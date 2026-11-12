@@ -75,11 +75,13 @@ export const localStore: Store = {
 // Firebase
 
 const env = import.meta.env
+// Configuration web publique du projet Firebase (pas un secret : l'accès aux
+// données est protégé par les règles Firestore). Surchargeable via VITE_FIREBASE_*.
 const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY as string | undefined,
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
-  projectId: env.VITE_FIREBASE_PROJECT_ID as string | undefined,
-  appId: env.VITE_FIREBASE_APP_ID as string | undefined,
+  apiKey: (env.VITE_FIREBASE_API_KEY as string | undefined) || 'AIzaSyBMLeZ1honHPTemyPvqv4XWKQkJsBMb6AM',
+  authDomain: (env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined) || 'trail-planner-814f6.firebaseapp.com',
+  projectId: (env.VITE_FIREBASE_PROJECT_ID as string | undefined) || 'trail-planner-814f6',
+  appId: (env.VITE_FIREBASE_APP_ID as string | undefined) || '1:923627677636:web:266ccd39d9ed69d2c1a691',
 }
 
 const app: FirebaseApp | null =

@@ -42,7 +42,8 @@ TP_GPX=chemin/course1.gpx,chemin/course2.gpx npx vitest run real
 ## Stockage et comptes (Firebase)
 
 Sans configuration, les données restent dans le navigateur (export/import JSON possible).
-Pour la synchronisation multi-appareils avec connexion Google ou par lien e-mail :
+Le projet Firebase `trail-planner-814f6` est déjà branché (configuration dans `src/lib/storage.ts`).
+Pour utiliser un autre projet :
 
 1. Sur [console.firebase.google.com](https://console.firebase.google.com), créer un projet (offre gratuite Spark).
 2. *Authentication* → *Sign-in method* : activer **Google** et **E-mail/Lien (connexion sans mot de passe)**.
