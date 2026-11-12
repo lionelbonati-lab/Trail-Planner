@@ -5,7 +5,8 @@ import {
   sendSignInLinkToEmail,
   signInWithEmailLink,
   signInWithPopup,
-  signOut,
+  deleteUser,
+  reauthenticateWithPopup,
   type User,
 } from 'firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -16,7 +17,7 @@ import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
-import { auth, cloudStore, hasLocalAthlete, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
+import { auth, clearLocalData, cloudStore, hasLocalAthlete, localRaceCount, localStore, signOutAndClear, type Backup, type Store, type SyncStatus } from './lib/storage'
 import type { Athlete, Race } from './lib/types'
 
 type Tab = 'races' | 'athlete' | 'cs'
@@ -108,13 +109,11 @@ export default function App() {
     setLoaded(false)
     setSync(null)
     ;(async () => {
-      // Première connexion : les données déjà saisies dans ce navigateur partent vers le compte.
-      if (store.kind === 'cloud' && (await store.isEmpty?.())) {
-        const [a, rs] = await Promise.all([localStore.loadAthlete(), localStore.listRaces()])
-        if (rs.length || hasLocalAthlete()) {
-          await store.saveAthlete({ ...a, updatedAt: new Date().toISOString() })
-          for (const r of rs) await store.saveRace(r)
-        }
+      // Nouveau compte : profil par défaut au nom de la personne. Les données hors compte de
+      // ce navigateur ne sont pas transférées d'office (appareil éventuellement partagé).
+      if (store.kind === 'cloud' && user && (await store.isEmpty?.())) {
+        const name = user.displayName || user.email?.split('@')[0] || 'Moi'
+        await store.saveAthlete({ ...DEFAULT_ATHLETE, name, updatedAt: new Date().toISOString() })
       }
       const [a, r] = await Promise.all([store.loadAthlete(), store.listRaces()])
       if (cancelled) return
@@ -209,13 +208,50 @@ export default function App() {
     }
   }
 
+  const [localCount, setLocalCount] = useState(() => localRaceCount())
   const pushLocalToCloud = async () => {
-    const a = await localStore.loadAthlete()
-    const rs = await localStore.listRaces()
-    await store.saveAthlete(a)
-    for (const r of rs) await store.saveRace(r)
-    setAthlete(a)
-    setRaces(await store.listRaces())
+    try {
+      const rs = await localStore.listRaces()
+      for (const r of rs) await store.saveRace(r)
+      // Le profil local ne remplace celui du compte que s'il n'a jamais été modifié.
+      if (hasLocalAthlete() && !athlete.history.length && athlete.cs === DEFAULT_ATHLETE.cs) {
+        const a = { ...(await localStore.loadAthlete()), updatedAt: new Date().toISOString() }
+        await store.saveAthlete(a)
+        setAthlete(a)
+      }
+      setRaces(await store.listRaces())
+      clearLocalData()
+      setLocalCount(0)
+    } catch (e) {
+      setError(`Import impossible : ${(e as Error).message}`)
+    }
+  }
+  const discardLocal = () => {
+    if (!confirm('Effacer les courses enregistrées dans ce navigateur sans compte ?')) return
+    clearLocalData()
+    setLocalCount(0)
+  }
+  const deleteAccount = async () => {
+    if (!user || store.kind !== 'cloud') return
+    if (!confirm('Supprimer ton compte et toutes tes données (profil, courses) ? Cette action est définitive.')) return
+    try {
+      await store.deleteAll?.()
+      try {
+        await deleteUser(user)
+      } catch (e) {
+        if ((e as { code?: string }).code !== 'auth/requires-recent-login') throw e
+        // Firebase exige une connexion récente pour supprimer le compte.
+        if (user.providerData.some((p) => p.providerId === 'google.com')) {
+          await reauthenticateWithPopup(user, new GoogleAuthProvider())
+          await deleteUser(user)
+        } else {
+          alert('Tes données sont supprimées. Pour supprimer aussi le compte, reconnecte-toi puis recommence.')
+        }
+      }
+      await signOutAndClear()
+    } catch (e) {
+      setError(`Suppression impossible : ${(e as Error).message}`)
+    }
   }
 
   const current = route.raceId ? races.find((r) => r.id === route.raceId) : null
@@ -231,7 +267,7 @@ export default function App() {
         </nav>
         <InstallButton />
         {sync && <SyncBadge status={sync} />}
-        <AuthBox user={user} />
+        <AuthBox user={user} onDeleteAccount={deleteAccount} />
       </header>
 
       <main>
@@ -261,7 +297,9 @@ export default function App() {
             onExport={exportBackup}
             onImport={importBackup}
             storeKind={store.kind}
-            onPushLocal={store.kind === 'cloud' ? pushLocalToCloud : undefined}
+            localCount={store.kind === 'cloud' ? localCount : 0}
+            onPushLocal={pushLocalToCloud}
+            onDiscardLocal={discardLocal}
           />
         )}
       </main>
@@ -278,11 +316,25 @@ function RaceList(props: {
   onExport: () => void
   onImport: (f: FileList | null) => void
   storeKind: 'local' | 'cloud'
-  onPushLocal?: () => void
+  localCount: number
+  onPushLocal: () => void
+  onDiscardLocal: () => void
 }) {
   const sorted = [...props.races].sort((a, b) => a.env.start.localeCompare(b.env.start))
   return (
     <div className="grid">
+      {props.localCount > 0 && (
+        <div className="banner info">
+          <span>
+            Ce navigateur contient {props.localCount} course{props.localCount > 1 ? 's' : ''} enregistrée
+            {props.localCount > 1 ? 's' : ''} sans compte.
+          </span>
+          <span className="row tight">
+            <button className="primary" onClick={props.onPushLocal}>Les ajouter à mon compte</button>
+            <button className="ghost" onClick={props.onDiscardLocal}>Les effacer</button>
+          </span>
+        </div>
+      )}
       <Card
         title="Mes courses"
         actions={
@@ -318,7 +370,6 @@ function RaceList(props: {
             Importer (JSON)
             <input type="file" accept=".json,application/json" hidden onChange={(e) => { props.onImport(e.target.files); e.target.value = '' }} />
           </label>
-          {props.onPushLocal && <button onClick={props.onPushLocal}>Envoyer les données de ce navigateur vers mon compte</button>}
         </div>
       </Card>
     </div>
@@ -349,7 +400,7 @@ function RaceRow({ race, onOpen, onDelete, onDuplicate }: { race: Race; onOpen: 
   )
 }
 
-function AuthBox({ user }: { user: User | null }) {
+function AuthBox({ user, onDeleteAccount }: { user: User | null; onDeleteAccount: () => void }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [open, setOpen] = useState(false)
@@ -357,10 +408,14 @@ function AuthBox({ user }: { user: User | null }) {
   const a = auth
   if (user) {
     return (
-      <span className="auth">
-        {user.email}
-        <button className="ghost" onClick={() => signOut(a)}>Déconnexion</button>
-      </span>
+      <details className="auth account">
+        <summary title={user.email ?? ''}>{user.displayName || user.email}</summary>
+        <div className="account-menu">
+          <div className="muted">{user.email}</div>
+          <button onClick={() => signOutAndClear()}>Se déconnecter</button>
+          <button className="ghost danger" onClick={onDeleteAccount}>Supprimer mon compte…</button>
+        </div>
+      </details>
     )
   }
   if (sent) return <span className="auth muted">Lien envoyé, vérifie tes e-mails.</span>

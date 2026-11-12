@@ -7,6 +7,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 - **Synchronisation** Firebase en temps réel entre appareils (connexion Google ou lien e-mail), avec
   envoi automatique des données locales à la première connexion et fonctionnement hors ligne.
+- **Multi-utilisateurs** : chacun se connecte avec son propre compte et ne voit que ses données
+  (règles Firestore par utilisateur). Déconnexion avec effacement du cache local (appareil partagé),
+  import facultatif des données saisies sans compte, suppression du compte et des données.
 - **Application installable** (PWA) sur ordinateur et téléphone, utilisable sans réseau.
 - **Météo** : prévision Open-Meteo à 15 jours, sinon normales des 5 dernières années aux mêmes dates.
 - **Profil athlète** : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,

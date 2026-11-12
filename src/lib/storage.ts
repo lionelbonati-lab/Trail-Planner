@@ -1,11 +1,13 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, type Auth, type User } from 'firebase/auth'
+import { getAuth, signOut, type Auth, type User } from 'firebase/auth'
 import {
   collection,
   doc,
   getDoc,
   getDocs,
+  clearIndexedDbPersistence,
   initializeFirestore,
+  terminate,
   onSnapshot,
   persistentLocalCache,
   persistentMultipleTabManager,
@@ -26,6 +28,8 @@ export interface Store {
   listRaces(): Promise<Race[]>
   saveRace(r: Race): Promise<void>
   deleteRace(id: string): Promise<void>
+  /** Cloud : supprime toutes les données du compte. */
+  deleteAll?(): Promise<void>
   /** Cloud : aucune donnée encore enregistrée pour ce compte. */
   isEmpty?(): Promise<boolean>
   /** Cloud : écoute en temps réel des changements faits sur d'autres appareils. */
@@ -68,6 +72,21 @@ export function hasLocalAthlete(): boolean {
     return localStorage.getItem(LS_ATHLETE) !== null
   } catch {
     return false
+  }
+}
+
+/** Nombre de courses enregistrées dans ce navigateur hors compte. */
+export function localRaceCount(): number {
+  return lsGet<Race[]>(LS_RACES, []).length
+}
+
+/** Efface les données hors compte de ce navigateur. */
+export function clearLocalData() {
+  try {
+    localStorage.removeItem(LS_ATHLETE)
+    localStorage.removeItem(LS_RACES)
+  } catch {
+    /* stockage indisponible */
   }
 }
 
@@ -265,7 +284,27 @@ export function cloudStore(user: User): Store {
       await batch.commit()
       savedGpx.delete(id)
     },
+    async deleteAll() {
+      const races = await getDocs(racesCol)
+      for (const r of races.docs) await this.deleteRace(r.id)
+      const batch = writeBatch(fs)
+      batch.delete(userDoc)
+      await batch.commit()
+    },
   }
+}
+
+/**
+ * Déconnexion « appareil partagé » : efface aussi le cache Firestore local,
+ * pour que la personne suivante ne puisse pas voir les données du compte.
+ */
+export async function signOutAndClear() {
+  if (auth) await signOut(auth)
+  if (db) {
+    await terminate(db)
+    await clearIndexedDbPersistence(db).catch(() => undefined)
+  }
+  window.location.reload()
 }
 
 /** Sauvegarde complète en JSON (pour export / import manuel). */
