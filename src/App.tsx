@@ -16,7 +16,7 @@ import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
-import { auth, cloudStore, localStore, type Backup, type Store } from './lib/storage'
+import { auth, cloudStore, hasLocalAthlete, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
 import type { Athlete, Race } from './lib/types'
 
 type Tab = 'races' | 'athlete' | 'cs'
@@ -29,17 +29,45 @@ function readHash(): { tab: Tab; raceId: string | null } {
   }
 }
 
-/** Sauvegarde différée : regroupe les modifications rapides (saisie au clavier). */
+/**
+ * Sauvegarde différée : regroupe les modifications rapides (saisie au clavier).
+ * Les sauvegardes en attente sont envoyées immédiatement si la page est quittée.
+ */
 function useDebounced<T>(fn: (v: T) => void, delay = 600) {
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const fnRef = useRef(fn)
+  fnRef.current = fn
+  const pending = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; value: T }>())
+  useEffect(() => {
+    const flush = () => {
+      for (const [k, p] of pending.current) {
+        clearTimeout(p.timer)
+        pending.current.delete(k)
+        fnRef.current(p.value)
+      }
+    }
+    const onHide = () => document.visibilityState === 'hidden' && flush()
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [])
   return useCallback(
-    (key: string, v: T) => {
-      clearTimeout(timers.current.get(key))
-      timers.current.set(key, setTimeout(() => fn(v), delay))
+    (key: string, value: T) => {
+      clearTimeout(pending.current.get(key)?.timer)
+      const timer = setTimeout(() => {
+        pending.current.delete(key)
+        fnRef.current(value)
+      }, delay)
+      pending.current.set(key, { timer, value })
     },
-    [fn, delay],
+    [delay],
   )
 }
+
+/** Garde la version la plus récente (les modifications locales en cours ne sont pas écrasées). */
+const newer = (remote?: string, local?: string) => !local || (remote ?? '') > local
 
 export default function App() {
   const [route, setRoute] = useState(readHash)
@@ -48,6 +76,7 @@ export default function App() {
   const [races, setRaces] = useState<Race[]>([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sync, setSync] = useState<SyncStatus | null>(null)
 
   const store: Store = useMemo(() => (user ? cloudStore(user) : localStore), [user])
 
@@ -75,17 +104,39 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
+    let unsubscribe: (() => void) | undefined
     setLoaded(false)
-    Promise.all([store.loadAthlete(), store.listRaces()])
-      .then(([a, r]) => {
-        if (cancelled) return
-        setAthlete(a)
-        setRaces(r)
-        setLoaded(true)
+    setSync(null)
+    ;(async () => {
+      // Première connexion : les données déjà saisies dans ce navigateur partent vers le compte.
+      if (store.kind === 'cloud' && (await store.isEmpty?.())) {
+        const [a, rs] = await Promise.all([localStore.loadAthlete(), localStore.listRaces()])
+        if (rs.length || hasLocalAthlete()) {
+          await store.saveAthlete({ ...a, updatedAt: new Date().toISOString() })
+          for (const r of rs) await store.saveRace(r)
+        }
+      }
+      const [a, r] = await Promise.all([store.loadAthlete(), store.listRaces()])
+      if (cancelled) return
+      setAthlete(a)
+      setRaces(r)
+      setLoaded(true)
+      unsubscribe = store.subscribe?.({
+        athlete: (remote) => setAthlete((local) => (newer(remote.updatedAt, local.updatedAt) ? remote : local)),
+        raceUpsert: (remote) =>
+          setRaces((all) => {
+            const local = all.find((x) => x.id === remote.id)
+            if (!local) return [remote, ...all]
+            return newer(remote.updatedAt, local.updatedAt) ? all.map((x) => (x.id === remote.id ? remote : x)) : all
+          }),
+        raceRemoved: (id) => setRaces((all) => all.filter((x) => x.id !== id)),
+        status: setSync,
+        error: (e) => setError(`Synchronisation : ${e.message}`),
       })
-      .catch((e) => setError(`Chargement impossible : ${e.message ?? e}`))
+    })().catch((e) => setError(`Chargement impossible : ${e.message ?? e}`))
     return () => {
       cancelled = true
+      unsubscribe?.()
     }
   }, [store])
 
@@ -94,8 +145,9 @@ export default function App() {
   const saveRaceLater = useDebounced<Race>((r) => store.saveRace(r).catch(report))
 
   const updateAthlete = (a: Athlete) => {
-    setAthlete(a)
-    saveAthleteLater('athlete', a)
+    const next = { ...a, updatedAt: new Date().toISOString() }
+    setAthlete(next)
+    saveAthleteLater('athlete', next)
   }
   const updateRace = (r: Race) => {
     const next = { ...r, updatedAt: new Date().toISOString() }
@@ -177,6 +229,8 @@ export default function App() {
           <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}>Profil athlète</button>
           <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}>Calculateur VC</button>
         </nav>
+        <InstallButton />
+        {sync && <SyncBadge status={sync} />}
         <AuthBox user={user} />
       </header>
 
@@ -340,4 +394,61 @@ function AuthBox({ user }: { user: User | null }) {
       )}
     </span>
   )
+}
+
+const SYNC_LABELS: Record<SyncStatus, { text: string; title: string }> = {
+  synced: { text: '☁ Synchronisé', title: 'Toutes les modifications sont enregistrées dans ton compte' },
+  pending: { text: '⟳ Envoi…', title: 'Modifications en cours d\'envoi' },
+  offline: { text: '⚠ Hors ligne', title: 'Modifications gardées sur cet appareil, envoyées au retour du réseau' },
+}
+
+function SyncBadge({ status }: { status: SyncStatus }) {
+  const l = SYNC_LABELS[status]
+  return (
+    <span className={`sync sync-${status}`} title={l.title}>
+      {l.text}
+    </span>
+  )
+}
+
+interface InstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+/** Bouton « Installer » : invite native (Chrome, Edge, Android) ou explication pour iPhone/iPad. */
+function InstallButton() {
+  const [evt, setEvt] = useState<InstallPromptEvent | null>(null)
+  const standalone =
+    window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault()
+      setEvt(e as InstallPromptEvent)
+    }
+    const onInstalled = () => setEvt(null)
+    window.addEventListener('beforeinstallprompt', onPrompt)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
+  }, [])
+  if (standalone) return null
+  if (evt) {
+    return (
+      <button className="install" onClick={async () => { await evt.prompt(); await evt.userChoice; setEvt(null) }}>
+        ⬇ Installer l'app
+      </button>
+    )
+  }
+  if (ios) {
+    return (
+      <button className="install ghost" onClick={() => alert("Dans Safari : touche Partager (carré avec flèche), puis « Sur l'écran d'accueil ».")}>
+        ⬇ Installer l'app
+      </button>
+    )
+  }
+  return null
 }

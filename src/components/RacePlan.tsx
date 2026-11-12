@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
+import { buildCourseFit } from '../lib/fit'
+import { fetchRaceWeather } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
 import { calibrateDurability, simulate, withFinish, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
@@ -68,6 +70,7 @@ export function RacePlan({
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
   const [printFormat, setPrintFormat] = useState<PrintFormat | null>(null)
   const [compare, setCompare] = useState(false)
+  const [weather, setWeather] = useState<{ busy: boolean; info: string | null; error: string | null }>({ busy: false, info: null, error: null })
 
   const set = (patch: Partial<Race>) => onChange({ ...race, ...patch })
   const setEnv = <K extends keyof Race['env']>(k: K, v: Race['env'][K]) => set({ env: { ...race.env, [k]: v } })
@@ -141,8 +144,26 @@ export function RacePlan({
     set({ checkpoints: race.checkpoints.map((c) => (updated.has(c.id) ? { ...c, ...updated.get(c.id)! } : c)) })
   }
 
-  const exportGpx = () => {
-    download(`${race.name.replace(/[^\w-]+/g, '_')}_plan.gpx`, buildCourseGpx(race, track, sim))
+  const fileBase = race.name.replace(/[^\w-]+/g, '_')
+  const exportGpx = () => download(`${fileBase}_plan.gpx`, buildCourseGpx(race, track, sim))
+  const exportFit = () => download(`${fileBase}_plan.fit`, buildCourseFit(race, track, sim), 'application/vnd.ant.fit')
+
+  const loadWeather = async () => {
+    setWeather({ busy: true, info: null, error: null })
+    try {
+      const p = track.points[0]
+      const w = await fetchRaceWeather(p.lat, p.lon, new Date(startMs), sim.totalTime)
+      const round = (x: number) => Math.round(x * 10) / 10
+      setEnv('heat', { ...race.env.heat, tMax: round(w.tMax), tMin: round(w.tMin), refAlt: Math.round(w.elevation), note: w.note })
+      const extras = [
+        w.precipProb !== null ? `pluie ${Math.round(w.precipProb)} %` : null,
+        w.precipMm !== null ? `${round(w.precipMm)} mm/j` : null,
+        w.windMax !== null ? `vent max ${Math.round(w.windMax)} km/h` : null,
+      ].filter(Boolean)
+      setWeather({ busy: false, info: extras.join(' · '), error: null })
+    } catch (e) {
+      setWeather({ busy: false, info: null, error: (e as Error).message })
+    }
   }
 
   const calibrate = () => {
@@ -175,9 +196,10 @@ export function RacePlan({
               <button onClick={() => setPrintFormat('a4')}>🖨 Feuille A4</button>
               <button onClick={() => setPrintFormat('strip')}>🖨 Bande</button>
               <button onClick={() => setPrintFormat('crew')}>🖨 Assistance</button>
-              <button className="primary" onClick={exportGpx} title="Parcours GPX pour Garmin Connect / PacePro">
-                ⌚ Export Garmin
+              <button className="primary" onClick={exportFit} title="Parcours FIT pour Garmin Connect / PacePro (points de ravito, heures prévues)">
+                ⌚ Export Garmin (FIT)
               </button>
+              <button onClick={exportGpx} title="Parcours GPX horodaté avec waypoints">GPX</button>
             </>
           }
         >
@@ -233,9 +255,9 @@ export function RacePlan({
             <Toggle label="Chaleur" checked={race.env.heat.enabled} onChange={(v) => setEnv('heat', { ...race.env.heat, enabled: v })} />
             {race.env.heat.enabled && (
               <div className="fields sub">
-                <Num label="T° max (jour)" value={race.env.heat.tMax} onChange={(v) => setEnv('heat', { ...race.env.heat, tMax: v })} unit="°C" />
-                <Num label="T° min (nuit)" value={race.env.heat.tMin} onChange={(v) => setEnv('heat', { ...race.env.heat, tMin: v })} unit="°C" />
-                <Num label="à l'altitude" value={race.env.heat.refAlt} onChange={(v) => setEnv('heat', { ...race.env.heat, refAlt: v })} unit="m" />
+                <Num label="T° max (jour)" value={race.env.heat.tMax} onChange={(v) => setEnv('heat', { ...race.env.heat, tMax: v, note: '' })} unit="°C" />
+                <Num label="T° min (nuit)" value={race.env.heat.tMin} onChange={(v) => setEnv('heat', { ...race.env.heat, tMin: v, note: '' })} unit="°C" />
+                <Num label="à l'altitude" value={race.env.heat.refAlt} onChange={(v) => setEnv('heat', { ...race.env.heat, refAlt: v, note: '' })} unit="m" />
                 <Num label="Seuil" value={race.env.heat.threshold} onChange={(v) => setEnv('heat', { ...race.env.heat, threshold: v })} unit="°C" />
                 <Num label="Pénalité" value={race.env.heat.perDeg} scale={100} onChange={(v) => setEnv('heat', { ...race.env.heat, perDeg: v })} unit="% / °C" />
               </div>
@@ -256,6 +278,18 @@ export function RacePlan({
                 ))}
               </div>
             )}
+            <div className="row">
+              <button onClick={loadWeather} disabled={weather.busy} title="Prévision à 15 jours, sinon normales des 5 dernières années (Open-Meteo)">
+                {weather.busy ? 'Météo…' : '☁ Récupérer la météo'}
+              </button>
+            </div>
+            {race.env.heat.note && (
+              <p className="hint">
+                {race.env.heat.note} : {race.env.heat.tMin}–{race.env.heat.tMax} °C à {race.env.heat.refAlt} m
+                {weather.info ? ` · ${weather.info}` : ''}
+              </p>
+            )}
+            {weather.error && <p className="warn">{weather.error}</p>}
             <Hint>Chaleur : cycle min à 6 h / max à 15 h, −0,65 °C par 100 m de montée.</Hint>
           </Card>
 

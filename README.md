@@ -5,7 +5,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 ## Fonctionnalités
 
-- **Synchronisation** facultative via Firebase (connexion Google ou lien e-mail).
+- **Synchronisation** Firebase en temps réel entre appareils (connexion Google ou lien e-mail), avec
+  envoi automatique des données locales à la première connexion et fonctionnement hors ligne.
+- **Application installable** (PWA) sur ordinateur et téléphone, utilisable sans réseau.
+- **Météo** : prévision Open-Meteo à 15 jours, sinon normales des 5 dernières années aux mêmes dates.
 - **Profil athlète** : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,
   durabilité au choix :
   - *courbe log* : %VC moyen tenable sur T heures = %VC₁ₕ − k·ln(T) ;
@@ -20,8 +23,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Points automatiques** : tous les X km, sommets/points bas, ruptures de pente, tous les X km-e ou X minutes.
 - **Ravitos** : temps d'arrêt, barrières horaires (marge et alerte), eau/glucides calculés entre ravitos, notes.
 - **Impression** : feuille A4 (profil + tableau), bande compacte à découper, fiche assistance avec fenêtre de passage.
-- **Export Garmin** : GPX de parcours horodaté avec waypoints (heures de passage) à importer dans Garmin Connect,
-  puis à transformer en stratégie PacePro.
+- **Export Garmin** : parcours **FIT** (ou GPX) horodaté selon le plan, avec points de ravito / sommets, à importer
+  dans Garmin Connect puis à transformer en stratégie PacePro.
 - **Calibration** : ajuste ta durabilité pour retrouver un temps réellement réalisé.
 
 ## Développement

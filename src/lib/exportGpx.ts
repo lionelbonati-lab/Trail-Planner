@@ -66,8 +66,8 @@ export function buildCourseGpx(race: Race, track: Track, sim: SimResult): string
   return lines.join('\n')
 }
 
-export function download(filename: string, content: string, type = 'application/gpx+xml') {
-  const blob = new Blob([content], { type })
+export function download(filename: string, content: string | Uint8Array, type = 'application/gpx+xml') {
+  const blob = new Blob([content as BlobPart], { type })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

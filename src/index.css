@@ -70,6 +70,11 @@ input[type='text'] { width: 100%; }
 .topbar nav { display: flex; gap: 4px; }
 .topbar nav button { border-color: transparent; }
 .topbar nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.sync { margin-left: auto; font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.sync-pending { background: #eef1f7; color: #3a4a8a; }
+.sync-offline { background: #fff6e5; color: var(--warn); }
+.sync + .auth { margin-left: 8px; }
+.install { font-size: 13px; }
 .auth { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 13px; }
 .auth input { width: 200px; }
 
@@ -189,7 +194,7 @@ body.printing .print-root {
 }
 
 @media (max-width: 720px) {
-  .topbar { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+  .topbar { flex-wrap: wrap; gap: 8px; padding: 8px 12px; position: static; }
   main { padding: 12px; }
   .grid.two, .grid.three { grid-template-columns: 1fr; }
 }
