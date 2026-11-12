@@ -1,11 +1,20 @@
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
+import { initializeApp, type FirebaseApp } from 'firebase/app'
+import { getAuth, type Auth, type User } from 'firebase/auth'
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  writeBatch,
+  type Firestore,
+} from 'firebase/firestore'
 import { normalizeAthlete, normalizeRace } from './defaults'
 import type { Athlete, Race } from './types'
 
 /**
- * Stockage : local (navigateur) par défaut ; Supabase dès que
- * VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY sont définis et que
- * l'utilisateur est connecté.
+ * Stockage : local (navigateur) par défaut ; Firebase (Firestore) dès que la
+ * configuration VITE_FIREBASE_* est définie et que l'utilisateur est connecté.
  */
 export interface Store {
   kind: 'local' | 'cloud'
@@ -62,47 +71,119 @@ export const localStore: Store = {
   },
 }
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// ---------------------------------------------------------------------------
+// Firebase
 
-export const supabase: SupabaseClient | null = url && anonKey ? createClient(url, anonKey) : null
+const env = import.meta.env
+const firebaseConfig = {
+  apiKey: env.VITE_FIREBASE_API_KEY as string | undefined,
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
+  projectId: env.VITE_FIREBASE_PROJECT_ID as string | undefined,
+  appId: env.VITE_FIREBASE_APP_ID as string | undefined,
+}
 
-export function cloudStore(client: SupabaseClient, user: User): Store {
+const app: FirebaseApp | null =
+  firebaseConfig.apiKey && firebaseConfig.projectId ? initializeApp(firebaseConfig) : null
+
+export const auth: Auth | null = app ? getAuth(app) : null
+const db: Firestore | null = app ? getFirestore(app) : null
+
+/** Taille max d'un morceau de GPX compressé (Firestore limite un document à 1 Mio). */
+const CHUNK = 700_000
+
+export async function gzipBase64(text: string): Promise<string> {
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer())
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  }
+  return btoa(bin)
+}
+
+export async function gunzipBase64(b64: string): Promise<string> {
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
+  return new Response(stream).text()
+}
+
+type RaceMeta = Omit<Race, 'gpxText'> & { gpxChunks: number }
+
+/**
+ * Organisation Firestore :
+ *   users/{uid}                         → profil athlète
+ *   users/{uid}/races/{raceId}          → course (sans le GPX)
+ *   users/{uid}/races/{raceId}/gpx/{n}  → GPX compressé (gzip + base64), en morceaux
+ */
+export function cloudStore(user: User): Store {
+  if (!db) throw new Error('Firebase non configuré')
+  const fs = db
+  const userDoc = doc(fs, 'users', user.uid)
+  const racesCol = collection(fs, 'users', user.uid, 'races')
+  const gpxCol = (raceId: string) => collection(fs, 'users', user.uid, 'races', raceId, 'gpx')
+  // Évite de réécrire le GPX à chaque modification du plan.
+  const savedGpx = new Map<string, string>()
+
   return {
     kind: 'cloud',
     async loadAthlete() {
-      const { data, error } = await client
-        .from('athletes')
-        .select('data')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (error) throw error
-      return normalizeAthlete(data?.data ?? null)
+      const snap = await getDoc(userDoc)
+      return normalizeAthlete((snap.data()?.athlete as Partial<Athlete>) ?? null)
     },
     async saveAthlete(a) {
-      const { error } = await client
-        .from('athletes')
-        .upsert({ user_id: user.id, data: a, updated_at: new Date().toISOString() })
-      if (error) throw error
+      const batch = writeBatch(fs)
+      batch.set(userDoc, { athlete: a, updatedAt: new Date().toISOString() }, { merge: true })
+      await batch.commit()
     },
     async listRaces() {
-      const { data, error } = await client
-        .from('races')
-        .select('data')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-      if (error) throw error
-      return (data ?? []).map((row) => normalizeRace(row.data as Race))
+      const snap = await getDocs(racesCol)
+      const races = await Promise.all(
+        snap.docs.map(async (d) => {
+          const meta = d.data() as RaceMeta
+          const parts = await getDocs(gpxCol(d.id))
+          const b64 = parts.docs
+            .sort((a, b) => Number(a.id) - Number(b.id))
+            .map((p) => p.data().data as string)
+            .join('')
+          const gpxText = b64 ? await gunzipBase64(b64) : ''
+          savedGpx.set(d.id, gpxText)
+          const { gpxChunks: _ignored, ...rest } = meta
+          return normalizeRace({ ...rest, gpxText })
+        }),
+      )
+      return races.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     },
     async saveRace(r) {
-      const { error } = await client
-        .from('races')
-        .upsert({ id: r.id, user_id: user.id, data: r, updated_at: r.updatedAt })
-      if (error) throw error
+      const { gpxText, ...rest } = r
+      const batch = writeBatch(fs)
+      const raceRef = doc(racesCol, r.id)
+      if (savedGpx.get(r.id) !== gpxText) {
+        const b64 = await gzipBase64(gpxText)
+        const n = Math.max(1, Math.ceil(b64.length / CHUNK))
+        const old = await getDocs(gpxCol(r.id))
+        old.docs.forEach((d) => {
+          if (Number(d.id) >= n) batch.delete(d.ref)
+        })
+        for (let i = 0; i < n; i++) {
+          batch.set(doc(gpxCol(r.id), String(i)), { data: b64.slice(i * CHUNK, (i + 1) * CHUNK) })
+        }
+        batch.set(raceRef, { ...rest, gpxChunks: n })
+        await batch.commit()
+        savedGpx.set(r.id, gpxText)
+      } else {
+        batch.set(raceRef, rest, { merge: true })
+        await batch.commit()
+      }
     },
     async deleteRace(id) {
-      const { error } = await client.from('races').delete().eq('id', id)
-      if (error) throw error
+      const parts = await getDocs(gpxCol(id))
+      const batch = writeBatch(fs)
+      parts.docs.forEach((d) => batch.delete(d.ref))
+      batch.delete(doc(racesCol, id))
+      await batch.commit()
+      savedGpx.delete(id)
     },
   }
 }

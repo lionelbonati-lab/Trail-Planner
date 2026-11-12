@@ -5,6 +5,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 ## Fonctionnalités
 
+- **Synchronisation** facultative via Firebase (connexion Google ou lien e-mail).
 - **Profil athlète** : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,
   durabilité au choix :
   - *courbe log* : %VC moyen tenable sur T heures = %VC₁ₕ − k·ln(T) ;
@@ -38,15 +39,21 @@ Tests sur des GPX réels (affiche distance, D+, temps prévus) :
 TP_GPX=chemin/course1.gpx,chemin/course2.gpx npx vitest run real
 ```
 
-## Stockage et comptes (Supabase)
+## Stockage et comptes (Firebase)
 
 Sans configuration, les données restent dans le navigateur (export/import JSON possible).
-Pour la synchronisation multi-appareils :
+Pour la synchronisation multi-appareils avec connexion Google ou par lien e-mail :
 
-1. Créer un projet Supabase et exécuter `supabase/migrations/20261112000000_init.sql`.
-2. Activer l'authentification par e-mail (lien magique) et ajouter l'URL du site dans *Redirect URLs*.
-3. Renseigner `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (fichier `.env` en local, *variables*
-   du dépôt GitHub pour le déploiement).
+1. Sur [console.firebase.google.com](https://console.firebase.google.com), créer un projet (offre gratuite Spark).
+2. *Authentication* → *Sign-in method* : activer **Google** et **E-mail/Lien (connexion sans mot de passe)**.
+   Dans *Settings* → *Authorized domains*, ajouter le domaine GitHub Pages (`<utilisateur>.github.io`).
+3. *Firestore Database* → créer la base (mode production), puis coller le contenu de `firestore.rules`
+   dans l'onglet *Règles* : chaque utilisateur n'accède qu'à ses propres données.
+4. *Paramètres du projet* → *Vos applications* → ajouter une app Web, puis reporter `apiKey`, `authDomain`,
+   `projectId` et `appId` dans `VITE_FIREBASE_*` (fichier `.env` en local, *Variables* du dépôt GitHub
+   pour le déploiement). Ces valeurs ne sont pas secrètes : la sécurité repose sur les règles Firestore.
+
+Les GPX sont compressés (gzip) et découpés si besoin pour respecter la limite de 1 Mio par document.
 
 ## Déploiement
 

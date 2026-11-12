@@ -1,4 +1,13 @@
-import type { User } from '@supabase/supabase-js'
+import {
+  GoogleAuthProvider,
+  isSignInWithEmailLink,
+  onAuthStateChanged,
+  sendSignInLinkToEmail,
+  signInWithEmailLink,
+  signInWithPopup,
+  signOut,
+  type User,
+} from 'firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AthletePanel } from './components/AthletePanel'
 import { CsCalculator } from './components/CsCalculator'
@@ -7,7 +16,7 @@ import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
-import { cloudStore, localStore, supabase, type Backup, type Store } from './lib/storage'
+import { auth, cloudStore, localStore, type Backup, type Store } from './lib/storage'
 import type { Athlete, Race } from './lib/types'
 
 type Tab = 'races' | 'athlete' | 'cs'
@@ -40,7 +49,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const store: Store = useMemo(() => (supabase && user ? cloudStore(supabase, user) : localStore), [user])
+  const store: Store = useMemo(() => (user ? cloudStore(user) : localStore), [user])
 
   useEffect(() => {
     const onHash = () => setRoute(readHash())
@@ -49,10 +58,19 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
-    const { data } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user ?? null))
-    return () => data.subscription.unsubscribe()
+    if (!auth) return
+    const a = auth
+    // Retour depuis le lien de connexion reçu par e-mail.
+    if (isSignInWithEmailLink(a, window.location.href)) {
+      const email = localStorage.getItem('tp.emailForSignIn') ?? prompt('Confirme ton e-mail') ?? ''
+      signInWithEmailLink(a, email, window.location.href)
+        .then(() => {
+          localStorage.removeItem('tp.emailForSignIn')
+          window.history.replaceState(null, '', window.location.pathname + '#/races')
+        })
+        .catch((e) => setError(`Connexion impossible : ${e.message}`))
+    }
+    return onAuthStateChanged(a, setUser)
   }, [])
 
   useEffect(() => {
@@ -280,32 +298,46 @@ function RaceRow({ race, onOpen, onDelete, onDuplicate }: { race: Race; onOpen: 
 function AuthBox({ user }: { user: User | null }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  if (!supabase) return <span className="auth muted" title="Configure Supabase pour synchroniser">Stockage local</span>
+  const [open, setOpen] = useState(false)
+  if (!auth) return <span className="auth muted" title="Configure Firebase pour synchroniser">Stockage local</span>
+  const a = auth
   if (user) {
     return (
       <span className="auth">
         {user.email}
-        <button className="ghost" onClick={() => supabase!.auth.signOut()}>Déconnexion</button>
+        <button className="ghost" onClick={() => signOut(a)}>Déconnexion</button>
       </span>
     )
   }
   if (sent) return <span className="auth muted">Lien envoyé, vérifie tes e-mails.</span>
   return (
-    <form
-      className="auth"
-      onSubmit={async (e) => {
-        e.preventDefault()
-        const { error } = await supabase!.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: window.location.origin + window.location.pathname },
-        })
-        if (error) alert(error.message)
-        else setSent(true)
-      }}
-    >
-      <input type="email" placeholder="e-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <button type="submit">Connexion</button>
-    </form>
+    <span className="auth">
+      <button onClick={() => signInWithPopup(a, new GoogleAuthProvider()).catch((e) => alert(e.message))}>
+        Connexion Google
+      </button>
+      {open ? (
+        <form
+          className="auth"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            try {
+              await sendSignInLinkToEmail(a, email, {
+                url: window.location.origin + window.location.pathname,
+                handleCodeInApp: true,
+              })
+              localStorage.setItem('tp.emailForSignIn', email)
+              setSent(true)
+            } catch (err) {
+              alert((err as Error).message)
+            }
+          }}
+        >
+          <input type="email" placeholder="e-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <button type="submit">Recevoir un lien</button>
+        </form>
+      ) : (
+        <button className="ghost" onClick={() => setOpen(true)}>par e-mail</button>
+      )}
+    </span>
   )
 }
-
