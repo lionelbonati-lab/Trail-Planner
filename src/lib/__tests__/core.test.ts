@@ -127,3 +127,35 @@ describe('export Garmin', () => {
     expect(out).toMatch(/<time>2026-06-06T04:00:00.000Z<\/time>/)
   })
 })
+
+import FitParser from 'fit-file-parser'
+import { buildCourseFit, fitCrc } from '../fit'
+describe('export FIT', () => {
+  it('produit un parcours FIT valide relu par un décodeur indépendant', async () => {
+    const xml = synthGpx()
+    const race = newRace('Trail test éà', xml)
+    race.checkpoints = [
+      { id: 'r', dist: 7000, name: 'Ravito Col', kind: 'ravito', stopMin: 2, cutoff: '', water: 0, carbs: 0, notes: '', auto: false },
+      { id: 's', dist: 10000, name: 'Sommet 1000 m', kind: 'split', stopMin: 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: true },
+    ]
+    const track = parseGpx(xml)
+    const sim = simulate(track, DEFAULT_ATHLETE, { mode: 'physio', kme: DEFAULT_KME, env: race.env, checkpoints: withFinish(race, track), techOverrides: [] })
+    const fit = buildCourseFit(race, track, sim)
+    // CRC global : recalculé sur tout le fichier, il vaut 0.
+    expect(fitCrc(fit)).toBe(0)
+    const data: any = await new Promise((res, rej) =>
+      new FitParser({ force: false, mode: 'list', lengthUnit: 'm', elapsedRecordField: true }).parse(fit.buffer as ArrayBuffer, (e: any, d: any) => (e ? rej(e) : res(d))),
+    )
+    expect(data.file_ids?.[0]?.type ?? data.file_id?.type).toBe('course')
+    expect(data.records.length).toBe(track.points.length)
+    const lastRec = data.records[data.records.length - 1]
+    expect(lastRec.distance).toBeCloseTo(track.totalDist, -1)
+    expect(lastRec.altitude).toBeCloseTo(track.points.at(-1)!.ele, 0)
+    expect(lastRec.position_lat).toBeCloseTo(track.points.at(-1)!.lat, 5)
+    const t0 = new Date(data.records[0].timestamp).getTime()
+    expect(new Date(lastRec.timestamp).getTime() - t0).toBeCloseTo(sim.totalTime * 1000, -4)
+    expect(data.course_points.length).toBe(3)
+    expect(data.course_points[0].name).toBe('Ravito Col')
+    expect(data.courses?.[0]?.name ?? data.course?.name).toBe('Trail test éà')
+  })
+})

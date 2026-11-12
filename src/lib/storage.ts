@@ -1,11 +1,16 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getAuth, type Auth, type User } from 'firebase/auth'
+import { getAuth, signOut, type Auth, type User } from 'firebase/auth'
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-  getFirestore,
+  clearIndexedDbPersistence,
+  initializeFirestore,
+  terminate,
+  onSnapshot,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   writeBatch,
   type Firestore,
 } from 'firebase/firestore'
@@ -23,6 +28,22 @@ export interface Store {
   listRaces(): Promise<Race[]>
   saveRace(r: Race): Promise<void>
   deleteRace(id: string): Promise<void>
+  /** Cloud : supprime toutes les données du compte. */
+  deleteAll?(): Promise<void>
+  /** Cloud : aucune donnée encore enregistrée pour ce compte. */
+  isEmpty?(): Promise<boolean>
+  /** Cloud : écoute en temps réel des changements faits sur d'autres appareils. */
+  subscribe?(h: SyncHandlers): () => void
+}
+
+export type SyncStatus = 'synced' | 'pending' | 'offline'
+
+export interface SyncHandlers {
+  athlete(a: Athlete): void
+  raceUpsert(r: Race): void
+  raceRemoved(id: string): void
+  status(s: SyncStatus): void
+  error(e: Error): void
 }
 
 const LS_ATHLETE = 'tp.athlete'
@@ -42,6 +63,30 @@ function lsSet(key: string, value: unknown) {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e) {
     console.warn('Stockage local indisponible', e)
+  }
+}
+
+/** Un profil athlète a-t-il déjà été enregistré dans ce navigateur ? */
+export function hasLocalAthlete(): boolean {
+  try {
+    return localStorage.getItem(LS_ATHLETE) !== null
+  } catch {
+    return false
+  }
+}
+
+/** Nombre de courses enregistrées dans ce navigateur hors compte. */
+export function localRaceCount(): number {
+  return lsGet<Race[]>(LS_RACES, []).length
+}
+
+/** Efface les données hors compte de ce navigateur. */
+export function clearLocalData() {
+  try {
+    localStorage.removeItem(LS_ATHLETE)
+    localStorage.removeItem(LS_RACES)
+  } catch {
+    /* stockage indisponible */
   }
 }
 
@@ -88,7 +133,10 @@ const app: FirebaseApp | null =
   firebaseConfig.apiKey && firebaseConfig.projectId ? initializeApp(firebaseConfig) : null
 
 export const auth: Auth | null = app ? getAuth(app) : null
-const db: Firestore | null = app ? getFirestore(app) : null
+// Cache local persistant : les données synchronisées restent consultables hors ligne.
+const db: Firestore | null = app
+  ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
+  : null
 
 /** Taille max d'un morceau de GPX compressé (Firestore limite un document à 1 Mio). */
 const CHUNK = 700_000
@@ -125,37 +173,86 @@ export function cloudStore(user: User): Store {
   const userDoc = doc(fs, 'users', user.uid)
   const racesCol = collection(fs, 'users', user.uid, 'races')
   const gpxCol = (raceId: string) => collection(fs, 'users', user.uid, 'races', raceId, 'gpx')
-  // Évite de réécrire le GPX à chaque modification du plan.
+  // Évite de réécrire (et de relire) le GPX à chaque modification du plan.
   const savedGpx = new Map<string, string>()
+
+  const loadRace = async (id: string, meta: RaceMeta): Promise<Race> => {
+    let gpxText = savedGpx.get(id)
+    if (gpxText === undefined) {
+      const parts = await getDocs(gpxCol(id))
+      const b64 = parts.docs
+        .sort((a, b) => Number(a.id) - Number(b.id))
+        .map((p) => p.data().data as string)
+        .join('')
+      gpxText = b64 ? await gunzipBase64(b64) : ''
+      savedGpx.set(id, gpxText)
+    }
+    const { gpxChunks: _ignored, ...rest } = meta
+    return normalizeRace({ ...rest, gpxText })
+  }
 
   return {
     kind: 'cloud',
     async loadAthlete() {
       const snap = await getDoc(userDoc)
-      return normalizeAthlete((snap.data()?.athlete as Partial<Athlete>) ?? null)
+      const d = snap.data()
+      return normalizeAthlete(d ? { ...(d.athlete as Partial<Athlete>), updatedAt: d.updatedAt } : null)
     },
     async saveAthlete(a) {
       const batch = writeBatch(fs)
-      batch.set(userDoc, { athlete: a, updatedAt: new Date().toISOString() }, { merge: true })
+      batch.set(userDoc, { athlete: a, updatedAt: a.updatedAt ?? new Date().toISOString() }, { merge: true })
       await batch.commit()
     },
     async listRaces() {
       const snap = await getDocs(racesCol)
-      const races = await Promise.all(
-        snap.docs.map(async (d) => {
-          const meta = d.data() as RaceMeta
-          const parts = await getDocs(gpxCol(d.id))
-          const b64 = parts.docs
-            .sort((a, b) => Number(a.id) - Number(b.id))
-            .map((p) => p.data().data as string)
-            .join('')
-          const gpxText = b64 ? await gunzipBase64(b64) : ''
-          savedGpx.set(d.id, gpxText)
-          const { gpxChunks: _ignored, ...rest } = meta
-          return normalizeRace({ ...rest, gpxText })
-        }),
-      )
+      const races = await Promise.all(snap.docs.map((d) => loadRace(d.id, d.data() as RaceMeta)))
       return races.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    },
+    async isEmpty() {
+      const [u, r] = await Promise.all([getDoc(userDoc), getDocs(racesCol)])
+      return !u.exists() && r.empty
+    },
+    subscribe(h) {
+      let usersPending = false
+      let racesPending = false
+      let fromCache = false
+      const emit = () => h.status(usersPending || racesPending ? 'pending' : fromCache ? 'offline' : 'synced')
+      const unUser = onSnapshot(
+        userDoc,
+        { includeMetadataChanges: true },
+        (snap) => {
+          usersPending = snap.metadata.hasPendingWrites
+          emit()
+          // Nos propres écritures en attente ne sont pas des changements distants.
+          if (!snap.metadata.hasPendingWrites && snap.exists()) {
+            const d = snap.data()
+            h.athlete(normalizeAthlete({ ...(d.athlete as Partial<Athlete>), updatedAt: d.updatedAt }))
+          }
+        },
+        (e) => h.error(e),
+      )
+      const unRaces = onSnapshot(
+        racesCol,
+        { includeMetadataChanges: true },
+        (snap) => {
+          racesPending = snap.metadata.hasPendingWrites
+          fromCache = snap.metadata.fromCache
+          emit()
+          for (const ch of snap.docChanges()) {
+            if (ch.type === 'removed') {
+              savedGpx.delete(ch.doc.id)
+              h.raceRemoved(ch.doc.id)
+            } else if (!ch.doc.metadata.hasPendingWrites) {
+              loadRace(ch.doc.id, ch.doc.data() as RaceMeta).then(h.raceUpsert, (e) => h.error(e))
+            }
+          }
+        },
+        (e) => h.error(e),
+      )
+      return () => {
+        unUser()
+        unRaces()
+      }
     },
     async saveRace(r) {
       const { gpxText, ...rest } = r
@@ -187,7 +284,27 @@ export function cloudStore(user: User): Store {
       await batch.commit()
       savedGpx.delete(id)
     },
+    async deleteAll() {
+      const races = await getDocs(racesCol)
+      for (const r of races.docs) await this.deleteRace(r.id)
+      const batch = writeBatch(fs)
+      batch.delete(userDoc)
+      await batch.commit()
+    },
   }
+}
+
+/**
+ * Déconnexion « appareil partagé » : efface aussi le cache Firestore local,
+ * pour que la personne suivante ne puisse pas voir les données du compte.
+ */
+export async function signOutAndClear() {
+  if (auth) await signOut(auth)
+  if (db) {
+    await terminate(db)
+    await clearIndexedDbPersistence(db).catch(() => undefined)
+  }
+  window.location.reload()
 }
 
 /** Sauvegarde complète en JSON (pour export / import manuel). */

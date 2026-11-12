@@ -70,6 +70,8 @@ export interface Athlete {
   durability: Durability
   /** Historique des tests de VC. */
   history: CsTestRecord[]
+  /** Dernière modification (ISO), pour départager les appareils. */
+  updatedAt?: string
 }
 
 export interface CsTestRecord {
@@ -106,6 +108,8 @@ export interface EnvSettings {
     threshold: number
     /** Pénalité par °C au-dessus du seuil (ex. 0.01). */
     perDeg: number
+    /** Origine des températures (ex. « Prévision du 12/11… »), vide si saisie manuelle. */
+    note?: string
   }
   altitude: {
     enabled: boolean
