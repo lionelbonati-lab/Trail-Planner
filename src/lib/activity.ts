@@ -20,6 +20,55 @@ export interface Activity {
   hr: Float64Array
 }
 
+// --- Tours retenus pour les analyses ----------------------------------------------
+
+/**
+ * Portions de la séance retenues pour les analyses, en secondes écoulées depuis le départ
+ * (tours de la montre choisis) ; null = toute la séance.
+ */
+export type Portions = [number, number][] | null
+
+export const inPortions = (p: Portions, elapsedSec: number): boolean => !p || p.some(([a, b]) => elapsedSec >= a && elapsedSec <= b)
+
+/** Portions correspondant aux tours cochés (null si tous le sont). */
+export function lapPortions(act: Activity, keep: boolean[]): Portions {
+  if (!act.laps.length || act.laps.every((_, i) => keep[i] !== false)) return null
+  return act.laps.flatMap((l, i): [number, number][] => {
+    if (keep[i] === false) return []
+    const t0 = (l.start - act.start) / 1000
+    return [[t0, t0 + l.elapsed]]
+  })
+}
+
+/** Tours retenus d'office : tous sauf l'échauffement et le retour au calme marqués par la montre. */
+export function defaultLapKeep(act: Activity): boolean[] {
+  const keep = act.laps.map((l) => l.intensity !== 'warmup' && l.intensity !== 'cooldown')
+  return keep.some(Boolean) ? keep : act.laps.map(() => true)
+}
+
+/** Sans échauffement ni retour au calme : tours marqués par la montre, sinon premier et dernier tours. */
+export function lapKeepWithoutEnds(act: Activity): boolean[] {
+  const n = act.laps.length
+  if (act.laps.some((l) => l.intensity === 'warmup' || l.intensity === 'cooldown')) return defaultLapKeep(act)
+  return act.laps.map((_, i) => n < 3 || (i > 0 && i < n - 1))
+}
+
+/** Distance le long de la trace (m) au temps écoulé `sec`. */
+export function distAtElapsed(act: Activity, sec: number): number {
+  const rawTotal = act.dist[act.dist.length - 1] || 1
+  let lo = 0
+  let hi = act.elapsed.length - 1
+  if (sec <= 0) return 0
+  if (sec >= act.elapsed[hi]) return act.track.totalDist
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (act.elapsed[mid] <= sec) lo = mid
+    else hi = mid
+  }
+  const f = (sec - act.elapsed[lo]) / (act.elapsed[hi] - act.elapsed[lo] || 1)
+  return ((act.dist[lo] + f * (act.dist[hi] - act.dist[lo])) / rawTotal) * act.track.totalDist
+}
+
 /** Lit un fichier d'activité (GPX ou FIT) ; il doit être horodaté. */
 export function readActivity(fileName: string, bytes: Uint8Array): Activity {
   let raw: RawPoint[]
@@ -126,7 +175,7 @@ interface Seg {
 
 const SEG = 200
 
-function segments(a: Activity, env: EnvSettings): Seg[] {
+function segments(a: Activity, env: EnvSettings, portions: Portions = null): Seg[] {
   const out: Seg[] = []
   const pts = a.track.points
   for (let s = 0; s + SEG <= a.track.totalDist; s += SEG) {
@@ -135,7 +184,7 @@ function segments(a: Activity, env: EnvSettings): Seg[] {
     const t0 = timesAt(a, s)
     const t1 = timesAt(a, s + SEG)
     const dt = t1.moving - t0.moving
-    if (dt <= 1) continue
+    if (dt <= 1 || !inPortions(portions, (t0.elapsed + t1.elapsed) / 2)) continue
     const mid = pts[Math.min(pts.length - 1, Math.round((s + SEG / 2) / 20))]
     const e = environment(env, {
       ms: a.start + ((t0.elapsed + t1.elapsed) / 2) * 1000,
@@ -228,9 +277,14 @@ export interface Analysis {
   intensity: [number, number][]
 }
 
-export function analyzeActivity(a: Activity, athlete: Athlete, baseEnv: EnvSettings): Analysis {
+/**
+ * Analyse d'une activité. `portions` : tours retenus (échauffement et retour au calme exclus,
+ * par exemple) pour l'intensité au fil des heures et les mesures par pente ; l'écart à la
+ * prévision porte toujours sur toute la séance.
+ */
+export function analyzeActivity(a: Activity, athlete: Athlete, baseEnv: EnvSettings, portions: Portions = null): Analysis {
   const env = analysisEnv(a.start, baseEnv)
-  const segs = segments(a, env)
+  const segs = segments(a, env, portions)
   const intensity = intensityBins(segs, athlete)
   const fitted = fitDurability(intensity, athlete.durability) ?? athlete.durability
   const sim = simulate(a.track, athlete, { mode: 'physio', kme: { upPer1km: 100, downPer1km: 0 }, env, checkpoints: [], techOverrides: [] })
@@ -329,6 +383,7 @@ export function calibrateOnActivity(
   current: Activity,
   currentRecord: ActivityRecord,
   baseEnv: EnvSettings,
+  portions: Portions = null,
 ): Calibration {
   const cal = calibrateFromActivities(athlete, records)
   const env = analysisEnv(current.start, baseEnv)
@@ -337,19 +392,31 @@ export function calibrateOnActivity(
     ...cal.athlete,
     durability: { ...d0, pct1h: d0.pct1h * m, basePct: d0.basePct * m },
   })
-  const run = (m: number) =>
-    simulate(current.track, withScale(m), { mode: 'physio', kme: { upPer1km: 100, downPer1km: 0 }, env, checkpoints: [], techOverrides: [] }).totalTime
+  // Niveau ajusté sur les tours retenus seulement (la simulation couvre toute la séance, pour
+  // garder l'heure de course de chaque portion).
+  const spans: [number, number][] = portions
+    ? portions.map(([a, b]) => [distAtElapsed(current, a), distAtElapsed(current, b)])
+    : [[0, current.track.totalDist]]
+  const actual = portions ? spans.reduce((t, [a, b]) => t + timesAt(current, b).moving - timesAt(current, a).moving, 0) : currentRecord.moving
+  const run = (m: number) => {
+    const sim = simulate(current.track, withScale(m), { mode: 'physio', kme: { upPer1km: 100, downPer1km: 0 }, env, checkpoints: [], techOverrides: [] })
+    if (!portions) return sim.totalTime
+    const tAt = (d: number) => sim.points[Math.min(sim.points.length - 1, Math.round(d / 20))].t
+    return spans.reduce((t, [a, b]) => t + tAt(b) - tAt(a), 0)
+  }
   let lo = 0.8
   let hi = 1.2
-  if (run(hi) <= currentRecord.moving && run(lo) >= currentRecord.moving) {
+  if (actual > 0 && run(hi) <= actual && run(lo) >= actual) {
     for (let i = 0; i < 30; i++) {
       const mid = (lo + hi) / 2
-      if (run(mid) > currentRecord.moving) lo = mid
+      if (run(mid) > actual) lo = mid
       else hi = mid
     }
     const m = (lo + hi) / 2
     if (Math.abs(m - 1) > 0.002) {
-      cal.changes.push(`Niveau ajusté de ${m > 1 ? '+' : ''}${((m - 1) * 100).toFixed(1)} % pour retrouver le temps en mouvement de « ${current.name} ».`)
+      cal.changes.push(
+        `Niveau ajusté de ${m > 1 ? '+' : ''}${((m - 1) * 100).toFixed(1)} % pour retrouver le temps en mouvement de « ${current.name} »${portions ? ' (tours retenus)' : ''}.`,
+      )
     }
     return { athlete: withScale(m), changes: cal.changes }
   }

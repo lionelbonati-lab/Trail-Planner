@@ -13,6 +13,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   prévu vs réalisé, intensité au fil des heures,
   VAM et descente mesurées par tranche de pente, comparaison point par point avec un plan,
   calibration du profil et historique des courses.
+- **Tours analysés** : choix des tours de la montre utilisés par les analyses (temps par zone, intensité, découplage,
+  mesures par pente, calibration) ; échauffement et retour au calme exclus d'office quand la montre les marque
+  (entraînement structuré), sinon en un clic (premier et dernier tours).
 - **Durabilité** (Maunder et al., 2021 ; Hunter et al., 2025, synthèse courir-mieux.fr) : **découplage cardiaque** des
   séances d'au moins 1 h avec FC (FC / vitesse ramenée au plat par fenêtres de 10 min, fin comparée à 10–30 min),
   début de la dérive et vitesse de dérive (droite brisée palier puis hausse), suivi dans l'évolution ; carte Durabilité
