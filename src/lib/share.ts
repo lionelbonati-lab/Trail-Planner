@@ -38,6 +38,8 @@ export interface ShareSnapshot {
   w: string
   /** Code montre si cette course est sur la montre : suivi envoyé par la montre (live/{code}). */
   liveRef: string | null
+  /** Réglages du datafield EndurancePro (document du code montre seulement, voir endurancepro.ts). */
+  ep?: string
 }
 
 export function buildSnapshot(

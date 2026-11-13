@@ -1,11 +1,22 @@
+import { useState } from 'react'
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES, hrZonesFromMax } from '../lib/defaults'
-import { colorForIndex } from '../lib/zones'
-import type { Athlete, DescentPoint, Durability, HrZone, Product, TrainingZone, VamPoint } from '../lib/types'
+import { climbEquivalence, epPayload } from '../lib/endurancepro'
+import { colorForIndex, wholeRouteZone } from '../lib/zones'
+import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
 
-export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
+export function AthletePanel({
+  athlete,
+  onChange,
+  garmin,
+}: {
+  athlete: Athlete
+  onChange: (a: Athlete) => void
+  /** Connexion (la synchro passe par le compte) et course/séance envoyée à la montre. */
+  garmin?: { signedIn: boolean; onWatch: Race | null }
+}) {
   const set = <K extends keyof Athlete>(k: K, v: Athlete[K]) => onChange({ ...athlete, [k]: v })
   const setDur = (patch: Partial<Durability>) => set('durability', { ...athlete.durability, ...patch })
   const d = athlete.durability
@@ -183,6 +194,8 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
         </Hint>
       </Card>
 
+      <EndurancePro athlete={athlete} onChange={onChange} signedIn={!!garmin?.signedIn} onWatch={garmin?.onWatch ?? null} />
+
       <Card title="Produits de nutrition" className="span2">
         <Hint>
           Tes produits habituels et la part des glucides que chacun apporte : le plan nutrition de chaque course en déduit
@@ -316,5 +329,82 @@ function PointTable<T extends object>({
         </tr>
       </tbody>
     </table>
+  )
+}
+
+/** Synchronisation du datafield Garmin EndurancePro : VC, zones, équivalence montée, zone d'alarme. */
+function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athlete; onChange: (a: Athlete) => void; signedIn: boolean; onWatch: Race | null }) {
+  const [copied, setCopied] = useState(false)
+  const on = !!athlete.epSync
+  const up = climbEquivalence(athlete)
+  const k = onWatch ? wholeRouteZone(onWatch.zones, athlete) : null
+  const sorted = [...athlete.zones].sort((a, b) => a.low - b.low).slice(0, 7)
+  const toggle = (v: boolean) =>
+    onChange({ ...athlete, epSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
+  const copy = () => {
+    if (!athlete.watchId) return
+    navigator.clipboard?.writeText(athlete.watchId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <Card title="Montre Garmin : EndurancePro" className="span2">
+      <Hint>
+        Ton datafield EndurancePro colore ton allure selon tes zones de VC et sonne quand tu sors de la zone visée. Avec la
+        synchronisation, il reprend tout seul ta VC, tes zones, l'équivalence montée déduite de ta VAM et la zone de la séance
+        envoyée à la montre : à chaque mise à jour ici, la montre suit (au lancement d'une activité, puis toutes les 30 min, téléphone
+        connecté).
+      </Hint>
+      <label className="check">
+        <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser EndurancePro avec ce profil
+      </label>
+      {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
+      {on && signedIn && athlete.watchId && (
+        <>
+          <div className="row">
+            <span>Code à saisir dans les réglages d'EndurancePro (« Code Trail Planner ») :</span>
+            <code className="watch-code">{athlete.watchId}</code>
+            <button className="ghost" onClick={copy}>{copied ? 'Copié ✓' : 'Copier'}</button>
+          </div>
+          <Hint>
+            Sur ton téléphone : appli Garmin Connect › ta montre › Activités et applications › EndurancePro › Paramètres › Code Trail
+            Planner. C'est le même code que pour le champ Trail Planner. Après la première synchro, EndurancePro passe en référence
+            « Zones VC » (dossier Allure du menu montre, modifiable).
+          </Hint>
+        </>
+      )}
+      <table className="table compact">
+        <tbody>
+          <tr><td>Vitesse critique</td><td><strong>{formatPace(1000 / athlete.cs)}/km</strong> <span className="muted">({(athlete.cs * 3.6).toFixed(2)} km/h)</span></td></tr>
+          <tr>
+            <td>Zones</td>
+            <td>
+              {sorted.map((z, i) => (
+                <span key={i} className="ep-zone">
+                  <i className="zone-swatch" style={{ background: colorForIndex(athlete.zones.indexOf(z), athlete) }} />
+                  {z.name.replace(/^Zone\s*/i, 'Z')} {Math.round(z.low * 100)}–{Math.round(z.high * 100)} %
+                </span>
+              ))}
+            </td>
+          </tr>
+          <tr>
+            <td>Équivalence montée</td>
+            <td>{up ? <><strong>{up} m</strong> de D+ = 1 km à plat <span className="muted">(d'après ta VAM à VC ; défaut EndurancePro : 100 m)</span></> : '—'}</td>
+          </tr>
+          <tr>
+            <td>Alarme au-dessus de</td>
+            <td>
+              {k !== null && onWatch ? (
+                <><strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} », envoyée à la montre)</span></>
+              ) : (
+                <span className="muted">inchangée (réglée sur la montre) : envoie à la montre une séance avec une zone sur tout le parcours pour la régler d'ici</span>
+              )}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      {on && <p className="muted small">Données publiées : <code>{epPayload(athlete, onWatch)}</code></p>}
+    </Card>
   )
 }
