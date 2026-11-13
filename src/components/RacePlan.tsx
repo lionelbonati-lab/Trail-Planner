@@ -69,6 +69,7 @@ export function RacePlan({
   onChange,
   onAthleteChange,
   onLive,
+  onRedraw,
   share,
   watch,
   library,
@@ -78,6 +79,8 @@ export function RacePlan({
   onChange: (r: Race) => void
   onAthleteChange: (a: Athlete) => void
   onLive?: () => void
+  /** Ouvre le traceur pour modifier le parcours sur la carte. */
+  onRedraw?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
   watch?: { available: boolean; code: string | null; active: boolean; activate: () => void }
   library?: { kind: RaceKind; addToLibrary: () => void; planSession: (start: string) => void }
@@ -245,6 +248,11 @@ export function RacePlan({
               )}
               {library && library.kind !== 'route' && (
                 <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement">📚 Ajouter à la bibliothèque</button>
+              )}
+              {onRedraw && (
+                <button onClick={onRedraw} title={race.drawn ? 'Modifier le tracé sur la carte' : 'Rendre la trace modifiable sur la carte (découpée en points à déplacer)'}>
+                  ✏️ Modifier le tracé
+                </button>
               )}
               {onLive && <button className={library?.kind === 'route' ? '' : 'primary'} onClick={onLive}>▶ Mode course</button>}
               {share && (

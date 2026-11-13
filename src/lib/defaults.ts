@@ -107,6 +107,7 @@ export function newRace(name: string, gpxText: string): Race {
     weather: null,
     live: null,
     shareId: null,
+    drawn: null,
     updatedAt: new Date().toISOString(),
   }
 }
