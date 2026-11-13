@@ -10,6 +10,18 @@ const swiss = (layer: string, ext: string) => `https://wmts.geo.admin.ch/1.0.0/$
 
 const MAX_ZOOM = 19
 
+/**
+ * Couleur des tracés sur les cartes : magenta, presque absent des cartes topo (forêts vertes,
+ * routes rouges ou orange, eau bleue) et lisible sur les photos aériennes, avec un liseré blanc.
+ */
+export const ROUTE_COLOR = '#e0007a'
+export const ROUTE_CASING = '#ffffff'
+
+/** Liseré blanc posé sous un tracé de largeur `weight`. */
+export function routeCasing(latlngs: L.LatLngExpression[], weight: number): L.Polyline {
+  return L.polyline(latlngs, { color: ROUTE_CASING, weight: weight + 4, opacity: 0.9, interactive: false, lineJoin: 'round', lineCap: 'round' })
+}
+
 export const LAYERS: Record<string, () => L.TileLayer> = {
   'Plan IGN (France)': () =>
     L.tileLayer(ign('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'image/png'), {

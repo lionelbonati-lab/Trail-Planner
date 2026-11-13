@@ -66,7 +66,7 @@ import {
 import { formatDuration, formatPace } from '../lib/time'
 import type { Athlete, PaceZone, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { colorForIndex, MODEL_COLOR, wholeRoute, wholeRouteZone, zoneTarget, type Target } from '../lib/zones'
-import { addLayers } from './mapLayers'
+import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 import { Num } from './ui'
 
 export interface DrawResult {
@@ -119,7 +119,7 @@ type Sel = { kind: 'wp'; k: number } | { kind: 'seg'; k: number; lat: number; lo
 const DRAFT_KEY = 'tp-draw-draft'
 const VIEW_KEY = 'tp-draw-view'
 const MODE_KEY = 'tp-draw-mode'
-const ACCENT = '#2f6b4f'
+const ACCENT = ROUTE_COLOR
 const SELECTED = '#f39c12'
 /** Durée de l'appui (doigt) pour poser un point. */
 const HOLD_MS = 350
@@ -654,9 +654,12 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
       const picked = sel?.kind === 'seg' && sel.k === k
       const latlngs: [number, number][] = s.status === 'ok' ? s.points.map((p) => [p.lat, p.lon]) : [[a.lat, a.lon], [b.lat, b.lon]]
       const straight = b.mode === 'line' || (s.status === 'ok' && s.offroad)
+      const weight = s.status === 'ok' ? (picked ? 7 : 5) : 3
+      // Liseré blanc dessous : le tracé ressort sur les forêts, le relief et les photos aériennes.
+      routeCasing(latlngs, weight).addTo(g)
       L.polyline(latlngs, {
         color: s.status === 'error' ? '#c0392b' : s.status === 'loading' ? '#8a8f88' : picked ? SELECTED : ACCENT,
-        weight: s.status === 'ok' ? (picked ? 7 : 5) : 3,
+        weight,
         opacity: 0.95,
         dashArray: s.status !== 'ok' ? '4 6' : straight ? '9 7' : undefined,
         interactive: false,
@@ -1448,7 +1451,7 @@ function MiniProfile({
         role="img"
         aria-label="Profil d'altitude du tracé"
       >
-        <path d={path} fill="rgba(47,107,79,0.18)" stroke={ACCENT} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+        <path d={path} fill="rgba(224,0,122,0.12)" stroke={ACCENT} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
         {marks.map((m) => (
           <line key={m.label} x1={px(m.d)} x2={px(m.d)} y1={0} y2={H} stroke={ACCENT} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
         ))}

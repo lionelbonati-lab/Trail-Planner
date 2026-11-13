@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { indexAt } from '../lib/gpx'
 import { formatClock } from '../lib/time'
 import type { SplitRow, Track } from '../lib/types'
-import { addLayers } from './mapLayers'
+import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 
 interface Props {
   track: Track
@@ -31,8 +31,9 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick }: 
     const m = L.map(el.current, { scrollWheelZoom: false })
     const latlngs = track.points.map((p) => [p.lat, p.lon] as [number, number])
     addLayers(m, latlngs[0])
-    const line = L.polyline(latlngs, { color: '#2f6b4f', weight: 4, opacity: 0.9 }).addTo(m)
-    L.circleMarker(latlngs[0], { radius: 6, color: '#2f6b4f', fillColor: '#ffffff', fillOpacity: 1, weight: 3 }).bindTooltip('Départ').addTo(m)
+    routeCasing(latlngs, 4).addTo(m)
+    const line = L.polyline(latlngs, { color: ROUTE_COLOR, weight: 4, opacity: 0.95 }).addTo(m)
+    L.circleMarker(latlngs[0], { radius: 6, color: '#ffffff', fillColor: '#2f6b4f', fillOpacity: 1, weight: 3 }).bindTooltip('Départ').addTo(m)
     m.fitBounds(line.getBounds(), { padding: [20, 20] })
     line.on('click', (e: L.LeafletMouseEvent) => {
       let best = 0
@@ -65,7 +66,7 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick }: 
       const ravito = s.cp.kind === 'ravito'
       L.circleMarker([p.lat, p.lon], {
         radius: ravito ? 7 : 4,
-        color: ravito ? '#c0571b' : '#2f6b4f',
+        color: ravito ? '#ffffff' : '#1f2420',
         fillColor: ravito ? '#c0571b' : '#ffffff',
         fillOpacity: 1,
         weight: 2,
