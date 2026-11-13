@@ -300,6 +300,15 @@ export default function App() {
       )
     }
   }
+  // Montre : un document partagé fixe par compte (code saisi une fois sur la montre),
+  // qui contient la course choisie.
+  const sendToWatch = (race: Race) => {
+    // Sans tirets : plus simple à saisir dans les réglages Garmin.
+    const watchId = athlete.watchId ?? crypto.randomUUID().replace(/-/g, '')
+    const next = { ...athlete, watchId, watchRaceId: race.id }
+    updateAthlete(next)
+    publish(race, next, watchId).catch((e) => setError(`Envoi à la montre impossible : ${(e as Error).message}`))
+  }
   const unshareRace = async (race: Race) => {
     if (!race.shareId) return
     await cloud?.deleteShare(race.shareId).catch(() => undefined)
@@ -311,6 +320,8 @@ export default function App() {
     if (!user) return
     const id = setTimeout(() => {
       for (const r of races) if (r.shareId) publish(r, athlete, r.shareId).catch(() => undefined)
+      const onWatch = races.find((r) => r.id === athlete.watchRaceId)
+      if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId).catch(() => undefined)
     }, 5000)
     return () => clearTimeout(id)
   }, [races, athlete, user, publish])
@@ -360,6 +371,12 @@ export default function App() {
                 url: current.shareId ? shareUrl(current.shareId) : null,
                 create: () => shareRace(current),
                 remove: () => unshareRace(current),
+              }}
+              watch={{
+                available: !!user,
+                code: athlete.watchId ?? null,
+                active: athlete.watchRaceId === current.id && !!athlete.watchId,
+                activate: () => sendToWatch(current),
               }}
             />
           </>

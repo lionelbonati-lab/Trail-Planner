@@ -1,0 +1,7 @@
+<strings>
+    <string id="AppName">Trail Planner</string>
+    <string id="CodeTitle">Code montre</string>
+    <string id="CodePrompt">Code affiché par l'app web (bouton « Mettre sur la montre »)</string>
+    <string id="FuelTitle">Rappel nutrition (min) : -1 = selon le plan, 0 = désactivé</string>
+    <string id="VibrateTitle">Vibrations</string>
+</strings>

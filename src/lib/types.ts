@@ -74,6 +74,10 @@ export interface Athlete {
   activities: ActivityRecord[]
   /** Produits de nutrition habituels. */
   products: Product[]
+  /** Code montre (identifiant du document partagé lu par le champ de données Garmin). */
+  watchId?: string
+  /** Course actuellement envoyée à la montre. */
+  watchRaceId?: string
   /** Dernière modification (ISO), pour départager les appareils. */
   updatedAt?: string
 }
