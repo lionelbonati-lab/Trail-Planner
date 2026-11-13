@@ -401,6 +401,8 @@ tr.muted td { color: var(--muted); }
   .draw-panel.sheet-mini .draw-head, .draw-panel.sheet-mini .draw-status, .draw-panel.sheet-mini .draw-more,
   .draw-panel.sheet-mini .draw-toolbar, .draw-panel.sheet-mini .draw-menu, .draw-panel.sheet-mini .pace-chip { display: none; }
   .draw-panel.sheet-peek .draw-more { display: none; }
+  .draw-panel.sheet-mini .draw-profile { display: none; }
+  .draw-panel.dragging .draw-profile { display: block; }
   .draw-panel.sheet-full { height: 78vh; }
   .draw-panel.dragging { max-height: none; overflow: hidden; }
   .draw-panel.dragging .draw-head, .draw-panel.dragging .draw-toolbar { display: flex; }
@@ -473,3 +475,20 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 .draw-toolbar .tb.flagged { position: relative; }
 .draw-toolbar .tb.flagged::after { content: ''; position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: #f39c12; }
+
+/* Points de repère : pastilles lettrées, noms modifiables */
+.wp-mark { background: #2f6b4f; border: 2px solid #fff; font: 700 12px/1 system-ui, sans-serif; }
+.wp-row { display: grid; grid-template-columns: 26px 1fr auto; grid-template-areas: "dot name time" "dot info time"; column-gap: 10px; row-gap: 2px; align-items: center; }
+.wp-row .wp-dot { grid-area: dot; width: 24px; height: 24px; border-radius: 50%; border: none; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 12px; }
+.wp-row .wp-dot.wp-mark { background: #2f6b4f; }
+.wp-row .wp-dot.wp-start { background: #2f6b4f; }
+.wp-row .wp-dot.wp-end { background: #1f2420; }
+.wp-row .wp-dot .svg-inline { width: 13px; height: 13px; }
+.wp-row input.wp-name { grid-area: name; border: none; background: var(--accent-soft); border-radius: 8px; padding: 4px 8px; font-weight: 600; color: var(--accent); width: 100%; min-width: 0; }
+.wp-row input.wp-name::placeholder { color: var(--accent); opacity: 0.85; }
+.wp-row .muted { grid-area: info; padding-left: 8px; }
+.wp-seg { cursor: default; }
+.draw-profile { margin-top: 4px; }
+.mini-profile { position: relative; }
+.mini-profile-marks { position: relative; height: 16px; }
+.mini-profile-marks span { position: absolute; transform: translateX(-50%); top: 0; width: 16px; height: 16px; border-radius: 50%; background: #2f6b4f; color: #fff; font: 700 10px/16px system-ui, sans-serif; text-align: center; }

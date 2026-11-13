@@ -4,6 +4,8 @@ import {
   ArrowDownUp,
   ArrowLeft,
   ArrowLeftRight,
+  Bookmark,
+  BookmarkX,
   Check,
   ChevronDown,
   Eraser,
@@ -67,6 +69,8 @@ export interface DrawResult {
   total: number
   /** Zones d'allure à enregistrer avec le parcours, ou null pour garder celles de la course. */
   zones: PaceZone[] | null
+  /** Points de repère : deviennent des points de passage de la course. */
+  marks: { name: string; dist: number }[]
 }
 
 /** Allure simulée : modèle de course, zones déjà placées sur le parcours, ou une zone du profil (indice). */
@@ -149,7 +153,7 @@ function initialState(race: Race | null, a: Athlete): { wps: Waypoint[]; cache: 
     try {
       const raw = gpxRawPoints(race.gpxText).map((p) => ({ lat: p.lat, lon: p.lon, ele: p.ele }))
       const drawn = race.drawn?.waypoints.length && race.drawn.waypoints[race.drawn.waypoints.length - 1].i < raw.length ? race.drawn : drawnFromRaw(raw)
-      wps = drawn.waypoints.map(({ lat, lon, mode }) => ({ lat, lon, mode }))
+      wps = drawn.waypoints.map(({ lat, lon, mode, mark, name }) => ({ lat, lon, mode, ...(mark ? { mark } : {}), ...(name ? { name } : {}) }))
       splitByWaypoints(raw, drawn.waypoints.map((w) => w.i)).forEach((points, k) => {
         cache.set(segmentKey(wps[k], wps[k + 1], wps[k + 1].mode), { status: 'ok', points })
       })
@@ -172,10 +176,10 @@ const svgIcon = (body: string) =>
 const PIN_SVG = svgIcon('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>')
 const FLAG_SVG = svgIcon('<path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/>')
 
-function wpIcon(k: number, n: number, selected: boolean): L.DivIcon {
-  const role = k === 0 ? 'start' : k === n - 1 ? 'end' : 'mid'
+function wpIcon(k: number, n: number, selected: boolean, letter: string | null): L.DivIcon {
+  const role = k === 0 ? 'start' : k === n - 1 ? 'end' : letter ? 'mark' : 'mid'
   const size = role === 'mid' ? 16 : 26
-  const html = role === 'start' ? PIN_SVG : role === 'end' ? FLAG_SVG : ''
+  const html = role === 'start' ? PIN_SVG : role === 'end' ? FLAG_SVG : role === 'mark' ? letter! : ''
   return L.divIcon({ className: `wp-icon wp-${role}${selected ? ' wp-sel' : ''}`, html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] })
 }
 
@@ -254,6 +258,17 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   const errorAt = segs.findIndex((s) => s.status === 'error')
   const offroadCount = segs.filter((s) => s.status === 'ok' && s.offroad).length
   const loop = wps.length > 2 && same(wps[0], wps[wps.length - 1])
+  // Points listés : départ, repères, arrivée.
+  const listed = useMemo(() => wps.map((_, k) => k).filter((k) => k === 0 || k === wps.length - 1 || wps[k].mark), [wps])
+  // Points de repère (lettres A, B… dans l'ordre du parcours) ; les autres points ne servent qu'à former le tracé.
+  const letters = useMemo(() => {
+    const out = new Map<number, string>()
+    let n = 0
+    wps.forEach((w, k) => {
+      if (w.mark && k > 0 && k < wps.length - 1) out.set(k, String.fromCharCode(65 + (n++ % 26)))
+    })
+    return out
+  }, [wps])
 
   const joined = useMemo(() => (ready ? joinSegments(segs.map((s) => (s as { points: RawPoint[] }).points)) : null), [segs, ready])
   const track = useMemo<Track | null>(() => {
@@ -406,16 +421,17 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       change(wps.map((w, j) => (j === k || (loop && k === 0 && j === wps.length - 1) ? { ...w, lat, lon } : w))),
     // Sur le départ d'une boucle : ouvre la boucle.
     remove: (k: number) => change(loop && k === 0 ? wps.slice(0, -1) : wps.filter((_, j) => j !== k)),
-    insert: (k: number, lat: number, lon: number) => {
+    insert: (k: number, lat: number, lon: number, mark = false) => {
       const s = segs[k]
       const b = wps[k + 1]
+      const flag = mark ? { mark: true } : {}
       if (s?.status !== 'ok' || s.points.length < 3) {
-        change([...wps.slice(0, k + 1), { lat, lon, mode: b.mode }, ...wps.slice(k + 1)])
+        change([...wps.slice(0, k + 1), { lat, lon, mode: b.mode, ...flag }, ...wps.slice(k + 1)])
         return
       }
       // Le nouveau point est posé sur le tracé : les deux moitiés gardent leur géométrie.
       const i = Math.min(s.points.length - 2, Math.max(1, nearestIndex(s.points, lat, lon)))
-      const p = { lat: s.points[i].lat, lon: s.points[i].lon, mode: b.mode }
+      const p = { lat: s.points[i].lat, lon: s.points[i].lon, mode: b.mode, ...flag }
       cache.current.set(segmentKey(wps[k], p, b.mode), { status: 'ok', points: s.points.slice(0, i + 1), offroad: s.offroad })
       cache.current.set(segmentKey(p, b, b.mode), { status: 'ok', points: s.points.slice(i), offroad: s.offroad })
       change([...wps.slice(0, k + 1), p, ...wps.slice(k + 1)])
@@ -443,6 +459,22 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       history.current.push(wps)
       setWps(next)
       setSel(null)
+    },
+    /** Point de repère ou simple point de tracé. */
+    toggleMark: (k: number) => change(wps.map((w, j) => (j === k ? (w.mark ? { lat: w.lat, lon: w.lon, mode: w.mode } : { ...w, mark: true }) : w))),
+    /** Nom d'un point listé (sans historique : la saisie se fait lettre par lettre). */
+    rename: (k: number, nm: string) =>
+      setWps(wps.map((w, j) => (j === k ? (nm ? { ...w, name: nm } : { lat: w.lat, lon: w.lon, mode: w.mode, ...(w.mark ? { mark: true } : {}) }) : w))),
+    /** Toucher le profil : sélectionne le tronçon à cette distance (pour y poser un repère). */
+    pickDist: (d: number) => {
+      if (!rows || !track) return
+      let k = 0
+      while (k < rows.length - 2 && rows[k + 1].d <= d) k++
+      const p = track.points[indexAt(track.points, d)]
+      setMenu(false)
+      setSel({ kind: 'seg', k, lat: p.lat, lon: p.lon })
+      map.current?.panTo([p.lat, p.lon])
+      if (mobile && sheet === 'full') setSheet('peek')
     },
     deleteSel: () => {
       if (sel?.kind === 'wp') act.remove(sel.k)
@@ -602,7 +634,7 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       const picked = sel?.kind === 'wp' && sel.k === k
       L.marker(k === 0 && loop ? at(0) : at(k), {
         draggable: true,
-        icon: wpIcon(k, loop ? n - 1 : n, picked),
+        icon: wpIcon(k, loop ? n - 1 : n, picked, letters.get(k) ?? null),
         zIndexOffset: picked ? 2000 : k === 0 || k === n - 1 ? 1000 : 0,
         autoPan: true,
         title: k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === n - 1 ? 'Arrivée' : `Point ${k}`,
@@ -614,7 +646,7 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
         .on('click', () => actRef.current.selectWp(k))
         .addTo(mk)
     })
-  }, [segs, wps, loop, sel])
+  }, [segs, wps, loop, sel, letters])
 
   // Bornes kilométriques.
   useEffect(() => {
@@ -715,7 +747,10 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       name: nm,
       kind,
       gpxText: drawnGpx(nm, joined.points),
-      drawn: { waypoints: wps.map((w, k) => ({ ...w, i: joined.starts[k] })) },
+      drawn: {
+        waypoints: wps.map((w, k) => ({ lat: w.lat, lon: w.lon, mode: w.mode, i: joined.starts[k], ...(w.mark ? { mark: true } : {}), ...(w.name ? { name: w.name } : {}) })),
+      },
+      marks: rows ? [...letters].map(([k, letter]) => ({ name: wps[k].name || `Repère ${letter}`, dist: Math.round(rows[k].d) })) : [],
       total: track.totalDist,
       // Zone du profil : tout le parcours dans cette zone ; allure de course : aucune zone.
       zones: typeof pace === 'number' ? paceZones(zoneTarget(athlete, pace)) : pace === 'model' ? [] : null,
@@ -768,7 +803,9 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   const floatBottom = (mobile ? sheetH : 0) + 12
   const paceLabel = pace === 'model' ? 'Course' : pace === 'route' ? 'Zones' : (athlete.zones[pace]?.name ?? '').replace(/^Zone\s*/i, 'Z')
   const paceColor = typeof pace === 'number' ? colorForIndex(pace, athlete) : MODEL_COLOR
-  const wpName = (k: number) => (k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === wps.length - 1 ? 'Arrivée' : `Point ${k}`)
+  const wpName = (k: number) =>
+    wps[k]?.name ||
+    (k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === wps.length - 1 ? 'Arrivée' : letters.has(k) ? `Repère ${letters.get(k)}` : 'Point du tracé')
 
   return (
     <div className="draw-shell" style={{ ['--sheet-h' as string]: `${mobile ? sheetH : 0}px` }}>
@@ -830,10 +867,12 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
           </div>
         )}
 
+        {!(mobile && sheet === 'full') && (
         <div className="draw-fabs" style={{ bottom: floatBottom + 26 }}>
           <button className="fab" onClick={locate} title="Ma position" aria-label="Ma position"><LocateFixed /></button>
           <button className="fab" onClick={fit} disabled={wps.length < 2} title="Voir tout le tracé" aria-label="Voir tout le tracé"><Maximize2 /></button>
         </div>
+        )}
 
         {sel ? (
           <div className="draw-card" style={{ bottom: floatBottom + 26 }}>
@@ -851,6 +890,11 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
                   </div>
                 )}
                 <div className="row tight">
+                  {sel.k > 0 && sel.k < wps.length - 1 && (
+                    <button onClick={() => act.toggleMark(sel.k)}>
+                      {wps[sel.k].mark ? <><BookmarkX /> Retirer le repère</> : <><Bookmark /> Point de repère</>}
+                    </button>
+                  )}
                   <button className="danger-btn" onClick={() => act.remove(sel.k)}>{loop && sel.k === 0 ? <><Repeat2 /> Ouvrir la boucle</> : <><Trash2 /> Supprimer le point</>}</button>
                   <span className="muted small">Glisse le point pour le déplacer</span>
                 </div>
@@ -870,7 +914,10 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
                 {segs[sel.k]?.status === 'ok' && (segs[sel.k] as { offroad?: boolean }).offroad && (
                   <span className="muted small">Hors du réseau de chemins : tracé en ligne droite.</span>
                 )}
-                <button onClick={() => act.insert(sel.k, sel.lat, sel.lon)}><Plus /> Ajouter un point ici</button>
+                <div className="row tight">
+                  <button className="primary" onClick={() => act.insert(sel.k, sel.lat, sel.lon, true)}><Bookmark /> Point de repère ici</button>
+                  <button onClick={() => act.insert(sel.k, sel.lat, sel.lon)}><Plus /> Point de tracé</button>
+                </div>
               </>
             ) : null}
           </div>
@@ -929,6 +976,17 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
             </div>
           )}
 
+          {track && (
+            <div className="draw-profile">
+              <MiniProfile
+                track={track}
+                onHover={setHover}
+                onPick={act.pickDist}
+                marks={rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []}
+              />
+            </div>
+          )}
+
           <div className="draw-more">
             {paceOpen && (
               <div className="pace-pick">
@@ -962,63 +1020,60 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
                 </span>
               </div>
             )}
-            {track && <MiniProfile track={track} onHover={setHover} />}
-
             {wps.length > 0 && (
               <>
                 <h3 className="draw-h">Points de repère</h3>
                 <ol className="wp-list">
-                  {wps.map((w, k) => {
-                    if (loop && k === wps.length - 1 && k > 0) return null
+                  {listed.map((k, j) => {
+                    const w = wps[k]
                     const r = rows?.[k]
-                    const next = rows?.[k + 1]
+                    const nk = listed[j + 1]
+                    const next = nk !== undefined ? rows?.[nk] : undefined
                     const g = r && next && track ? elevationGain(track.points, r.d, next.d) : null
+                    const role = k === 0 ? 'start' : k === wps.length - 1 && !loop ? 'end' : 'mark'
+                    const loopEnd = loop && k === wps.length - 1
                     return (
                       <li key={k}>
-                        <button
-                          className={`wp-row${sel?.kind === 'wp' && sel.k === k ? ' on' : ''}`}
-                          onClick={() => {
-                            act.selectWp(k)
-                            map.current?.panTo([w.lat, w.lon])
-                          }}
-                        >
-                          <span className={`wp-dot wp-${k === 0 ? 'start' : k === wps.length - 1 && !loop ? 'end' : 'mid'}`}>
-                            {k === 0 ? <MapPinIcon /> : k === wps.length - 1 && !loop ? <FlagIcon /> : null}
-                          </span>
-                          <span className="wp-name">{wpName(k)}</span>
+                        <div className={`wp-row${sel?.kind === 'wp' && sel.k === k ? ' on' : ''}`}>
+                          <button
+                            className={`wp-dot wp-${loopEnd ? 'end' : role}`}
+                            onClick={() => {
+                              if (loopEnd) return
+                              act.selectWp(k)
+                              map.current?.panTo([w.lat, w.lon])
+                              if (mobile) setSheet('peek')
+                            }}
+                            aria-label="Voir sur la carte"
+                          >
+                            {role === 'start' && !loopEnd ? <MapPinIcon /> : role === 'end' || loopEnd ? <FlagIcon /> : letters.get(k)}
+                          </button>
+                          <input
+                            className="wp-name"
+                            value={loopEnd ? 'Arrivée (départ)' : (w.name ?? '')}
+                            placeholder={wpName(k)}
+                            readOnly={loopEnd}
+                            onChange={(e) => act.rename(k, e.target.value)}
+                            aria-label="Nom du point"
+                          />
                           <span className="muted">{r ? `${km(r.d)} km · ${Math.round(r.ele)} m` : '…'}</span>
                           <strong className="wp-time">{r?.t !== null && r?.t !== undefined ? shortTime(r.t) : ''}</strong>
-                        </button>
-                        {k < wps.length - 1 && (
-                          <button className="wp-seg" onClick={() => act.selectSeg(k, (w.lat + wps[k + 1].lat) / 2, (w.lon + wps[k + 1].lon) / 2)}>
-                            {(() => {
-                              const Icon = segs[k]?.status === 'ok' && (segs[k] as { offroad?: boolean }).offroad ? Ruler : MODE_ICON[wps[k + 1].mode]
-                              return <Icon className="inline" />
-                            })()}{' '}
+                        </div>
+                        {nk !== undefined && (
+                          <div className="wp-seg">
                             {g && r && next ? (
                               <>
                                 {km(next.d - r.d)} km <TrendingUp className="inline" /> {Math.round(g.dPlus)} m <TrendingDown className="inline" /> {Math.round(g.dMinus)} m
                               </>
                             ) : (
                               '…'
-                            )}{' '}
-                            · {segs[k]?.status === 'ok' && (segs[k] as { offroad?: boolean }).offroad ? 'Hors sentier (auto)' : modeLabel(wps[k + 1].mode)}
-                          </button>
+                            )}
+                          </div>
                         )}
                       </li>
                     )
                   })}
-                  {loop && rows && (
-                    <li>
-                      <span className="wp-row static">
-                        <span className="wp-dot wp-end"><FlagIcon /></span>
-                        <span className="wp-name">Arrivée (départ)</span>
-                        <span className="muted">{km(rows[rows.length - 1].d)} km</span>
-                        <strong className="wp-time">{rows[rows.length - 1].t !== null ? shortTime(rows[rows.length - 1].t!) : ''}</strong>
-                      </span>
-                    </li>
-                  )}
                 </ol>
+                <p className="muted small">Touche le tracé ou le profil pour ajouter un point de repère ; il devient un point de passage de la course.</p>
               </>
             )}
 
@@ -1034,7 +1089,8 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
             <p className="muted small draw-help">
               Pour poser un point : appui maintenu un instant sur la carte (clic sur ordinateur) ; un toucher bref ne pose rien, pour
               déplacer la carte librement. Sur un chemin, le tracé le suit ; hors d'un chemin, il passe automatiquement en ligne droite.
-              Touche un point ou un tronçon pour le supprimer, y ajouter un point ou forcer son mode ; glisse un point pour le déplacer.
+              Touche un point ou un tronçon pour le supprimer, en faire un point de repère, ajouter un point ou forcer son mode ; glisse un
+              point pour le déplacer. Seuls le départ, les points de repère et l'arrivée figurent dans la liste.
               Itinéraires : routeur public BRouter (OpenStreetMap).
               {race && ' Les points de passage au-delà de la nouvelle arrivée sont retirés ; la technicité OSM est à recharger.'}
             </p>
@@ -1077,8 +1133,21 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   )
 }
 
-function MiniProfile({ track, onHover }: { track: Track; onHover: (d: number | null) => void }) {
+function MiniProfile({
+  track,
+  onHover,
+  onPick,
+  marks = [],
+}: {
+  track: Track
+  onHover: (d: number | null) => void
+  /** Toucher bref (sans glisser) : distance touchée (m). */
+  onPick?: (d: number) => void
+  /** Points de repère à marquer sur le profil. */
+  marks?: { d: number; label: string }[]
+}) {
   const [x, setX] = useState<number | null>(null)
+  const down = useRef<number | null>(null)
   const W = 1000
   const H = 140
   const pts = track.points
@@ -1105,6 +1174,17 @@ function MiniProfile({ track, onHover }: { track: Track; onHover: (d: number | n
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
         onPointerMove={move}
+        onPointerDown={(e) => {
+          down.current = e.clientX
+          move(e)
+        }}
+        onPointerUp={(e) => {
+          if (down.current !== null && Math.abs(e.clientX - down.current) < 8 && onPick) {
+            const r = e.currentTarget.getBoundingClientRect()
+            onPick(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * track.totalDist)
+          }
+          down.current = null
+        }}
         onPointerLeave={() => {
           setX(null)
           onHover(null)
@@ -1113,8 +1193,18 @@ function MiniProfile({ track, onHover }: { track: Track; onHover: (d: number | n
         aria-label="Profil d'altitude du tracé"
       >
         <path d={path} fill="rgba(47,107,79,0.18)" stroke={ACCENT} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+        {marks.map((m) => (
+          <line key={m.label} x1={px(m.d)} x2={px(m.d)} y1={0} y2={H} stroke={ACCENT} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+        ))}
         {x !== null && <line x1={x} x2={x} y1={0} y2={H} stroke="#1f2420" strokeWidth={1} vectorEffect="non-scaling-stroke" />}
       </svg>
+      {marks.length > 0 && (
+        <div className="mini-profile-marks" aria-hidden>
+          {marks.map((m) => (
+            <span key={m.label} style={{ left: `${(m.d / track.totalDist) * 100}%` }}>{m.label}</span>
+          ))}
+        </div>
+      )}
       <div className="mini-profile-head muted">
         <span>{Math.round(lo)} m</span>
         <span>{(track.totalDist / 1000).toFixed(1)} km</span>

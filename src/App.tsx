@@ -63,7 +63,7 @@ const rememberSignedIn = (on: boolean) => {
     /* stockage indisponible */
   }
 }
-import type { Athlete, Race, RaceKind } from './lib/types'
+import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 
 type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances' | 'parcours' | 'tracer'
 
@@ -238,11 +238,17 @@ export default function App() {
   }
   // Traceur : nouveau parcours, ou tracé modifié d'une course existante.
   const saveDrawing = async (d: DrawResult, edited: Race | null) => {
+    // Points de repère du tracé → points de passage (« Repère »), sauf s'il y en a déjà un à moins de 100 m.
+    const markPoints = (existing: Checkpoint[]): Checkpoint[] =>
+      d.marks
+        .filter((m) => !existing.some((c) => Math.abs(c.dist - m.dist) < 100))
+        .map((m) => ({ id: crypto.randomUUID(), dist: m.dist, name: m.name, kind: 'info', stopMin: 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }))
     if (edited) {
       const next = { ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name }
-      updateRace(d.zones ? { ...next, zones: d.zones } : next)
+      const checkpoints = [...next.checkpoints, ...markPoints(next.checkpoints)].sort((a, b) => a.dist - b.dist)
+      updateRace({ ...next, checkpoints, ...(d.zones ? { zones: d.zones } : {}) })
       go('races', edited.id)
-    } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [] })
+    } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [], checkpoints: markPoints([]) })
   }
   const removeRace = async (id: string) => {
     setRaces((all) => all.filter((r) => r.id !== id))

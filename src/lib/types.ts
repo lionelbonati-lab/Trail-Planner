@@ -392,6 +392,10 @@ export interface Waypoint {
   lon: number
   /** Mode du segment qui arrive à ce point (sans objet pour le départ). */
   mode: SegMode
+  /** Point de repère (affiché dans la liste, devient un point de passage de la course). */
+  mark?: boolean
+  /** Nom donné au point (départ, arrivée ou repère). */
+  name?: string
 }
 
 /**
