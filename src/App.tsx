@@ -345,7 +345,7 @@ export default function App() {
       if (!plan) return
       const snap = buildSnapshot(user.uid, race, a, plan.track, plan.sim, scenarioWindows(plan.track, a, plan.opts))
       // Document du code montre : réglages EndurancePro en plus du plan (si la synchro est active).
-      if (a.epSync && shareId === a.watchId) snap.ep = epPayload(a, race)
+      if (a.epSync && (shareId === a.watchId || shareId === a.epCode)) snap.ep = epPayload(a, race)
       const key = JSON.stringify({ ...snap, updatedAt: '' })
       if (lastShared.current.get(shareId) === key) return
       await cloud.publishShare(shareId, snap)
@@ -401,8 +401,10 @@ export default function App() {
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
       }
-      // Code court saisi sur la montre : réglages EndurancePro seulement (zone de la course envoyée comprise).
-      if (athlete.epSync && athlete.epCode && cloud) {
+      // Code court saisi sur la montre : plan de la course envoyée (champ Trail Planner) et réglages
+      // EndurancePro, sinon réglages EndurancePro seulement.
+      if (onWatch && athlete.epCode) publish(onWatch, athlete, athlete.epCode).catch(() => undefined)
+      else if (athlete.epSync && athlete.epCode && cloud) {
         const ep = epPayload(athlete, onWatch ?? null)
         const key = `ep:${ep}`
         const code = athlete.epCode
@@ -416,10 +418,10 @@ export default function App() {
     }, 5000)
     return () => clearTimeout(id)
   }, [races, athlete, user, publish, cloud])
-  // Synchro EndurancePro activée : réserve le code à 8 chiffres à saisir sur la montre.
+  // Montre utilisée (course envoyée ou synchro EndurancePro) : réserve le code court à 8 chiffres.
   const reservingEp = useRef(false)
   useEffect(() => {
-    if (!user || !cloud || !athlete.epSync || athlete.epCode || reservingEp.current) return
+    if (!user || !cloud || !(athlete.epSync || athlete.watchId) || athlete.epCode || reservingEp.current) return
     reservingEp.current = true
     cloud
       .reserveEpCode(user.uid)
@@ -429,7 +431,7 @@ export default function App() {
         reservingEp.current = false
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, cloud, athlete.epSync, athlete.epCode])
+  }, [user, cloud, athlete.epSync, athlete.watchId, athlete.epCode])
 
   return (
     <div className="app">
@@ -520,6 +522,7 @@ export default function App() {
               watch={{
                 available: !!user,
                 code: athlete.watchId ?? null,
+                shortCode: athlete.epCode ?? null,
                 active: athlete.watchRaceId === current.id && !!athlete.watchId,
                 activate: () => sendToWatch(current),
               }}

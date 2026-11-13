@@ -102,7 +102,7 @@ export function RacePlan({
   /** Ouvre le traceur pour modifier le parcours sur la carte. */
   onRedraw?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
-  watch?: { available: boolean; code: string | null; active: boolean; activate: () => void }
+  watch?: { available: boolean; code: string | null; shortCode?: string | null; active: boolean; activate: () => void }
   library?: { kind: RaceKind; addToLibrary: () => void; planSession: (start: string) => void }
 }) {
   const [planning, setPlanning] = useState<string | null>(null)
@@ -344,11 +344,24 @@ export function RacePlan({
           {showWatch && (
             <div className="banner info watch-banner">
               <div>
-                <strong>Montre Garmin</strong> — {watch?.active ? 'cette course est sur ta montre' : 'envoi en cours…'}. Code montre (à saisir une seule fois) :{' '}
-                {watchCode ? <code className="watch-code">{watchCode}</code> : <span className="muted">création…</span>}
+                <strong>Montre Garmin</strong> — {watch?.active ? 'cette course est sur ta montre' : 'envoi en cours…'}. Code à saisir sur la
+                montre (une seule fois) :{' '}
+                {watch?.shortCode ? (
+                  <strong className="ep-short">{`${watch.shortCode.slice(0, 4)} ${watch.shortCode.slice(4)}`}</strong>
+                ) : (
+                  <span className="muted">création…</span>
+                )}
+                {watchCode && (
+                  <span className="muted small">
+                    {' '}· code long pour Garmin Connect : <code className="watch-code">{watchCode}</code>
+                  </span>
+                )}
                 <ol className="watch-steps">
                   <li>Installe le champ de données « Trail Planner » sur ta montre.</li>
-                  <li>Saisis ce code dans les réglages du champ (une seule fois, voir le guide d'installation).</li>
+                  <li>
+                    Sur la montre, pendant une activité : appui long sur Haut (menu) › Champs Connect IQ › Trail Planner › Code montre,
+                    saisis les 8 chiffres. Si le champ vient du Store, tu peux aussi coller le code long dans Garmin Connect.
+                  </li>
                   <li>Ajoute le champ à un écran de ton activité Trail.</li>
                   <li>Avant le départ, ouvre l'activité quelques minutes, téléphone à proximité : la montre télécharge la course (contrôle toutes les 5 min). Ensuite, tout fonctionne sans réseau.</li>
                   <li>Pour changer de course, clique « Mettre sur la montre » sur une autre course. Les modifications du plan sont envoyées automatiquement.</li>

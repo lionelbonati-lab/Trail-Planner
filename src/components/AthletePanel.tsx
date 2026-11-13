@@ -528,7 +528,8 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
   return (
     <Card title="Montre Garmin : EndurancePro" className="span2">
       <Hint>
-        Ton datafield EndurancePro colore ton allure selon tes zones de VC et sonne quand tu sors de la zone visée. Avec la
+        EndurancePro garde la colorisation et l'alarme de son allure cible (vert dans la cible, orange et alarme quand tu vas trop
+        vite) ; la cible peut être une allure, une zone de VC ou un % de VC (réglage « Référence » du dossier Allure). Avec la
         synchronisation, il reprend tout seul ta VC, tes zones, les équivalences montée et descente (déduites de ta VAM et de tes coefficients de descente), tes zones VAM et la zone de la séance
         envoyée à la montre : à chaque mise à jour ici, la montre suit (au lancement d'une activité, puis toutes les 30 min, téléphone
         connecté).
@@ -551,8 +552,8 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
           </div>
           <Hint>
             Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis les 8 chiffres puis valide (00000000
-            efface le code). La ligne affiche ensuite « Synchro hh:mm » à chaque mise à jour. Après la première synchro, EndurancePro
-            passe en référence « Zones VC » (dossier Allure, modifiable).
+            efface le code). La ligne affiche ensuite « Synchro hh:mm » à chaque mise à jour. C'est le même code que pour le champ
+            Trail Planner. Une séance envoyée à la montre avec une zone sur tout le parcours devient la cible (référence « Zone VC »).
           </Hint>
           {athlete.watchId && (
             <details className="small">
@@ -625,7 +626,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
             </td>
           </tr>
           <tr>
-            <td>Alarme au-dessus de</td>
+            <td>Zone cible</td>
             <td>
               {k !== null && onWatch ? (
                 <><strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} », envoyée à la montre)</span></>

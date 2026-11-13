@@ -103,7 +103,10 @@ export interface Athlete {
   watchRaceId?: string
   /** Synchroniser le datafield EndurancePro (VC, zones…) via le code montre. */
   epSync?: boolean
-  /** Code court (8 chiffres) à saisir sur la montre dans EndurancePro : document réservé à ses réglages. */
+  /**
+   * Code montre court (8 chiffres), saisi sur la montre dans EndurancePro et dans le champ Trail
+   * Planner : document qui reçoit les réglages EndurancePro et le plan de la course envoyée.
+   */
   epCode?: string
   /** Dernière modification (ISO), pour départager les appareils. */
   updatedAt?: string

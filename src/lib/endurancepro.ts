@@ -1,13 +1,13 @@
 // Réglages publiés pour le datafield Garmin EndurancePro : il les lit en arrière-plan dans le
-// document du code montre (shares/{code}, champ `ep`) et s'en sert pour colorer l'allure et
-// déclencher ses alarmes par zone de vitesse critique.
+// document du code montre (shares/{code}, champ `ep`) : sa cible d'allure peut être une zone ou
+// un % de VC (colorisation et alarme de l'allure cible inchangées).
 //
 //   EP1|cs=247|z=60,70,80,88,96,105,115,150|up=110|dn=330|vz=660,770,880,970,1060|zt=2
 //   cs : VC en s/km · z : bornes des zones en % de VC (N+1 valeurs, 7 zones au plus)
 //   up : m de D+ équivalents à 1 km à plat (allure effort d'EndurancePro)
 //   dn : m de D- équivalents à 1 km à plat (allure effort montagne d'EndurancePro)
 //   vz : seuils VAM en m/h (début de Z1, fin de Z1 à Z4) pour les 5 couleurs VAM de la montre
-//   zt : zone au-dessus de laquelle l'alarme sonne (zone de la séance envoyée à la montre), 0 = inchangée
+//   zt : zone cible (zone de la séance envoyée à la montre), 0 = inchangée
 import type { Athlete, Race } from './types'
 import { epVamThresholds } from './vam'
 import { wholeRouteZone } from './zones'

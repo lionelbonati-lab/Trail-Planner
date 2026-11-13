@@ -43,6 +43,18 @@ describe('encodage Firestore', () => {
     expect(hasNestedArray(athlete)).toBe(true) // c'est bien ce qui faisait échouer la sauvegarde
     expect(hasNestedArray(snap)).toBe(true) // et le partage
   })
+
+  it('course sur la montre : suivi en direct attendu sur le code long et le code court', () => {
+    const race = newRace('Montre', gpx())
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const onWatch = normalizeAthlete({ ...DEFAULT_ATHLETE, watchId: 'a'.repeat(32), epCode: '48203917', watchRaceId: race.id })
+    const snap = buildSnapshot('uid', race, onWatch, plan.track, plan.sim, scenarioWindows(plan.track, onWatch, plan.opts))
+    expect(snap.liveRef).toBe('a'.repeat(32))
+    expect(snap.liveRefShort).toBe('48203917')
+    const other = buildSnapshot('uid', race, { ...onWatch, watchRaceId: 'autre' }, plan.track, plan.sim, scenarioWindows(plan.track, onWatch, plan.opts))
+    expect(other.liveRef).toBeNull()
+    expect(other.liveRefShort).toBeNull()
+  })
 })
 
 import { initializeApp } from 'firebase/app'

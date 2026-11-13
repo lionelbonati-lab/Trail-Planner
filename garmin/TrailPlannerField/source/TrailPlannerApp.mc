@@ -23,6 +23,11 @@ class TrailPlannerApp extends Application.AppBase {
         return [new PlanService()];
     }
 
+    // Réglages sur la montre : saisie du code montre court (8 chiffres), voir SettingsMenu.mc.
+    function getSettingsView() {
+        return [new TrailPlannerSettingsMenu(), new TrailPlannerSettingsDelegate()];
+    }
+
     // Contrôle du plan toutes les 5 minutes (minimum imposé par Garmin) tant qu'un code est saisi.
     function scheduleFetch() as Void {
         if (!(Toybox.System has :ServiceDelegate)) {

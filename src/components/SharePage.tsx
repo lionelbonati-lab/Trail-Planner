@@ -31,20 +31,33 @@ export function SharePage({ shareId }: { shareId: string }) {
       unsub?.()
     }
   }, [shareId])
-  // Suivi envoyé par la montre, si cette course est sur la montre.
+  // Suivi envoyé par la montre, si cette course est sur la montre : avec le code montre long
+  // ou le code court (8 chiffres) ; le relevé le plus récent l'emporte.
   const liveRef = snap?.liveRef ?? null
+  const liveRefShort = snap?.liveRefShort ?? null
   useEffect(() => {
-    if (!liveRef) return
-    let unsub: (() => void) | undefined
+    const refs = [liveRef, liveRefShort].filter((r): r is string => !!r)
+    if (!refs.length) return
+    const latest = new Map<string, WatchReport | null>()
+    const unsubs: (() => void)[] = []
     let cancelled = false
     import('../lib/cloud').then((c) => {
-      if (!cancelled) unsub = c.subscribeLive(liveRef, setReport)
+      if (cancelled) return
+      for (const ref of refs) {
+        unsubs.push(
+          c.subscribeLive(ref, (r) => {
+            latest.set(ref, r)
+            const best = [...latest.values()].reduce<WatchReport | null>((a, b) => (b && (!a || b.t > a.t) ? b : a), null)
+            setReport(best)
+          }),
+        )
+      }
     })
     return () => {
       cancelled = true
-      unsub?.()
+      unsubs.forEach((u) => u())
     }
-  }, [liveRef])
+  }, [liveRef, liveRefShort])
   useEffect(() => {
     const id = setInterval(() => tick((x) => x + 1), 30000)
     return () => clearInterval(id)
