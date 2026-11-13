@@ -30,6 +30,9 @@ class TrailPlannerField extends WatchUi.DataField {
     var alerted = {};         // barrières déjà signalées
     var nextFuel = 0.0;       // temps écoulé (s) du prochain rappel
     var fuelUntil = 0;        // s Unix : affichage du rappel jusqu'à cet instant
+    var passes = {};          // indice du point -> instant de passage (s Unix)
+    var lastElapsed = 0.0;    // pour détecter une nouvelle activité
+    var lastSaved = 0;        // dernier enregistrement du suivi (s Unix)
 
     function initialize() {
         DataField.initialize();
@@ -56,6 +59,7 @@ class TrailPlannerField extends WatchUi.DataField {
         }
         alerted = {};
         nextFuel = 0.0;
+        passes = {};
     }
 
     function fuelInterval() as Number {
@@ -106,6 +110,13 @@ class TrailPlannerField extends WatchUi.DataField {
             }
         }
         dist = d;
+        // Nouvelle activité (temps écoulé revenu en arrière) : on repart de zéro.
+        if (elapsed < lastElapsed - 5) {
+            passes = {};
+            alerted = {};
+            nextFuel = 0.0;
+        }
+        lastElapsed = elapsed;
 
         var planned = plan.plannedAt(d);
         delta = d > 200 ? elapsed - planned : 0.0;
@@ -145,6 +156,18 @@ class TrailPlannerField extends WatchUi.DataField {
             vibrate(true);
         }
 
+        // Passages aux points (pour le suivi de l'assistance).
+        var changed = false;
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (!passes.hasKey(i) && d >= plan.cpDist[i] - 30) {
+                passes.put(i, now);
+                changed = true;
+            }
+        }
+        if (changed || now - lastSaved >= 60) {
+            saveProgress(info, now, d);
+        }
+
         // Rappel nutrition.
         var interval = fuelInterval();
         if (interval > 0) {
@@ -156,6 +179,28 @@ class TrailPlannerField extends WatchUi.DataField {
                 vibrate(false);
             }
         }
+    }
+
+    // Suivi lu par la tâche de fond, qui l'envoie à l'assistance via le téléphone.
+    function saveProgress(info as Activity.Info, now as Number, d as Float) as Void {
+        var p = "";
+        var keys = passes.keys();
+        for (var k = 0; k < keys.size(); k++) {
+            p += (k > 0 ? "," : "") + keys[k] + ":" + passes[keys[k]];
+        }
+        var progress = { "t" => now, "s" => startUnix, "d" => d.toNumber(), "p" => p };
+        var loc = info.currentLocation;
+        if (loc != null) {
+            var deg = loc.toDegrees();
+            progress.put("lat", deg[0].toFloat());
+            progress.put("lon", deg[1].toFloat());
+        }
+        var stats = System.getSystemStats();
+        if (stats != null && stats.battery != null) {
+            progress.put("bat", stats.battery.toNumber());
+        }
+        Application.Storage.setValue("progress", progress);
+        lastSaved = now;
     }
 
     // --- Mise en forme ------------------------------------------------------

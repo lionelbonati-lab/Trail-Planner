@@ -7,7 +7,10 @@ ClimbPro et PacePro continuent de fonctionner) :
 - **prochain point** : nom, distance, heure prévue et heure estimée ;
 - **marge sur la prochaine barrière horaire**, avec vibration si elle passe sous 30 min ;
 - **rappels nutrition** (vibration + écran « Manger / boire » 30 s) selon ton plan ;
-- avant le départ : nom de la course et heure de départ prévue.
+- avant le départ : nom de la course et heure de départ prévue ;
+- **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton
+  téléphone ; ils s'affichent sur le lien assistance de la course (position sur le profil, écart au plan,
+  heures estimées recalculées).
 
 ![Aperçu approximatif sur Enduro 3 (écran rond 280 px)](apercu-enduro3.png)
 
@@ -59,7 +62,9 @@ Puis, sur la montre : activité **Trail → Paramètres → Écrans de données*
 2. Quelques minutes avant le départ, **ouvre l'activité Trail avec le parcours, téléphone à proximité** :
    le champ télécharge le plan (contrôle toutes les 5 min, minimum imposé par Garmin) et affiche
    « Départ hh:mm ».
-3. Démarre l'activité : tout fonctionne ensuite sans réseau.
+3. Démarre l'activité : le champ fonctionne ensuite sans réseau. Si ton téléphone est avec toi, ton
+   assistance suit ta progression sur le lien assistance de la course (créé depuis l'app web,
+   « 👥 Lien assistance »).
 
 Messages possibles : « Saisis le code montre », « Plan en attente... » (pas encore téléchargé : téléphone
 connecté ?), « Code inconnu » (code erroné ou course pas encore envoyée), « Plan : erreur N ».
@@ -69,5 +74,6 @@ connecté ?), « Code inconnu » (code erroné ou course pas encore envoyée), �
 - Écrit sans accès au SDK Garmin : la première compilation peut demander de petites corrections
   (signale-les, avec le message d'erreur).
 - Mémoire limitée : le plan est compacté (≈ 2–4 Ko pour un ultra comme l'UTMB, précision ±1 min).
-- Les passages ne remontent pas encore au lien assistance depuis la montre (utilise le mode course de
-  l'app web pour cela).
+- Suivi pour l'assistance : toutes les 5 min au mieux (minimum imposé par Garmin), et seulement si le
+  téléphone est avec toi, l'app Garmin Connect connectée et du réseau mobile. Sans réseau, les passages
+  restent sur la montre et partent au prochain envoi réussi.

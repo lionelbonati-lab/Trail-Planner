@@ -35,6 +35,7 @@ import { gunzipBase64, gzipBase64 } from './compress'
 import { normalizeAthlete, normalizeRace } from './defaults'
 import { decodeFromFirestore, encodeForFirestore } from './firestoreCodec'
 import type { ShareSnapshot } from './share'
+import type { WatchReport } from './watchLive'
 import type { Store } from './storage'
 import type { Athlete, Race } from './types'
 
@@ -283,5 +284,15 @@ export function subscribeShare(shareId: string, cb: (s: ShareSnapshot | null) =>
     doc(db, 'shares', shareId),
     (d) => cb(d.exists() ? decodeFromFirestore<ShareSnapshot>(d.data()) : null),
     (e) => onError(e),
+  )
+}
+
+/** Suivi envoyé par la montre (document live/{code montre}). */
+export function subscribeLive(code: string, cb: (r: WatchReport | null) => void) {
+  if (!db) return () => {}
+  return onSnapshot(
+    doc(db, 'live', code),
+    (d) => cb(d.exists() ? (d.data() as WatchReport) : null),
+    () => cb(null),
   )
 }

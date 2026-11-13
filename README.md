@@ -36,7 +36,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,
-  rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique.
+  rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
+  passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone).
   Voir `garmin/README.md`.
 
 **Compte et appareils**

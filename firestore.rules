@@ -14,5 +14,19 @@ service cloud.firestore {
                     && request.resource.data.owner == request.auth.uid;
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
+    // Suivi envoyé par la montre (sans compte) : seulement pour un code montre existant,
+    // et seulement ces champs, avec des types et tailles limités.
+    match /live/{code} {
+      allow read: if true;
+      allow write: if exists(/databases/$(database)/documents/shares/$(code))
+                   && request.resource.data.keys().hasOnly(['t', 's', 'd', 'lat', 'lon', 'bat', 'p', 'v'])
+                   && request.resource.data.t is int
+                   && request.resource.data.s is int
+                   && request.resource.data.d is int
+                   && (!('p' in request.resource.data) || (request.resource.data.p is string && request.resource.data.p.size() < 2000))
+                   && (!('lat' in request.resource.data) || request.resource.data.lat is number)
+                   && (!('lon' in request.resource.data) || request.resource.data.lon is number)
+                   && (!('bat' in request.resource.data) || request.resource.data.bat is int);
+    }
   }
 }

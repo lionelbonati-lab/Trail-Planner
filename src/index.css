@@ -282,3 +282,5 @@ button.on-watch { border-color: var(--accent); color: var(--accent); }
 .tips { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
 .result-card { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .progress-chart h3 { text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); margin: 0 0 4px; }
+.profile .me line { stroke: var(--series-1); stroke-width: 2; }
+.profile .me circle { fill: var(--series-1); stroke: var(--surface); stroke-width: 2; }

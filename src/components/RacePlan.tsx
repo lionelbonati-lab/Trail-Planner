@@ -293,6 +293,7 @@ export function RacePlan({
                   <li>Ajoute le champ à un écran de ton activité Trail.</li>
                   <li>Avant le départ, ouvre l'activité quelques minutes, téléphone à proximité : la montre télécharge la course (contrôle toutes les 5 min). Ensuite, tout fonctionne sans réseau.</li>
                   <li>Pour changer de course, clique « Mettre sur la montre » sur une autre course. Les modifications du plan sont envoyées automatiquement.</li>
+                  <li>Pendant la course, si ton téléphone est avec toi, la montre envoie tes passages et ta position toutes les 5 min : ton assistance les voit sur le lien assistance.</li>
                 </ol>
               </div>
               <span className="row tight">
