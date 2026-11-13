@@ -113,3 +113,13 @@ export function Card({ title, children, actions, className }: { title?: ReactNod
 export function Hint({ children }: { children: ReactNode }) {
   return <p className="hint">{children}</p>
 }
+
+export function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="kpi">
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value">{value}</div>
+      {sub && <div className="kpi-sub">{sub}</div>}
+    </div>
+  )
+}
