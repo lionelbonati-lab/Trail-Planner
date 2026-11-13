@@ -83,6 +83,10 @@ interface Props {
 /** Segment calculé ; `offroad` : point hors du réseau de chemins, tracé en ligne droite. */
 type Seg = { status: 'ok'; points: RawPoint[]; offroad?: boolean } | { status: 'loading' } | { status: 'error'; message: string }
 
+/** Hauteurs de la feuille du bas (téléphone) : chiffres seuls, avec la barre d'édition, ou dépliée. */
+type SheetState = 'mini' | 'peek' | 'full'
+const SHEET_ORDER: SheetState[] = ['mini', 'peek', 'full']
+
 /** Sélection : un point de passage, ou un tronçon (avec l'endroit touché, pour y insérer un point). */
 type Sel = { kind: 'wp'; k: number } | { kind: 'seg'; k: number; lat: number; lon: number } | null
 
@@ -221,7 +225,10 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<Sel>(null)
   const [menu, setMenu] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [sheet, setSheet] = useState<SheetState>('peek')
+  // Glisser la feuille : hauteur suivie au doigt, puis calage sur la hauteur voisine.
+  const [dragH, setDragH] = useState<number | null>(null)
+  const drag = useRef<{ y: number; h: number; id: number; moved: boolean } | null>(null)
   const [paceOpen, setPaceOpen] = useState(false)
   const mobile = useMediaQuery('(max-width: 899px)')
   const panelRef = useRef<HTMLElement>(null)
@@ -731,6 +738,33 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   }
   const trash = () => (sel?.kind === 'wp' ? act.remove(sel.k) : clearAll())
 
+  const onSheetDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!mobile || (e.target as HTMLElement).closest('button, input, select, a, label')) return
+    const p = panelRef.current
+    if (!p) return
+    drag.current = { y: e.clientY, h: p.offsetHeight, id: e.pointerId, moved: false }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onSheetMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d || e.pointerId !== d.id) return
+    const dy = e.clientY - d.y
+    if (!d.moved && Math.abs(dy) < 6) return
+    d.moved = true
+    setDragH(Math.max(56, Math.min(window.innerHeight * 0.85, d.h - dy)))
+  }
+  const onSheetUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current
+    if (!d || e.pointerId !== d.id) return
+    drag.current = null
+    setDragH(null)
+    const dy = e.clientY - d.y
+    if (Math.abs(dy) < 30) return // un toucher ne change rien : seul le glisser ouvre ou ferme
+    const i = SHEET_ORDER.indexOf(sheet)
+    const steps = Math.abs(dy) > 220 ? 2 : 1
+    setSheet(SHEET_ORDER[Math.max(0, Math.min(SHEET_ORDER.length - 1, i + (dy < 0 ? steps : -steps)))])
+  }
+
   const floatBottom = (mobile ? sheetH : 0) + 12
   const paceLabel = pace === 'model' ? 'Course' : pace === 'route' ? 'Zones' : (athlete.zones[pace]?.name ?? '').replace(/^Zone\s*/i, 'Z')
   const paceColor = typeof pace === 'number' ? colorForIndex(pace, athlete) : MODEL_COLOR
@@ -840,29 +874,25 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
               </>
             ) : null}
           </div>
-        ) : (
-          mode !== 'trail' && (
-            <div className="draw-pill" style={{ bottom: floatBottom + 26 }}>
-              <span>
-                {mode === 'line' ? <Ruler /> : <Route />} {mode === 'line' ? 'Ligne droite forcée' : 'Plus court chemin'}
-              </span>
-              <button onClick={() => pickMode('trail')} title="Revenir au suivi automatique des chemins" aria-label="Revenir aux chemins"><X /></button>
-            </div>
-          )
-        )}
+        ) : null}
       </div>
 
-      <aside ref={panelRef} className={`draw-panel${sheetOpen ? ' open' : ''}`}>
-        {mobile && (
-          <button className="sheet-handle" onClick={() => setSheetOpen(!sheetOpen)} aria-label={sheetOpen ? 'Réduire' : 'Détails du parcours'}>
-            <span />
-          </button>
-        )}
+      <aside
+        ref={panelRef}
+        className={`draw-panel sheet-${sheet}${dragH !== null ? ' dragging' : ''}`}
+        style={mobile && dragH !== null ? { height: dragH } : undefined}
+      >
         <div className="draw-panel-body">
+          <div className="sheet-drag" onPointerDown={onSheetDown} onPointerMove={onSheetMove} onPointerUp={onSheetUp} onPointerCancel={onSheetUp}>
+          {mobile && (
+            <div className="sheet-handle" title="Glisser vers le haut ou le bas" aria-hidden>
+              <span />
+            </div>
+          )}
           <div className="draw-head">
             <input className="draw-name" value={name} placeholder={race ? race.name : 'Nouveau parcours'} onChange={(e) => setName(e.target.value)} aria-label="Nom du parcours" />
           </div>
-          <div className="draw-summary" onClick={() => mobile && !sheetOpen && setSheetOpen(true)}>
+          <div className="draw-summary">
             <span>{track ? km(track.totalDist) : '0'} km</span>
             <span><TrendingUp className="inline" /> {track ? Math.round(track.dPlus) : 0} m</span>
             <span><TrendingDown className="inline" /> {track ? Math.round(track.dMinus) : 0} m</span>
@@ -874,13 +904,14 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
               onClick={(e) => {
                 e.stopPropagation()
                 setPaceOpen(!paceOpen)
-                setSheetOpen(true)
+                setSheet('full')
               }}
               title="Allure simulée"
             >
               <i className="zone-swatch" style={{ background: paceColor }} />
               {paceLabel} <ChevronDown className="inline" />
             </button>
+          </div>
           </div>
           {(pending > 0 || errorAt >= 0 || offroadCount > 0) && (
             <div className="draw-status">
@@ -1026,7 +1057,14 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
           </div>
         )}
         <div className="draw-toolbar">
-          <button className={`tb${menu ? ' on' : ''}`} onClick={() => setMenu(!menu)} title="Options" aria-label="Options"><Settings /></button>
+          <button
+            className={`tb${menu ? ' on' : ''}${mode !== 'trail' ? ' flagged' : ''}`}
+            onClick={() => setMenu(!menu)}
+            title={mode === 'trail' ? 'Options' : `Options (nouveaux points : ${modeLabel(mode)})`}
+            aria-label="Options"
+          >
+            <Settings />
+          </button>
           <span className="tb-group">
             <button className="tb" onClick={act.undo} disabled={!history.current.length} title="Annuler (Ctrl+Z)" aria-label="Annuler"><Undo2 /></button>
             <button className="tb" onClick={act.redo} disabled={!future.current.length} title="Rétablir (Ctrl+Y)" aria-label="Rétablir"><Redo2 /></button>
