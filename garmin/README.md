@@ -23,8 +23,9 @@ amorti et borné. La position le long du parcours vient de la navigation du parc
 
 ## 1. Envoyer une course à la montre (app web)
 
-Connecté, sur la page d'une course : **⌚ Mettre sur la montre**. L'app affiche ton **code montre**
-(le même pour toutes tes courses). Pour changer de course, clique « Mettre sur la montre » sur une autre :
+Connecté, sur la page d'une course : **⌚ Mettre sur la montre**. L'app affiche ton **code montre à
+8 chiffres** (le même pour toutes tes courses, et le même que pour EndurancePro), plus un code long pour
+Garmin Connect. Pour changer de course, clique « Mettre sur la montre » sur une autre :
 la montre la récupère d'elle-même.
 
 ## 2. Compiler le champ
@@ -44,8 +45,10 @@ Activity Data → FIT/GPX*) et règle le code via *File → Edit Persistent Stor
 
 **Par câble (le plus rapide pour tester)** : branche la montre en USB et copie le `.prg` dans
 `GARMIN/APPS/`. Les réglages de l'app Garmin Connect ne sont pas disponibles pour une installation par
-câble : **colle ton code montre dans `resources/settings/properties.xml`** (`<property id="code" …>TON_CODE</property>`)
-avant de compiler.
+câble : **saisis le code à 8 chiffres sur la montre**. Pendant une activité, appui long sur Haut (menu) ›
+Champs Connect IQ › Trail Planner › Code montre, règle les 8 chiffres et valide (00000000 efface le code).
+Autre possibilité : coller le code long dans `resources/settings/properties.xml`
+(`<property id="code" …>TON_CODE</property>`) avant de compiler.
 
 **Par le Connect IQ Store (version « bêta » privée)** : publie le `.iq` (« Monkey C: Export Project ») en
 bêta sur <https://apps.garmin.com/developer>. Une fois installé depuis le Store, les réglages sont

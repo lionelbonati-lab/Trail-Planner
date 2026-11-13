@@ -38,6 +38,8 @@ export interface ShareSnapshot {
   w: string
   /** Code montre si cette course est sur la montre : suivi envoyé par la montre (live/{code}). */
   liveRef: string | null
+  /** Code montre court (8 chiffres), s'il existe : la montre peut aussi envoyer son suivi avec lui. */
+  liveRefShort?: string | null
   /** Réglages du datafield EndurancePro (document du code montre seulement, voir endurancepro.ts). */
   ep?: string
 }
@@ -72,6 +74,7 @@ export function buildSnapshot(
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
     liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
+    liveRefShort: athlete.epCode && athlete.watchRaceId === race.id ? athlete.epCode : null,
     rows: sim.splits.map((s, i) => {
       const w = windowOf(s.cp.id)
       const row = status?.rows[i]
