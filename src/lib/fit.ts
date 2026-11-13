@@ -6,7 +6,7 @@ import { indexAt } from './gpx'
 import { zonedToUtc } from './time'
 import type { CheckpointKind, Race, SimResult, Track } from './types'
 
-const FIT_EPOCH = 631065600 // 1989-12-31T00:00:00Z en secondes Unix
+export const FIT_EPOCH = 631065600 // 1989-12-31T00:00:00Z en secondes Unix
 
 const CRC_TABLE = [
   0x0000, 0xcc01, 0xd801, 0x1400, 0xf001, 0x3c00, 0x2800, 0xe401, 0xa001, 0x6c00, 0x7800, 0xb401, 0x5000, 0x9c01,
@@ -25,7 +25,7 @@ export function fitCrc(bytes: Uint8Array, crc = 0): number {
   return crc
 }
 
-type BaseType = 'enum' | 'uint8' | 'uint16' | 'sint32' | 'uint32' | 'uint32z' | 'string'
+export type BaseType = 'enum' | 'uint8' | 'uint16' | 'sint32' | 'uint32' | 'uint32z' | 'string'
 
 const BASE: Record<BaseType, { id: number; size: number }> = {
   enum: { id: 0x00, size: 1 },
@@ -37,14 +37,14 @@ const BASE: Record<BaseType, { id: number; size: number }> = {
   string: { id: 0x07, size: 0 },
 }
 
-interface FieldDef {
+export interface FieldDef {
   num: number
   type: BaseType
   /** Taille en octets (chaînes uniquement). */
   size?: number
 }
 
-class FitWriter {
+export class FitWriter {
   private chunks: number[] = []
   private local = 0
   private defs = new Map<string, number>()

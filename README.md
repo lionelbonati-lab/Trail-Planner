@@ -13,6 +13,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   VAM et descente mesurées par tranche de pente, comparaison point par point avec un plan,
   calibration du profil et historique des courses.
 
+- **Séances d'étalonnage** : sortie longue, navettes tempo en côte, seuil en côte et sur le plat (20 min),
+  test 3′/7′/12′, descentes. Cibles tirées du profil, entraînement structuré **FIT** pour la montre
+  (`GARMIN/NewFiles`), analyse dédiée de l'enregistrement, mise à jour du profil et **graphiques d'évolution**.
+
 **Plan de course**
 - Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic.
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.

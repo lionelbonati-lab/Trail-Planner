@@ -118,6 +118,26 @@ export interface ActivityRecord {
   useForCalibration: boolean
   /** Course planifiée associée, le cas échéant. */
   raceId?: string
+  /** Séance d'étalonnage dont il s'agit, le cas échéant. */
+  session?: string
+  /** Valeurs mesurées par la séance (pour le suivi de l'évolution). */
+  metrics?: SessionMetrics
+}
+
+/** Mesures issues d'une séance d'étalonnage. */
+export interface SessionMetrics {
+  /** VC (m/s). */
+  cs?: number
+  /** D′ (m). */
+  dPrime?: number
+  /** Vitesse ascensionnelle ramenée à l'intensité VC. */
+  vam?: { grade: number; vam: number }
+  /** Durabilité (mode log). */
+  k?: number
+  pct1h?: number
+  /** Durabilité (mode linéaire). */
+  lossPerH?: number
+  descent?: { grade: number; factor: number }
 }
 
 export interface Product {
