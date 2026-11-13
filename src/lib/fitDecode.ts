@@ -19,6 +19,10 @@ export function isFit(bytes: Uint8Array): boolean {
 }
 
 /** Tour (lap) enregistré par la montre : une étape d'entraînement structuré = un tour. */
+/** Type de tour donné par l'étape d'entraînement (échauffement, retour au calme…). */
+export type LapIntensity = 'active' | 'rest' | 'warmup' | 'cooldown' | 'recovery' | 'interval' | 'other'
+const LAP_INTENSITIES: LapIntensity[] = ['active', 'rest', 'warmup', 'cooldown', 'recovery', 'interval', 'other']
+
 export interface FitLap {
   /** Début (ms Unix). */
   start: number
@@ -27,6 +31,8 @@ export interface FitLap {
   timer: number
   /** Distance (m). */
   distance: number
+  /** Type de tour, si la montre l'a enregistré (entraînement structuré). */
+  intensity?: LapIntensity
 }
 
 export function decodeFitRecords(bytes: Uint8Array): RawPoint[] {
@@ -134,6 +140,7 @@ export function decodeFit(bytes: Uint8Array): { records: RawPoint[]; laps: FitLa
     let elapsed: number | null = null
     let timer: number | null = null
     let distance: number | null = null
+    let intensity: LapIntensity | undefined
     for (const f of def.fields) {
       const v = read(off, f.size, f.base, def.little)
       if (v !== null && v !== 0xffffffff) {
@@ -141,11 +148,12 @@ export function decodeFit(bytes: Uint8Array): { records: RawPoint[]; laps: FitLa
         else if (f.num === 7) elapsed = v / 1000
         else if (f.num === 8) timer = v / 1000
         else if (f.num === 9) distance = v / 100
+        else if (f.num === 23 && v < LAP_INTENSITIES.length) intensity = LAP_INTENSITIES[v]
       }
       off += f.size
     }
     if (startTime !== null && elapsed !== null && distance !== null) {
-      laps.push({ start: FIT_EPOCH_MS + startTime * 1000, elapsed, timer: timer ?? elapsed, distance })
+      laps.push({ start: FIT_EPOCH_MS + startTime * 1000, elapsed, timer: timer ?? elapsed, distance, ...(intensity ? { intensity } : {}) })
     }
   }
 

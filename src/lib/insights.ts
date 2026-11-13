@@ -1,7 +1,7 @@
 // Analyse générale d'une séance quelconque : allure « plat équivalent » (correction
 // de pente de Minetti), temps par zone, tours de la montre, meilleurs efforts comparés
 // à la VC et au D′, détection d'un test VC, découplage cardiaque (durabilité).
-import { timesAt, type Activity } from './activity'
+import { distAtElapsed as distAtElapsedOf, inPortions, timesAt, type Activity, type Portions } from './activity'
 import { gapFactor } from './model'
 import type { Athlete, CsTrial } from './types'
 import { VAM_MIN_GRADE, vamZoneIndex, vamZonesOf } from './vam'
@@ -52,6 +52,8 @@ export interface LapInfo {
   zone: number
   /** Fréquence cardiaque moyenne (bpm), si enregistrée. */
   hr: number | null
+  /** Tour retenu pour les analyses. */
+  kept: boolean
 }
 
 export interface BestEffort {
@@ -81,7 +83,12 @@ export const EFFORT_DURATIONS = [60, 180, 300, 420, 720, 1200, 1800, 3600]
 
 const SEG = 200
 
-export function analyzeSession(act: Activity, a: Athlete): Insights {
+/**
+ * Analyse générale d'une séance. `portions` : tours retenus (échauffement et retour au calme
+ * exclus, par exemple) pour les temps par zone ; les meilleurs efforts et la détection d'un test
+ * VC portent sur toute la séance.
+ */
+export function analyzeSession(act: Activity, a: Athlete, portions: Portions = null): Insights {
   const s = series(act)
   const n = s.d.length
   const idxAt = (dist: number) => Math.min(n - 1, Math.max(0, Math.round(dist / 20)))
@@ -92,7 +99,7 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     const i = idxAt(from)
     const j = idxAt(Math.min(act.track.totalDist, from + SEG))
     const dt = s.m[j] - s.m[i]
-    if (j <= i || dt <= 0) continue
+    if (j <= i || dt <= 0 || !inPortions(portions, (s.t[i] + s.t[j]) / 2)) continue
     const intensity = (s.eq[j] - s.eq[i]) / dt / a.cs
     zoneSec[zoneIndexOfIntensity(intensity, a)] += dt
   }
@@ -109,27 +116,14 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
       const dt = s.m[j] - s.m[i]
       const dz = s.e[j] - s.e[i]
       const dx = s.d[j] - s.d[i]
-      if (j <= i || dt <= 0 || dx <= 0 || (dz / dx) * 100 < VAM_MIN_GRADE) continue
+      if (j <= i || dt <= 0 || dx <= 0 || (dz / dx) * 100 < VAM_MIN_GRADE || !inPortions(portions, (s.t[i] + s.t[j]) / 2)) continue
       sec[vamZoneIndex((dz / dt) * 3600, vamZones)] += dt
     }
     if (sec.some((x) => x > 0)) vamZoneTimes = vamZones.map((z, index) => ({ index, name: z.name, seconds: sec[index] }))
   }
 
   // Tours de la montre : temps → distance le long de la trace.
-  const rawTotal = act.dist[act.dist.length - 1] || 1
-  const distAtElapsed = (sec: number) => {
-    let lo = 0
-    let hi = act.elapsed.length - 1
-    if (sec <= 0) return 0
-    if (sec >= act.elapsed[hi]) return act.track.totalDist
-    while (hi - lo > 1) {
-      const mid = (lo + hi) >> 1
-      if (act.elapsed[mid] <= sec) lo = mid
-      else hi = mid
-    }
-    const f = (sec - act.elapsed[lo]) / (act.elapsed[hi] - act.elapsed[lo] || 1)
-    return ((act.dist[lo] + f * (act.dist[hi] - act.dist[lo])) / rawTotal) * act.track.totalDist
-  }
+  const distAtElapsed = (sec: number) => distAtElapsedOf(act, sec)
   // Fréquence cardiaque : temps en mouvement par zone, et moyenne d'un intervalle de temps.
   const hasHr = act.hr.some((h) => Number.isFinite(h))
   let hrZoneTimes: ZoneTime[] | null = null
@@ -138,7 +132,7 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     for (let k = 1; k < act.hr.length; k++) {
       const h = act.hr[k]
       const dt = act.moving[k] - act.moving[k - 1]
-      if (!Number.isFinite(h) || dt <= 0 || dt > 30) continue
+      if (!Number.isFinite(h) || dt <= 0 || dt > 30 || !inPortions(portions, act.elapsed[k])) continue
       let z = a.hrZones.findIndex((x) => h >= x.low && h < x.high)
       if (z < 0) z = h < a.hrZones[0].low ? 0 : a.hrZones.length - 1
       sec[z] += dt
@@ -164,7 +158,7 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     for (let k = i + 1; k <= j; k++) dPlus += Math.max(0, s.e[k] - s.e[k - 1])
     const dt = s.m[j] - s.m[i]
     const intensity = dt > 0 ? (s.eq[j] - s.eq[i]) / dt / a.cs : l.timer > 0 ? l.distance / l.timer / a.cs : 0
-    return { index, start, duration: l.timer, distance: l.distance, dPlus, intensity, zone: zoneIndexOfIntensity(intensity, a), hr: hasHr ? hrMean(start, start + l.elapsed) : null }
+    return { index, start, duration: l.timer, distance: l.distance, dPlus, intensity, zone: zoneIndexOfIntensity(intensity, a), hr: hasHr ? hrMean(start, start + l.elapsed) : null, kept: inPortions(portions, start + l.elapsed / 2) }
   })
 
   // Meilleurs efforts (temps écoulé : les arrêts comptent).
@@ -231,8 +225,10 @@ export interface DriftPoint {
 
 export interface CardiacDrift {
   points: DriftPoint[]
-  /** Rapport de référence (10 à 30 min). */
+  /** Rapport de référence et sa période (s en mouvement, 10 à 30 min sur une séance entière). */
   baseline: number
+  baseFrom: number
+  baseTo: number
   /** Découplage : 20 dernières minutes par rapport à la référence (fraction). */
   decoupling: number
   /** Début de la dérive (h en mouvement), null s'il n'y a pas de dérive nette. */
@@ -250,7 +246,7 @@ export interface CardiacDrift {
  * plat par fenêtres de 5 min, comparé à celui de 10 à 30 min. Le début de la dérive est le coude
  * d'une droite brisée (palier puis hausse) ajustée sur les fenêtres.
  */
-export function cardiacDrift(act: Activity): CardiacDrift | null {
+export function cardiacDrift(act: Activity, portions: Portions = null): CardiacDrift | null {
   const nRaw = act.moving.length
   const total = act.moving[nRaw - 1] ?? 0
   if (total < DRIFT_MIN_SECONDS || !act.hr.some((h) => Number.isFinite(h))) return null
@@ -275,20 +271,29 @@ export function cardiacDrift(act: Activity): CardiacDrift | null {
     const t1 = t0 + DRIFT_WINDOW
     let sum = 0
     let w = 0
+    let all = 0
+    let kept = 0
     while (k < nRaw && act.moving[k] <= t1) {
       const dt = act.moving[k] - act.moving[k - 1]
-      if (act.moving[k] > t0 && dt > 0 && dt < 30 && Number.isFinite(act.hr[k])) {
-        sum += act.hr[k] * dt
-        w += dt
+      if (act.moving[k] > t0 && dt > 0 && dt < 30) {
+        all += dt
+        if (inPortions(portions, act.elapsed[k])) kept += dt
+        if (Number.isFinite(act.hr[k])) {
+          sum += act.hr[k] * dt
+          w += dt
+        }
       }
       k++
     }
     const kmh = ((eqAt(t1) - eqAt(t0)) / DRIFT_WINDOW) * 3.6
-    // Fenêtre retenue : FC présente sur 60 % du temps au moins, et on avance vraiment.
-    if (w >= DRIFT_WINDOW * 0.6 && kmh >= 3.6 && t0 >= DRIFT_WARMUP) raw.push({ t: (t0 + t1) / 2, ratio: sum / w / kmh })
+    // Fenêtre retenue : dans les tours choisis (90 % au moins), FC présente sur 60 % du temps
+    // au moins, et on avance vraiment.
+    const inLaps = !portions || (all > 0 && kept / all >= 0.9)
+    if (inLaps && w >= DRIFT_WINDOW * 0.6 && kmh >= 3.6 && t0 >= DRIFT_WARMUP) raw.push({ t: (t0 + t1) / 2, ratio: sum / w / kmh })
   }
   if (raw.length < 5) return null
-  const base = raw.filter((p) => p.t <= DRIFT_BASE_END)
+  // Référence : les 20 premières minutes retenues (10 à 30 min sur une séance entière).
+  const base = raw.filter((p) => p.t <= raw[0].t + DRIFT_BASE_END - DRIFT_WARMUP - DRIFT_WINDOW / 2)
   const ref = base.length >= 2 ? base : raw.slice(0, 2)
   const baseline = ref.reduce((a, p) => a + p.ratio, 0) / ref.length
   const points = raw.map((p) => ({ ...p, drift: p.ratio / baseline - 1 }))
@@ -296,17 +301,20 @@ export function cardiacDrift(act: Activity): CardiacDrift | null {
   const decoupling = end.reduce((a, p) => a + p.drift, 0) / end.length
   // Droite brisée y = c + pente × max(0, t − b) : coude b qui minimise l'erreur.
   let best = { sse: Infinity, b: 0, c: 0, slope: 0 }
-  for (let i = 1; i < points.length - 2; i++) {
+  // Coude suivi d'au moins trois fenêtres (30 min) : une remontée isolée en toute fin n'est pas une dérive.
+  for (let i = 1; i < points.length - 3; i++) {
     const b = points[i].t
     const fit = brokenLine(points, b)
     if (fit && fit.slope > 0 && fit.sse < best.sse) best = { ...fit, b }
   }
   const lastT = points[points.length - 1].t
   const rise = best.slope * (lastT - best.b)
-  const drifts = best.sse < Infinity && rise >= DRIFT_MIN_RISE
+  const drifts = best.sse < Infinity && rise >= DRIFT_MIN_RISE && decoupling > 0
   return {
     points,
     baseline,
+    baseFrom: ref[0].t - DRIFT_WINDOW / 2,
+    baseTo: ref[ref.length - 1].t + DRIFT_WINDOW / 2,
     decoupling,
     onsetH: drifts ? best.b / 3600 : null,
     perHour: drifts ? best.slope * 3600 : 0,

@@ -509,3 +509,8 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .trial-form { flex-wrap: wrap; gap: 8px; }
 .trial-form .seg { margin: 0; }
 .trial-fit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 8px; }
+.lap-picker { margin-top: 4px; }
+.lap-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.lap-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 16px; font-size: 13px; cursor: pointer; color: var(--muted); background: var(--surface); }
+.lap-chip.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.lap-chip input { margin: 0; }

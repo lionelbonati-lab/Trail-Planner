@@ -5,10 +5,16 @@ import {
   calibrateFromActivities,
   calibrateOnActivity,
   compareWithPlan,
+  defaultLapKeep,
+  lapKeepWithoutEnds,
+  lapPortions,
   readActivity,
+  type Activity,
   type Analysis,
   type Calibration,
+  type Portions,
 } from '../lib/activity'
+import type { LapIntensity } from '../lib/fitDecode'
 import { DEFAULT_ENV } from '../lib/defaults'
 import { haversine } from '../lib/gpx'
 import { averageIntensity, intensityAt, interp } from '../lib/model'
@@ -29,7 +35,16 @@ interface Props {
 const pct = (x: number) => `${x > 0 ? '+' : ''}${(x * 100).toFixed(1)} %`
 
 export function ActivityPanel({ athlete, races, onChange }: Props) {
-  const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [activity, setActivity] = useState<Activity | null>(null)
+  // Tours de la montre retenus (échauffement et retour au calme exclus d'office s'ils sont marqués).
+  const [lapKeep, setLapKeep] = useState<boolean[]>([])
+  const portions = useMemo(() => (activity ? lapPortions(activity, lapKeep) : null), [activity, lapKeep])
+  const analysis = useMemo(() => (activity ? analyzeActivity(activity, athlete, DEFAULT_ENV, portions) : null), [activity, athlete, portions])
+  const chooseLaps = (keep: boolean[]) => {
+    if (!keep.some(Boolean)) return
+    setLapKeep(keep)
+    setCalibration(null)
+  }
   const [error, setError] = useState<string | null>(null)
   const [raceId, setRaceId] = useState<string>('')
   const [calibration, setCalibration] = useState<Calibration | null>(null)
@@ -41,8 +56,8 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
     setCalibration(null)
     try {
       const act = readActivity(f.name, new Uint8Array(await f.arrayBuffer()))
-      const an = analyzeActivity(act, athlete, DEFAULT_ENV)
-      setAnalysis(an)
+      setLapKeep(defaultLapKeep(act))
+      setActivity(act)
       // Plan correspondant : départ à moins de 1 km et distance à ±15 %.
       const start = act.track.points[0]
       const match = races.find((r) => {
@@ -57,7 +72,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
       setRaceId(match?.id ?? '')
     } catch (e) {
       setError((e as Error).message)
-      setAnalysis(null)
+      setActivity(null)
     }
   }
 
@@ -70,11 +85,11 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
     return compareWithPlan(analysis.activity, race, plan.track, arrivals)
   }, [analysis, raceId, races, athlete])
 
-  const drift = useMemo(() => (analysis ? cardiacDrift(analysis.activity) : null), [analysis])
+  const drift = useMemo(() => (activity ? cardiacDrift(activity, portions) : null), [activity, portions])
   const records = analysis ? [analysis.record, ...athlete.activities] : athlete.activities
   const preview = () => {
     if (!analysis) return
-    setCalibration(calibrateOnActivity(athlete, records, analysis.activity, analysis.record, DEFAULT_ENV))
+    setCalibration(calibrateOnActivity(athlete, records, analysis.activity, analysis.record, DEFAULT_ENV, portions))
   }
   const save = (withCalibration: boolean) => {
     if (!analysis) return
@@ -88,7 +103,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
     }
     const base = withCalibration && calibration ? calibration.athlete : athlete
     onChange({ ...base, activities: [record, ...athlete.activities.filter((a) => a.id !== record.id)] })
-    setAnalysis(null)
+    setActivity(null)
     setCalibration(null)
   }
 
@@ -126,6 +141,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
             </div>
             <h3>Avance (−) ou retard (+) sur la prévision, en mouvement</h3>
             <GapChart curve={analysis.curve} />
+            {analysis.activity.laps.length > 1 && <LapPicker activity={analysis.activity} keep={lapKeep} onChange={chooseLaps} />}
             <h3>Intensité tenue sur le plat (% de VC)</h3>
             <IntensityChart points={analysis.intensity} athlete={athlete} />
             <h3>Durabilité : découplage cardiaque</h3>
@@ -140,7 +156,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
             )}
           </Card>
 
-          <SessionInsights activity={analysis.activity} athlete={athlete} onChange={onChange} />
+          <SessionInsights activity={analysis.activity} athlete={athlete} onChange={onChange} portions={portions} lapKeep={lapKeep} onLapKeep={chooseLaps} />
 
           <div className="grid two">
             <Card title="Mesures par pente">
@@ -386,7 +402,7 @@ function DriftBlock({ drift }: { drift: CardiacDrift }) {
     <>
       <p>
         FC / vitesse au plat : <strong style={{ color: strong ? 'var(--warn)' : 'var(--ok)' }}>{pctFr(drift.decoupling)}</strong> sur les 20 dernières
-        minutes par rapport au début (10 à 30 min, {fr(drift.baseline)} bpm par km/h).{' '}
+        minutes par rapport au début ({Math.round(drift.baseFrom / 60)} à {Math.round(drift.baseTo / 60)} min, {fr(drift.baseline)} bpm par km/h).{' '}
         {drift.onsetH !== null
           ? `La dérive commence vers ${formatDuration(drift.onsetH * 3600)} puis progresse d'environ ${fr(drift.perHour * 100)} % par heure.`
           : 'Pas de dérive nette : le coût cardiaque reste stable.'}{' '}
@@ -477,9 +493,64 @@ function IntensityChart({ points, athlete }: { points: [number, number][]; athle
   )
 }
 
+/** Type de tour enregistré par la montre (entraînement structuré). */
+const LAP_TAG: Partial<Record<LapIntensity, string>> = { warmup: 'échauffement', cooldown: 'retour au calme', rest: 'repos', recovery: 'récup.' }
+
+/**
+ * Choix des tours de la montre utilisés par les analyses : temps par zone, intensité au fil des
+ * heures, découplage, mesures par pente et calibration.
+ */
+function LapPicker({ activity, keep, onChange }: { activity: Activity; keep: boolean[]; onChange: (keep: boolean[]) => void }) {
+  const laps = activity.laps
+  const kept = laps.filter((_, i) => keep[i] !== false).length
+  const without = lapKeepWithoutEnds(activity)
+  const dur = (sec: number) => (sec < 3600 ? `${Math.round(sec / 60)}′` : formatDuration(sec))
+  return (
+    <div className="lap-picker">
+      <h3>Tours analysés ({kept} sur {laps.length})</h3>
+      <div className="lap-chips">
+        {laps.map((l, i) => {
+          const on = keep[i] !== false
+          return (
+            <label key={i} className={`lap-chip${on ? ' on' : ''}`}>
+              <input type="checkbox" checked={on} onChange={(e) => onChange(laps.map((_, j) => (j === i ? e.target.checked : keep[j] !== false)))} />
+              <strong>{i + 1}</strong> {dur(l.timer)} · {(l.distance / 1000).toFixed(1).replace('.', ',')} km
+              {l.intensity && LAP_TAG[l.intensity] ? <span className="muted"> · {LAP_TAG[l.intensity]}</span> : null}
+            </label>
+          )
+        })}
+      </div>
+      <div className="row tight">
+        <button className="ghost" onClick={() => onChange(laps.map(() => true))} disabled={kept === laps.length}>Tous les tours</button>
+        <button className="ghost" onClick={() => onChange(without)} disabled={without.every((v, i) => v === (keep[i] !== false))}>
+          Sans échauffement ni retour au calme
+        </button>
+      </div>
+      <Hint>
+        Les tours décochés sont ignorés dans le temps par zone, l'intensité au fil des heures, le découplage cardiaque, les mesures par
+        pente et la calibration. L'écart à la prévision et les meilleurs efforts portent sur toute la séance.
+      </Hint>
+    </div>
+  )
+}
+
 /** Analyse générale : temps par zone, tours, meilleurs efforts, test VC détecté. */
-function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['activity']; athlete: Athlete; onChange: (a: Athlete) => void }) {
-  const ins = useMemo(() => analyzeSession(activity, athlete), [activity, athlete])
+function SessionInsights({
+  activity,
+  athlete,
+  onChange,
+  portions,
+  lapKeep,
+  onLapKeep,
+}: {
+  activity: Activity
+  athlete: Athlete
+  onChange: (a: Athlete) => void
+  portions: Portions
+  lapKeep: boolean[]
+  onLapKeep: (keep: boolean[]) => void
+}) {
+  const ins = useMemo(() => analyzeSession(activity, athlete, portions), [activity, athlete, portions])
   const [done, setDone] = useState<Set<string>>(new Set())
   const label = (sec: number) => (sec < 3600 ? `${Math.round(sec / 60)}′` : `${sec / 3600} h`)
   const mark = (k: string) => setDone(new Set([...done, k]))
@@ -539,12 +610,20 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
           <div className="scroll">
             <table className="table compact">
               <thead>
-                <tr><th>#</th><th>Durée</th><th>Distance</th><th>Allure</th><th>D+</th><th>Intensité (plat éq.)</th><th>Zone</th>{ins.hrZoneTimes && <th>FC moy.</th>}</tr>
+                <tr><th title="Tour utilisé dans les analyses">Analysé</th><th>#</th><th>Durée</th><th>Distance</th><th>Allure</th><th>D+</th><th>Intensité (plat éq.)</th><th>Zone</th>{ins.hrZoneTimes && <th>FC moy.</th>}</tr>
               </thead>
               <tbody>
                 {ins.laps.map((l) => (
-                  <tr key={l.index}>
-                    <td>{l.index + 1}</td>
+                  <tr key={l.index} className={l.kept ? '' : 'muted'}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={lapKeep[l.index] !== false}
+                        onChange={(e) => onLapKeep(activity.laps.map((_, i) => (i === l.index ? e.target.checked : lapKeep[i] !== false)))}
+                        aria-label={`Utiliser le tour ${l.index + 1} dans les analyses`}
+                      />
+                    </td>
+                    <td>{l.index + 1}{activity.laps[l.index].intensity && LAP_TAG[activity.laps[l.index].intensity!] ? <span className="muted small"> {LAP_TAG[activity.laps[l.index].intensity!]}</span> : null}</td>
                     <td>{formatDuration(l.duration, true).replace(/^0:/, '')}</td>
                     <td>{l.distance >= 1000 ? `${(l.distance / 1000).toFixed(2)} km` : `${Math.round(l.distance)} m`}</td>
                     <td>{l.distance > 0 ? `${formatPace(l.duration / (l.distance / 1000))}/km` : '—'}</td>
@@ -589,7 +668,10 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
 /** Barre empilée et légende du temps passé par zone. */
 function ZoneStack({ times, color }: { times: { index: number; name: string; seconds: number }[]; color: (k: number) => string }) {
   const total = times.reduce((a, z) => a + z.seconds, 0) || 1
-  const fmt = (sec: number) => (sec < 3600 ? `${Math.floor(sec / 60)}′${String(Math.round(sec % 60)).padStart(2, '0')}` : formatDuration(sec))
+  const fmt = (sec: number) => {
+    const r = Math.round(sec)
+    return r < 3600 ? `${Math.floor(r / 60)}′${String(r % 60).padStart(2, '0')}` : formatDuration(r)
+  }
   return (
     <>
       <div className="zone-stack" role="img" aria-label="Répartition du temps par zone">
