@@ -248,3 +248,7 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .profile .done-dot { fill: var(--ok); }
 .profile .ravito-dot { fill: var(--ravito); }
 .profile .cp-dot { fill: var(--surface); stroke: var(--profile); stroke-width: 1.5; }
+
+.map { height: 380px; border-radius: 10px; border: 1px solid var(--line); margin-top: 8px; z-index: 0; }
+.map-loading { display: flex; align-items: center; justify-content: center; color: var(--muted); }
+@media (max-width: 720px) { .map { height: 280px; } }

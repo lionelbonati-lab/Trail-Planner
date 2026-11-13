@@ -15,6 +15,8 @@ interface Props {
   print?: boolean
   /** D′ de l'athlète : affiche le D′ restant au survol. */
   dPrime?: number
+  /** Survol : distance (m) ou null, pour synchroniser la carte. */
+  onHover?: (dist: number | null) => void
 }
 
 const TECH_COLORS = ['transparent', '#f5c542', '#f08a24', '#d9452b', '#7a1f6b']
@@ -40,7 +42,7 @@ function useWidth(fallback: number) {
   return [ref, w] as const
 }
 
-export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime }: Props) {
+export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime, onHover }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [wrapRef, measured] = useWidth(1000)
   const [hover, setHover] = useState<SimPoint | null>(null)
@@ -130,8 +132,19 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
       className={`profile ${print ? 'print' : ''}`}
       viewBox={`0 0 ${W} ${H}`}
       style={{ width: '100%', height: 'auto', display: 'block' }}
-      onMouseMove={print ? undefined : (e) => setHover(pick(e.clientX))}
-      onMouseLeave={() => setHover(null)}
+      onMouseMove={
+        print
+          ? undefined
+          : (e) => {
+              const p = pick(e.clientX)
+              setHover(p)
+              onHover?.(p ? p.dist : null)
+            }
+      }
+      onMouseLeave={() => {
+        setHover(null)
+        onHover?.(null)
+      }}
       onClick={onPick ? (e) => { const p = pick(e.clientX); if (p) onPick(p.dist) } : undefined}
     >
       {geo.night.map((b, i) => (

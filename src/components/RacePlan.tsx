@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { fetchRaceWeather } from '../lib/weather'
+import { fetchOsmTech, osmSummary } from '../lib/osm'
+import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
 import { planOptions } from '../lib/plan'
 import { calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
@@ -12,6 +13,9 @@ import { Kpi } from './CsCalculator'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { Card, Hint, Num, Toggle } from './ui'
+
+// Carte chargée à la demande (Leaflet ne pèse pas sur le premier affichage).
+const MapView = lazy(() => import('./MapView'))
 
 const MODE_LABELS: Record<CalcMode, string> = {
   physio: 'VC + vitesse asc.',
@@ -59,6 +63,9 @@ export function RacePlan({
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
 }) {
   const [copied, setCopied] = useState(false)
+  const [hoverDist, setHoverDist] = useState<number | null>(null)
+  const [showMap, setShowMap] = useState(true)
+  const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const { track, opts, sim } = useRaceComputation(race, athlete)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
@@ -158,10 +165,17 @@ export function RacePlan({
     setWeather({ busy: true, info: null, error: null })
     try {
       const p = track.points[0]
-      const w = await fetchRaceWeather(p.lat, p.lon, new Date(startMs), sim.totalTime)
+      const [w, series] = await Promise.all([
+        fetchRaceWeather(p.lat, p.lon, new Date(startMs), sim.totalTime),
+        fetchWeatherSeries(track.points, track.totalDist, new Date(startMs), sim.totalTime).catch(() => null),
+      ])
       const round = (x: number) => Math.round(x * 10) / 10
-      setEnv('heat', { ...race.env.heat, tMax: round(w.tMax), tMin: round(w.tMin), refAlt: Math.round(w.elevation), note: w.note })
+      set({
+        env: { ...race.env, heat: { ...race.env.heat, tMax: round(w.tMax), tMin: round(w.tMin), refAlt: Math.round(w.elevation), note: w.note } },
+        weather: series,
+      })
       const extras = [
+        series ? `heure par heure en ${series.points.length} points du parcours` : null,
         w.precipProb !== null ? `pluie ${Math.round(w.precipProb)} %` : null,
         w.precipMm !== null ? `${round(w.precipMm)} mm/j` : null,
         w.windMax !== null ? `vent max ${Math.round(w.windMax)} km/h` : null,
@@ -169,6 +183,16 @@ export function RacePlan({
       setWeather({ busy: false, info: extras.join(' · '), error: null })
     } catch (e) {
       setWeather({ busy: false, info: null, error: (e as Error).message })
+    }
+  }
+
+  const loadOsm = async () => {
+    setOsm({ busy: true, error: null })
+    try {
+      set({ osmTech: await fetchOsmTech(track) })
+      setOsm({ busy: false, error: null })
+    } catch (e) {
+      setOsm({ busy: false, error: (e as Error).message })
     }
   }
 
@@ -261,8 +285,16 @@ export function RacePlan({
               />
             )}
           </div>
-          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} dPrime={race.push.enabled ? athlete.dPrime : undefined} />
-          <Hint>Clique sur le profil pour ajouter un ravito à cet endroit. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).</Hint>
+          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} dPrime={race.push.enabled ? athlete.dPrime : undefined} onHover={setHoverDist} />
+          <Hint>Clique sur le profil ou sur la trace de la carte pour ajouter un ravito à cet endroit. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).</Hint>
+          <div className="row">
+            <Toggle label="Carte" checked={showMap} onChange={setShowMap} />
+          </div>
+          {showMap && (
+            <Suspense fallback={<div className="map map-loading">Chargement de la carte…</div>}>
+              <MapView track={track} splits={sim.splits} timeZone={race.env.timeZone} hoverDist={hoverDist} onPick={(d) => addPoint(d)} />
+            </Suspense>
+          )}
         </Card>
 
         <div className="grid three">
@@ -341,6 +373,20 @@ export function RacePlan({
               </div>
             )}
             <div className="row">
+              <button onClick={loadOsm} disabled={osm.busy} title="Échelle SAC, visibilité et revêtement des sentiers (OpenStreetMap)">
+                {osm.busy ? 'OpenStreetMap…' : '🗺 Technicité OpenStreetMap'}
+              </button>
+              {race.osmTech.length > 0 && <button className="ghost" onClick={() => set({ osmTech: [] })}>Effacer</button>}
+            </div>
+            {race.osmTech.length > 0 && <p className="hint">OSM : {osmSummary(race.osmTech)}</p>}
+            {osm.error && <p className="warn">{osm.error}</p>}
+            <Toggle label="Pluie (météo heure par heure)" checked={race.env.rain.enabled} onChange={(v) => setEnv('rain', { ...race.env.rain, enabled: v })} />
+            {race.env.rain.enabled && (
+              <div className="fields sub">
+                <Num label="Pénalité" value={race.env.rain.perMm} scale={100} unit="% par mm/h" min={0} onChange={(v) => setEnv('rain', { ...race.env.rain, perMm: v })} />
+              </div>
+            )}
+            <div className="row">
               <button onClick={loadWeather} disabled={weather.busy} title="Prévision à 15 jours, sinon normales des 5 dernières années (Open-Meteo)">
                 {weather.busy ? 'Météo…' : '☁ Récupérer la météo'}
               </button>
@@ -352,7 +398,17 @@ export function RacePlan({
               </p>
             )}
             {weather.error && <p className="warn">{weather.error}</p>}
-            <Hint>Chaleur : cycle min à 6 h / max à 15 h, −0,65 °C par 100 m de montée.</Hint>
+            {race.weather && (
+              <p className="hint">
+                Météo heure par heure active (prévision du {race.weather.fetchedAt.slice(8, 10)}/{race.weather.fetchedAt.slice(5, 7)}).{' '}
+                <button className="ghost" onClick={() => set({ weather: null })}>Revenir au cycle min/max</button>
+              </p>
+            )}
+            <Hint>
+              {race.weather
+                ? 'Température et pluie prises à chaque instant et à chaque endroit du parcours, corrigées de l’altitude.'
+                : 'Chaleur : cycle min à 6 h / max à 15 h, −0,65 °C par 100 m de montée. La pluie ne compte qu’avec la météo heure par heure.'}
+            </Hint>
           </Card>
 
           <Card title="Points automatiques">

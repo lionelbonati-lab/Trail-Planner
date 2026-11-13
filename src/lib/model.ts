@@ -167,16 +167,17 @@ export function weatherAt(
     precip: p.precip[i0] + fh * (p.precip[i1] - p.precip[i0]),
   })
   const pts = w.points
-  if (dist <= pts[0].dist) return at(pts[0])
+  const ok = (r: { temp: number; precip: number }) => (Number.isFinite(r.temp) ? r : null)
+  if (dist <= pts[0].dist) return ok(at(pts[0]))
   for (let k = 1; k < pts.length; k++) {
     if (dist <= pts[k].dist) {
       const a = at(pts[k - 1])
       const b = at(pts[k])
       const f = (dist - pts[k - 1].dist) / (pts[k].dist - pts[k - 1].dist || 1)
-      return { temp: a.temp + f * (b.temp - a.temp), precip: a.precip + f * (b.precip - a.precip) }
+      return ok({ temp: a.temp + f * (b.temp - a.temp), precip: a.precip + f * (b.precip - a.precip) })
     }
   }
-  return at(pts[pts.length - 1])
+  return ok(at(pts[pts.length - 1]))
 }
 
 export interface StepContext {
