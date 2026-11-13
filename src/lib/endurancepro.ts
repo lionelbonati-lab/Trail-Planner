@@ -2,11 +2,13 @@
 // document du code montre (shares/{code}, champ `ep`) et s'en sert pour colorer l'allure et
 // déclencher ses alarmes par zone de vitesse critique.
 //
-//   EP1|cs=247|z=60,70,80,88,96,105,115,150|up=110|zt=2
+//   EP1|cs=247|z=60,70,80,88,96,105,115,150|up=110|vz=660,770,880,970,1060|zt=2
 //   cs : VC en s/km · z : bornes des zones en % de VC (N+1 valeurs, 7 zones au plus)
 //   up : m de D+ équivalents à 1 km à plat (allure effort d'EndurancePro)
+//   vz : seuils VAM en m/h (début de Z1, fin de Z1 à Z4) pour les 5 couleurs VAM de la montre
 //   zt : zone au-dessus de laquelle l'alarme sonne (zone de la séance envoyée à la montre), 0 = inchangée
 import type { Athlete, Race } from './types'
+import { epVamThresholds } from './vam'
 import { wholeRouteZone } from './zones'
 
 /**
@@ -40,7 +42,8 @@ export function epPayload(a: Athlete, onWatch: Race | null): string {
   const up = climbEquivalence(a)
   const k = onWatch ? wholeRouteZone(onWatch.zones, a) : null
   const zt = k === null ? 0 : order.indexOf(k) + 1
-  return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', `zt=${zt}`]
+  const vz = epVamThresholds(a)
+  return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', vz ? `vz=${vz.join(',')}` : '', `zt=${zt}`]
     .filter(Boolean)
     .join('|')
 }

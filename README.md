@@ -52,7 +52,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   Import d'un GPX ou d'un FIT dans le traceur (bouton ou glisser-déposer), en remplacement ou à la suite du
   tracé en cours ; altitude complétée si le fichier n'en a pas.
 - **Synchronisation EndurancePro** (datafield Garmin) : depuis le profil, VC, zones, équivalence montée
-  (déduite de la VAM à VC) et zone de la séance envoyée à la montre sont publiés dans le document du code
+  (déduite de la VAM à VC), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
   montre (champ `ep`) ; EndurancePro les lit en arrière-plan pour colorer l'allure et sonner par zone de VC.
 - **Fonds de carte** : Plan IGN et photos aériennes IGN (France), OpenStreetMap (mis à jour en continu),
   OpenStreetMap France, carte nationale suisse, satellite, relief OpenTopoMap ; surcouches sentiers balisés
@@ -63,6 +63,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Zones cardiaques en %** : méthode Grappe (échelle ESIE, i1 à i5 en % de FC max), Karvonen (% de la FC de
   réserve, avec la FC repos) ou perso (% de FC max ou de réserve) ; les bpm en sont déduits. Temps par zone
   cardiaque et FC moyenne des tours à l'analyse ; séances sur la montre guidées à l'allure ou à la FC.
+- **Zones de vitesse ascensionnelle** (VAM, m/h) : mêmes % que les zones de VC appliqués à la VAM tenue à VC
+  (la meilleure du tableau VAM selon la pente), ou valeurs perso en m/h. Temps par zone VAM dans les montées
+  (pente > 10 %) à l'analyse des séances ; les seuils Z1 à Z4 sont envoyés aux couleurs VAM d'EndurancePro.
 - **Poids du sac** dans les coefficients de calcul de chaque course : temps allongé de 1 % par kg, ou au prorata
   du poids corporel du profil.
 - **Zones d'allure en portions contiguës** (couleurs Garmin) : clic = fin de cycle, poignées à glisser pour

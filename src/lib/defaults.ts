@@ -66,6 +66,8 @@ export const DEFAULT_ATHLETE: Athlete = {
   hrMethod: 'grappe',
   hrPct: GARMIN_PCT.map((z) => ({ ...z })),
   hrBase: 'max',
+  vamZoneMode: 'cs',
+  vamZones: [],
   workoutTarget: 'pace',
 }
 
