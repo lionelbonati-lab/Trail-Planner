@@ -327,7 +327,8 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
     const stepTime = (intensity: number) => effDist / Math.max(baseSpeed(athlete, mode, grade, intensity) * e.mult, 0.05)
 
     // Intensité du pas : zone imposée, sinon relance en montée tant que le D′ le permet.
-    const zone = zoneOf[i] >= 0 ? opts.zones![zoneOf[i]] : null
+    const zoneRaw = zoneOf[i] >= 0 ? opts.zones![zoneOf[i]] : null
+    const zone = zoneRaw && zoneRaw.kind !== 'model' ? zoneRaw : null
     let intensity = base
     let dt = stepTime(base)
     if (zone && zone.kind === 'pace') {
