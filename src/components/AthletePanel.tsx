@@ -5,7 +5,7 @@ import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES } from '../lib/defaults'
 import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
 import { climbEquivalence, epPayload } from '../lib/endurancepro'
-import { epVamThresholds, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
+import { VAM_ZONE_COUNT, epVamThresholds, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
@@ -387,6 +387,7 @@ function VamZonesCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: A
     onChange({ ...athlete, vamZoneMode: mode, vamZones: mode === 'custom' && !athlete.vamZones.length ? vamZonesFromCs(athlete) : athlete.vamZones })
   const setZones = (vamZones: VamZone[]) => onChange({ ...athlete, vamZoneMode: 'custom', vamZones })
   const gentle = ref ? interpVam(athlete, VAM_GENTLE_GRADE) : 0
+  const csSorted = [...athlete.zones].sort((x, y) => x.low - y.low)
   return (
     <Card title="Zones de vitesse ascensionnelle" className="span2">
       <Hint>
@@ -407,8 +408,9 @@ function VamZonesCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: A
           : custom
             ? `Tes zones en m/h. Le % indique où elles se situent par rapport à ta VAM à VC (${ref.vam} m/h sur ${ref.grade} %).`
             : `Référence : ${ref.vam} m/h, ta meilleure VAM à VC (sur ${ref.grade} %, tableau « Vitesse ascensionnelle selon la pente »). ` +
-              `La VAM suivant l'intensité, chaque zone reprend les % de ta zone de VC. Sur pente plus douce, la même intensité donne ` +
-              `une VAM plus faible (${Math.round(gentle)} m/h à ${VAM_GENTLE_GRADE} % à VC).`}
+              `5 zones comme la FC : la VAM suivant l'intensité, Z1 à Z4 reprennent les % de tes zones de VC, Z5 couvre le voisinage ` +
+              `de VC et au-delà. Sur pente plus douce, la même intensité donne une VAM plus faible (${Math.round(gentle)} m/h à ` +
+              `${VAM_GENTLE_GRADE} % à VC).`}
       </Hint>
       {zones.length > 0 && (
         <table className="table compact">
@@ -419,19 +421,21 @@ function VamZonesCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: A
             {zones.map((z, i) => {
               const setZ = (patch: Partial<VamZone>) => setZones(zones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
               const pct = (v: number) => (ref ? Math.round((v / ref.vam) * 100) : '—')
+              // Dernière zone calculée : ouverte vers le haut (« et plus »).
+              const open = !custom && i === zones.length - 1
               return (
                 <tr key={i}>
                   <td className="nowrap">
-                    <i className="zone-swatch" style={{ background: colorForIndex(i, athlete) }} />
+                    <i className="zone-swatch" style={{ background: colorForIndex(i) }} />
                     {custom ? <input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 90 }} /> : z.name}
                   </td>
                   <td>{custom ? <Num value={z.low} width={64} min={0} max={4000} onChange={(v) => setZ({ low: v })} /> : z.low}</td>
-                  <td>{custom ? <Num value={z.high} width={64} min={0} max={4000} onChange={(v) => setZ({ high: v })} /> : z.high}</td>
-                  <td className="muted">{pct(z.low)} – {pct(z.high)} %</td>
+                  <td>{custom ? <Num value={z.high} width={64} min={0} max={4000} onChange={(v) => setZ({ high: v })} /> : open ? 'et plus' : z.high}</td>
+                  <td className="muted">{open ? `${pct(z.low)} % et plus` : `${pct(z.low)} – ${pct(z.high)} %`}</td>
                   {custom ? (
                     <td><button className="ghost" onClick={() => setZones(zones.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
                   ) : (
-                    <td className="muted">{athlete.zones[i]?.use ?? ''}</td>
+                    <td className="muted">{open && csSorted.length > VAM_ZONE_COUNT ? 'Voisinage de VC et au-delà' : (csSorted[i]?.use ?? '')}</td>
                   )}
                 </tr>
               )
@@ -441,15 +445,17 @@ function VamZonesCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: A
       )}
       {custom && (
         <div className="row">
-          <button
-            className="ghost"
-            onClick={() => {
-              const last = zones[zones.length - 1]
-              setZones([...zones, { name: `Zone ${zones.length + 1}`, low: last?.high ?? 600, high: (last?.high ?? 600) + 100 }])
-            }}
-          >
-            <Plus /> Ajouter une zone
-          </button>
+          {zones.length < VAM_ZONE_COUNT && (
+            <button
+              className="ghost"
+              onClick={() => {
+                const last = zones[zones.length - 1]
+                setZones([...zones, { name: `Zone ${zones.length + 1}`, low: last?.high ?? 600, high: (last?.high ?? 600) + 100 }])
+              }}
+            >
+              <Plus /> Ajouter une zone
+            </button>
+          )}
           {ref && <button className="ghost" onClick={() => setZones(vamZonesFromCs(athlete))}><RotateCcw /> Repartir des zones calculées</button>}
         </div>
       )}
@@ -534,7 +540,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
                   ))}
                   <span className="ep-zone">
                     <i className="zone-swatch" style={{ background: colorForIndex(4) }} />
-                    Z5 et plus &gt; {vz[4]} m/h
+                    Z5 dès {vz[4]} m/h
                   </span>
                   <span className="muted"> (pas de couleur sous {vz[0]} m/h)</span>
                 </>
