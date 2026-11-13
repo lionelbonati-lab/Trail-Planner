@@ -391,13 +391,25 @@ tr.muted td { color: var(--muted); }
 .draw-toolbar .tb-group { display: inline-flex; background: var(--accent-soft); border-radius: 22px; }
 .draw-toolbar .tb-ok { border: none; background: none; color: var(--accent); font-weight: 800; font-size: 17px; padding: 0 8px; }
 .draw-toolbar .tb-ok:disabled { opacity: 0.4; }
-.sheet-handle { display: block; width: 100%; height: 22px; border: none; background: transparent; padding: 0; border-radius: 16px 16px 0 0; }
+.sheet-handle { display: block; width: 100%; height: 22px; padding: 0; }
 .sheet-handle span { display: block; width: 42px; height: 5px; border-radius: 3px; background: #c9c5bb; margin: 9px auto 0; }
 @media (max-width: 899px) {
   .draw-shell { display: block; }
   .draw-mapwrap { position: absolute; inset: 0; }
   .draw-panel { position: absolute; left: 0; right: 0; bottom: 0; width: auto; border-left: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -4px 18px rgba(0,0,0,0.18); max-height: 78vh; z-index: 1003; }
-  .draw-panel:not(.open) .draw-more { display: none; }
+  /* Trois hauteurs : mini (chiffres seuls), peek (avec la barre d'édition), full (dépliée). */
+  .draw-panel.sheet-mini .draw-head, .draw-panel.sheet-mini .draw-status, .draw-panel.sheet-mini .draw-more,
+  .draw-panel.sheet-mini .draw-toolbar, .draw-panel.sheet-mini .draw-menu, .draw-panel.sheet-mini .pace-chip { display: none; }
+  .draw-panel.sheet-peek .draw-more { display: none; }
+  .draw-panel.sheet-full { height: 78vh; }
+  .draw-panel.dragging { max-height: none; overflow: hidden; }
+  .draw-panel.dragging .draw-head, .draw-panel.dragging .draw-toolbar { display: flex; }
+  .draw-panel.dragging .draw-status { display: grid; }
+  .draw-panel.dragging .draw-more { display: block; }
+  .draw-panel.dragging .pace-chip { display: inline-flex; }
+  .draw-panel.dragging .draw-panel-body { overflow: hidden; }
+  .sheet-drag { touch-action: none; cursor: grab; }
+  .draw-panel.sheet-mini .draw-summary { margin: 2px 0 6px; }
   .draw-panel-body { padding: 2px 14px 6px; }
   .draw-name { font-size: 16px; padding: 7px 10px; }
   .draw-summary { font-size: 15px; margin: 6px 0 2px; }
@@ -458,3 +470,6 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
   .topbar nav::-webkit-scrollbar { display: none; }
   .topbar nav button { flex: none; }
 }
+
+.draw-toolbar .tb.flagged { position: relative; }
+.draw-toolbar .tb.flagged::after { content: ''; position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: #f39c12; }

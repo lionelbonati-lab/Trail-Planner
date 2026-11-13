@@ -30,7 +30,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   datée sans toucher au modèle ; liste des séances planifiées.
 - **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
   avec distance, D+/D−, temps, profil et points de repère (km, altitude, temps prévu à chaque point) ; barre
-  réglages / annuler / rétablir / supprimer / OK. Un point se pose par un appui maintenu un instant (clic à la
+  réglages / annuler / rétablir / supprimer / OK. Sur téléphone, la feuille se glisse entre trois hauteurs : chiffres
+  seuls, avec la barre d'édition, ou dépliée. Un point se pose par un appui maintenu un instant (clic à la
   souris) ; un toucher bref laisse déplacer la carte. **Hors-route automatique** : sur un chemin (à ~24 px près
   au zoom courant) le tracé le suit et s'y accroche, hors chemin il passe en ligne droite. Toucher un point ou
   un tronçon pour le supprimer, y insérer un point ou forcer son mode.
