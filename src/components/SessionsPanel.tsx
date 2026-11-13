@@ -1,3 +1,4 @@
+import { Trash2, Upload, UserCheck, Watch } from 'lucide-react'
 import { useState } from 'react'
 import { readActivity } from '../lib/activity'
 import { download } from '../lib/exportGpx'
@@ -65,7 +66,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
           <h3>Mise à jour proposée du profil</h3>
           <ul className="changes">{result.r.changes.map((c) => <li key={c}>{c}</li>)}</ul>
           <div className="row">
-            <button className="primary" onClick={() => save(true)}>Appliquer au profil et enregistrer</button>
+            <button className="primary" onClick={() => save(true)}><UserCheck /> Appliquer au profil et enregistrer</button>
             <button onClick={() => save(false)}>Enregistrer sans appliquer</button>
             <button className="ghost" onClick={() => setResult(null)}>Annuler</button>
           </div>
@@ -83,9 +84,9 @@ export function SessionsPanel({ athlete, onChange }: Props) {
               actions={
                 s.variants ? undefined : (
                   <>
-                    <button onClick={() => exportFit(s.key)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)">⌚ Entraînement .fit</button>
+                    <button onClick={() => exportFit(s.key)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)"><Watch /> Entraînement .fit</button>
                     <label className="button primary">
-                      Importer ma séance
+                      <Upload /> Importer ma séance
                       <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { importFor(s.key, e.target.files); e.target.value = '' }} />
                     </label>
                   </>
@@ -99,9 +100,9 @@ export function SessionsPanel({ athlete, onChange }: Props) {
                   {s.variants.map((v) => (
                     <div key={v.key} className="variant">
                       <strong>Test {v.label}</strong>
-                      <button onClick={() => exportFit(s.key, v)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)">⌚ .fit</button>
+                      <button onClick={() => exportFit(s.key, v)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)"><Watch /> .fit</button>
                       <label className="button primary">
-                        Importer
+                        <Upload /> Importer
                         <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { importFor(s.key, e.target.files, v); e.target.value = '' }} />
                       </label>
                     </div>
@@ -223,7 +224,7 @@ function CsTrials({ athlete, onChange }: Props) {
                 <td><Num value={t.dist} width={70} min={1} onChange={(v) => set(athlete.csTrials.map((x) => (x.id === t.id ? { ...x, dist: v, source: 'manual' } : x)))} /></td>
                 <td>{formatPace(t.seconds / (t.dist / 1000))}/km</td>
                 <td className="small">{src[t.source]}</td>
-                <td><button className="ghost" onClick={() => set(athlete.csTrials.filter((x) => x.id !== t.id))}>✕</button></td>
+                <td><button className="ghost" onClick={() => set(athlete.csTrials.filter((x) => x.id !== t.id))} aria-label="Supprimer"><Trash2 /></button></td>
               </tr>
             ))}
           </tbody>
@@ -238,7 +239,7 @@ function CsTrials({ athlete, onChange }: Props) {
               {fit.r2 !== null ? ` · R² ${fit.r2.toFixed(3)}` : ''}
             </span>
             {(Math.abs(fit.cs - athlete.cs) > 0.001 || Math.abs(fit.dPrime - athlete.dPrime) > 1) && (
-              <button className="primary" onClick={() => onChange({ ...athlete, cs: fit.cs, dPrime: fit.dPrime })}>Appliquer au profil</button>
+              <button className="primary" onClick={() => onChange({ ...athlete, cs: fit.cs, dPrime: fit.dPrime })}><UserCheck /> Appliquer au profil</button>
             )}
           </>
         )}

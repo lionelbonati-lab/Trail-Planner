@@ -1,3 +1,4 @@
+import { ArrowLeft, Check, LocateFixed, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { liveStatus, locate, plannedAt } from '../lib/live'
 import { formatClock, formatDuration, zonedToUtc } from '../lib/time'
@@ -74,7 +75,7 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
   if (!race.live || !status) {
     return (
       <div className="live">
-        <button className="ghost" onClick={onExit}>← Plan</button>
+        <button className="ghost" onClick={onExit}><ArrowLeft /> Plan</button>
         <Card title={`Mode course · ${race.name}`}>
           <p>Départ prévu {formatClock(new Date(plannedStart), tz, true)}. Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.</p>
           <div className="live-actions">
@@ -130,7 +131,7 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
   return (
     <div className="live">
       <div className="row">
-        <button className="ghost" onClick={onExit}>← Plan</button>
+        <button className="ghost" onClick={onExit}><ArrowLeft /> Plan</button>
         <strong>{race.name}</strong>
       </div>
 
@@ -160,13 +161,13 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
             )}
           </div>
           <button className="primary big" onClick={() => mark(next.split.cp.id, new Date().toISOString())}>
-            ✓ J'arrive à {next.split.cp.name}
+            <Check /> J'arrive à {next.split.cp.name}
           </button>
         </section>
       )}
 
       <div className="live-actions">
-        <button onClick={whereAmI} disabled={gps.busy}>{gps.busy ? 'Localisation…' : '📍 Où suis-je ?'}</button>
+        <button onClick={whereAmI} disabled={gps.busy}>{gps.busy ? 'Localisation…' : <><LocateFixed /> Où suis-je ?</>}</button>
         <label className="toggle"><input type="checkbox" checked={awake} onChange={(e) => setAwake(e.target.checked)} /> Garder l'écran allumé</label>
       </div>
       {gps.text && <p className="hint">{gps.text}</p>}
@@ -186,7 +187,7 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
                   {r.actual !== null ? <strong>{clock(r.actual)}</strong> : <span className="muted">~{clock(r.eta)}</span>}
                   {r.actual !== null && <span className={`small ${r.actual > r.planned ? 'warn-text' : 'ok-text'}`}> {signed(r.actual - r.planned)}</span>}
                 </td>
-                <td><button className="ghost" onClick={() => editTime(r.split.cp.id, r.actual)} title="Saisir ou corriger l'heure">✎</button></td>
+                <td><button className="ghost" onClick={() => editTime(r.split.cp.id, r.actual)} title="Saisir ou corriger l'heure" aria-label="Modifier l'heure"><Pencil /></button></td>
               </tr>
             ))}
           </tbody>

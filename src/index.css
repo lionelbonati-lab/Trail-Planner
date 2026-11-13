@@ -421,3 +421,40 @@ tr.muted td { color: var(--muted); }
 .pace-info { font-size: 12px; flex-basis: 100%; }
 .ep-zone { display: inline-flex; align-items: center; margin-right: 12px; white-space: nowrap; }
 label.check { display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer; }
+
+/* Icônes (Lucide) */
+svg.lucide { width: 1.15em; height: 1.15em; flex: none; stroke-width: 2; }
+svg.lucide.inline { width: 1em; height: 1em; vertical-align: -0.12em; }
+button svg.lucide, .button svg.lucide { margin: 0 1px; }
+.fab svg.lucide { width: 22px; height: 22px; }
+.draw-toolbar .tb svg.lucide { width: 22px; height: 22px; }
+.draw-toolbar .tb-ok { display: inline-flex; align-items: center; gap: 4px; }
+.svg-inline { display: inline-flex; }
+.svg-inline svg { width: 100%; height: 100%; }
+.draw-search-icon { position: absolute; left: 14px; top: 13px; width: 18px !important; height: 18px !important; color: #6b716c; pointer-events: none; }
+.draw-search input { padding-left: 40px; }
+.draw-pill { align-items: center; gap: 4px; padding-left: 14px; font-weight: 600; font-size: 14px; color: #1f2420; }
+.draw-pill span { display: inline-flex; align-items: center; gap: 6px; }
+.draw-pill button { height: 44px; padding: 0 12px; }
+.wp-icon svg { width: 14px; height: 14px; }
+.wp-row .wp-dot { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: #fff; }
+.wp-row .wp-dot .svg-inline { width: 12px; height: 12px; }
+.wp-row .wp-dot.wp-mid { width: 12px; height: 12px; margin: 4px; }
+.wp-row { grid-template-columns: 20px 1fr auto; }
+.wp-seg svg.lucide { color: var(--muted); }
+.mode-seg button { justify-content: center; gap: 5px; }
+.hold-ring { position: absolute; z-index: 1001; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; border: 3px solid var(--accent); background: rgba(47,107,79,0.15); pointer-events: none; animation: hold-grow linear forwards; }
+@keyframes hold-grow { from { transform: scale(0.3); opacity: 0.4; } to { transform: scale(1); opacity: 1; } }
+.brand { display: inline-flex; align-items: center; gap: 6px; }
+.brand svg.lucide { color: var(--accent); width: 20px; height: 20px; }
+.topbar nav button svg.lucide { color: var(--muted); }
+.topbar nav button.on svg.lucide { color: var(--accent); }
+.crumbs a { display: inline-flex; align-items: center; gap: 4px; }
+.ok-text { display: inline-flex; align-items: center; gap: 4px; }
+.night-icon { color: #5b6bb5; }
+.sync { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 720px) {
+  .topbar nav { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .topbar nav::-webkit-scrollbar { display: none; }
+  .topbar nav button { flex: none; }
+}

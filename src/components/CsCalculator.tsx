@@ -1,3 +1,4 @@
+import { Plus, Trash2, UserCheck } from 'lucide-react'
 import { useState } from 'react'
 import { computeCs, predictTime, PROTOCOLS } from '../lib/cs'
 import { csFromTrials } from '../lib/sessions'
@@ -84,8 +85,8 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
                   <td>{t > 0 && d > 0 ? formatPace(t / (d / 1000)) : '—'}</td>
                   <td>
                     {rows.length > 2 && (
-                      <button className="ghost" onClick={() => setRows(rows.filter((_, j) => j !== i))}>
-                        ✕
+                      <button className="ghost" onClick={() => setRows(rows.filter((_, j) => j !== i))} aria-label="Supprimer">
+                        <Trash2 />
                       </button>
                     )}
                   </td>
@@ -95,7 +96,7 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
           </tbody>
         </table>
         <button className="ghost" onClick={() => setRows([...rows, { time: '', dist: '' }])}>
-          + Ajouter un essai
+          <Plus /> Ajouter un essai
         </button>
         {athlete.csTrials.length > 0 && (
           <button
@@ -153,7 +154,7 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
               </label>
               <button className="primary" onClick={apply}>
-                Appliquer au profil et enregistrer
+                <UserCheck /> Appliquer au profil et enregistrer
               </button>
             </div>
           </>
@@ -191,8 +192,9 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
                     <button
                       className="ghost"
                       onClick={() => onChange({ ...athlete, history: athlete.history.filter((x) => x.id !== h.id) })}
+                      aria-label="Supprimer"
                     >
-                      ✕
+                      <Trash2 />
                     </button>
                   </td>
                 </tr>

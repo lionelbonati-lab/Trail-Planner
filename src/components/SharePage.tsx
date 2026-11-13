@@ -1,3 +1,4 @@
+import { Check, Mountain } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
@@ -82,7 +83,7 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
 
   return (
     <div className="app">
-      <header className="topbar"><span className="brand">⛰ Trail Planner · Assistance</span></header>
+      <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
       <main className="share">
         <h1>{snap.raceName}</h1>
         <p className="muted">
@@ -129,7 +130,7 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
                 <td>{clock(r.early, long)}</td>
                 <td><strong>{clock(r.planned, long)}</strong></td>
                 <td>{clock(r.late, long)}</td>
-                <td>{r.actual ? <strong>✓ {clock(r.actual, long)}</strong> : snap.live ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
+                <td>{r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
                 <td>{clock(r.cutoff, long)}</td>
               </tr>
             ))}

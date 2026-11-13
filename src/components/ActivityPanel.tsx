@@ -1,3 +1,4 @@
+import { Check, Trash2, Upload, UserCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
   analyzeActivity,
@@ -89,7 +90,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
         title="Analyser une séance"
         actions={
           <label className="button primary">
-            Importer GPX ou FIT
+            <Upload /> Importer GPX ou FIT
             <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { load(e.target.files); e.target.value = '' }} />
           </label>
         }
@@ -180,7 +181,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
                   cochée(s) de l'historique.
                 </Hint>
                 <div className="row">
-                  <button className="primary" onClick={() => save(true)}>Appliquer au profil et enregistrer</button>
+                  <button className="primary" onClick={() => save(true)}><UserCheck /> Appliquer au profil et enregistrer</button>
                   <button onClick={() => save(false)}>Enregistrer sans calibrer</button>
                 </div>
               </>
@@ -241,7 +242,7 @@ function History({ athlete, races, onChange }: Props) {
                 <td>{formatDuration(a.predicted)}</td>
                 <td>{pct(a.predicted / a.moving - 1)}</td>
                 <td className="muted">{races.find((r) => r.id === a.raceId)?.name ?? ''}</td>
-                <td><button className="ghost" onClick={() => set(athlete.activities.filter((x) => x.id !== a.id))}>✕</button></td>
+                <td><button className="ghost" onClick={() => set(athlete.activities.filter((x) => x.id !== a.id))} aria-label="Supprimer"><Trash2 /></button></td>
               </tr>
             ))}
           </tbody>
@@ -413,7 +414,7 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
               <span key={k} className="row tight">
                 Un tour de {Math.round(t.seconds / 60)}′ à fond : <strong>{t.dist} m</strong> ({formatPace(t.seconds / (t.dist / 1000))}/km).
                 {done.has(k) ? (
-                  <span className="ok-text">Enregistré ✓</span>
+                  <span className="ok-text"><Check className="inline" /> Enregistré</span>
                 ) : (
                   <button className="primary" onClick={() => { onChange({ ...athlete, csTrials: [t, ...athlete.csTrials] }); mark(k) }}>
                     Enregistrer comme test VC {Math.round(t.seconds / 60)}′
@@ -427,7 +428,7 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
               Ton meilleur effort de {label(ins.csFloor.seconds)} dépasse ce que permettent ta VC et ton D′ : ta VC est d'au moins{' '}
               <strong>{formatPace(1000 / ins.csFloor.cs)}/km</strong> (actuelle {formatPace(1000 / athlete.cs)}/km).
               {done.has('cs') ? (
-                <span className="ok-text">Appliqué ✓</span>
+                <span className="ok-text"><Check className="inline" /> Appliqué</span>
               ) : (
                 <button onClick={() => { onChange({ ...athlete, cs: ins.csFloor!.cs }); mark('cs') }}>Appliquer</button>
               )}

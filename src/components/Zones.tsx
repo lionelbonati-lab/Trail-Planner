@@ -1,3 +1,4 @@
+import { Watch, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { download } from '../lib/exportGpx'
 import { formatDuration, formatPace, parseDuration } from '../lib/time'
@@ -105,7 +106,7 @@ export function ZonesCard({ race, athlete, track, sim, onChange }: { race: Race;
         <>
           <button onClick={addBoundaries} title="Ajoute un point de passage à chaque fin de cycle">Points aux fins de cycle</button>
           <button className="ghost" onClick={() => confirm('Effacer toutes les zones ?') && setZones([])}>Tout effacer</button>
-          <button className="primary" onClick={exportWorkout} title="Entraînement Garmin : une étape par portion, avec une fourchette d'allure">⌚ Entraînement .fit</button>
+          <button className="primary" onClick={exportWorkout} title="Entraînement Garmin : une étape par portion, avec une fourchette d'allure"><Watch /> Entraînement .fit</button>
         </>
       }
     >
@@ -129,7 +130,7 @@ export function ZonesCard({ race, athlete, track, sim, onChange }: { race: Race;
                   <td>{dist > 0 && time > 0 ? `${formatPace(time / (dist / 1000))}/km` : '—'}</td>
                   <td>
                     {parts.length > 1 && (
-                      <button className="ghost" onClick={() => setZones(mergeInto(parts, i, i > 0 ? -1 : 1))} title="Supprimer cette fin de cycle (fusion avec la portion voisine)">✕</button>
+                      <button className="ghost" onClick={() => setZones(mergeInto(parts, i, i > 0 ? -1 : 1))} title="Supprimer cette fin de cycle (fusion avec la portion voisine)" aria-label="Supprimer la fin de cycle"><X /></button>
                     )}
                   </td>
                 </tr>
