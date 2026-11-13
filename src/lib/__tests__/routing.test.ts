@@ -188,6 +188,54 @@ describe('tracé sur carte : services', () => {
     await expect(fillElevation([{ lat: 45, lon: 6, ele: null }], bad)).rejects.toThrow('Altitude')
   })
 
+  it('altitude : un point tous les 90 m demandé, les autres interpolés, rien de redemandé', async () => {
+    let asked = 0
+    const fetcher: Fetcher = async (url) => {
+      const lats = new URL(url).searchParams.get('latitude')!.split(',').map(Number)
+      asked += lats.length
+      return json({ elevation: lats.map((l) => 1000 + (l - 45) * 10000) })
+    }
+    // Ligne droite de 2 km vers le nord, un point tous les 25 m.
+    const line = densify({ lat: 45, lon: 7 }, { lat: 45.018, lon: 7 })
+    const out = await fillElevation(line, fetcher)
+    expect(asked).toBeLessThanOrEqual(25)
+    expect(out.every((p) => p.ele !== null)).toBe(true)
+    expect(out[40].ele).toBeCloseTo(1000 + (line[40].lat - 45) * 10000, 0)
+    // Même ligne : tout vient du cache.
+    asked = 0
+    await fillElevation(line, fetcher)
+    expect(asked).toBe(0)
+  })
+
+  it('altitude : service saturé (429), nouvelle tentative puis repli sur les altitudes du routeur', async () => {
+    let n = 0
+    const flaky: Fetcher = async (url) => {
+      n++
+      if (n === 1) return new Response('', { status: 429 })
+      const lats = new URL(url).searchParams.get('latitude')!.split(',')
+      return json({ elevation: lats.map(() => 1234) })
+    }
+    const out = await fillElevation([{ lat: 44, lon: 5, ele: null }], flaky, { retryMs: [0] })
+    expect(out[0].ele).toBe(1234)
+    expect(n).toBe(2)
+    // Toujours saturé : le raccord prend l'altitude du point de chemin connu.
+    const busy: Fetcher = async () => new Response('', { status: 429 })
+    const conn = [...densify({ lat: 44.1, lon: 5 }, { lat: 44.101, lon: 5, ele: 800 })]
+    const filled = await fillElevation(conn, busy, { retryMs: [0, 0] })
+    expect(filled.every((p) => p.ele === 800)).toBe(true)
+    // Aucune altitude connue : message clair.
+    await expect(fillElevation([{ lat: 44.2, lon: 5, ele: null }], busy, { retryMs: [] })).rejects.toThrow('saturé')
+    // Service en pause après le refus : plus aucune requête pendant une minute.
+    let more = 0
+    const counting: Fetcher = async () => {
+      more++
+      return new Response('', { status: 429 })
+    }
+    await fillElevation(conn.map((p) => ({ ...p, lat: p.lat + 0.01 })), counting, { retryMs: [] })
+    await fillElevation(conn.map((p) => ({ ...p, lat: p.lat + 0.02 })), counting, { retryMs: [] })
+    expect(more).toBe(1)
+  })
+
   it('recherche de lieu', async () => {
     const { fetcher, calls } = fakeServices()
     const res = await searchPlace('Chamonix', fetcher)
@@ -347,9 +395,10 @@ describe('tracé sur carte : import de fichiers', () => {
     expect(asked).toBeLessThanOrEqual(1000)
     expect(out.every((p) => p.ele !== null)).toBe(true)
     expect(out[2501].ele).toBeCloseTo(1000 + 0.2501 * 1000, 0)
-    // Peu de points : tous interrogés.
+    // Peu de points (tous les 11 m) : un tous les 90 m environ suffit, les autres interpolés.
     asked = 0
-    await fillElevationSparse(pts.slice(0, 50), fetcher)
-    expect(asked).toBe(50)
+    const few = await fillElevationSparse(pts.slice(0, 50).map((p) => ({ ...p, lon: 6.5 })), fetcher)
+    expect(asked).toBeLessThanOrEqual(8)
+    expect(few[23].ele).toBeCloseTo(1000 + 0.0023 * 1000, 1)
   })
 })

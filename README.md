@@ -40,7 +40,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Création automatique de boucle** (traceur) : terrain plat, vallonné ou montagne (D+ par km visé), distance ou
   durée (convertie avec ton profil et l'allure choisie). Trois directions retenues d'après le relief du modèle de
   terrain, boucles calculées sur les chemins, taille ajustée à la distance ou à la durée ; propositions à parcourir,
-  la boucle retenue reste modifiable.
+  la boucle retenue reste modifiable. Départ placé sur la carte (appui maintenu ou clic, repère déplaçable) ou à
+  ta position.
+- **Altitude** : un point tous les 90 m demandé au modèle de terrain (les autres interpolés), altitudes gardées en
+  mémoire, nouvel essai si le service sature ; en cas de refus persistant (429), le service est laissé tranquille une
+  minute et les altitudes données par le routeur sont prolongées.
 - **Icônes** (Lucide) dans la navigation et sur les boutons de toute l'appli.
 - **Traceur de parcours sur carte** (onglet « Tracer ») : clic = point, l'itinéraire suit les sentiers
   d'OpenStreetMap (routeur public BRouter, profil randonnée montagne), le chemin le plus court ou une ligne

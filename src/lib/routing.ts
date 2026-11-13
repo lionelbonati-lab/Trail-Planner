@@ -41,36 +41,143 @@ export function parseBrouter(json: unknown): RawPoint[] {
   return coords.map((c) => ({ lat: c[1], lon: c[0], ele: Number.isFinite(c[2]) ? c[2] : null }))
 }
 
-/** Ligne droite de a à b, un point tous les `step` m au plus (extrémités comprises). */
-export function densify(a: { lat: number; lon: number }, b: { lat: number; lon: number }, step = 25): RawPoint[] {
+type LatLon = { lat: number; lon: number; ele?: number | null }
+
+/**
+ * Ligne droite de a à b, un point tous les `step` m au plus (extrémités comprises). Les
+ * extrémités gardent leur altitude si elles en ont une (point accroché au chemin).
+ */
+export function densify(a: LatLon, b: LatLon, step = 25): RawPoint[] {
   const d = haversine(a.lat, a.lon, b.lat, b.lon)
   // Au plus 400 points par segment : un pas plus long sur les très grandes lignes droites.
   const n = Math.max(1, Math.ceil(d / Math.max(step, d / 400)))
   return Array.from({ length: n + 1 }, (_, k) => ({
     lat: a.lat + ((b.lat - a.lat) * k) / n,
     lon: a.lon + ((b.lon - a.lon) * k) / n,
-    ele: null,
+    ele: k === 0 ? (a.ele ?? null) : k === n ? (b.ele ?? null) : null,
   }))
 }
 
-/** Complète les altitudes manquantes (modèle de terrain Copernicus 90 m d'Open-Meteo). */
-export async function fillElevation(points: RawPoint[], fetcher: Fetcher = fetch): Promise<RawPoint[]> {
-  const missing = points.map((p, i) => (p.ele === null ? i : -1)).filter((i) => i >= 0)
-  if (!missing.length) return points
-  const out = points.map((p) => ({ ...p }))
-  for (let k = 0; k < missing.length; k += ELEVATION_BATCH) {
-    const idx = missing.slice(k, k + ELEVATION_BATCH)
-    const lat = idx.map((i) => points[i].lat.toFixed(5)).join(',')
-    const lon = idx.map((i) => points[i].lon.toFixed(5)).join(',')
-    const res = await fetcher(`${ELEVATION}?latitude=${lat}&longitude=${lon}`)
-    if (!res.ok) throw new Error(`Altitude indisponible (${res.status}).`)
-    const { elevation } = (await res.json()) as { elevation?: number[] }
-    if (!Array.isArray(elevation) || elevation.length !== idx.length) throw new Error('Altitude indisponible.')
-    idx.forEach((i, j) => {
-      out[i].ele = Number.isFinite(elevation[j]) ? elevation[j] : null
-    })
+/**
+ * Pas (m) entre deux altitudes demandées : le modèle de terrain est au pas de 90 m, les points
+ * intermédiaires sont interpolés (bien moins de requêtes, même précision).
+ */
+const ELEVATION_STEP = 90
+/** Attentes avant de redemander une altitude refusée (429 : trop de requêtes, ou panne passagère). */
+const ELEVATION_RETRY_MS = [1000, 2500]
+/** Après un refus persistant, le service n'est plus interrogé pendant ce temps (ms). */
+const ELEVATION_PAUSE_MS = 60000
+/** Fin de la pause du service d'altitude, par service. */
+const elevationPause = new WeakMap<Fetcher, number>()
+const SATURATED = 'Service d’altitude saturé (trop de requêtes) : réessaie dans une minute.'
+/** Altitudes déjà obtenues (à ~10 m près), par service : annuler, refaire ou recalculer ne redemande rien. */
+const elevationCaches = new WeakMap<Fetcher, Map<string, number>>()
+const eleKey = (p: { lat: number; lon: number }) => `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`
+
+export class ElevationError extends Error {}
+
+/** Altitudes de points (Open-Meteo, 100 par requête), avec nouvelles tentatives si le service sature. */
+async function queryElevation(pts: RawPoint[], fetcher: Fetcher, retryMs: number[]): Promise<number[]> {
+  if (Date.now() < (elevationPause.get(fetcher) ?? 0)) throw new ElevationError(SATURATED)
+  const out: number[] = []
+  for (let k = 0; k < pts.length; k += ELEVATION_BATCH) {
+    const batch = pts.slice(k, k + ELEVATION_BATCH)
+    const lat = batch.map((p) => p.lat.toFixed(5)).join(',')
+    const lon = batch.map((p) => p.lon.toFixed(5)).join(',')
+    let res: Response | null = null
+    for (let attempt = 0; ; attempt++) {
+      res = await fetcher(`${ELEVATION}?latitude=${lat}&longitude=${lon}`).catch(() => null)
+      if (res?.ok) break
+      const retry = !res || res.status === 429 || res.status >= 500
+      if (!retry || attempt >= retryMs.length) {
+        if (res?.status === 429) {
+          // Inutile d'insister : les tronçons suivants prennent directement les altitudes du routeur.
+          elevationPause.set(fetcher, Date.now() + ELEVATION_PAUSE_MS)
+          throw new ElevationError(SATURATED)
+        }
+        throw new ElevationError(`Altitude indisponible (${res ? res.status : 'connexion'}).`)
+      }
+      await new Promise((r) => setTimeout(r, retryMs[attempt]))
+    }
+    const { elevation } = (await res!.json()) as { elevation?: number[] }
+    if (!Array.isArray(elevation) || elevation.length !== batch.length) throw new ElevationError('Altitude indisponible.')
+    out.push(...elevation)
   }
   return out
+}
+
+/** Altitudes manquantes interpolées (selon la distance) entre les points connus voisins. */
+function interpolateMissing(out: RawPoint[]): RawPoint[] {
+  const dist = [0]
+  for (let i = 1; i < out.length; i++) dist.push(dist[i - 1] + haversine(out[i - 1].lat, out[i - 1].lon, out[i].lat, out[i].lon))
+  let prev = -1
+  for (let i = 0; i < out.length; i++) {
+    if (out[i].ele !== null) {
+      prev = i
+      continue
+    }
+    let next = i + 1
+    while (next < out.length && out[next].ele === null) next++
+    const ea = prev >= 0 ? out[prev].ele : null
+    const eb = next < out.length ? out[next].ele : null
+    if (ea === null && eb === null) throw new ElevationError('Altitude indisponible.')
+    for (let j = i; j < next; j++) {
+      out[j].ele =
+        ea === null ? eb : eb === null ? ea : ea + ((eb - ea) * (dist[j] - dist[prev])) / (dist[next] - dist[prev] || 1)
+    }
+    i = next - 1
+  }
+  return out
+}
+
+/**
+ * Complète les altitudes manquantes (modèle de terrain Copernicus 90 m d'Open-Meteo). Seul un
+ * point tous les `step` m est demandé (et aucun déjà connu), les autres sont interpolés. Si le
+ * service ne répond pas, les altitudes connues de la trace (celles du routeur) sont prolongées ;
+ * erreur seulement s'il n'y en a aucune (ou si `fallback` vaut false).
+ */
+export async function fillElevation(
+  points: RawPoint[],
+  fetcher: Fetcher = fetch,
+  opts: { step?: number; retryMs?: number[]; fallback?: boolean } = {},
+): Promise<RawPoint[]> {
+  if (!points.some((p) => p.ele === null)) return points
+  const step = opts.step ?? ELEVATION_STEP
+  let cache = elevationCaches.get(fetcher)
+  if (!cache) elevationCaches.set(fetcher, (cache = new Map()))
+  const out = points.map((p) => ({ ...p, ele: p.ele ?? cache.get(eleKey(p)) ?? null }))
+  if (!out.some((p) => p.ele === null)) return out
+  // Points à demander : premier et dernier d'une suite sans voisin connu, puis un tous les `step` m.
+  const ask: number[] = []
+  let since = Infinity
+  for (let i = 0; i < out.length; i++) {
+    if (i > 0) since += haversine(out[i - 1].lat, out[i - 1].lon, out[i].lat, out[i].lon)
+    if (out[i].ele !== null) {
+      since = 0
+      continue
+    }
+    if (since >= step || i === out.length - 1) {
+      ask.push(i)
+      since = 0
+    }
+  }
+  if (ask.length) {
+    try {
+      const ele = await queryElevation(
+        ask.map((i) => out[i]),
+        fetcher,
+        opts.retryMs ?? ELEVATION_RETRY_MS,
+      )
+      ask.forEach((i, j) => {
+        if (!Number.isFinite(ele[j])) return
+        out[i].ele = ele[j]
+        cache.set(eleKey(out[i]), ele[j])
+      })
+    } catch (e) {
+      if (opts.fallback === false || !out.some((p) => p.ele !== null)) throw e
+    }
+  }
+  return interpolateMissing(out)
 }
 
 /** Écart au-delà duquel un point posé hors chemin est relié en ligne droite au chemin (m). */
@@ -150,8 +257,9 @@ export async function routeLeg(
   const startOn = haversine(a.lat, a.lon, first.lat, first.lon) <= snap
   const endOn = haversine(last.lat, last.lon, b.lat, b.lon) <= snap
   if (startOn && endOn) return { points: await withElevation(net, fetcher), offroad: false }
-  const from = startOn ? { lat: first.lat, lon: first.lon } : a
-  const to = endOn ? { lat: last.lat, lon: last.lon } : b
+  // Extrémité accrochée au chemin : elle garde l'altitude donnée par le routeur.
+  const from = startOn ? first : a
+  const to = endOn ? last : b
   return { points: await withElevation(densify(from, to), fetcher), offroad: true }
 }
 

@@ -51,7 +51,8 @@ export function reliefDensity(eles: number[], dist: number): number {
 /**
  * Directions à essayer, de la plus prometteuse à la moins prometteuse pour le terrain voulu,
  * d'après l'altitude de leurs points (une seule requête au modèle de terrain). `offset` décale
- * les directions pour d'autres propositions.
+ * les directions pour d'autres propositions. Sans altitude (service saturé), elles restent dans
+ * l'ordre, avec un relief inconnu (NaN).
  */
 export async function rankBearings(
   start: { lat: number; lon: number },
@@ -63,7 +64,15 @@ export async function rankBearings(
   const bearings = Array.from({ length: 8 }, (_, k) => (k * 45 + offset) % 360)
   const plans = bearings.map((bearing) => ({ bearing, points: loopPoints(start, dist, bearing) }))
   const all = [start, ...plans.flatMap((p) => p.points)].map((p) => ({ ...p, ele: null as number | null }))
-  const withEle = await fillElevation(all, fetcher)
+  let withEle: { ele: number | null }[]
+  try {
+    // Points isolés (pas une trace) : chacun est demandé, sans interpolation.
+    withEle = await fillElevation(all, fetcher, { step: 0, fallback: false })
+  } catch {
+    // Altitude indisponible : directions dans l'ordre ; le relief des boucles calculées (altitudes
+    // du routeur) départage quand même les propositions.
+    return plans.map((p) => ({ ...p, density: NaN }))
+  }
   const e0 = withEle[0].ele ?? 0
   return plans
     .map((p, k) => {
