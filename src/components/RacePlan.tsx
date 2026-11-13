@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { fetchRaceWeather } from '../lib/weather'
+import { bagText, nutritionPlan } from '../lib/nutrition'
+import { fetchOsmTech, osmSummary } from '../lib/osm'
+import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
-import { calibrateDurability, simulate, withFinish, type SimOptions } from '../lib/model'
+import { planOptions } from '../lib/plan'
+import { calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, SimResult, Track } from '../lib/types'
@@ -11,6 +14,22 @@ import { Kpi } from './CsCalculator'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { Card, Hint, Num, Toggle } from './ui'
+
+/** Vrai si la requête média correspond (mise à jour au redimensionnement). */
+function useMediaQuery(q: string): boolean {
+  const [match, setMatch] = useState(() => window.matchMedia?.(q).matches ?? false)
+  useEffect(() => {
+    const m = window.matchMedia?.(q)
+    if (!m) return
+    const on = () => setMatch(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [q])
+  return match
+}
+
+// Carte chargée à la demande (Leaflet ne pèse pas sur le premier affichage).
+const MapView = lazy(() => import('./MapView'))
 
 const MODE_LABELS: Record<CalcMode, string> = {
   physio: 'VC + vitesse asc.',
@@ -36,19 +55,7 @@ export function useRaceComputation(race: Race, athlete: Athlete) {
     }
   }, [race.gpxText, race.smoothing])
 
-  const opts = useMemo<SimOptions | null>(
-    () =>
-      track
-        ? {
-            mode: race.mode,
-            kme: race.kme,
-            env: race.env,
-            checkpoints: withFinish(race, track),
-            techOverrides: race.techOverrides,
-          }
-        : null,
-    [track, race],
-  )
+  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(race, track) : null), [track, race])
 
   const sim = useMemo<SimResult | null>(() => (track && opts ? simulate(track, athlete, opts) : null), [track, opts, athlete])
   return { track, opts, sim }
@@ -59,12 +66,22 @@ export function RacePlan({
   athlete,
   onChange,
   onAthleteChange,
+  onLive,
+  share,
 }: {
   race: Race
   athlete: Athlete
   onChange: (r: Race) => void
   onAthleteChange: (a: Athlete) => void
+  onLive?: () => void
+  share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
 }) {
+  const [copied, setCopied] = useState(false)
+  const [hoverDist, setHoverDist] = useState<number | null>(null)
+  const narrow = useMediaQuery('(max-width: 720px)')
+  const [editing, setEditing] = useState<string | null>(null)
+  const [showMap, setShowMap] = useState(true)
+  const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const { track, opts, sim } = useRaceComputation(race, athlete)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
@@ -78,6 +95,18 @@ export function RacePlan({
     set({ checkpoints: race.checkpoints.map((c) => (c.id === id ? { ...c, ...patch, auto: patch.dist !== undefined || patch.name !== undefined || patch.kind !== undefined ? false : c.auto } : c)) })
 
   const startMs = zonedToUtc(race.env.start, race.env.timeZone).getTime()
+
+  // Scénarios : fenêtre de passage entre une bonne journée et une journée difficile.
+  const scenarios = useMemo(() => {
+    if (!track || !opts) return null
+    const run = (k: 'good' | 'hard') => simulate(track, ...scenarioInputs(athlete, opts, k))
+    return { good: run('good'), hard: run('hard') }
+  }, [track, opts, athlete])
+  const windowOf = (cpId: string) => {
+    const g = scenarios?.good.splits.find((x) => x.cp.id === cpId)
+    const h = scenarios?.hard.splits.find((x) => x.cp.id === cpId)
+    return g && h ? { early: g.arrival, late: h.arrival } : null
+  }
 
   const compareResults = useMemo(() => {
     if (!compare || !track || !opts) return null
@@ -120,28 +149,11 @@ export function RacePlan({
     set({ checkpoints: cps.sort((a, b) => a.dist - b.dist) })
   }
 
+  const legs = nutritionPlan(race, sim, athlete.products)
+  // Reporte eau et glucides de chaque tronçon sur le point de départ correspondant.
   const fillNutrition = () => {
-    // Quantités entre un ravito et le suivant, selon le temps prévu.
-    const rows = sim.splits
-    const updated = new Map<string, { water: number; carbs: number }>()
-    let lastRavito: string | null = null
-    let acc = 0
-    for (const r of rows) {
-      if (lastRavito) {
-        acc += r.moveTime
-      }
-      if (r.cp.kind === 'ravito' || r.cp.id === '__finish') {
-        if (lastRavito) {
-          updated.set(lastRavito, {
-            water: Math.round((acc / 3600) * race.waterPerH * 10) / 10,
-            carbs: Math.round((acc / 3600) * race.carbsPerH),
-          })
-        }
-        lastRavito = r.cp.id
-        acc = 0
-      }
-    }
-    set({ checkpoints: race.checkpoints.map((c) => (updated.has(c.id) ? { ...c, ...updated.get(c.id)! } : c)) })
+    const byId = new Map(legs.filter((l) => l.fromId).map((l) => [l.fromId!, l]))
+    set({ checkpoints: race.checkpoints.map((c) => (byId.has(c.id) ? { ...c, water: byId.get(c.id)!.water, carbs: byId.get(c.id)!.carbs } : c)) })
   }
 
   const fileBase = race.name.replace(/[^\w-]+/g, '_')
@@ -152,10 +164,17 @@ export function RacePlan({
     setWeather({ busy: true, info: null, error: null })
     try {
       const p = track.points[0]
-      const w = await fetchRaceWeather(p.lat, p.lon, new Date(startMs), sim.totalTime)
+      const [w, series] = await Promise.all([
+        fetchRaceWeather(p.lat, p.lon, new Date(startMs), sim.totalTime),
+        fetchWeatherSeries(track.points, track.totalDist, new Date(startMs), sim.totalTime).catch(() => null),
+      ])
       const round = (x: number) => Math.round(x * 10) / 10
-      setEnv('heat', { ...race.env.heat, tMax: round(w.tMax), tMin: round(w.tMin), refAlt: Math.round(w.elevation), note: w.note })
+      set({
+        env: { ...race.env, heat: { ...race.env.heat, tMax: round(w.tMax), tMin: round(w.tMin), refAlt: Math.round(w.elevation), note: w.note } },
+        weather: series,
+      })
       const extras = [
+        series ? `heure par heure en ${series.points.length} points du parcours` : null,
         w.precipProb !== null ? `pluie ${Math.round(w.precipProb)} %` : null,
         w.precipMm !== null ? `${round(w.precipMm)} mm/j` : null,
         w.windMax !== null ? `vent max ${Math.round(w.windMax)} km/h` : null,
@@ -163,6 +182,16 @@ export function RacePlan({
       setWeather({ busy: false, info: extras.join(' · '), error: null })
     } catch (e) {
       setWeather({ busy: false, info: null, error: (e as Error).message })
+    }
+  }
+
+  const loadOsm = async () => {
+    setOsm({ busy: true, error: null })
+    try {
+      set({ osmTech: await fetchOsmTech(track) })
+      setOsm({ busy: false, error: null })
+    } catch (e) {
+      setOsm({ busy: false, error: (e as Error).message })
     }
   }
 
@@ -193,6 +222,15 @@ export function RacePlan({
           }
           actions={
             <>
+              {onLive && <button className="primary" onClick={onLive}>▶ Mode course</button>}
+              {share && (
+                <button
+                  onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
+                  title="Lien en lecture seule pour ton assistance, mis à jour en direct"
+                >
+                  👥 Lien assistance
+                </button>
+              )}
               <button onClick={() => setPrintFormat('a4')}>🖨 Feuille A4</button>
               <button onClick={() => setPrintFormat('strip')}>🖨 Bande</button>
               <button onClick={() => setPrintFormat('crew')}>🖨 Assistance</button>
@@ -203,15 +241,59 @@ export function RacePlan({
             </>
           }
         >
+          {share?.url && (
+            <div className="banner info share-banner">
+              <span>
+                Lien assistance : <a href={share.url} target="_blank" rel="noreferrer">{share.url}</a>
+              </span>
+              <span className="row tight">
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(share.url!).then(() => {
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                    })
+                  }}
+                >
+                  {copied ? 'Copié ✓' : 'Copier'}
+                </button>
+                <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
+                  Arrêter le partage
+                </button>
+              </span>
+            </div>
+          )}
           <div className="kpis">
             <Kpi label="Distance" value={`${(track.totalDist / 1000).toFixed(1)} km`} sub={`${sim.totalKme.toFixed(1)} km-e`} />
             <Kpi label="Dénivelé" value={`+${Math.round(track.dPlus)} m`} sub={`−${Math.round(track.dMinus)} m`} />
             <Kpi label="Temps prévu" value={formatDuration(sim.totalTime)} sub={`dont ${formatDuration(totalStops)} d'arrêts`} />
+            {scenarios && (
+              <Kpi
+                label="Fourchette"
+                value={`${formatDuration(scenarios.good.totalTime)} – ${formatDuration(scenarios.hard.totalTime)}`}
+                sub={`${SCENARIOS.good.label.toLowerCase()} → ${SCENARIOS.hard.label.toLowerCase()}`}
+              />
+            )}
             <Kpi label="Arrivée" value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
             <Kpi label="Allure moy." value={`${formatPace(sim.totalTime / (track.totalDist / 1000))}/km`} sub={`${formatPace(sim.totalTime / sim.totalKme)}/km-e`} />
+            {race.push.enabled && (
+              <Kpi
+                label="D′ au plus bas"
+                value={`${Math.round((sim.minWbal / Math.max(1, athlete.dPrime)) * 100)} %`}
+                sub={`${Math.round(sim.minWbal)} m sur ${Math.round(athlete.dPrime)} m`}
+              />
+            )}
           </div>
-          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} />
-          <Hint>Clique sur le profil pour ajouter un ravito à cet endroit. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).</Hint>
+          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} dPrime={race.push.enabled ? athlete.dPrime : undefined} onHover={setHoverDist} />
+          <Hint>Clique sur le profil ou sur la trace de la carte pour ajouter un ravito à cet endroit. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).</Hint>
+          <div className="row">
+            <Toggle label="Carte" checked={showMap} onChange={setShowMap} />
+          </div>
+          {showMap && (
+            <Suspense fallback={<div className="map map-loading">Chargement de la carte…</div>}>
+              <MapView track={track} splits={sim.splits} timeZone={race.env.timeZone} hoverDist={hoverDist} onPick={(d) => addPoint(d)} />
+            </Suspense>
+          )}
         </Card>
 
         <div className="grid three">
@@ -238,6 +320,17 @@ export function RacePlan({
               <Num label="D− (0 = ignoré)" value={race.kme.downPer1km} onChange={(v) => set({ kme: { ...race.kme, downPer1km: v } })} unit="m = 1 km" min={0} />
               <Num label="Lissage altitude" value={race.smoothing} onChange={(v) => set({ smoothing: Math.round(v) })} min={0} max={10} title="0 = brut ; plus haut = D+ plus faible" />
             </div>
+            <Toggle label="Relancer les montées (D′)" checked={race.push.enabled} onChange={(v) => set({ push: { ...race.push, enabled: v } })} />
+            {race.push.enabled && (
+              <div className="fields sub">
+                <Num label="Intensité en montée" value={race.push.climbPct} scale={100} unit="% VC" min={50} max={150} onChange={(v) => set({ push: { ...race.push, climbPct: v } })} />
+                <Num label="D′ utilisable" value={race.push.budget} scale={100} unit="%" min={0} max={100} onChange={(v) => set({ push: { ...race.push, budget: v } })} />
+              </div>
+            )}
+            <Hint>
+              Avec les relances, tu montes plus vite que ta VC tant qu'il te reste du D′ ({Math.round(athlete.dPrime)} m) ; il se
+              recharge quand tu repasses sous ta VC.
+            </Hint>
             <div className="row">
               <Toggle label="Comparer les modes" checked={compare} onChange={setCompare} />
               <button className="ghost" onClick={calibrate} title="Ajuste ta durabilité pour retrouver un temps réalisé">Calibrer sur un temps réel…</button>
@@ -279,6 +372,20 @@ export function RacePlan({
               </div>
             )}
             <div className="row">
+              <button onClick={loadOsm} disabled={osm.busy} title="Échelle SAC, visibilité et revêtement des sentiers (OpenStreetMap)">
+                {osm.busy ? 'OpenStreetMap…' : '🗺 Technicité OpenStreetMap'}
+              </button>
+              {race.osmTech.length > 0 && <button className="ghost" onClick={() => set({ osmTech: [] })}>Effacer</button>}
+            </div>
+            {race.osmTech.length > 0 && <p className="hint">OSM : {osmSummary(race.osmTech)}</p>}
+            {osm.error && <p className="warn">{osm.error}</p>}
+            <Toggle label="Pluie (météo heure par heure)" checked={race.env.rain.enabled} onChange={(v) => setEnv('rain', { ...race.env.rain, enabled: v })} />
+            {race.env.rain.enabled && (
+              <div className="fields sub">
+                <Num label="Pénalité" value={race.env.rain.perMm} scale={100} unit="% par mm/h" min={0} onChange={(v) => setEnv('rain', { ...race.env.rain, perMm: v })} />
+              </div>
+            )}
+            <div className="row">
               <button onClick={loadWeather} disabled={weather.busy} title="Prévision à 15 jours, sinon normales des 5 dernières années (Open-Meteo)">
                 {weather.busy ? 'Météo…' : '☁ Récupérer la météo'}
               </button>
@@ -290,7 +397,17 @@ export function RacePlan({
               </p>
             )}
             {weather.error && <p className="warn">{weather.error}</p>}
-            <Hint>Chaleur : cycle min à 6 h / max à 15 h, −0,65 °C par 100 m de montée.</Hint>
+            {race.weather && (
+              <p className="hint">
+                Météo heure par heure active (prévision du {race.weather.fetchedAt.slice(8, 10)}/{race.weather.fetchedAt.slice(5, 7)}).{' '}
+                <button className="ghost" onClick={() => set({ weather: null })}>Revenir au cycle min/max</button>
+              </p>
+            )}
+            <Hint>
+              {race.weather
+                ? 'Température et pluie prises à chaque instant et à chaque endroit du parcours, corrigées de l’altitude.'
+                : 'Chaleur : cycle min à 6 h / max à 15 h, −0,65 °C par 100 m de montée. La pluie ne compte qu’avec la météo heure par heure.'}
+            </Hint>
           </Card>
 
           <Card title="Points automatiques">
@@ -314,9 +431,11 @@ export function RacePlan({
             <h3>Nutrition</h3>
             <div className="fields">
               <Num label="Glucides" value={race.carbsPerH} onChange={(v) => set({ carbsPerH: v })} unit="g/h" />
-              <Num label="Eau" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
+              <Num label="Eau (à 15 °C)" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
+              <Num label="Sodium" value={race.sodiumPerH} onChange={(v) => set({ sodiumPerH: v })} unit="mg/h" />
             </div>
-            <button className="ghost" onClick={fillNutrition} disabled={ravitos.length === 0}>Calculer eau et glucides entre ravitos</button>
+            <button className="ghost" onClick={fillNutrition} disabled={ravitos.length === 0}>Reporter eau et glucides sur les ravitos</button>
+            <Hint>Tes produits (gels, boissons…) se règlent dans le profil athlète. L'eau augmente de 4 % par °C au-dessus de 15 °C.</Hint>
             <TechOverrides race={race} onChange={onChange} />
           </Card>
         </div>
@@ -355,6 +474,73 @@ export function RacePlan({
           title="Temps de passage"
           actions={<button onClick={() => addPoint(track.totalDist / 2, 'ravito')}>+ Ajouter un point</button>}
         >
+          {narrow ? (
+            <div className="split-cards">
+              {sim.splits.map((s) => {
+                const isFinish = s.cp.id === '__finish'
+                const cp = s.cp
+                const w = windowOf(cp.id)
+                const open = editing === cp.id
+                return (
+                  <div key={cp.id} className={`split-card kind-${cp.kind} ${s.night ? 'is-night' : ''}`}>
+                    <div className="sc-head">
+                      <strong>{cp.name}</strong>
+                      <span className="muted">km {(s.to / 1000).toFixed(1)}</span>
+                    </div>
+                    <div className="sc-main">
+                      <span className="sc-time">{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}{s.night && ' 🌙'}</span>
+                      <span>{formatDuration(s.arrival)}</span>
+                      {w && (
+                        <span className="muted small">
+                          {formatClock(new Date(startMs + w.early * 1000), race.env.timeZone)}–{formatClock(new Date(startMs + w.late * 1000), race.env.timeZone)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="sc-meta muted">
+                      {(s.dist / 1000).toFixed(1)} km · +{Math.round(s.dPlus)}/−{Math.round(s.dMinus)} m · {formatDuration(s.moveTime)} · {formatPace(s.avgPace)}/km
+                      {cp.stopMin ? ` · arrêt ${cp.stopMin} min` : ''}
+                    </div>
+                    {s.cutoffMargin !== null && (
+                      <div className={s.cutoffMargin < 1800 ? 'danger' : s.cutoffMargin < 3600 ? 'warn-text' : 'ok-text'}>
+                        Barrière : {s.cutoffMargin < 0 ? 'hors délai ' : 'marge '}{formatDuration(Math.abs(s.cutoffMargin))}
+                      </div>
+                    )}
+                    {cp.notes && !open && <div className="small">{cp.notes}</div>}
+                    {!isFinish && (
+                      <button className="ghost" onClick={() => setEditing(open ? null : cp.id)}>{open ? 'Fermer' : 'Modifier'}</button>
+                    )}
+                    {open && !isFinish && (
+                      <div className="fields">
+                        <label className="field">
+                          <span className="field-label">Type</span>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, { kind: e.target.value as CheckpointKind })}>
+                            {Object.entries(KIND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        </label>
+                        <label className="field">
+                          <span className="field-label">Nom</span>
+                          <input type="text" value={cp.name} onChange={(e) => setCp(cp.id, { name: e.target.value })} />
+                        </label>
+                        <Num label="Km" value={cp.dist / 1000} onChange={(v) => setCp(cp.id, { dist: Math.max(0, Math.min(track.totalDist, v * 1000)) })} />
+                        <Num label="Arrêt" value={cp.stopMin} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />
+                        <label className="field">
+                          <span className="field-label">Barrière</span>
+                          <input type="datetime-local" value={cp.cutoff} onChange={(e) => setCp(cp.id, { cutoff: e.target.value })} />
+                        </label>
+                        <Num label="Eau" value={cp.water} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
+                        <Num label="Glucides" value={cp.carbs} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
+                        <label className="field">
+                          <span className="field-label">Notes</span>
+                          <input type="text" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />
+                        </label>
+                        <button className="ghost danger" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })}>Supprimer ce point</button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
           <div className="scroll">
             <table className="table splits">
               <thead>
@@ -395,7 +581,17 @@ export function RacePlan({
                       <td>{formatDuration(s.moveTime)}</td>
                       <td>{formatPace(s.avgPace)}</td>
                       <td><strong>{formatDuration(s.arrival)}</strong></td>
-                      <td><strong>{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}</strong>{s.night && ' 🌙'}</td>
+                      <td>
+                        <strong>{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}</strong>{s.night && ' 🌙'}
+                        {(() => {
+                          const w = windowOf(s.cp.id)
+                          return w ? (
+                            <div className="muted small" title="Fenêtre : bonne journée → journée difficile">
+                              {formatClock(new Date(startMs + w.early * 1000), race.env.timeZone)}–{formatClock(new Date(startMs + w.late * 1000), race.env.timeZone)}
+                            </div>
+                          ) : null
+                        })()}
+                      </td>
                       <td>{isFinish ? '' : <Num value={cp.stopMin} width={44} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />}</td>
                       <td>
                         {!isFinish && (
@@ -423,12 +619,37 @@ export function RacePlan({
               </tbody>
             </table>
           </div>
+          )}
           <Hint>Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant.</Hint>
+        </Card>
+
+        <Card title="Plan nutrition">
+          <div className="scroll">
+            <table className="table">
+              <thead>
+                <tr><th>Tronçon</th><th>Durée</th><th>T° moy.</th><th>Eau</th><th>Glucides</th><th>Sodium</th><th>À emporter</th></tr>
+              </thead>
+              <tbody>
+                {legs.map((l) => (
+                  <tr key={`${l.from}-${l.to}`}>
+                    <td>{l.from} → {l.to}</td>
+                    <td>{formatDuration(l.duration)}</td>
+                    <td>{Math.round(l.temp)} °C</td>
+                    <td>{l.water} L</td>
+                    <td>{l.carbs} g</td>
+                    <td>{l.sodium} mg</td>
+                    <td>{bagText(l)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Hint>Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant).</Hint>
         </Card>
       </div>
 
       {printFormat && (
-        <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} onDone={() => setPrintFormat(null)} />
+        <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} windowOf={windowOf} legs={legs} onDone={() => setPrintFormat(null)} />
       )}
     </div>
   )

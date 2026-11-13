@@ -13,6 +13,10 @@ interface Props {
   onPick?: (dist: number) => void
   /** Version impression : pas d'interaction, étiquettes compactes. */
   print?: boolean
+  /** D′ de l'athlète : affiche le D′ restant au survol. */
+  dPrime?: number
+  /** Survol : distance (m) ou null, pour synchroniser la carte. */
+  onHover?: (dist: number | null) => void
 }
 
 const TECH_COLORS = ['transparent', '#f5c542', '#f08a24', '#d9452b', '#7a1f6b']
@@ -38,12 +42,12 @@ function useWidth(fallback: number) {
   return [ref, w] as const
 }
 
-export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print }: Props) {
+export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime, onHover }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [wrapRef, measured] = useWidth(1000)
   const [hover, setHover] = useState<SimPoint | null>(null)
 
-  const m = { l: 46, r: 12, t: print ? 54 : 46, b: 34 }
+  const m = { l: 46, r: 12, t: print ? 84 : 46, b: 34 }
   const W = width ?? measured
   const H = height
   const iw = W - m.l - m.r
@@ -128,8 +132,19 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
       className={`profile ${print ? 'print' : ''}`}
       viewBox={`0 0 ${W} ${H}`}
       style={{ width: '100%', height: 'auto', display: 'block' }}
-      onMouseMove={print ? undefined : (e) => setHover(pick(e.clientX))}
-      onMouseLeave={() => setHover(null)}
+      onMouseMove={
+        print
+          ? undefined
+          : (e) => {
+              const p = pick(e.clientX)
+              setHover(p)
+              onHover?.(p ? p.dist : null)
+            }
+      }
+      onMouseLeave={() => {
+        setHover(null)
+        onHover?.(null)
+      }}
       onClick={onPick ? (e) => { const p = pick(e.clientX); if (p) onPick(p.dist) } : undefined}
     >
       {geo.night.map((b, i) => (
@@ -169,9 +184,11 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
       {hover && !print && (
         <g className="hover">
           <line x1={geo.x(hover.dist)} x2={geo.x(hover.dist)} y1={m.t} y2={m.t + ih} />
-          <text x={Math.min(geo.x(hover.dist) + 6, W - 190)} y={m.t + 14}>
+          <text x={Math.min(geo.x(hover.dist) + 6, W - 380)} y={m.t + 14}>
             {(hover.dist / 1000).toFixed(1)} km · {Math.round(hover.ele)} m · {formatDuration(hover.t)} ·{' '}
             {formatClock(new Date(startMs + hover.t * 1000), timeZone)} · {Math.round(hover.temp)}°C
+            {hover.precip > 0.1 ? ` · ${hover.precip.toFixed(1)} mm/h` : ''}
+            {dPrime ? ` · D′ ${Math.round((hover.wbal / dPrime) * 100)} %` : ''}
           </text>
         </g>
       )}

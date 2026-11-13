@@ -70,8 +70,61 @@ export interface Athlete {
   durability: Durability
   /** Historique des tests de VC. */
   history: CsTestRecord[]
+  /** Activités analysées (courses passées, prévu vs réalisé). */
+  activities: ActivityRecord[]
+  /** Produits de nutrition habituels. */
+  products: Product[]
   /** Dernière modification (ISO), pour départager les appareils. */
   updatedAt?: string
+}
+
+/** Statistiques observées sur une tranche de pente. */
+export interface GradeStat {
+  /** Borne basse de la tranche (%). */
+  lo: number
+  /** Borne haute de la tranche (%). */
+  hi: number
+  /** Distance cumulée (m). */
+  dist: number
+  /** Dénivelé cumulé (m, signé). */
+  dz: number
+  /** Temps cumulé (s). */
+  time: number
+  /** Vitesse « à intensité VC » estimée : VAM (m/h) en montée marchée, coefficient sinon. */
+  normalized: number
+}
+
+export interface ActivityRecord {
+  id: string
+  name: string
+  /** Date et heure de départ (ISO UTC). */
+  date: string
+  dist: number
+  dPlus: number
+  /** Temps total réel (s). */
+  elapsed: number
+  /** Temps en mouvement (s). */
+  moving: number
+  /** Temps prédit par le modèle au moment de l'analyse (s, en mouvement). */
+  predicted: number
+  /** Intensité (%VC) estimée au fil du temps : [heure, %VC]. */
+  intensity: [number, number][]
+  grades: GradeStat[]
+  /** Prise en compte dans la calibration. */
+  useForCalibration: boolean
+  /** Course planifiée associée, le cas échéant. */
+  raceId?: string
+}
+
+export interface Product {
+  id: string
+  name: string
+  /** Glucides par unité (g). */
+  carbs: number
+  /** Sodium par unité (mg). */
+  sodium: number
+  /** Part des glucides apportée par ce produit (0–1). */
+  share: number
 }
 
 export interface CsTestRecord {
@@ -123,6 +176,52 @@ export interface EnvSettings {
     /** Multiplicateur de vitesse par niveau de technicité 1 à 5. */
     factors: [number, number, number, number, number]
   }
+  rain: {
+    enabled: boolean
+    /** Pénalité par mm/h de pluie (ex. 0.02), majorée de moitié en terrain technique. */
+    perMm: number
+  }
+}
+
+/** Relances en montée en puisant dans le D′ (modèle W′bal). */
+export interface PushSettings {
+  enabled: boolean
+  /** Intensité visée en montée (fraction de VC, ex. 1.05). */
+  climbPct: number
+  /** Part maximale du D′ que l'on s'autorise à dépenser (0–1). */
+  budget: number
+}
+
+/** Météo heure par heure en quelques points du parcours (Open-Meteo). */
+export interface WeatherSeries {
+  fetchedAt: string
+  /** Première heure de la série (ISO UTC), pas d'une heure. */
+  start: string
+  points: {
+    dist: number
+    /** Altitude du point de grille météo (m). */
+    elevation: number
+    temp: number[]
+    precip: number[]
+    wind: number[]
+  }[]
+}
+
+/** Technicité issue d'OpenStreetMap sur un intervalle [from, to] (m). */
+export interface TechInterval {
+  from: number
+  to: number
+  level: 1 | 2 | 3 | 4 | 5
+  /** Description OSM (ex. « sentier T3 »). */
+  label: string
+}
+
+/** Suivi en direct de la course. */
+export interface LiveState {
+  /** Départ réel (ISO UTC). */
+  startedAt: string
+  /** Passages réels : id du point → instant ISO UTC. */
+  passages: Record<string, string>
 }
 
 export type CalcMode = 'physio' | 'kme' | 'gap'
@@ -178,6 +277,14 @@ export interface Race {
   carbsPerH: number
   /** Eau par heure (L/h), pour les suggestions. */
   waterPerH: number
+  /** Sodium par heure (mg/h). */
+  sodiumPerH: number
+  push: PushSettings
+  osmTech: TechInterval[]
+  weather: WeatherSeries | null
+  live: LiveState | null
+  /** Identifiant du lien public pour l'assistance. */
+  shareId: string | null
   updatedAt: string
 }
 
@@ -190,6 +297,10 @@ export interface SimPoint {
   night: boolean
   tech: number
   temp: number
+  /** Pluie (mm/h), si météo horaire. */
+  precip: number
+  /** D′ restant (m). */
+  wbal: number
 }
 
 export interface SplitRow {
@@ -218,4 +329,6 @@ export interface SimResult {
   splits: SplitRow[]
   totalTime: number
   totalKme: number
+  /** D′ restant minimal sur la course (m). */
+  minWbal: number
 }

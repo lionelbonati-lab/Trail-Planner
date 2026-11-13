@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { gunzipBase64, gzipBase64 } from '../storage'
+import { gunzipBase64, gzipBase64 } from '../compress'
 
 describe('compression GPX', () => {
   it('aller-retour sans perte (accents compris)', async () => {

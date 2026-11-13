@@ -1,6 +1,7 @@
 // Météo via Open-Meteo (gratuit, sans clé, CORS autorisé).
 // - Course dans les 15 prochains jours : prévision.
 // - Au-delà (ou dans le passé) : normales = moyenne des 5 dernières années aux mêmes dates.
+import type { WeatherSeries } from './types'
 
 export interface WeatherResult {
   source: 'forecast' | 'normals'
@@ -120,5 +121,46 @@ export async function fetchRaceWeather(
     precipMm: avg(results.flatMap((j) => j.daily.precipitation_sum)),
     windMax: avg(results.map((j) => maxOf(j.daily.wind_speed_10m_max))),
     note: `Normales ${years[years.length - 1]}–${years[0]} au ${fmtDate(d0)}${d1 !== d0 ? `–${fmtDate(d1)}` : ''}`,
+  }
+}
+
+/**
+ * Météo heure par heure en plusieurs points du parcours (prévision uniquement,
+ * jusqu'à 16 jours). Renvoie null si la course est hors de portée de la prévision.
+ */
+export async function fetchWeatherSeries(
+  points: { dist: number; lat: number; lon: number }[],
+  totalDist: number,
+  startUtc: Date,
+  durationS: number,
+  now = new Date(),
+  fetcher: typeof fetch = fetch,
+): Promise<WeatherSeries | null> {
+  const endUtc = new Date(startUtc.getTime() + Math.max(durationS, 3600) * 1000)
+  if (endUtc.getTime() - now.getTime() > FORECAST_DAYS * 86400000 || endUtc.getTime() < now.getTime() - 86400000) return null
+  // Un point tous les 5 km au moins, 15 au plus.
+  const n = Math.min(15, Math.max(2, Math.ceil(totalDist / 5000) + 1))
+  const samples = Array.from({ length: n }, (_, i) => {
+    const d = (totalDist * i) / (n - 1)
+    return points.reduce((best, p) => (Math.abs(p.dist - d) < Math.abs(best.dist - d) ? p : best))
+  })
+  const url =
+    `https://api.open-meteo.com/v1/forecast?latitude=${samples.map((p) => p.lat.toFixed(4)).join(',')}` +
+    `&longitude=${samples.map((p) => p.lon.toFixed(4)).join(',')}` +
+    `&hourly=temperature_2m,precipitation,wind_speed_10m&timezone=GMT` +
+    `&start_date=${ymd(startUtc)}&end_date=${ymd(endUtc)}`
+  const j = await getJson(url, fetcher)
+  const list = Array.isArray(j) ? j : [j]
+  if (list.length !== samples.length) throw new Error('Open-Meteo : réponse inattendue.')
+  return {
+    fetchedAt: now.toISOString(),
+    start: `${list[0].hourly.time[0]}:00Z`,
+    points: list.map((r, i) => ({
+      dist: samples[i].dist,
+      elevation: r.elevation,
+      temp: r.hourly.temperature_2m.map((x: number | null) => x ?? NaN),
+      precip: r.hourly.precipitation.map((x: number | null) => x ?? 0),
+      wind: r.hourly.wind_speed_10m.map((x: number | null) => x ?? 0),
+    })),
   }
 }
