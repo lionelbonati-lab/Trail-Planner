@@ -149,7 +149,7 @@ function RouteRow({
   const exportWorkout = () => {
     const plan = computePlan(route, athlete)
     if (!plan) return
-    download(`${route.name.replace(/[^\w-]+/g, '_')}_allures.fit`, buildWorkoutFit(route.name.slice(0, 32), zoneSteps(plan.track, plan.sim, route.zones, athlete)), 'application/vnd.ant.fit')
+    download(`${route.name.replace(/[^\w-]+/g, '_')}_allures.fit`, buildWorkoutFit(route.name.slice(0, 32), zoneSteps(plan.track, plan.sim, route.zones, athlete), Date.now(), { target: athlete.workoutTarget, athlete }), 'application/vnd.ant.fit')
   }
   const last = sessions[0]
   return (

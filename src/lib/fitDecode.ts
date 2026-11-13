@@ -156,6 +156,7 @@ export function decodeFit(bytes: Uint8Array): { records: RawPoint[]; laps: FitLa
     let lon: number | null = null
     let alt: number | null = null
     let enh: number | null = null
+    let hr: number | null = null
     for (const f of def.fields) {
       const v = read(off, f.size, f.base, def.little)
       if (v !== null) {
@@ -164,6 +165,7 @@ export function decodeFit(bytes: Uint8Array): { records: RawPoint[]; laps: FitLa
         else if (f.num === 1 && v !== 0x7fffffff) lon = v * SEMI
         else if (f.num === 2 && v !== 0xffff) alt = v / 5 - 500
         else if (f.num === 78 && v !== 0xffffffff) enh = v / 5 - 500
+        else if (f.num === 3 && v !== 0xff && v > 0) hr = v
       }
       off += f.size
     }
@@ -173,6 +175,7 @@ export function decodeFit(bytes: Uint8Array): { records: RawPoint[]; laps: FitLa
       lat,
       lon,
       ele: enh ?? alt,
+      ...(hr !== null ? { hr } : {}),
       ...(ts !== null ? { time: FIT_EPOCH_MS + ts * 1000 } : {}),
     })
   }

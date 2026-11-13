@@ -41,7 +41,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
   const exportFit = (key: SessionKey, variant?: SessionVariant) => {
     const s = SESSIONS_BY_KEY[key]
     const title = variant ? `Test VC ${variant.label}` : s.title
-    download(`TrailPlanner_${key}${variant ? `_${variant.key}` : ''}.fit`, buildWorkoutFit(title.slice(0, 32), s.steps(athlete, variant)), 'application/vnd.ant.fit')
+    download(`TrailPlanner_${key}${variant ? `_${variant.key}` : ''}.fit`, buildWorkoutFit(title.slice(0, 32), s.steps(athlete, variant), Date.now(), { target: athlete.workoutTarget, athlete }), 'application/vnd.ant.fit')
   }
 
   return (
@@ -108,7 +108,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
                   ))}
                 </div>
               )}
-              <ol className="steps">{describeSteps(s.steps(athlete, s.variants?.[0])).map((d) => <li key={d}>{d}</li>)}</ol>
+              <ol className="steps">{describeSteps(s.steps(athlete, s.variants?.[0]), athlete).map((d) => <li key={d}>{d}</li>)}</ol>
               {s.key === 'csTest' && <CsTrials athlete={athlete} onChange={onChange} />}
               <ul className="tips">{s.tips.map((t) => <li key={t}>{t}</li>)}</ul>
               {last && <Hint>Dernière séance : {last.date.slice(0, 10)} ({formatDuration(last.elapsed)}).</Hint>}

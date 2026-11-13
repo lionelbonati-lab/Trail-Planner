@@ -391,26 +391,19 @@ function IntensityChart({ points, athlete }: { points: [number, number][]; athle
 function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['activity']; athlete: Athlete; onChange: (a: Athlete) => void }) {
   const ins = useMemo(() => analyzeSession(activity, athlete), [activity, athlete])
   const [done, setDone] = useState<Set<string>>(new Set())
-  const total = ins.zoneTimes.reduce((a, z) => a + z.seconds, 0) || 1
   const label = (sec: number) => (sec < 3600 ? `${Math.round(sec / 60)}′` : `${sec / 3600} h`)
   const mark = (k: string) => setDone(new Set([...done, k]))
   return (
     <Card title="Séance">
       <h3>Temps par zone (allure ramenée au plat)</h3>
-      <div className="zone-stack" role="img" aria-label="Répartition du temps par zone">
-        {ins.zoneTimes.filter((z) => z.seconds > 0).map((z) => (
-          <span key={z.index} style={{ width: `${(z.seconds / total) * 100}%`, background: colorForIndex(z.index) }} title={`${z.name} : ${formatDuration(z.seconds)}`} />
-        ))}
-      </div>
-      <div className="zone-legend">
-        {ins.zoneTimes.map((z) => (
-          <span key={z.index}>
-            <i className="zone-swatch" style={{ background: colorForIndex(z.index) }} />
-            {z.name} <strong>{z.seconds < 3600 ? `${Math.floor(z.seconds / 60)}′${String(Math.round(z.seconds % 60)).padStart(2, '0')}` : formatDuration(z.seconds)}</strong>{' '}
-            <span className="muted">({Math.round((z.seconds / total) * 100)} %)</span>
-          </span>
-        ))}
-      </div>
+      <ZoneStack times={ins.zoneTimes} color={(k) => colorForIndex(k, athlete)} />
+
+      {ins.hrZoneTimes && (
+        <>
+          <h3>Temps par zone cardiaque</h3>
+          <ZoneStack times={ins.hrZoneTimes} color={(k) => colorForIndex(k)} />
+        </>
+      )}
 
       {(ins.tests.length > 0 || ins.csFloor) && (
         <div className="banner info suggestions">
@@ -449,7 +442,7 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
           <div className="scroll">
             <table className="table compact">
               <thead>
-                <tr><th>#</th><th>Durée</th><th>Distance</th><th>Allure</th><th>D+</th><th>Intensité (plat éq.)</th><th>Zone</th></tr>
+                <tr><th>#</th><th>Durée</th><th>Distance</th><th>Allure</th><th>D+</th><th>Intensité (plat éq.)</th><th>Zone</th>{ins.hrZoneTimes && <th>FC moy.</th>}</tr>
               </thead>
               <tbody>
                 {ins.laps.map((l) => (
@@ -460,7 +453,8 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
                     <td>{l.distance > 0 ? `${formatPace(l.duration / (l.distance / 1000))}/km` : '—'}</td>
                     <td>{Math.round(l.dPlus)} m</td>
                     <td>{Math.round(l.intensity * 100)} % VC</td>
-                    <td><i className="zone-swatch" style={{ background: colorForIndex(l.zone) }} />{athlete.zones[l.zone]?.name}</td>
+                    <td><i className="zone-swatch" style={{ background: colorForIndex(l.zone, athlete) }} />{athlete.zones[l.zone]?.name}</td>
+                    {ins.hrZoneTimes && <td>{l.hr ? `${l.hr} bpm` : '—'}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -492,5 +486,28 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
         signifie que ta VC (ou ton D′) est sous-estimée ; en dessous, la séance n'était simplement pas un effort maximal.
       </Hint>
     </Card>
+  )
+}
+
+/** Barre empilée et légende du temps passé par zone. */
+function ZoneStack({ times, color }: { times: { index: number; name: string; seconds: number }[]; color: (k: number) => string }) {
+  const total = times.reduce((a, z) => a + z.seconds, 0) || 1
+  const fmt = (sec: number) => (sec < 3600 ? `${Math.floor(sec / 60)}′${String(Math.round(sec % 60)).padStart(2, '0')}` : formatDuration(sec))
+  return (
+    <>
+      <div className="zone-stack" role="img" aria-label="Répartition du temps par zone">
+        {times.filter((z) => z.seconds > 0).map((z) => (
+          <span key={z.index} style={{ width: `${(z.seconds / total) * 100}%`, background: color(z.index) }} title={`${z.name} : ${fmt(z.seconds)}`} />
+        ))}
+      </div>
+      <div className="zone-legend">
+        {times.map((z) => (
+          <span key={z.index}>
+            <i className="zone-swatch" style={{ background: color(z.index) }} />
+            {z.name} <strong>{fmt(z.seconds)}</strong> <span className="muted">({Math.round((z.seconds / total) * 100)} %)</span>
+          </span>
+        ))}
+      </div>
+    </>
   )
 }

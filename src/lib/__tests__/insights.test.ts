@@ -34,9 +34,9 @@ describe('analyse d’une séance quelconque', () => {
     expect(byZone['Zone 1']).toBeGreaterThanOrEqual(29)
     expect(byZone['Zone 1']).toBeLessThanOrEqual(31)
     expect(byZone['Zone 2']).toBeGreaterThanOrEqual(9)
-    expect(byZone['Zone 5']).toBeGreaterThanOrEqual(6)
+    expect(byZone['Zone 7']).toBeGreaterThanOrEqual(6) // 116 % VC : zone 7 du bilan
     expect(ins.laps).toHaveLength(4)
-    expect(ins.laps[2].zone).toBe(4)
+    expect(ins.laps[2].zone).toBe(6)
     expect(ins.laps[1].intensity).toBeCloseTo(0.75, 1)
     const b7 = ins.best.find((b) => b.seconds === 420)!
     expect(b7.ratio).toBeGreaterThan(1.02)

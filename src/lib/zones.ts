@@ -52,22 +52,49 @@ export function zoneSteps(track: Track, sim: SimResult, zones: PaceZone[], a: At
     const v = r.time > 0 ? dist / r.time : 0
     const where = `km ${(r.from / 1000).toFixed(1)} → ${(r.to / 1000).toFixed(1)}`
     if (!r.zone || r.zone.kind === 'model' || v <= 0) return { kind: 'active', name: 'Libre', seconds: null, meters: dist, notes: where }
+    const k = zoneIndexOfIntensity(zoneIntensity(r.zone, a), a) + 1
     return {
       kind: 'active',
       name: (r.zone.label || (r.zone.kind === 'pace' ? 'Allure imposée' : 'Allure cible')).slice(0, 30),
       seconds: null,
       meters: dist,
       speed: [v * 0.95, v * 1.05],
+      zones: [k, k],
       notes: `${where} · ≈ ${formatPace(1000 / v)}/km (${zoneText(r.zone, a)})`.slice(0, 63),
     }
   })
 }
 
+/** Durée en dessous de laquelle une étape reste sans cible cardiaque : la FC n'a pas le temps de suivre. */
+export const HR_MIN_STEP = 120
+
+/**
+ * Plage de fréquence cardiaque (bpm) d'une étape d'entraînement : zones VC visées → zones cardiaques
+ * de même numéro (Z6 et Z7 → la zone cardiaque la plus haute). Null = sans cible (effort à fond,
+ * étape courte, ni zone ni vitesse).
+ */
+export function stepHrRange(s: SimpleStep, a: Athlete): [number, number] | null {
+  if (s.zones === 'max' || !a.hrZones?.length) return null
+  if (s.seconds && s.seconds < HR_MIN_STEP) return null
+  let z = s.zones ?? null
+  if (!z && s.speed && a.cs > 0) {
+    const k = zoneIndexOfIntensity((s.speed[0] + s.speed[1]) / 2 / a.cs, a) + 1
+    z = [k, k]
+  }
+  if (!z) return null
+  const n = a.hrZones.length
+  const lo = a.hrZones[Math.max(1, Math.min(z[0], n)) - 1]
+  const hi = a.hrZones[Math.max(1, Math.min(z[1], n)) - 1]
+  return [Math.round(Math.min(lo.low, hi.low)), Math.round(Math.max(lo.high, hi.high))]
+}
 
 // --- Couleurs Garmin --------------------------------------------------------------
 
-/** Couleurs des zones Garmin : 1 gris, 2 bleu, 3 vert, 4 orange, 5 rouge (au-delà : rouge foncé). */
-export const GARMIN_ZONE_COLORS = ['#9e9e9e', '#2b8ae0', '#43a047', '#f39c12', '#e53935', '#8e1b1b']
+/**
+ * Couleurs des zones Garmin : 1 gris, 2 bleu, 3 vert, 4 orange, 5 rouge ;
+ * 6 et 7 comme les zones de puissance (violet, prune) — modifiables par zone dans le profil.
+ */
+export const GARMIN_ZONE_COLORS = ['#9e9e9e', '#2b8ae0', '#43a047', '#f39c12', '#e53935', '#8e44ad', '#5b2a6e']
 export const MODEL_COLOR = '#d6d3cc'
 
 export function zoneIntensity(z: PaceZone, a: Athlete): number {
@@ -87,15 +114,16 @@ export function zoneIndexOfIntensity(i: number, a: Athlete): number {
   return best
 }
 
-export function colorForIndex(k: number): string {
-  return GARMIN_ZONE_COLORS[Math.min(k, GARMIN_ZONE_COLORS.length - 1)]
+/** Couleur de la zone k (0…) : celle choisie dans le profil, sinon la couleur Garmin. */
+export function colorForIndex(k: number, a?: Athlete): string {
+  return a?.zones[k]?.color || GARMIN_ZONE_COLORS[Math.min(k, GARMIN_ZONE_COLORS.length - 1)]
 }
 
 /** Couleur Garmin d'une zone d'allure (par son nom, sinon par son intensité). */
 export function zoneColor(z: PaceZone, a: Athlete): string {
   if (z.kind === 'model') return MODEL_COLOR
   const byName = a.zones.findIndex((x) => x.name === z.label)
-  return colorForIndex(byName >= 0 ? byName : zoneIndexOfIntensity(zoneIntensity(z, a), a))
+  return colorForIndex(byName >= 0 ? byName : zoneIndexOfIntensity(zoneIntensity(z, a), a), a)
 }
 
 /** Nom court affiché sur la barre de zones. */

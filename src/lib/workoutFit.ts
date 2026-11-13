@@ -2,6 +2,8 @@
 // dans GARMIN/NewFiles : il apparaît ensuite dans les entraînements.
 import { FIT_EPOCH, FitWriter, type FieldDef } from './fit'
 import { isRepeat, type SimpleStep, type Step } from './sessions'
+import type { Athlete } from './types'
+import { stepHrRange } from './zones'
 
 const INTENSITY: Record<SimpleStep['kind'], number> = { active: 0, rest: 1, warmup: 2, cooldown: 3, recovery: 4 }
 const DURATION_TIME = 0
@@ -9,7 +11,10 @@ const DURATION_DISTANCE = 1
 const DURATION_OPEN = 5
 const DURATION_REPEAT = 6
 const TARGET_SPEED = 0
+const TARGET_HR = 1
 const TARGET_OPEN = 2
+/** FC personnalisée : au-delà de 100, la valeur est en bpm + 100 (en dessous, % de FC max). */
+const HR_OFFSET = 100
 const INVALID_ENUM = 0xff
 
 const STEP_FIELDS: FieldDef[] = [
@@ -25,20 +30,35 @@ const STEP_FIELDS: FieldDef[] = [
   { num: 8, type: 'string', size: 64 }, // notes
 ]
 
-export function buildWorkoutFit(name: string, steps: Step[], now = Date.now()): Uint8Array {
+/**
+ * Cible des étapes : allure (fourchette de vitesse) ou fréquence cardiaque (zones cardiaques
+ * de l'athlète, voir stepHrRange).
+ */
+export interface WorkoutTarget {
+  target: 'pace' | 'hr'
+  athlete: Athlete
+}
+
+export function buildWorkoutFit(name: string, steps: Step[], now = Date.now(), opts?: WorkoutTarget): Uint8Array {
   // Aplatit les répétitions : les étapes répétées puis une étape « répéter depuis l'étape i ».
   const flat: (number | string)[][] = []
   const push = (s: SimpleStep) => {
-    const speed = s.speed
+    const hr = opts?.target === 'hr' ? stepHrRange(s, opts.athlete) : null
+    const speed = opts?.target === 'hr' ? null : s.speed
+    const [type, low, high] = hr
+      ? [TARGET_HR, hr[0] + HR_OFFSET, hr[1] + HR_OFFSET]
+      : speed
+        ? [TARGET_SPEED, Math.round(speed[0] * 1000), Math.round(speed[1] * 1000)]
+        : [TARGET_OPEN, 0, 0]
     flat.push([
       flat.length,
       s.name,
       s.meters ? DURATION_DISTANCE : s.seconds ? DURATION_TIME : DURATION_OPEN,
       s.meters ? Math.round(s.meters * 100) : s.seconds ? Math.round(s.seconds * 1000) : 0,
-      speed ? TARGET_SPEED : TARGET_OPEN,
+      type,
       0,
-      speed ? Math.round(speed[0] * 1000) : 0,
-      speed ? Math.round(speed[1] * 1000) : 0,
+      low,
+      high,
       INTENSITY[s.kind],
       s.notes ?? '',
     ])

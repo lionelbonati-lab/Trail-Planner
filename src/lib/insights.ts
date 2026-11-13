@@ -49,6 +49,8 @@ export interface LapInfo {
   /** Intensité plat équivalente (fraction de VC). */
   intensity: number
   zone: number
+  /** Fréquence cardiaque moyenne (bpm), si enregistrée. */
+  hr: number | null
 }
 
 export interface BestEffort {
@@ -62,6 +64,8 @@ export interface BestEffort {
 
 export interface Insights {
   zoneTimes: ZoneTime[]
+  /** Temps par zone cardiaque (si la FC est enregistrée). */
+  hrZoneTimes: ZoneTime[] | null
   laps: LapInfo[]
   best: BestEffort[]
   /** VC minimale qu'impliquent les meilleurs efforts (2 à 30 min), si supérieure à la VC actuelle. */
@@ -106,6 +110,32 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     const f = (sec - act.elapsed[lo]) / (act.elapsed[hi] - act.elapsed[lo] || 1)
     return ((act.dist[lo] + f * (act.dist[hi] - act.dist[lo])) / rawTotal) * act.track.totalDist
   }
+  // Fréquence cardiaque : temps en mouvement par zone, et moyenne d'un intervalle de temps.
+  const hasHr = act.hr.some((h) => Number.isFinite(h))
+  let hrZoneTimes: ZoneTime[] | null = null
+  if (hasHr && a.hrZones.length) {
+    const sec = a.hrZones.map(() => 0)
+    for (let k = 1; k < act.hr.length; k++) {
+      const h = act.hr[k]
+      const dt = act.moving[k] - act.moving[k - 1]
+      if (!Number.isFinite(h) || dt <= 0 || dt > 30) continue
+      let z = a.hrZones.findIndex((x) => h >= x.low && h < x.high)
+      if (z < 0) z = h < a.hrZones[0].low ? 0 : a.hrZones.length - 1
+      sec[z] += dt
+    }
+    hrZoneTimes = a.hrZones.map((z, index) => ({ index, name: z.name, seconds: sec[index] }))
+  }
+  const hrMean = (t0: number, t1: number): number | null => {
+    let sum = 0
+    let n = 0
+    for (let k = 0; k < act.hr.length; k++) {
+      if (act.elapsed[k] < t0 || act.elapsed[k] > t1 || !Number.isFinite(act.hr[k])) continue
+      sum += act.hr[k]
+      n++
+    }
+    return n ? Math.round(sum / n) : null
+  }
+
   const laps: LapInfo[] = act.laps.map((l, index) => {
     const start = (l.start - act.start) / 1000
     const i = idxAt(distAtElapsed(start))
@@ -114,7 +144,7 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     for (let k = i + 1; k <= j; k++) dPlus += Math.max(0, s.e[k] - s.e[k - 1])
     const dt = s.m[j] - s.m[i]
     const intensity = dt > 0 ? (s.eq[j] - s.eq[i]) / dt / a.cs : l.timer > 0 ? l.distance / l.timer / a.cs : 0
-    return { index, start, duration: l.timer, distance: l.distance, dPlus, intensity, zone: zoneIndexOfIntensity(intensity, a) }
+    return { index, start, duration: l.timer, distance: l.distance, dPlus, intensity, zone: zoneIndexOfIntensity(intensity, a), hr: hasHr ? hrMean(start, start + l.elapsed) : null }
   })
 
   // Meilleurs efforts (temps écoulé : les arrêts comptent).
@@ -152,5 +182,5 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     }
   }
 
-  return { zoneTimes, laps, best, csFloor, tests }
+  return { zoneTimes, hrZoneTimes, laps, best, csFloor, tests }
 }

@@ -6,6 +6,7 @@ import { DEFAULT_ENV, DEFAULT_ZONES } from './defaults'
 import { autoTech, interp } from './model'
 import { peaksAndValleys } from './splits'
 import { formatDuration, formatPace } from './time'
+import { stepHrRange } from './zones'
 import type { ActivityRecord, Athlete, CsTrial, DescentPoint, SessionMetrics, VamPoint } from './types'
 
 export type SessionKey = 'long' | 'hillTempo' | 'hillTest' | 'flatTest' | 'csTest' | 'descents'
@@ -21,6 +22,11 @@ export interface SimpleStep {
   meters?: number
   /** Fourchette de vitesse (m/s), ou rien = cible libre. */
   speed?: [number, number]
+  /**
+   * Zones VC visées (numéros 1…, bornes incluses), pour la cible cardiaque ; « max » = effort à
+   * fond, sans cible. À défaut, déduites de la vitesse.
+   */
+  zones?: [number, number] | 'max'
   notes?: string
 }
 
@@ -69,9 +75,10 @@ const DESCENT_INTENSITY = 0.9 // intensité « soutenue » en descente
 
 const pace = (mps: number) => `${formatPace(1000 / mps)}/km`
 
-/** Fourchette de vitesse (m/s) d'une zone d'entraînement du profil (1 à 5). */
+/** Fourchette de vitesse (m/s) d'une zone d'entraînement du profil (numéro 1…). */
 export function zoneSpeed(a: Athlete, zone: number): [number, number] {
-  const z = (a.zones?.length ? a.zones : DEFAULT_ZONES)[Math.min(zone, 5) - 1] ?? DEFAULT_ZONES[zone - 1]
+  const list = a.zones?.length ? a.zones : DEFAULT_ZONES
+  const z = list[Math.max(1, Math.min(zone, list.length)) - 1]
   return [a.cs * z.low, a.cs * z.high]
 }
 
@@ -228,7 +235,7 @@ export const SESSIONS: SessionDef[] = [
     tips: ['Allure facile et régulière, sans chercher la performance.', 'Évite les longs arrêts : ils faussent la mesure de la durabilité.'],
     steps: (a) => [
       { kind: 'warmup', name: 'Échauffement Z1', seconds: 15 * MIN, speed: zoneSpeed(a, 1) },
-      { kind: 'active', name: 'Endurance', seconds: 150 * MIN, notes: 'Allure facile (conversation). Montées raides en marchant.' },
+      { kind: 'active', name: 'Endurance', seconds: 150 * MIN, zones: [2, 2], notes: 'Allure facile (conversation). Montées raides en marchant.' },
       { kind: 'cooldown', name: 'Retour au calme', seconds: null },
     ],
     analyze: (act, a) => {
@@ -259,11 +266,11 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Une côte régulière de 10 à 20 %, assez longue pour 10 min de montée.',
     tips: ['Tempo : effort soutenu mais contrôlé, tu pourrais tenir 1 h à 1 h 30.', 'Redescends en trottinant, puis appuie sur « Lap » pour la répétition suivante.'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]] },
+      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]], zones: [1, 2] },
       {
         repeat: 5,
         steps: [
-          { kind: 'active', name: 'Montée tempo', seconds: 10 * MIN, notes: `VAM visée ≈ ${vamAt(a, TEMPO)} m/h à 15 %` },
+          { kind: 'active', name: 'Montée tempo', seconds: 10 * MIN, zones: [4, 4], notes: `VAM visée ≈ ${vamAt(a, TEMPO)} m/h à 15 %` },
           { kind: 'recovery', name: 'Descente au trot', seconds: null, notes: 'Appuie sur Lap en bas.' },
         ],
       },
@@ -300,8 +307,8 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Une montée régulière de 10 à 25 % d’au moins 20 min.',
     tips: ['Effort maximal mais régulier : la meilleure fenêtre de 20 min est retenue.', 'Course ou marche rapide, selon ce qui est le plus efficace pour toi.'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]] },
-      { kind: 'active', name: 'Montée à fond', seconds: 20 * MIN, notes: `Repère : ≈ ${vamAt(a, allOutIntensity(a, 1200))} m/h à 15 %` },
+      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]], zones: [1, 2] },
+      { kind: 'active', name: 'Montée à fond', seconds: 20 * MIN, zones: 'max', notes: `Repère : ≈ ${vamAt(a, allOutIntensity(a, 1200))} m/h à 15 %` },
       { kind: 'cooldown', name: 'Retour au calme', seconds: 15 * MIN },
     ],
     analyze: (act, a) => {
@@ -333,7 +340,7 @@ export const SESSIONS: SessionDef[] = [
       const v = a.cs + a.dPrime / 1200
       return [
         ...coachWarmup(a),
-        { kind: 'active', name: '20 min à fond', seconds: 20 * MIN, speed: [v * 0.97, v * 1.03], notes: `Repère : ${pace(v)}` },
+        { kind: 'active', name: '20 min à fond', seconds: 20 * MIN, speed: [v * 0.97, v * 1.03], zones: 'max', notes: `Repère : ${pace(v)}` },
         { kind: 'cooldown', name: 'Récupération Z1', seconds: 10 * MIN, speed: zoneSpeed(a, 1) },
       ]
     },
@@ -373,7 +380,7 @@ export const SESSIONS: SessionDef[] = [
       const seconds = v?.seconds ?? 180
       return [
         ...coachWarmup(a),
-        { kind: 'active', name: `${Math.round(seconds / 60)}' à fond`, seconds, notes: 'Effort maximal 10/10 : sans retenue, mais pas sans contrôle' },
+        { kind: 'active', name: `${Math.round(seconds / 60)}' à fond`, seconds, zones: 'max', notes: 'Effort maximal 10/10 : sans retenue, mais pas sans contrôle' },
         { kind: 'cooldown', name: 'Récupération Z1', seconds: 10 * MIN, speed: zoneSpeed(a, 1) },
       ]
     },
@@ -408,7 +415,7 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Une descente de 10 à 25 %, représentative de tes courses (technicité comprise).',
     tips: ['Allure soutenue mais maîtrisée, comme en course.', 'Remonte en marchant, puis appuie sur « Lap ».'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]] },
+      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]], zones: [1, 2] },
       {
         repeat: 4,
         steps: [
@@ -444,10 +451,18 @@ export const SESSIONS: SessionDef[] = [
 export const SESSIONS_BY_KEY = Object.fromEntries(SESSIONS.map((s) => [s.key, s])) as Record<SessionKey, SessionDef>
 
 /** Déroulé lisible d'une séance. */
-export function describeSteps(steps: Step[]): string[] {
+export function describeSteps(steps: Step[], a?: Athlete): string[] {
+  const hr = a?.workoutTarget === 'hr'
+  const target = (s: SimpleStep) => {
+    if (hr && a) {
+      const r = stepHrRange(s, a)
+      return r ? ` (${r[0]}–${r[1]} bpm)` : ''
+    }
+    return s.speed ? ` (${formatPace(1000 / s.speed[1])}–${formatPace(1000 / s.speed[0])}/km)` : ''
+  }
   const one = (s: SimpleStep) =>
     `${s.name} : ${s.meters ? `${(s.meters / 1000).toFixed(2)} km` : s.seconds ? (s.seconds < 60 ? `${s.seconds}"` : s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
-    (s.speed ? ` (${formatPace(1000 / s.speed[1])}–${formatPace(1000 / s.speed[0])}/km)` : '') +
+    target(s) +
     (s.notes ? ` — ${s.notes}` : '')
   return steps.flatMap((s) => (isRepeat(s) ? [`${s.repeat} × [ ${s.steps.map(one).join(' ; ')} ]`] : [one(s)]))
 }
