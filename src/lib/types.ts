@@ -377,7 +377,27 @@ export interface Race {
   live: LiveState | null
   /** Identifiant du lien public pour l'assistance. */
   shareId: string | null
+  /** Tracé dessiné sur la carte (points cliqués), pour pouvoir le modifier. */
+  drawn: DrawnRoute | null
   updatedAt: string
+}
+
+/** Mode de tracé d'un segment : sentiers, chemin le plus court, ligne droite (hors sentier). */
+export type SegMode = 'trail' | 'shortest' | 'line'
+
+export interface Waypoint {
+  lat: number
+  lon: number
+  /** Mode du segment qui arrive à ce point (sans objet pour le départ). */
+  mode: SegMode
+}
+
+/**
+ * Tracé enregistré avec la course : points cliqués et indice de chacun dans les points du
+ * GPX (le segment k va du point i[k] au point i[k+1]).
+ */
+export interface DrawnRoute {
+  waypoints: (Waypoint & { i: number })[]
 }
 
 /** Résultat de simulation pour chaque point de la trace. */

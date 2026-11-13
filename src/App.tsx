@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
 import { LiveMode } from './components/LiveMode'
@@ -14,9 +14,12 @@ import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
+import { withNewTrace } from './lib/routing'
+import type { DrawResult } from './components/RouteBuilder'
 import { clearLocalData, hasLocalAthlete, localRaceCount, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
 
 type Cloud = typeof import('./lib/cloud')
+const RouteBuilder = lazy(() => import('./components/RouteBuilder'))
 
 /** Marqueur local : une session était ouverte, on attend Firebase avant d'afficher les données. */
 const SIGNED_IN_KEY = 'tp.signedIn'
@@ -37,13 +40,13 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Race, RaceKind } from './lib/types'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances' | 'parcours'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances' | 'parcours' | 'tracer'
 
 function readHash(): { tab: Tab; raceId: string | null } {
   const [tab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'seances' || tab === 'parcours' ? tab : 'races',
-    raceId: (tab === 'races' || tab === 'live') && raceId ? raceId : null,
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'seances' || tab === 'parcours' || tab === 'tracer' ? tab : 'races',
+    raceId: (tab === 'races' || tab === 'live' || tab === 'tracer') && raceId ? raceId : null,
   }
 }
 
@@ -208,6 +211,13 @@ export default function App() {
     await store.saveRace(r).catch(report)
     if (open) go('races', r.id)
   }
+  // Traceur : nouveau parcours, ou tracé modifié d'une course existante.
+  const saveDrawing = async (d: DrawResult, edited: Race | null) => {
+    if (edited) {
+      updateRace({ ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name })
+      go('races', edited.id)
+    } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn })
+  }
   const removeRace = async (id: string) => {
     setRaces((all) => all.filter((r) => r.id !== id))
     await store.deleteRace(id).catch(report)
@@ -349,6 +359,7 @@ export default function App() {
           <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}>Profil athlète</button>
           <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}>Calculateur VC</button>
           <button className={route.tab === 'parcours' ? 'on' : ''} onClick={() => go('parcours')}>Parcours</button>
+          <button className={route.tab === 'tracer' ? 'on' : ''} onClick={() => go('tracer')}>Tracer</button>
           <button className={route.tab === 'seances' ? 'on' : ''} onClick={() => go('seances')}>Séances</button>
           <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}>Analyse</button>
         </nav>
@@ -365,6 +376,16 @@ export default function App() {
         )}
         {!loaded ? (
           <p className="muted">Chargement…</p>
+        ) : route.tab === 'tracer' ? (
+          <Suspense fallback={<p className="muted">Chargement de la carte…</p>}>
+            <RouteBuilder
+              key={current?.id ?? 'new'}
+              athlete={athlete}
+              race={current ?? null}
+              onSave={(d) => saveDrawing(d, current ?? null)}
+              onCancel={() => (current ? go('races', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
+            />
+          </Suspense>
         ) : route.tab === 'athlete' ? (
           <AthletePanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'cs' ? (
@@ -375,6 +396,7 @@ export default function App() {
             athlete={athlete}
             onOpen={(id) => go('races', id)}
             onAdd={(f) => addGpx(f, 'route')}
+            onDraw={() => go('tracer')}
             onUpdate={updateRace}
             onDelete={removeRace}
             onPlan={(r, start) => addRaceCopy(planSession(r, start))}
@@ -398,6 +420,7 @@ export default function App() {
               onChange={updateRace}
               onAthleteChange={updateAthlete}
               onLive={() => go('live', current.id)}
+              onRedraw={() => go('tracer', current.id)}
               library={{
                 kind: current.kind,
                 addToLibrary: () => addRaceCopy(toRoute(current)),
@@ -422,6 +445,7 @@ export default function App() {
             races={races.filter((r) => r.kind === 'race')}
             onOpen={(id) => go('races', id)}
             onAdd={addGpx}
+            onDraw={() => go('tracer')}
             onDelete={deleteRace}
             onDuplicate={duplicateRace}
             onExport={exportBackup}
@@ -441,6 +465,7 @@ function RaceList(props: {
   races: Race[]
   onOpen: (id: string) => void
   onAdd: (f: FileList | null) => void
+  onDraw: () => void
   onDelete: (id: string) => void
   onDuplicate: (r: Race) => void
   onExport: () => void
@@ -468,15 +493,18 @@ function RaceList(props: {
       <Card
         title="Mes courses"
         actions={
-          <label className="button primary">
-            + Importer un GPX
-            <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { props.onAdd(e.target.files); e.target.value = '' }} />
-          </label>
+          <>
+            <button onClick={props.onDraw} title="Dessine le parcours sur la carte">✏️ Tracer sur la carte</button>
+            <label className="button primary">
+              + Importer un GPX
+              <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { props.onAdd(e.target.files); e.target.value = '' }} />
+            </label>
+          </>
         }
       >
         {sorted.length === 0 ? (
           <div className="empty">
-            <p>Importe le fichier .gpx d'une course pour commencer ton plan.</p>
+            <p>Importe le fichier .gpx d'une course, ou trace-la sur la carte, pour commencer ton plan.</p>
             <Hint>Renseigne d'abord ton profil (VC, VAM, durabilité) : tous les temps en découlent.</Hint>
           </div>
         ) : (

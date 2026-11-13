@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { indexAt } from '../lib/gpx'
 import { formatClock } from '../lib/time'
 import type { SplitRow, Track } from '../lib/types'
+import { LAYERS } from './mapLayers'
 
 interface Props {
   track: Track
@@ -13,19 +14,6 @@ interface Props {
   hoverDist: number | null
   /** Clic sur la carte : distance du point de trace le plus proche (m). */
   onPick?: (dist: number) => void
-}
-
-const LAYERS = {
-  'Topographique (OpenTopoMap)': () =>
-    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-      maxZoom: 17,
-      attribution: '© OpenStreetMap, SRTM · style © OpenTopoMap (CC-BY-SA)',
-    }),
-  OpenStreetMap: () =>
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap',
-    }),
 }
 
 /** Carte Leaflet du parcours, synchronisée avec le profil. */

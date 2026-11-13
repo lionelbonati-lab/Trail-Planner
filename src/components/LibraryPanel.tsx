@@ -13,6 +13,7 @@ interface Props {
   athlete: Athlete
   onOpen: (id: string) => void
   onAdd: (files: FileList | null) => void
+  onDraw: () => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
   onPlan: (route: Race, start: string) => void
@@ -25,7 +26,7 @@ function tomorrow8(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T08:00`
 }
 
-export function LibraryPanel({ races, athlete, onOpen, onAdd, onUpdate, onDelete, onPlan }: Props) {
+export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete, onPlan }: Props) {
   const routes = races.filter((r) => r.kind === 'route')
   const sessions = races.filter((r) => r.kind === 'session').sort((a, b) => b.env.start.localeCompare(a.env.start))
   const [query, setQuery] = useState('')
@@ -38,10 +39,13 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onUpdate, onDelete
       <Card
         title="Bibliothèque de parcours"
         actions={
-          <label className="button primary">
-            + Importer un GPX
-            <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { onAdd(e.target.files); e.target.value = '' }} />
-          </label>
+          <>
+            <button onClick={onDraw} title="Dessine un parcours sur la carte, sur les sentiers">✏️ Tracer sur la carte</button>
+            <label className="button primary">
+              + Importer un GPX
+              <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { onAdd(e.target.files); e.target.value = '' }} />
+            </label>
+          </>
         }
       >
         <Hint>
@@ -64,7 +68,7 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onUpdate, onDelete
           </div>
         )}
         {routes.length === 0 ? (
-          <p className="muted">Aucun parcours. Importe un GPX ou ajoute une course à la bibliothèque.</p>
+          <p className="muted">Aucun parcours. Trace-en un sur la carte, importe un GPX ou ajoute une course à la bibliothèque.</p>
         ) : (
           <div className="scroll">
             <table className="table">
