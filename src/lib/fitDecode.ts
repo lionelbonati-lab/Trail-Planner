@@ -18,13 +18,30 @@ export function isFit(bytes: Uint8Array): boolean {
   return bytes.length > 12 && bytes[8] === 0x2e && bytes[9] === 0x46 && bytes[10] === 0x49 && bytes[11] === 0x54
 }
 
+/** Tour (lap) enregistré par la montre : une étape d'entraînement structuré = un tour. */
+export interface FitLap {
+  /** Début (ms Unix). */
+  start: number
+  /** Durée totale et durée chronométrée (s). */
+  elapsed: number
+  timer: number
+  /** Distance (m). */
+  distance: number
+}
+
 export function decodeFitRecords(bytes: Uint8Array): RawPoint[] {
+  return decodeFit(bytes).records
+}
+
+/** Points d'enregistrement et tours d'une activité FIT. */
+export function decodeFit(bytes: Uint8Array): { records: RawPoint[]; laps: FitLap[] } {
   if (!isFit(bytes)) throw new Error("Ce fichier n'est pas un fichier FIT.")
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const headerSize = bytes[0]
   const end = Math.min(bytes.length, headerSize + dv.getUint32(4, true))
   const defs = new Map<number, Def>()
   const out: RawPoint[] = []
+  const laps: FitLap[] = []
   let pos = headerSize
   let lastTs = 0
 
@@ -65,6 +82,7 @@ export function decodeFitRecords(bytes: Uint8Array): RawPoint[] {
       if (offset < (lastTs & 0x1f)) ts += 0x20
       lastTs = ts
       if (def.global === 20) handleRecord(pos, def, ts)
+      else if (def.global === 19) handleLap(pos, def)
       pos += def.size
       continue
     }
@@ -94,7 +112,8 @@ export function decodeFitRecords(bytes: Uint8Array): RawPoint[] {
     const def = defs.get(local)
     if (!def) throw new Error('FIT invalide (définition manquante).')
     if (def.global === 20) handleRecord(pos, def, null)
-    else {
+    else if (def.global === 19) handleLap(pos, def)
+    if (def.global !== 20) {
       // Suit l'horodatage pour les en-têtes compressés.
       let off = pos
       for (const f of def.fields) {
@@ -107,7 +126,28 @@ export function decodeFitRecords(bytes: Uint8Array): RawPoint[] {
     }
     pos += def.size
   }
-  return out
+  return { records: out, laps }
+
+  function handleLap(start: number, def: Def) {
+    let off = start
+    let startTime: number | null = null
+    let elapsed: number | null = null
+    let timer: number | null = null
+    let distance: number | null = null
+    for (const f of def.fields) {
+      const v = read(off, f.size, f.base, def.little)
+      if (v !== null && v !== 0xffffffff) {
+        if (f.num === 2) startTime = v
+        else if (f.num === 7) elapsed = v / 1000
+        else if (f.num === 8) timer = v / 1000
+        else if (f.num === 9) distance = v / 100
+      }
+      off += f.size
+    }
+    if (startTime !== null && elapsed !== null && distance !== null) {
+      laps.push({ start: FIT_EPOCH_MS + startTime * 1000, elapsed, timer: timer ?? elapsed, distance })
+    }
+  }
 
   function handleRecord(start: number, def: Def, compressedTs: number | null) {
     let off = start

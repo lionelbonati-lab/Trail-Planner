@@ -1,6 +1,6 @@
 // Analyse d'activités enregistrées (GPX horodaté ou FIT de montre) et
 // calibration du profil : durabilité, vitesse ascensionnelle, descente.
-import { decodeFitRecords, isFit } from './fitDecode'
+import { decodeFit, isFit, type FitLap } from './fitDecode'
 import { elevationAt, gpxRawPoints, haversine, projectOnTrack, trackFromRaw, type RawPoint } from './gpx'
 import { autoTech, environment, gapFactor, intensityAt, simulate, withFinish } from './model'
 import type { ActivityRecord, Athlete, DescentPoint, Durability, EnvSettings, GradeStat, Race, Track, VamPoint } from './types'
@@ -14,14 +14,20 @@ export interface Activity {
   dist: Float64Array
   elapsed: Float64Array
   moving: Float64Array
+  /** Tours enregistrés par la montre (FIT uniquement). */
+  laps: FitLap[]
 }
 
 /** Lit un fichier d'activité (GPX ou FIT) ; il doit être horodaté. */
 export function readActivity(fileName: string, bytes: Uint8Array): Activity {
   let raw: RawPoint[]
+  let laps: FitLap[] = []
   let name = fileName.replace(/\.(gpx|fit)$/i, '')
-  if (isFit(bytes)) raw = decodeFitRecords(bytes)
-  else {
+  if (isFit(bytes)) {
+    const fit = decodeFit(bytes)
+    raw = fit.records
+    laps = fit.laps
+  } else {
     const xml = new TextDecoder().decode(bytes)
     raw = gpxRawPoints(xml)
     const m = /<trk>\s*<name>([^<]+)<\/name>/.exec(xml)
@@ -30,10 +36,10 @@ export function readActivity(fileName: string, bytes: Uint8Array): Activity {
   raw = raw.filter((p) => p.time !== undefined)
   if (raw.length < 10) throw new Error("Cette trace n'est pas horodatée : il faut l'enregistrement de ta montre (GPX ou FIT).")
   raw.sort((a, b) => a.time! - b.time!)
-  return activityFromRaw(name, raw)
+  return activityFromRaw(name, raw, laps)
 }
 
-export function activityFromRaw(name: string, raw: RawPoint[]): Activity {
+export function activityFromRaw(name: string, raw: RawPoint[], laps: FitLap[] = []): Activity {
   const n = raw.length
   const dist = new Float64Array(n)
   const elapsed = new Float64Array(n)
@@ -55,7 +61,7 @@ export function activityFromRaw(name: string, raw: RawPoint[]): Activity {
     moving[i] = moving[i - 1] + (v < 0.3 ? 0 : dt)
   }
   const track = trackFromRaw(raw, name, 2)
-  return { name, track, start: t0, dist, elapsed, moving }
+  return { name, track, start: t0, dist, elapsed, moving, laps }
 }
 
 /** Temps écoulé et en mouvement (s) à une distance de la trace. */

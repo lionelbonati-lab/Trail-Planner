@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { readActivity } from '../lib/activity'
 import { download } from '../lib/exportGpx'
 import { progressSeries, type ProgressSeries } from '../lib/progress'
-import { describeSteps, SESSIONS, SESSIONS_BY_KEY, type SessionKey, type SessionResult } from '../lib/sessions'
-import { formatDuration } from '../lib/time'
-import type { Athlete } from '../lib/types'
+import { csFromTrials, describeSteps, SESSIONS, SESSIONS_BY_KEY, type SessionKey, type SessionResult, type SessionVariant } from '../lib/sessions'
+import { formatDuration, formatPace } from '../lib/time'
+import type { Athlete, CsTrial } from '../lib/types'
 import { buildWorkoutFit } from '../lib/workoutFit'
-import { Card, Hint } from './ui'
+import { Card, Hint, Num } from './ui'
 
 interface Props {
   athlete: Athlete
@@ -17,14 +17,14 @@ export function SessionsPanel({ athlete, onChange }: Props) {
   const [result, setResult] = useState<{ key: SessionKey; r: SessionResult } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const importFor = async (key: SessionKey, files: FileList | null) => {
+  const importFor = async (key: SessionKey, files: FileList | null, variant?: SessionVariant) => {
     const f = files?.[0]
     if (!f) return
     setError(null)
     setResult(null)
     try {
       const act = readActivity(f.name, new Uint8Array(await f.arrayBuffer()))
-      setResult({ key, r: SESSIONS_BY_KEY[key].analyze(act, athlete) })
+      setResult({ key, r: SESSIONS_BY_KEY[key].analyze(act, athlete, variant) })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (e) {
       setError(`${SESSIONS_BY_KEY[key].title} : ${(e as Error).message}`)
@@ -33,14 +33,15 @@ export function SessionsPanel({ athlete, onChange }: Props) {
 
   const save = (apply: boolean) => {
     if (!result) return
-    const base = apply ? result.r.athlete : athlete
+    const base = apply ? result.r.athlete : { ...athlete, ...result.r.persist }
     onChange({ ...base, activities: [result.r.record, ...athlete.activities] })
     setResult(null)
   }
 
-  const exportFit = (key: SessionKey) => {
+  const exportFit = (key: SessionKey, variant?: SessionVariant) => {
     const s = SESSIONS_BY_KEY[key]
-    download(`TrailPlanner_${key}.fit`, buildWorkoutFit(s.title.slice(0, 32), s.steps(athlete)), 'application/vnd.ant.fit')
+    const title = variant ? `Test VC ${variant.label}` : s.title
+    download(`TrailPlanner_${key}${variant ? `_${variant.key}` : ''}.fit`, buildWorkoutFit(title.slice(0, 32), s.steps(athlete, variant)), 'application/vnd.ant.fit')
   }
 
   return (
@@ -78,19 +79,37 @@ export function SessionsPanel({ athlete, onChange }: Props) {
             <Card
               key={s.key}
               title={s.title}
+              className={s.variants ? 'span2' : ''}
               actions={
-                <>
-                  <button onClick={() => exportFit(s.key)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)">⌚ Entraînement .fit</button>
-                  <label className="button primary">
-                    Importer ma séance
-                    <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { importFor(s.key, e.target.files); e.target.value = '' }} />
-                  </label>
-                </>
+                s.variants ? undefined : (
+                  <>
+                    <button onClick={() => exportFit(s.key)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)">⌚ Entraînement .fit</button>
+                    <label className="button primary">
+                      Importer ma séance
+                      <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { importFor(s.key, e.target.files); e.target.value = '' }} />
+                    </label>
+                  </>
+                )
               }
             >
               <p className="muted">{s.measures}</p>
               <p className="small"><strong>Terrain :</strong> {s.terrain}</p>
-              <ol className="steps">{describeSteps(s.steps(athlete)).map((d) => <li key={d}>{d}</li>)}</ol>
+              {s.variants && (
+                <div className="variant-actions">
+                  {s.variants.map((v) => (
+                    <div key={v.key} className="variant">
+                      <strong>Test {v.label}</strong>
+                      <button onClick={() => exportFit(s.key, v)} title="Entraînement structuré pour la montre (GARMIN/NewFiles)">⌚ .fit</button>
+                      <label className="button primary">
+                        Importer
+                        <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { importFor(s.key, e.target.files, v); e.target.value = '' }} />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <ol className="steps">{describeSteps(s.steps(athlete, s.variants?.[0])).map((d) => <li key={d}>{d}</li>)}</ol>
+              {s.key === 'csTest' && <CsTrials athlete={athlete} onChange={onChange} />}
               <ul className="tips">{s.tips.map((t) => <li key={t}>{t}</li>)}</ul>
               {last && <Hint>Dernière séance : {last.date.slice(0, 10)} ({formatDuration(last.elapsed)}).</Hint>}
             </Card>
@@ -170,5 +189,61 @@ function ProgressChart({ series }: { series: ProgressSeries }) {
       </svg>
       {h && <div className="muted small">{h.source}</div>}
     </div>
+  )
+}
+
+/** Tests VC enregistrés (un par séance), corrigeables, et VC / D′ qui en découlent. */
+function CsTrials({ athlete, onChange }: Props) {
+  const trials = [...athlete.csTrials].sort((a, b) => b.date.localeCompare(a.date))
+  const fit = csFromTrials(trials)
+  const set = (csTrials: CsTrial[]) => onChange({ ...athlete, csTrials })
+  const addManual = () => {
+    const seconds = Number(prompt('Durée du test en minutes (3, 7 ou 12) ?', '3'))
+    if (!(seconds > 0)) return
+    const dist = Number(prompt(`Distance parcourue en ${seconds} min (m) ?`, ''))
+    if (!(dist > 0)) return
+    set([{ id: crypto.randomUUID(), date: new Date().toISOString(), seconds: seconds * 60, dist, source: 'manual' }, ...athlete.csTrials])
+  }
+  const src = { lap: 'tour montre', gps: 'GPS', manual: 'saisie' } as const
+  return (
+    <>
+      <h3>Mes tests</h3>
+      {trials.length === 0 ? (
+        <p className="muted small">Aucun test enregistré. Importe chaque séance après l'avoir faite (ou saisis la distance).</p>
+      ) : (
+        <table className="table compact">
+          <thead>
+            <tr><th>Date</th><th>Durée</th><th>Distance (m)</th><th>Allure</th><th>Source</th><th /></tr>
+          </thead>
+          <tbody>
+            {trials.map((t) => (
+              <tr key={t.id} className={fit?.used.some((u) => u.id === t.id) ? '' : 'muted'}>
+                <td>{t.date.slice(0, 10)}</td>
+                <td>{Math.round(t.seconds / 60)}′</td>
+                <td><Num value={t.dist} width={70} min={1} onChange={(v) => set(athlete.csTrials.map((x) => (x.id === t.id ? { ...x, dist: v, source: 'manual' } : x)))} /></td>
+                <td>{formatPace(t.seconds / (t.dist / 1000))}/km</td>
+                <td className="small">{src[t.source]}</td>
+                <td><button className="ghost" onClick={() => set(athlete.csTrials.filter((x) => x.id !== t.id))}>✕</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <div className="row">
+        <button className="ghost" onClick={addManual}>+ Saisir un test</button>
+        {fit && (
+          <>
+            <span>
+              VC <strong>{formatPace(1000 / fit.cs)}/km</strong> ({(fit.cs * 3.6).toFixed(2)} km/h), D′ <strong>{Math.round(fit.dPrime)} m</strong>
+              {fit.r2 !== null ? ` · R² ${fit.r2.toFixed(3)}` : ''}
+            </span>
+            {(Math.abs(fit.cs - athlete.cs) > 0.001 || Math.abs(fit.dPrime - athlete.dPrime) > 1) && (
+              <button className="primary" onClick={() => onChange({ ...athlete, cs: fit.cs, dPrime: fit.dPrime })}>Appliquer au profil</button>
+            )}
+          </>
+        )}
+      </div>
+      <Hint>Calcul sur le test le plus récent de chaque durée, sur 6 semaines au plus. Les lignes grisées ne sont pas utilisées.</Hint>
+    </>
   )
 }

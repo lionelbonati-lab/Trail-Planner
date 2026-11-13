@@ -74,6 +74,10 @@ export interface Athlete {
   activities: ActivityRecord[]
   /** Produits de nutrition habituels. */
   products: Product[]
+  /** Zones d'entraînement en fraction de VC (comme celles de ton entraîneur). */
+  zones: TrainingZone[]
+  /** Résultats des tests VC (3′, 7′, 12′…), faits des jours différents. */
+  csTrials: CsTrial[]
   /** Code montre (identifiant du document partagé lu par le champ de données Garmin). */
   watchId?: string
   /** Course actuellement envoyée à la montre. */
@@ -149,6 +153,25 @@ export interface Product {
   sodium: number
   /** Part des glucides apportée par ce produit (0–1). */
   share: number
+}
+
+export interface TrainingZone {
+  name: string
+  /** Bornes en fraction de VC (ex. 0.6 – 0.7). */
+  low: number
+  high: number
+}
+
+export interface CsTrial {
+  id: string
+  /** Date du test (ISO). */
+  date: string
+  /** Durée de l'effort (s). */
+  seconds: number
+  /** Distance parcourue (m). */
+  dist: number
+  /** Origine de la distance : tour de la montre, meilleure fenêtre GPS ou saisie. */
+  source: 'lap' | 'gps' | 'manual'
 }
 
 export interface CsTestRecord {

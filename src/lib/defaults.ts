@@ -1,4 +1,13 @@
-import type { Athlete, EnvSettings, KmeSettings, Product, PushSettings, Race } from './types'
+import type { Athlete, EnvSettings, KmeSettings, Product, PushSettings, Race, TrainingZone } from './types'
+
+/** Zones en % de VC (zones 1, 2 et 5 d'après les séances de l'entraîneur ; 3 et 4 à ajuster). */
+export const DEFAULT_ZONES: TrainingZone[] = [
+  { name: 'Zone 1', low: 0.6, high: 0.7 },
+  { name: 'Zone 2', low: 0.7, high: 0.8 },
+  { name: 'Zone 3', low: 0.8, high: 0.9 },
+  { name: 'Zone 4', low: 0.9, high: 0.96 },
+  { name: 'Zone 5', low: 0.96, high: 1.05 },
+]
 
 export const DEFAULT_ATHLETE: Athlete = {
   name: 'Moi',
@@ -33,6 +42,8 @@ export const DEFAULT_ATHLETE: Athlete = {
   history: [],
   activities: [],
   products: [] as Product[],
+  zones: DEFAULT_ZONES,
+  csTrials: [],
 }
 
 export const DEFAULT_ENV: EnvSettings = {
@@ -91,6 +102,8 @@ export function normalizeAthlete(a: Partial<Athlete> | null | undefined): Athlet
     history: a?.history ?? [],
     activities: a?.activities ?? [],
     products: a?.products ?? DEFAULT_PRODUCTS.map((p) => ({ ...p })),
+    zones: a?.zones?.length ? a.zones : DEFAULT_ZONES.map((z) => ({ ...z })),
+    csTrials: a?.csTrials ?? [],
     durability: { ...DEFAULT_ATHLETE.durability, ...(a?.durability ?? {}) },
   }
 }

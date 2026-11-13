@@ -2,13 +2,13 @@
 // Garmin, et analyse dédiée de l'enregistrement pour mettre le profil à jour.
 import { analyzeActivity, calibrateOnActivity, timesAt, type Activity } from './activity'
 import { computeCs } from './cs'
-import { DEFAULT_ENV } from './defaults'
+import { DEFAULT_ENV, DEFAULT_ZONES } from './defaults'
 import { autoTech, interp } from './model'
 import { peaksAndValleys } from './splits'
 import { formatDuration, formatPace } from './time'
-import type { ActivityRecord, Athlete, DescentPoint, SessionMetrics, VamPoint } from './types'
+import type { ActivityRecord, Athlete, CsTrial, DescentPoint, SessionMetrics, VamPoint } from './types'
 
-export type SessionKey = 'long' | 'hillTempo' | 'hillTest' | 'flatTest' | 'cs3712' | 'descents'
+export type SessionKey = 'long' | 'hillTempo' | 'hillTest' | 'flatTest' | 'csTest' | 'descents'
 
 export type StepKind = 'warmup' | 'active' | 'recovery' | 'rest' | 'cooldown'
 
@@ -41,6 +41,15 @@ export interface SessionResult {
   athlete: Athlete
   changes: string[]
   record: ActivityRecord
+  /** Toujours conservé, même sans appliquer la mise à jour (ex. résultat d'un test VC). */
+  persist?: Partial<Athlete>
+}
+
+/** Variante d'une séance (ex. test VC de 3, 7 ou 12 min). */
+export interface SessionVariant {
+  key: string
+  label: string
+  seconds: number
 }
 
 export interface SessionDef {
@@ -49,8 +58,9 @@ export interface SessionDef {
   measures: string
   terrain: string
   tips: string[]
-  steps: (a: Athlete) => Step[]
-  analyze: (act: Activity, a: Athlete) => SessionResult
+  variants?: SessionVariant[]
+  steps: (a: Athlete, variant?: SessionVariant) => Step[]
+  analyze: (act: Activity, a: Athlete, variant?: SessionVariant) => SessionResult
 }
 
 const MIN = 60
@@ -58,6 +68,29 @@ const TEMPO = 0.88 // intensité visée en navettes tempo (fraction de VC)
 const DESCENT_INTENSITY = 0.9 // intensité « soutenue » en descente
 
 const pace = (mps: number) => `${formatPace(1000 / mps)}/km`
+
+/** Fourchette de vitesse (m/s) d'une zone d'entraînement du profil (1 à 5). */
+export function zoneSpeed(a: Athlete, zone: number): [number, number] {
+  const z = (a.zones?.length ? a.zones : DEFAULT_ZONES)[Math.min(zone, 5) - 1] ?? DEFAULT_ZONES[zone - 1]
+  return [a.cs * z.low, a.cs * z.high]
+}
+
+/** Échauffement de l'entraîneur (séances de test) : zones 1-2, gammes, 3 accélérations. */
+export function coachWarmup(a: Athlete): Step[] {
+  return [
+    { kind: 'warmup', name: 'Échauffement Z1', seconds: 10 * MIN, speed: zoneSpeed(a, 1), notes: 'Facile 2/10' },
+    { kind: 'warmup', name: 'Échauffement Z2', seconds: 10 * MIN, speed: zoneSpeed(a, 2), notes: 'Modéré 4/10' },
+    { kind: 'warmup', name: 'Gammes Z1', seconds: 5 * MIN, speed: zoneSpeed(a, 1), notes: 'Montées de genoux, talons-fesses, jambes tendues, foulées bondissantes' },
+    {
+      repeat: 3,
+      steps: [
+        { kind: 'warmup', name: 'Accélération Z5', seconds: 25, speed: zoneSpeed(a, 5) },
+        { kind: 'recovery', name: 'Récupération Z1', seconds: 35, speed: zoneSpeed(a, 1) },
+      ],
+    },
+    { kind: 'warmup', name: 'Échauffement Z1', seconds: 2 * MIN, speed: zoneSpeed(a, 1) },
+  ]
+}
 
 /** Intensité d'un effort maximal de `seconds` (fraction de VC), d'après VC et D′. */
 export function allOutIntensity(a: Athlete, seconds: number): number {
@@ -156,6 +189,34 @@ function baseRecord(act: Activity, a: Athlete, key: SessionKey, metrics: Session
   return { ...rec, name: `${SESSIONS_BY_KEY[key].title} · ${rec.name}`, session: key, metrics, useForCalibration: calibrate }
 }
 
+/**
+ * Distance de l'effort de `seconds` : tour de la montre de cette durée (étape
+ * « Corps de séance »), sinon meilleure fenêtre sur le plat ramenée à la durée exacte.
+ */
+export function effortDistance(act: Activity, seconds: number): { dist: number; source: 'lap' | 'gps' } | null {
+  const tol = Math.max(3, seconds * 0.02)
+  const lap = act.laps.filter((l) => Math.abs(l.timer - seconds) <= tol && l.distance > 0).sort((x, y) => y.distance - x.distance)[0]
+  if (lap) return { dist: (lap.distance * seconds) / lap.timer, source: 'lap' }
+  const w = bestWindow(act, seconds, 'speed', (g) => Math.abs(g) < 3)
+  return w ? { dist: (w.dist * seconds) / w.dt, source: 'gps' } : null
+}
+
+/** VC et D′ à partir des tests récents : le plus récent de chaque durée, sur 6 semaines au plus. */
+export function csFromTrials(trials: CsTrial[]): { cs: number; dPrime: number; r2: number | null; used: CsTrial[] } | null {
+  const sorted = [...trials].sort((x, y) => y.date.localeCompare(x.date))
+  if (!sorted.length) return null
+  const newest = Date.parse(sorted[0].date)
+  const used: CsTrial[] = []
+  for (const t of sorted) {
+    if (newest - Date.parse(t.date) > 42 * 86400000) continue
+    if (!used.some((u) => u.seconds === t.seconds)) used.push(t)
+  }
+  if (used.length < 2) return null
+  const r = computeCs(used.map((t) => ({ dist: t.dist, time: t.seconds })))
+  if (!r || r.cs <= 0) return null
+  return { cs: r.cs, dPrime: Math.max(0, r.dPrime), r2: used.length > 2 ? r.r2 : null, used: used.sort((x, y) => x.seconds - y.seconds) }
+}
+
 // --- Catalogue -----------------------------------------------------------------
 
 export const SESSIONS: SessionDef[] = [
@@ -166,7 +227,7 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Parcours vallonné, idéalement proche de ta course cible. 2 h 30 à 3 h 30.',
     tips: ['Allure facile et régulière, sans chercher la performance.', 'Évite les longs arrêts : ils faussent la mesure de la durabilité.'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement', seconds: 15 * MIN, speed: [a.cs * 0.6, a.cs * 0.72] },
+      { kind: 'warmup', name: 'Échauffement Z1', seconds: 15 * MIN, speed: zoneSpeed(a, 1) },
       { kind: 'active', name: 'Endurance', seconds: 150 * MIN, notes: 'Allure facile (conversation). Montées raides en marchant.' },
       { kind: 'cooldown', name: 'Retour au calme', seconds: null },
     ],
@@ -198,7 +259,7 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Une côte régulière de 10 à 20 %, assez longue pour 10 min de montée.',
     tips: ['Tempo : effort soutenu mais contrôlé, tu pourrais tenir 1 h à 1 h 30.', 'Redescends en trottinant, puis appuie sur « Lap » pour la répétition suivante.'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement', seconds: 20 * MIN, speed: [a.cs * 0.6, a.cs * 0.75] },
+      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]] },
       {
         repeat: 5,
         steps: [
@@ -239,7 +300,7 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Une montée régulière de 10 à 25 % d’au moins 20 min.',
     tips: ['Effort maximal mais régulier : la meilleure fenêtre de 20 min est retenue.', 'Course ou marche rapide, selon ce qui est le plus efficace pour toi.'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement', seconds: 20 * MIN, speed: [a.cs * 0.6, a.cs * 0.8] },
+      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]] },
       { kind: 'active', name: 'Montée à fond', seconds: 20 * MIN, notes: `Repère : ≈ ${vamAt(a, allOutIntensity(a, 1200))} m/h à 15 %` },
       { kind: 'cooldown', name: 'Retour au calme', seconds: 15 * MIN },
     ],
@@ -271,9 +332,9 @@ export const SESSIONS: SessionDef[] = [
     steps: (a) => {
       const v = a.cs + a.dPrime / 1200
       return [
-        { kind: 'warmup', name: 'Échauffement', seconds: 20 * MIN, speed: [a.cs * 0.6, a.cs * 0.8], notes: 'Avec 3 accélérations de 20 s.' },
+        ...coachWarmup(a),
         { kind: 'active', name: '20 min à fond', seconds: 20 * MIN, speed: [v * 0.97, v * 1.03], notes: `Repère : ${pace(v)}` },
-        { kind: 'cooldown', name: 'Retour au calme', seconds: 15 * MIN },
+        { kind: 'cooldown', name: 'Récupération Z1', seconds: 10 * MIN, speed: zoneSpeed(a, 1) },
       ]
     },
     analyze: (act, a) => {
@@ -294,35 +355,49 @@ export const SESSIONS: SessionDef[] = [
     },
   },
   {
-    key: 'cs3712',
-    title: 'Test 3′ / 7′ / 12′',
-    measures: 'Vitesse critique et D′ (régression distance-temps), comme le calculateur VC.',
-    terrain: 'Piste ou plat roulant.',
-    tips: ['Trois efforts à fond, 20 min de récupération entre chaque (ou sur deux jours).', 'Les meilleures fenêtres de 3, 7 et 12 min sur le plat sont retenues.'],
-    steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement', seconds: 20 * MIN, speed: [a.cs * 0.6, a.cs * 0.8] },
-      { kind: 'active', name: '3 min à fond', seconds: 3 * MIN },
-      { kind: 'rest', name: 'Récupération', seconds: 20 * MIN, speed: [a.cs * 0.5, a.cs * 0.7] },
-      { kind: 'active', name: '7 min à fond', seconds: 7 * MIN },
-      { kind: 'rest', name: 'Récupération', seconds: 20 * MIN, speed: [a.cs * 0.5, a.cs * 0.7] },
-      { kind: 'active', name: '12 min à fond', seconds: 12 * MIN },
-      { kind: 'cooldown', name: 'Retour au calme', seconds: 10 * MIN },
+    key: 'csTest',
+    title: 'Test VC 3′ / 7′ / 12′',
+    measures: 'Vitesse critique et D′ : trois séances à des jours différents, un effort à fond chacune ; la distance parcourue de chaque effort donne VC et D′ (régression distance-temps).',
+    terrain: 'Piste : pars du départ du tour de 400 m pour compter facilement la distance.',
+    tips: [
+      'ALL OUT : sans retenue, mais pas sans contrôle.',
+      'La distance est lue dans le tour « Corps de séance » de ta montre ; tu peux la corriger (tours de piste comptés).',
+      'VC et D′ se calculent dès deux tests ; les trois donnent le résultat le plus fiable.',
     ],
-    analyze: (act, a) => {
-      const trials = [180, 420, 720].map((s) => bestWindow(act, s, 'speed', (g) => Math.abs(g) < 3))
-      if (trials.some((t) => !t)) throw new Error('Il manque un effort de 3, 7 ou 12 min sur le plat.')
-      const r = computeCs(trials.map((t) => ({ dist: t!.dist, time: t!.dt })))
-      if (!r || r.cs <= 0) throw new Error('Calcul impossible : efforts incohérents.')
-      const metrics: SessionMetrics = { cs: r.cs, dPrime: Math.max(0, r.dPrime) }
+    variants: [
+      { key: '3', label: '3′', seconds: 180 },
+      { key: '7', label: '7′', seconds: 420 },
+      { key: '12', label: '12′', seconds: 720 },
+    ],
+    steps: (a, v) => {
+      const seconds = v?.seconds ?? 180
+      return [
+        ...coachWarmup(a),
+        { kind: 'active', name: `${Math.round(seconds / 60)}' à fond`, seconds, notes: 'Effort maximal 10/10 : sans retenue, mais pas sans contrôle' },
+        { kind: 'cooldown', name: 'Récupération Z1', seconds: 10 * MIN, speed: zoneSpeed(a, 1) },
+      ]
+    },
+    analyze: (act, a, v) => {
+      const seconds = v?.seconds ?? 180
+      const effort = effortDistance(act, seconds)
+      if (!effort) throw new Error(`Effort de ${Math.round(seconds / 60)} min introuvable dans cette activité.`)
+      const trial: CsTrial = { id: crypto.randomUUID(), date: new Date(act.start).toISOString(), seconds, dist: Math.round(effort.dist), source: effort.source }
+      const trials = [trial, ...a.csTrials.filter((t) => !(t.seconds === seconds && t.date.slice(0, 10) === trial.date.slice(0, 10)))]
+      const fit = csFromTrials(trials)
+      const metrics: SessionMetrics = fit ? { cs: fit.cs, dPrime: fit.dPrime } : {}
+      const lines = [
+        `Test ${Math.round(seconds / 60)}′ : ${trial.dist} m à ${pace(trial.dist / seconds)} (${effort.source === 'lap' ? 'tour de la montre' : 'meilleure fenêtre GPS'}).`,
+        fit
+          ? `Avec ${fit.used.map((t) => `${Math.round(t.seconds / 60)}′ (${t.date.slice(5, 10).split('-').reverse().join('/')})`).join(', ')} : VC ${pace(fit.cs)} (${(fit.cs * 3.6).toFixed(2)} km/h), D′ ${Math.round(fit.dPrime)} m${fit.r2 !== null ? `, R² ${fit.r2.toFixed(3)}` : ''}.`
+          : 'Encore un test d’une autre durée (7′ ou 12′) pour calculer VC et D′.',
+      ]
       return {
-        lines: [
-          `Meilleurs efforts : ${trials.map((t) => `${formatDuration(t!.dt, true).replace(/^0:/, '')} → ${Math.round(t!.dist)} m`).join(' · ')}.`,
-          `VC ${pace(r.cs)} (${(r.cs * 3.6).toFixed(2)} km/h), D′ ${Math.round(r.dPrime)} m, R² ${r.r2.toFixed(3)}.`,
-        ],
+        lines,
         metrics,
-        athlete: { ...a, cs: r.cs, dPrime: Math.max(0, r.dPrime) },
-        changes: [`VC : ${pace(a.cs)} → ${pace(r.cs)}`, `D′ : ${Math.round(a.dPrime)} → ${Math.round(r.dPrime)} m`],
-        record: baseRecord(act, a, 'cs3712', metrics, false),
+        athlete: fit ? { ...a, csTrials: trials, cs: fit.cs, dPrime: fit.dPrime } : { ...a, csTrials: trials },
+        changes: fit ? [`VC : ${pace(a.cs)} → ${pace(fit.cs)}`, `D′ : ${Math.round(a.dPrime)} → ${Math.round(fit.dPrime)} m`] : [`Test ${Math.round(seconds / 60)}′ enregistré.`],
+        record: baseRecord(act, a, 'csTest', metrics, false),
+        persist: { csTrials: trials },
       }
     },
   },
@@ -333,7 +408,7 @@ export const SESSIONS: SessionDef[] = [
     terrain: 'Une descente de 10 à 25 %, représentative de tes courses (technicité comprise).',
     tips: ['Allure soutenue mais maîtrisée, comme en course.', 'Remonte en marchant, puis appuie sur « Lap ».'],
     steps: (a) => [
-      { kind: 'warmup', name: 'Échauffement', seconds: 20 * MIN, speed: [a.cs * 0.6, a.cs * 0.75] },
+      { kind: 'warmup', name: 'Échauffement Z1-Z2', seconds: 20 * MIN, speed: [zoneSpeed(a, 1)[0], zoneSpeed(a, 2)[1]] },
       {
         repeat: 4,
         steps: [
@@ -371,7 +446,7 @@ export const SESSIONS_BY_KEY = Object.fromEntries(SESSIONS.map((s) => [s.key, s]
 /** Déroulé lisible d'une séance. */
 export function describeSteps(steps: Step[]): string[] {
   const one = (s: SimpleStep) =>
-    `${s.name} : ${s.meters ? `${(s.meters / 1000).toFixed(2)} km` : s.seconds ? (s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
+    `${s.name} : ${s.meters ? `${(s.meters / 1000).toFixed(2)} km` : s.seconds ? (s.seconds < 60 ? `${s.seconds}"` : s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
     (s.speed ? ` (${formatPace(1000 / s.speed[1])}–${formatPace(1000 / s.speed[0])}/km)` : '') +
     (s.notes ? ` — ${s.notes}` : '')
   return steps.flatMap((s) => (isRepeat(s) ? [`${s.repeat} × [ ${s.steps.map(one).join(' ; ')} ]`] : [one(s)]))

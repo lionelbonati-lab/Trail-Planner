@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { computeCs, predictTime, PROTOCOLS } from '../lib/cs'
+import { csFromTrials } from '../lib/sessions'
 import { formatDuration, formatPace, parseDuration } from '../lib/time'
 import type { Athlete } from '../lib/types'
 import { Card, Hint } from './ui'
@@ -96,6 +97,19 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
         <button className="ghost" onClick={() => setRows([...rows, { time: '', dist: '' }])}>
           + Ajouter un essai
         </button>
+        {athlete.csTrials.length > 0 && (
+          <button
+            className="ghost"
+            onClick={() => {
+              const fit = csFromTrials(athlete.csTrials)
+              const used = fit?.used ?? [...athlete.csTrials].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3)
+              setRows(used.sort((a, b) => a.seconds - b.seconds).map((t) => ({ time: formatDuration(t.seconds, true).replace(/^0:/, ''), dist: String(t.dist) })))
+            }}
+            title="Reprend les distances de tes tests importés dans Séances → Test VC"
+          >
+            Charger mes tests
+          </button>
+        )}
       </Card>
 
       <Card title="Résultat">

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { download } from '../lib/exportGpx'
-import { TRAINING_ZONES } from '../lib/model'
 import { formatDuration, formatPace, parseDuration } from '../lib/time'
 import type { Athlete, PaceZone, Race, SimResult, Track } from '../lib/types'
 import { buildWorkoutFit } from '../lib/workoutFit'
@@ -37,15 +36,20 @@ export function ZonePicker({
         <strong>Portion km {(from / 1000).toFixed(1)} → {(to / 1000).toFixed(1)}</strong> ({((to - from) / 1000).toFixed(1)} km) : choisis une allure cible.
       </div>
       <div className="zone-buttons">
-        {TRAINING_ZONES.map((z) => (
-          <button key={z.label} onClick={() => onApply({ kind: 'intensity', value: z.value, label: z.label })}>
-            <span>
-              <i className="zone-swatch" style={{ background: zoneColor({ id: '', from: 0, to: 0, kind: 'intensity', value: z.value, label: '' }, athlete) }} />
-              {z.label}
-            </span>
-            <small>{Math.round(z.value * 100)} % VC · {formatPace(1000 / (athlete.cs * z.value))}/km plat</small>
-          </button>
-        ))}
+        {athlete.zones.map((z) => {
+          const value = (z.low + z.high) / 2
+          return (
+            <button key={z.name} onClick={() => onApply({ kind: 'intensity', value, label: z.name })} title={`Milieu de zone : ${Math.round(value * 100)} % VC`}>
+              <span>
+                <i className="zone-swatch" style={{ background: zoneColor({ id: '', from: 0, to: 0, kind: 'intensity', value, label: '' }, athlete) }} />
+                {z.name}
+              </span>
+              <small>
+                {Math.round(z.low * 100)}–{Math.round(z.high * 100)} % VC · {formatPace(1000 / (athlete.cs * z.high))}–{formatPace(1000 / (athlete.cs * z.low))}/km
+              </small>
+            </button>
+          )
+        })}
       </div>
       <div className="row">
         <Num label="% de VC" value={pct} scale={100} unit="%" min={30} max={150} onChange={setPct} width={70} />

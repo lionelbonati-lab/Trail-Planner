@@ -1,6 +1,7 @@
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
-import type { Athlete, DescentPoint, Durability, Product, VamPoint } from '../lib/types'
+import { DEFAULT_ZONES } from '../lib/defaults'
+import type { Athlete, DescentPoint, Durability, Product, TrainingZone, VamPoint } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
 
 export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
@@ -91,6 +92,37 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
           onChange={(rows) => set('descent', rows)}
           blank={{ grade: -35, factor: 0.65 }}
         />
+      </Card>
+
+      <Card title="Zones d'entraînement" className="span2">
+        <Hint>
+          En pourcentage de ta VC, comme dans tes séances Nolio. Elles servent aux cibles des séances (échauffement, accélérations)
+          et au choix d'une zone sur le profil d'un parcours.
+        </Hint>
+        <table className="table compact">
+          <thead>
+            <tr><th>Zone</th><th>De (% VC)</th><th>À (% VC)</th><th>Allure</th><th>Vitesse</th><th /></tr>
+          </thead>
+          <tbody>
+            {athlete.zones.map((z, i) => {
+              const setZ = (patch: Partial<TrainingZone>) => set('zones', athlete.zones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+              return (
+                <tr key={i}>
+                  <td><input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 110 }} /></td>
+                  <td><Num value={z.low} scale={100} width={64} min={20} max={200} onChange={(v) => setZ({ low: v })} /></td>
+                  <td><Num value={z.high} scale={100} width={64} min={20} max={200} onChange={(v) => setZ({ high: v })} /></td>
+                  <td>{formatPace(1000 / (athlete.cs * z.high))} – {formatPace(1000 / (athlete.cs * z.low))}/km</td>
+                  <td className="muted">{(athlete.cs * z.low * 3.6).toFixed(2)} – {(athlete.cs * z.high * 3.6).toFixed(2)} km/h</td>
+                  <td><button className="ghost" onClick={() => set('zones', athlete.zones.filter((_, j) => j !== i))}>✕</button></td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        <div className="row">
+          <button className="ghost" onClick={() => set('zones', [...athlete.zones, { name: `Zone ${athlete.zones.length + 1}`, low: 1, high: 1.1 }])}>+ Ajouter une zone</button>
+          <button className="ghost" onClick={() => set('zones', DEFAULT_ZONES.map((z) => ({ ...z })))}>Valeurs par défaut</button>
+        </div>
       </Card>
 
       <Card title="Produits de nutrition" className="span2">
