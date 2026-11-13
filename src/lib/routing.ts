@@ -1,7 +1,8 @@
 // Tracé d'un parcours sur la carte : des points cliqués reliés segment par segment,
 // soit en suivant les sentiers et chemins d'OpenStreetMap (routeur BRouter), soit en
 // ligne droite (hors sentier). L'altitude manquante vient du modèle de terrain d'Open-Meteo.
-import { haversine, type RawPoint } from './gpx'
+import { decodeFitRecords, isFit } from './fitDecode'
+import { gpxName, gpxRawPoints, haversine, type RawPoint } from './gpx'
 import type { DrawnRoute, SegMode, Waypoint } from './types'
 
 export type { DrawnRoute, SegMode, Waypoint }
@@ -225,4 +226,55 @@ export function drawnFromRaw(raw: RawPoint[], mode: SegMode = 'trail', maxPoints
   for (let i = 1; i < raw.length - 1; i++) if (cum[i] - cum[idx[idx.length - 1]] >= spacing && total - cum[i] >= spacing / 2) idx.push(i)
   if (raw.length > 1) idx.push(raw.length - 1)
   return { waypoints: idx.map((i) => ({ lat: raw[i].lat, lon: raw[i].lon, mode, i })) }
+}
+
+/**
+ * Altitude d'une longue trace qui n'en a pas : au plus `max` points interrogés, répartis
+ * le long de la trace, les autres interpolés.
+ */
+export async function fillElevationSparse(points: RawPoint[], fetcher: Fetcher = fetch, max = 1000): Promise<RawPoint[]> {
+  const missing = points.filter((p) => p.ele === null).length
+  if (!missing) return points
+  if (missing <= max) return fillElevation(points, fetcher)
+  const n = points.length
+  const idx = [...new Set(Array.from({ length: max }, (_, k) => Math.round((k * (n - 1)) / (max - 1))))]
+  const sample = await fillElevation(idx.map((i) => ({ ...points[i], ele: null })), fetcher)
+  const out = points.map((p) => ({ ...p }))
+  for (let s = 0; s + 1 < idx.length; s++) {
+    const a = idx[s]
+    const b = idx[s + 1]
+    const ea = sample[s].ele ?? 0
+    const eb = sample[s + 1].ele ?? ea
+    for (let i = a; i <= b; i++) if (out[i].ele === null) out[i].ele = ea + ((eb - ea) * (i - a)) / (b - a || 1)
+  }
+  return out
+}
+
+/**
+ * Trace d'un fichier GPX ou FIT, pour le traceur : positions et altitude seulement, points
+ * à moins de 2 m du précédent retirés (enregistrements à la seconde).
+ */
+export function readTrackFile(fileName: string, bytes: Uint8Array): { name: string; raw: RawPoint[] } {
+  let name = fileName.replace(/\.(gpx|fit)$/i, '')
+  let src: RawPoint[]
+  if (isFit(bytes)) src = decodeFitRecords(bytes)
+  else {
+    const xml = new TextDecoder().decode(bytes)
+    src = gpxRawPoints(xml)
+    const n = gpxName(xml)
+    if (n && n !== 'Course') name = n
+  }
+  const raw: RawPoint[] = []
+  for (const p of src) {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue
+    const last = raw[raw.length - 1]
+    if (last && haversine(last.lat, last.lon, p.lat, p.lon) < 2) continue
+    raw.push({ lat: p.lat, lon: p.lon, ele: p.ele })
+  }
+  const last = src[src.length - 1]
+  if (last && raw.length && raw[raw.length - 1] !== last && haversine(raw[raw.length - 1].lat, raw[raw.length - 1].lon, last.lat, last.lon) > 0) {
+    raw.push({ lat: last.lat, lon: last.lon, ele: last.ele })
+  }
+  if (raw.length < 2) throw new Error('Trace trop courte.')
+  return { name, raw }
 }

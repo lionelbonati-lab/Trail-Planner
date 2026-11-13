@@ -35,6 +35,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   profil, distance, D+/D− et temps estimé selon le profil, à l'allure de course ou dans une zone choisie
   (Z1…Z7 : temps au milieu de la zone, fourchette haut/bas de zone ; la zone est enregistrée avec le parcours). Enregistré comme parcours d'entraînement ou comme
   course, export GPX ; « Modifier le tracé » rouvre un tracé (ou découpe une trace importée en points à déplacer).
+  Import d'un GPX ou d'un FIT dans le traceur (bouton ou glisser-déposer), en remplacement ou à la suite du
+  tracé en cours ; altitude complétée si le fichier n'en a pas.
+- **Fonds de carte** : Plan IGN et photos aériennes IGN (France), OpenStreetMap (mis à jour en continu),
+  OpenStreetMap France, carte nationale suisse, satellite, relief OpenTopoMap ; surcouches sentiers balisés
+  (Waymarked Trails) et chemins de randonnée suisses. Le choix est mémorisé.
 - **7 zones d'entraînement** en % de VC, celles du bilan VC (Z1 60–70 % récupération … Z5 96–105 %
   voisinage de VC, Z6 105–115 % supra-VC, Z7 > 115 % haute intensité), avec utilisation et durée tenable,
   réglables dans le profil. Couleurs Garmin (Z6 et Z7 : couleurs des zones de puissance), modifiables par zone.

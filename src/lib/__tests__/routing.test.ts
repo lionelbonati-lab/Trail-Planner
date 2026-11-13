@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
+import { FIT_EPOCH, FitWriter } from '../fit'
 import { gpxRawPoints, haversine, parseGpx, type RawPoint } from '../gpx'
 import { simulate } from '../model'
 import { planOptions } from '../plan'
@@ -12,10 +13,12 @@ import {
   drawnFromRaw,
   drawnGpx,
   fillElevation,
+  fillElevationSparse,
   joinSegments,
   nearestIndex,
   outAndBack,
   parseBrouter,
+  readTrackFile,
   reverseRoute,
   routeSegment,
   searchPlace,
@@ -218,5 +221,63 @@ describe('tracé sur carte : assemblage', () => {
     expect(wholeRouteZone(z2, a)).toBe(1)
     expect(wholeRouteZone([], a)).toBeNull()
     expect(wholeRoute(MODEL_TARGET, track.totalDist)).toEqual([])
+  })
+})
+
+describe('tracé sur carte : import de fichiers', () => {
+  it('GPX : nom de la trace, points à moins de 2 m retirés, arrivée gardée', () => {
+    const pts = [
+      [45, 6, 1000],
+      [45.000005, 6, 1000], // 0,6 m : retiré
+      [45.001, 6, 1010],
+      [45.002, 6, 1020],
+      [45.002001, 6, 1020], // 0,1 m, dernier point : gardé
+    ]
+    const xml = `<?xml version="1.0"?><gpx><wpt lat="45" lon="6"><name>Ravito</name></wpt><trk><name>Tour du lac &amp; col</name><trkseg>${pts
+      .map(([la, lo, e]) => `<trkpt lat="${la}" lon="${lo}"><ele>${e}</ele></trkpt>`)
+      .join('')}</trkseg></trk></gpx>`
+    const r = readTrackFile('fichier.gpx', new TextEncoder().encode(xml))
+    expect(r.name).toBe('Tour du lac & col')
+    expect(r.raw.map((p) => p.lat)).toEqual([45, 45.001, 45.002, 45.002001])
+    expect(r.raw[0]).toEqual({ lat: 45, lon: 6, ele: 1000 })
+  })
+
+  it('FIT d’une sortie : positions et altitude, nom du fichier', () => {
+    const w = new FitWriter()
+    const ts = Math.round(Date.parse('2026-11-10T17:00:00Z') / 1000) - FIT_EPOCH
+    const fields = [
+      { num: 253, type: 'uint32' as const },
+      { num: 0, type: 'sint32' as const },
+      { num: 1, type: 'sint32' as const },
+      { num: 2, type: 'uint16' as const },
+    ]
+    const semi = (deg: number) => Math.round((deg * 2 ** 31) / 180)
+    for (let k = 0; k < 20; k++) w.message(20, fields, [ts + k, semi(45 + k * 0.0001), semi(6), (500 + k + 500) * 5])
+    const r = readTrackFile('Sortie du jeudi.fit', w.finish())
+    expect(r.name).toBe('Sortie du jeudi')
+    expect(r.raw).toHaveLength(20)
+    expect(r.raw[19].ele).toBeCloseTo(519, 0)
+  })
+
+  it('fichier sans trace : erreur', () => {
+    expect(() => readTrackFile('vide.gpx', new TextEncoder().encode('<gpx></gpx>'))).toThrow()
+  })
+
+  it('longue trace sans altitude : au plus 1000 points interrogés, les autres interpolés', async () => {
+    const pts: RawPoint[] = Array.from({ length: 5001 }, (_, k) => ({ lat: 45 + k * 0.0001, lon: 6, ele: null }))
+    let asked = 0
+    const fetcher: Fetcher = async (url) => {
+      const lats = new URL(url).searchParams.get('latitude')!.split(',').map(Number)
+      asked += lats.length
+      return json({ elevation: lats.map((l) => 1000 + (l - 45) * 1000) })
+    }
+    const out = await fillElevationSparse(pts, fetcher)
+    expect(asked).toBeLessThanOrEqual(1000)
+    expect(out.every((p) => p.ele !== null)).toBe(true)
+    expect(out[2501].ele).toBeCloseTo(1000 + 0.2501 * 1000, 0)
+    // Peu de points : tous interrogés.
+    asked = 0
+    await fillElevationSparse(pts.slice(0, 50), fetcher)
+    expect(asked).toBe(50)
   })
 })

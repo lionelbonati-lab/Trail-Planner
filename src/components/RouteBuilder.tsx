@@ -10,9 +10,11 @@ import {
   closeLoop,
   drawnFromRaw,
   drawnGpx,
+  fillElevationSparse,
   joinSegments,
   nearestIndex,
   outAndBack,
+  readTrackFile,
   reverseRoute,
   routeSegment,
   searchPlace,
@@ -27,7 +29,7 @@ import {
 import { formatDuration, formatPace } from '../lib/time'
 import type { Athlete, PaceZone, Race, RaceKind, Track } from '../lib/types'
 import { colorForIndex, MODEL_COLOR, wholeRoute, wholeRouteZone, zoneTarget, type Target } from '../lib/zones'
-import { LAYERS } from './mapLayers'
+import { addLayers } from './mapLayers'
 import { Card, Hint } from './ui'
 
 export interface DrawResult {
@@ -58,6 +60,7 @@ const DRAFT_KEY = 'tp-draw-draft'
 const VIEW_KEY = 'tp-draw-view'
 const MODE_KEY = 'tp-draw-mode'
 const ACCENT = '#2f6b4f'
+const DEFAULT_CENTER: [number, number] = [45.9237, 6.8694]
 
 function readJson<T>(key: string): T | null {
   try {
@@ -136,6 +139,8 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [pendingImport, setPendingImport] = useState<{ name: string; raw: RawPoint[] } | null>(null)
+  const [dropping, setDropping] = useState(false)
 
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
@@ -248,21 +253,17 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   useEffect(() => {
     if (!el.current) return
     const m = L.map(el.current, { doubleClickZoom: false })
-    const layers = Object.fromEntries(Object.entries(LAYERS).map(([k, f]) => [k, f()]))
-    Object.values(layers)[0].addTo(m)
-    L.control.layers(layers, undefined, { position: 'topright' }).addTo(m)
+    const pts = init.wps
+    const view = readJson<{ lat: number; lon: number; z: number }>(VIEW_KEY)
+    addLayers(m, pts.length ? [pts[0].lat, pts[0].lon] : view ? [view.lat, view.lon] : DEFAULT_CENTER)
     L.control.scale({ imperial: false }).addTo(m)
     kms.current = L.layerGroup().addTo(m)
     lines.current = L.layerGroup().addTo(m)
     marks.current = L.layerGroup().addTo(m)
     cursor.current = L.circleMarker([0, 0], { radius: 7, color: '#1f2420', fillColor: '#f5c542', fillOpacity: 1, weight: 2, interactive: false })
-    const pts = init.wps
     if (pts.length >= 2) m.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lon])), { padding: [30, 30] })
     else if (pts.length === 1) m.setView([pts[0].lat, pts[0].lon], 14)
-    else {
-      const v = readJson<{ lat: number; lon: number; z: number }>(VIEW_KEY)
-      m.setView(v ? [v.lat, v.lon] : [45.9237, 6.8694], v?.z ?? 12)
-    }
+    else m.setView(view ? [view.lat, view.lon] : DEFAULT_CENTER, view?.z ?? 12)
     m.on('click', (e: L.LeafletMouseEvent) => actRef.current.add(e.latlng.lat, e.latlng.lng))
     m.on('moveend', () => {
       const c = m.getCenter()
@@ -390,6 +391,34 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       { enableHighAccuracy: true, timeout: 10000 },
     )
   }
+  // Import d'un GPX ou d'un FIT : la trace devient un tracé modifiable.
+  const importFile = async (f: File | undefined) => {
+    if (!f) return
+    try {
+      const imp = readTrackFile(f.name, new Uint8Array(await f.arrayBuffer()))
+      if (imp.raw.some((p) => p.ele === null)) {
+        setNotice('Altitude du fichier importé…')
+        imp.raw = await fillElevationSparse(imp.raw)
+        setNotice(null)
+      }
+      if (wps.length) setPendingImport(imp)
+      else applyImport(imp, 'replace')
+    } catch (e) {
+      setNotice(`${f.name} : ${(e as Error).message}`)
+    }
+  }
+  const applyImport = (imp: { name: string; raw: RawPoint[] }, how: 'replace' | 'append') => {
+    setPendingImport(null)
+    const d = drawnFromRaw(imp.raw)
+    const iw: Waypoint[] = d.waypoints.map(({ lat, lon, mode }) => ({ lat, lon, mode }))
+    splitByWaypoints(imp.raw, d.waypoints.map((w) => w.i)).forEach((points, k) => {
+      cache.current.set(segmentKey(iw[k], iw[k + 1], iw[k + 1].mode), { status: 'ok', points })
+    })
+    if (how === 'append') change([...wps, { ...iw[0], mode }, ...iw.slice(1)])
+    else change(iw)
+    if (how === 'replace' && (!race || !name.trim())) setName(imp.name)
+    map.current?.fitBounds(L.latLngBounds(imp.raw.map((p) => [p.lat, p.lon])), { padding: [30, 30] })
+  }
   const retry = () => {
     for (const [k, s] of cache.current) if (s.status === 'error') cache.current.delete(k)
     setTick((t) => t + 1)
@@ -437,7 +466,8 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
         <Hint>
           Clique sur la carte pour poser les points : l'itinéraire suit les sentiers et chemins d'OpenStreetMap (calculé par le routeur
           public BRouter), ou une ligne droite hors sentier. Glisse un point pour le déplacer, clique dessus pour le supprimer, clique sur
-          le tracé pour ajouter un point intermédiaire. Ctrl+Z annule.
+          le tracé pour ajouter un point intermédiaire. Ctrl+Z annule. Pour modifier un parcours existant, importe son GPX (ou le FIT
+          d'une sortie) : bouton « Importer » ou glisser-déposer sur la carte.
         </Hint>
         <div className="row draw-tools">
           <div className="seg" role="group" aria-label="Mode des prochains segments">
@@ -450,6 +480,10 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
           <button onClick={() => { reversedSegments(); change(outAndBack(wps)) }} disabled={wps.length < 2} title="Revient au départ par le même chemin">⇄ Aller-retour</button>
           <button onClick={() => { reversedSegments(); change(reverseRoute(wps)) }} disabled={wps.length < 2} title="Parcourt le tracé dans l'autre sens">⇅ Inverser</button>
           <button className="ghost" onClick={() => wps.length && confirm('Effacer tout le tracé ?') && change([])} disabled={!wps.length}>Effacer</button>
+          <label className="button" title="Ouvre un GPX ou un FIT pour le modifier">
+            📂 Importer
+            <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { importFile(e.target.files?.[0]); e.target.value = '' }} />
+          </label>
           <span className="spacer" />
           <form className="row tight" onSubmit={search}>
             <input type="search" placeholder="Aller à un lieu…" value={query} onChange={(e) => setQuery(e.target.value)} style={{ width: 200 }} />
@@ -466,7 +500,33 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
           </ul>
         )}
         {notice && <p className="warn-text">{notice}</p>}
-        <div ref={el} className="map draw-map" role="region" aria-label="Carte de tracé" />
+        {pendingImport && (
+          <div className="banner info">
+            <span>« {pendingImport.name} » : que faire du tracé en cours ?</span>
+            <span className="row tight">
+              <button className="primary" onClick={() => applyImport(pendingImport, 'append')} title="Relie la fin du tracé actuel au début du fichier">Ajouter à la suite</button>
+              <button onClick={() => applyImport(pendingImport, 'replace')}>Remplacer</button>
+              <button className="ghost" onClick={() => setPendingImport(null)}>Annuler</button>
+            </span>
+          </div>
+        )}
+        <div
+          ref={el}
+          className={`map draw-map${dropping ? ' dropping' : ''}`}
+          role="region"
+          aria-label="Carte de tracé"
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return
+            e.preventDefault()
+            setDropping(true)
+          }}
+          onDragLeave={() => setDropping(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDropping(false)
+            importFile(e.dataTransfer.files[0])
+          }}
+        />
         <div className="draw-stats">
           <span><strong>{track ? (track.totalDist / 1000).toFixed(2) : '—'}</strong> km</span>
           <span>D+ <strong>{track ? Math.round(track.dPlus) : '—'}</strong> m</span>
