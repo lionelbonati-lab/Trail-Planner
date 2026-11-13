@@ -11,7 +11,7 @@ export interface ProgressPoint {
 }
 
 export interface ProgressSeries {
-  key: 'cs' | 'vam' | 'durability' | 'descent'
+  key: 'cs' | 'vam' | 'durability' | 'decoupling' | 'descent'
   title: string
   unit: string
   /** Plus haut = mieux ? */
@@ -52,6 +52,7 @@ export function progressSeries(a: Athlete): ProgressSeries[] {
   const vam: ProgressPoint[] = []
   const dur: ProgressPoint[] = []
   const descent: ProgressPoint[] = []
+  const decoupling: ProgressPoint[] = []
   for (const r of a.activities) {
     const m = r.metrics
     if (!m) continue
@@ -60,12 +61,24 @@ export function progressSeries(a: Athlete): ProgressSeries[] {
     if (m.cs && r.session !== 'csTest') cs.push({ t, value: m.cs * 3.6, source: r.name })
     if (m.vam) vam.push({ t, value: m.vam.vam, source: r.name, detail: `à ${m.vam.grade} %` })
     if (m.k !== undefined) dur.push({ t, value: m.k * 100, source: r.name })
+    if (m.decoupling !== undefined) {
+      const onset = m.driftOnsetH != null ? `, dérive dès ${Math.floor(m.driftOnsetH)} h ${String(Math.round((m.driftOnsetH % 1) * 60)).padStart(2, '0')}` : ', sans dérive nette'
+      decoupling.push({ t, value: m.decoupling * 100, source: r.name, detail: `sur ${(m.driftHours ?? 0).toFixed(1).replace('.', ',')} h${onset}` })
+    }
     if (m.descent) descent.push({ t, value: m.descent.factor, source: r.name, detail: `à ${m.descent.grade} %` })
   }
   return [
     { key: 'cs', title: 'Vitesse critique', unit: 'km/h', higherIsBetter: true, format: (v) => `${v.toFixed(2)} km/h`, points: cs.sort(byDate) },
     { key: 'vam', title: 'Vitesse ascensionnelle (à ta VC)', unit: 'm/h', higherIsBetter: true, format: (v) => `${Math.round(v)} m/h`, points: vam.sort(byDate) },
     { key: 'durability', title: 'Durabilité (k, plus bas = mieux)', unit: '', higherIsBetter: false, format: (v) => `k ${v.toFixed(1)}`, points: dur.sort(byDate) },
+    {
+      key: 'decoupling',
+      title: 'Découplage cardiaque (plus bas = mieux)',
+      unit: '%',
+      higherIsBetter: false,
+      format: (v) => `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} %`,
+      points: decoupling.sort(byDate),
+    },
     { key: 'descent', title: 'Coefficient de descente', unit: '×', higherIsBetter: true, format: (v) => `×${v.toFixed(2)}`, points: descent.sort(byDate) },
   ]
 }

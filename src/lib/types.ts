@@ -163,6 +163,10 @@ export interface SessionMetrics {
   /** Durabilité (mode linéaire). */
   lossPerH?: number
   descent?: { grade: number; factor: number }
+  /** Découplage cardiaque (fraction), début de la dérive (h) et durée analysée (h). */
+  decoupling?: number
+  driftOnsetH?: number | null
+  driftHours?: number
 }
 
 export interface Product {

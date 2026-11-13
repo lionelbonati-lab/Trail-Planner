@@ -14,7 +14,7 @@ import { haversine } from '../lib/gpx'
 import { averageIntensity, intensityAt, interp } from '../lib/model'
 import { computePlan } from '../lib/plan'
 import { formatDuration, formatPace } from '../lib/time'
-import { analyzeSession } from '../lib/insights'
+import { analyzeSession, cardiacDrift, DRIFT_MIN_SECONDS, type CardiacDrift } from '../lib/insights'
 import { VAM_MIN_GRADE } from '../lib/vam'
 import type { ActivityRecord, Athlete, GradeStat, Race } from '../lib/types'
 import { colorForIndex } from '../lib/zones'
@@ -70,6 +70,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
     return compareWithPlan(analysis.activity, race, plan.track, arrivals)
   }, [analysis, raceId, races, athlete])
 
+  const drift = useMemo(() => (analysis ? cardiacDrift(analysis.activity) : null), [analysis])
   const records = analysis ? [analysis.record, ...athlete.activities] : athlete.activities
   const preview = () => {
     if (!analysis) return
@@ -77,7 +78,14 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
   }
   const save = (withCalibration: boolean) => {
     if (!analysis) return
-    const record: ActivityRecord = { ...analysis.record, raceId: raceId || undefined }
+    const record: ActivityRecord = {
+      ...analysis.record,
+      raceId: raceId || undefined,
+      // Découplage cardiaque gardé pour le suivi de la durabilité.
+      metrics: drift
+        ? { ...analysis.record.metrics, decoupling: drift.decoupling, driftOnsetH: drift.onsetH, driftHours: drift.seconds / 3600 }
+        : analysis.record.metrics,
+    }
     const base = withCalibration && calibration ? calibration.athlete : athlete
     onChange({ ...base, activities: [record, ...athlete.activities.filter((a) => a.id !== record.id)] })
     setAnalysis(null)
@@ -120,6 +128,16 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
             <GapChart curve={analysis.curve} />
             <h3>Intensité tenue sur le plat (% de VC)</h3>
             <IntensityChart points={analysis.intensity} athlete={athlete} />
+            <h3>Durabilité : découplage cardiaque</h3>
+            {drift ? (
+              <DriftBlock drift={drift} />
+            ) : (
+              <p className="muted small">
+                {analysis.activity.hr.some((h) => Number.isFinite(h))
+                  ? `Il faut au moins ${DRIFT_MIN_SECONDS / 3600} h en mouvement, à allure assez régulière, pour mesurer le découplage.`
+                  : 'Pas de fréquence cardiaque dans ce fichier : découplage non mesurable.'}
+              </p>
+            )}
           </Card>
 
           <SessionInsights activity={analysis.activity} athlete={athlete} onChange={onChange} />
@@ -337,6 +355,77 @@ function GapChart({ curve }: { curve: Analysis['curve'] }) {
         </g>
       )}
     </svg>
+  )
+}
+
+/**
+ * Découplage cardiaque (Hunter et al., 2025) : rapport FC / vitesse au plat par rapport au début
+ * (10 à 30 min), moment où la dérive commence et son ampleur (Maunder et al., 2021).
+ */
+function DriftBlock({ drift }: { drift: CardiacDrift }) {
+  const [hover, setHover] = useState<number | null>(null)
+  const fr = (x: number) => x.toFixed(1).replace('.', ',')
+  const pctFr = (x: number) => `${x > 0 ? '+' : ''}${fr(x * 100)} %`
+  const pts = drift.points
+  const maxH = (drift.seconds / 3600) * 1.02
+  const ys = [0, ...pts.map((p) => p.drift)]
+  const y0 = Math.min(-0.02, Math.floor(Math.min(...ys) * 50) / 50)
+  const y1 = Math.max(0.04, Math.ceil(Math.max(...ys) * 50) / 50)
+  const x = scale(0, maxH, M.l, W - M.r)
+  const y = scale(y0, y1, H - M.b, M.t)
+  const ticks: number[] = []
+  const step = y1 - y0 > 0.12 ? 0.04 : 0.02
+  for (let v = Math.ceil(y0 / step) * step; v <= y1 + 1e-9; v += step) ticks.push(v)
+  const lastH = pts[pts.length - 1].t / 3600
+  const model =
+    drift.onsetH === null
+      ? `M${x(pts[0].t / 3600)},${y(0)}L${x(lastH)},${y(0)}`
+      : `M${x(pts[0].t / 3600)},${y(drift.level)}L${x(drift.onsetH)},${y(drift.level)}L${x(lastH)},${y(drift.level + drift.perHour * (lastH - drift.onsetH))}`
+  const strong = drift.decoupling >= 0.05
+  return (
+    <>
+      <p>
+        FC / vitesse au plat : <strong style={{ color: strong ? 'var(--warn)' : 'var(--ok)' }}>{pctFr(drift.decoupling)}</strong> sur les 20 dernières
+        minutes par rapport au début (10 à 30 min, {fr(drift.baseline)} bpm par km/h).{' '}
+        {drift.onsetH !== null
+          ? `La dérive commence vers ${formatDuration(drift.onsetH * 3600)} puis progresse d'environ ${fr(drift.perHour * 100)} % par heure.`
+          : 'Pas de dérive nette : le coût cardiaque reste stable.'}{' '}
+        {strong
+          ? "À allure égale, l'effort t'a coûté de plus en plus cher (chaleur, hydratation, glycogène… ou durabilité à travailler)."
+          : 'Découplage faible : bonne tenue sur cette séance (repère courant : moins de 5 %).'}
+      </p>
+      <div className="legend">
+        <span><i className="swatch series-1" /> Écart au début, par 10 min</span>
+        <span><i className="swatch series-2" /> Palier puis dérive</span>
+      </div>
+      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Découplage cardiaque au fil de la séance" onMouseLeave={() => setHover(null)}>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={M.l} x2={W - M.r} y1={y(t)} y2={y(t)} className={Math.abs(t) < 1e-9 ? 'axis' : 'grid'} />
+            <text x={M.l - 6} y={y(t) + 4} textAnchor="end" className="tick">{`${t > 0 ? '+' : ''}${Math.round(t * 100)} %`}</text>
+          </g>
+        ))}
+        {Array.from({ length: Math.floor(maxH) + 1 }, (_, h) => (
+          <text key={h} x={x(h)} y={H - 6} textAnchor="middle" className="tick">{h} h</text>
+        ))}
+        <path d={model} className="series-2 line" />
+        {pts.map((p, i) => (
+          <g key={i} onMouseEnter={() => setHover(i)}>
+            <circle cx={x(p.t / 3600)} cy={y(p.drift)} r={10} fill="transparent" />
+            <circle cx={x(p.t / 3600)} cy={y(p.drift)} r={3.5} className="series-1 dot" />
+          </g>
+        ))}
+        {hover !== null && pts[hover] && (
+          <text x={Math.min(x(pts[hover].t / 3600) + 10, W - 260)} y={M.t + 12} className="tip">
+            {formatDuration(pts[hover].t)} : {pctFr(pts[hover].drift)} ({fr(pts[hover].ratio)} bpm par km/h)
+          </text>
+        )}
+      </svg>
+      <Hint>
+        Marqueur de terrain de la durabilité (Hunter et al., 2025) : à allure égale, une FC qui monte traduit un coût qui augmente.
+        Fiable sur une sortie longue à allure régulière ; un fractionné, de longs arrêts ou la chaleur le faussent.
+      </Hint>
+    </>
   )
 }
 
