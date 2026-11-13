@@ -7,6 +7,7 @@ import { computePlan, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
 import { CsCalculator } from './components/CsCalculator'
 import { RacePlan } from './components/RacePlan'
+import { SessionsPanel } from './components/SessionsPanel'
 import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
@@ -34,12 +35,12 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Race } from './lib/types'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances'
 
 function readHash(): { tab: Tab; raceId: string | null } {
   const [tab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' ? tab : 'races',
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'seances' ? tab : 'races',
     raceId: (tab === 'races' || tab === 'live') && raceId ? raceId : null,
   }
 }
@@ -334,6 +335,7 @@ export default function App() {
           <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}>Courses</button>
           <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}>Profil athlète</button>
           <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}>Calculateur VC</button>
+          <button className={route.tab === 'seances' ? 'on' : ''} onClick={() => go('seances')}>Séances</button>
           <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}>Analyse</button>
         </nav>
         <InstallButton />
@@ -353,6 +355,8 @@ export default function App() {
           <AthletePanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'cs' ? (
           <CsCalculator athlete={athlete} onChange={updateAthlete} />
+        ) : route.tab === 'seances' ? (
+          <SessionsPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : route.tab === 'live' && current ? (
