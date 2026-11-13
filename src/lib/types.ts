@@ -78,9 +78,17 @@ export interface Athlete {
   zones: TrainingZone[]
   /** Résultats des tests VC (3′, 7′, 12′…), faits des jours différents. */
   csTrials: CsTrial[]
-  /** Zones cardiaques (bpm) et FC max. */
+  /** Poids corporel (kg), pour le poids du sac au prorata. */
+  weight: number
+  /** Zones cardiaques (bpm, calculées d'après la méthode et les %), FC max et FC de repos. */
   hrZones: HrZone[]
   hrMax: number
+  hrRest: number
+  /** Méthode des zones cardiaques : Grappe (% FC max), Karvonen (% FC de réserve) ou perso. */
+  hrMethod: HrMethod
+  /** Zones en % (fractions) pour la méthode perso, et leur base. */
+  hrPct: HrZone[]
+  hrBase: 'max' | 'reserve'
   /** Cible des entraînements exportés vers la montre : allure ou fréquence cardiaque. */
   workoutTarget: 'pace' | 'hr'
   /** Code montre (identifiant du document partagé lu par le champ de données Garmin). */
@@ -176,6 +184,8 @@ export interface TrainingZone {
 }
 
 /** Zone de fréquence cardiaque (bpm). */
+export type HrMethod = 'grappe' | 'karvonen' | 'custom'
+
 export interface HrZone {
   name: string
   low: number
@@ -247,6 +257,12 @@ export interface EnvSettings {
     enabled: boolean
     /** Pénalité par mm/h de pluie (ex. 0.02), majorée de moitié en terrain technique. */
     perMm: number
+  }
+  /** Poids du sac : temps allongé de 1 % par kg, ou au prorata du poids corporel. */
+  bag?: {
+    enabled: boolean
+    kg: number
+    relative: boolean
   }
 }
 

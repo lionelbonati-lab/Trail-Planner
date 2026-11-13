@@ -2,7 +2,8 @@ import { Check, Copy, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
-import { DEFAULT_ZONES, hrZonesFromMax } from '../lib/defaults'
+import { DEFAULT_ZONES } from '../lib/defaults'
+import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
 import { climbEquivalence, epPayload } from '../lib/endurancepro'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint } from '../lib/types'
@@ -21,6 +22,9 @@ export function AthletePanel({
   const set = <K extends keyof Athlete>(k: K, v: Athlete[K]) => onChange({ ...athlete, [k]: v })
   const setDur = (patch: Partial<Durability>) => set('durability', { ...athlete.durability, ...patch })
   const d = athlete.durability
+  // Zones cardiaques : les bpm sont recalculés à chaque changement de méthode, de FC ou de %.
+  const setHr = (patch: Partial<Athlete>) => onChange(withHrZones({ ...athlete, ...patch }))
+  const { pct: hrPct, base: hrBase } = hrPctOf(athlete)
 
   return (
     <div className="grid two">
@@ -32,6 +36,7 @@ export function AthletePanel({
           </label>
           <PaceField label="Vitesse critique (VC)" speed={athlete.cs} onChange={(v) => set('cs', v)} />
           <Num label="D′" value={athlete.dPrime} onChange={(v) => set('dPrime', v)} unit="m" min={0} />
+          <Num label="Poids" value={athlete.weight} onChange={(v) => set('weight', v)} unit="kg" min={30} max={150} title="Sert au poids du sac au prorata du poids corporel" />
           <Num
             label="Seuil de marche"
             value={athlete.walkThreshold}
@@ -151,42 +156,75 @@ export function AthletePanel({
       <Card title="Zones cardiaques" className="span2">
         <Hint>
           Pour t'entraîner à la fréquence cardiaque : ces zones servent à l'analyse des séances importées (temps par zone, FC moyenne
-          des tours) et, si tu le choisis, aux cibles des séances envoyées sur la montre. Par défaut, les zones Garmin en % de la FC max ;
-          reprends celles de ton test ou de Garmin Connect si tu les connais.
+          des tours) et, si tu le choisis, aux cibles des séances envoyées sur la montre. Elles se règlent en %, les bpm en sont déduits.
         </Hint>
-        <div className="fields">
-          <Num label="FC max" value={athlete.hrMax} onChange={(v) => set('hrMax', v)} unit="bpm" min={100} max={240} />
-          <button className="ghost" onClick={() => set('hrZones', hrZonesFromMax(athlete.hrMax))}>Calculer depuis la FC max</button>
+        <div className="seg" role="group" aria-label="Méthode">
+          {HR_METHODS.map((m) => (
+            <button key={m.key} className={athlete.hrMethod === m.key ? 'on' : ''} onClick={() => setHr({ hrMethod: m.key })} title={m.title}>
+              {m.label}
+            </button>
+          ))}
         </div>
+        <div className="fields">
+          <Num label="FC max" value={athlete.hrMax} onChange={(v) => setHr({ hrMax: v })} unit="bpm" min={100} max={240} />
+          {hrBase === 'reserve' && <Num label="FC repos" value={athlete.hrRest} onChange={(v) => setHr({ hrRest: v })} unit="bpm" min={25} max={120} />}
+          {athlete.hrMethod === 'custom' && (
+            <label className="field">
+              <span className="field-label">Base des %</span>
+              <span className="seg">
+                <button className={athlete.hrBase === 'max' ? 'on' : ''} onClick={() => setHr({ hrBase: 'max' })}>FC max</button>
+                <button className={athlete.hrBase === 'reserve' ? 'on' : ''} onClick={() => setHr({ hrBase: 'reserve' })} title="FC de réserve = FC max − FC repos">Réserve</button>
+              </span>
+            </label>
+          )}
+        </div>
+        <Hint>
+          {athlete.hrMethod === 'grappe'
+            ? 'Échelle ESIE de F. Grappe : i1 à i5 en % de la FC max. Au-delà (i6, i7), la FC ne suit plus l\'effort : ces intensités se pilotent à l\'allure.'
+            : athlete.hrMethod === 'karvonen'
+              ? `Karvonen : % de la FC de réserve (FC max − FC repos = ${athlete.hrMax - athlete.hrRest} bpm), ajoutés à la FC repos.`
+              : `Tes zones, en % de la ${athlete.hrBase === 'reserve' ? 'FC de réserve (ajoutés à la FC repos)' : 'FC max'}.`}
+        </Hint>
         <table className="table compact">
           <thead>
-            <tr><th>Zone</th><th>De (bpm)</th><th>À (bpm)</th><th>% FC max</th><th>Zones VC correspondantes</th><th /></tr>
+            <tr><th>Zone</th><th>De (%)</th><th>À (%)</th><th>bpm</th><th>Zones VC correspondantes</th><th /></tr>
           </thead>
           <tbody>
-            {athlete.hrZones.map((z, i) => {
-              const setH = (patch: Partial<HrZone>) => set('hrZones', athlete.hrZones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-              const vc = vcZonesForHr(i, athlete)
+            {hrPct.map((z, i) => {
+              const custom = athlete.hrMethod === 'custom'
+              const setP = (patch: Partial<HrZone>) => setHr({ hrPct: hrPct.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
+              const bpm = athlete.hrZones[i]
               return (
                 <tr key={i}>
-                  <td className="nowrap"><i className="zone-swatch" style={{ background: colorForIndex(i) }} /><input type="text" value={z.name} onChange={(e) => setH({ name: e.target.value })} style={{ width: 90 }} /></td>
-                  <td><Num value={z.low} width={60} min={40} max={240} onChange={(v) => setH({ low: v })} /></td>
-                  <td><Num value={z.high} width={60} min={40} max={240} onChange={(v) => setH({ high: v })} /></td>
-                  <td className="muted">{Math.round((z.low / athlete.hrMax) * 100)} – {Math.round((z.high / athlete.hrMax) * 100)} %</td>
-                  <td className="muted">{vc}</td>
-                  <td><button className="ghost" onClick={() => set('hrZones', athlete.hrZones.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
+                  <td className="nowrap">
+                    <i className="zone-swatch" style={{ background: colorForIndex(i) }} />
+                    {custom ? <input type="text" value={z.name} onChange={(e) => setP({ name: e.target.value })} style={{ width: 90 }} /> : z.name}
+                  </td>
+                  <td>{custom ? <Num value={z.low} scale={100} width={56} min={20} max={110} onChange={(v) => setP({ low: v })} /> : Math.round(z.low * 100)}</td>
+                  <td>{custom ? <Num value={z.high} scale={100} width={56} min={20} max={110} onChange={(v) => setP({ high: v })} /> : Math.round(z.high * 100)}</td>
+                  <td><strong>{bpm ? `${bpm.low} – ${bpm.high}` : '—'}</strong></td>
+                  <td className="muted">{vcZonesForHr(i, athlete)}</td>
+                  <td>
+                    {custom && (
+                      <button className="ghost" onClick={() => setHr({ hrPct: hrPct.filter((_, j) => j !== i) })} aria-label="Supprimer"><Trash2 /></button>
+                    )}
+                  </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
-        <div className="row">
-          <button className="ghost" onClick={() => {
-            const last = athlete.hrZones[athlete.hrZones.length - 1]
-            set('hrZones', [...athlete.hrZones, { name: `Zone ${athlete.hrZones.length + 1}`, low: last?.high ?? 120, high: (last?.high ?? 120) + 10 }])
-          }}>
-            <Plus /> Ajouter une zone
-          </button>
-        </div>
+        {athlete.hrMethod === 'custom' && (
+          <div className="row">
+            <button className="ghost" onClick={() => {
+              const last = hrPct[hrPct.length - 1]
+              setHr({ hrPct: [...hrPct, { name: `Zone ${hrPct.length + 1}`, low: last?.high ?? 0.9, high: Math.min(1.1, (last?.high ?? 0.9) + 0.05) }] })
+            }}>
+              <Plus /> Ajouter une zone
+            </button>
+            <button className="ghost" onClick={() => setHr({ hrPct: GARMIN_PCT.map((z) => ({ ...z })) })}><RotateCcw /> Zones Garmin</button>
+          </div>
+        )}
         <h3>Cible des séances envoyées sur la montre</h3>
         <div className="seg">
           <button className={athlete.workoutTarget === 'pace' ? 'on' : ''} onClick={() => set('workoutTarget', 'pace')}>Allure</button>

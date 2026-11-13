@@ -370,9 +370,23 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
     ro.observe(p)
     return () => ro.disconnect()
   }, [mobile])
+  // Ordinateur : la barre de menu de l'appli reste visible au-dessus du traceur.
+  const [topOffset, setTopOffset] = useState(0)
+  useLayoutEffect(() => {
+    const bar = document.querySelector<HTMLElement>('.topbar')
+    if (mobile || !bar) {
+      setTopOffset(0)
+      return
+    }
+    const update = () => setTopOffset(Math.max(0, Math.round(bar.getBoundingClientRect().bottom)))
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(bar)
+    return () => ro.disconnect()
+  }, [mobile])
   useEffect(() => {
     map.current?.invalidateSize()
-  }, [mobile])
+  }, [mobile, topOffset])
 
   // Actions (lues par les gestionnaires de la carte, créés une seule fois).
   const change = (next: Waypoint[]) => {
@@ -808,7 +822,7 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
     (k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === wps.length - 1 ? 'Arrivée' : letters.has(k) ? `Repère ${letters.get(k)}` : 'Point du tracé')
 
   return (
-    <div className="draw-shell" style={{ ['--sheet-h' as string]: `${mobile ? sheetH : 0}px` }}>
+    <div className="draw-shell" style={{ ['--sheet-h' as string]: `${mobile ? sheetH : 0}px`, top: topOffset }}>
       <div className="draw-mapwrap">
         <div
           ref={el}

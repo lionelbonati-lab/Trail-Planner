@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { readActivity } from '../lib/activity'
 import { download } from '../lib/exportGpx'
 import { progressSeries, type ProgressSeries } from '../lib/progress'
-import { csFromTrials, describeSteps, SESSIONS, SESSIONS_BY_KEY, type SessionKey, type SessionResult, type SessionVariant } from '../lib/sessions'
+import { csFromTrials, describeSteps, OFFERED_SESSIONS, SESSIONS_BY_KEY, type SessionKey, type SessionResult, type SessionVariant } from '../lib/sessions'
 import { formatDuration, formatPace } from '../lib/time'
 import type { Athlete, CsTrial } from '../lib/types'
 import { buildWorkoutFit } from '../lib/workoutFit'
@@ -74,7 +74,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
       )}
 
       <div className="grid two">
-        {SESSIONS.map((s) => {
+        {OFFERED_SESSIONS.map((s) => {
           const last = athlete.activities.find((a) => a.session === s.key)
           return (
             <Card
