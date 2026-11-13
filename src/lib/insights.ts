@@ -1,6 +1,6 @@
 // Analyse générale d'une séance quelconque : allure « plat équivalent » (correction
 // de pente de Minetti), temps par zone, tours de la montre, meilleurs efforts comparés
-// à la VC et au D′, détection d'un test VC.
+// à la VC et au D′, détection d'un test VC, découplage cardiaque (durabilité).
 import { timesAt, type Activity } from './activity'
 import { gapFactor } from './model'
 import type { Athlete, CsTrial } from './types'
@@ -204,3 +204,133 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
 
   return { zoneTimes, hrZoneTimes, vamZoneTimes, laps, best, csFloor, tests }
 }
+
+// --- Durabilité : découplage cardiaque ---------------------------------------------
+// La durabilité est la détérioration des caractéristiques physiologiques au fil d'un effort
+// prolongé, décrite par son moment d'apparition et son ampleur (Maunder et al., 2021). Sur le
+// terrain, Hunter et al. (2025) proposent le découplage cardiaque : à allure égale, le rapport
+// FC / vitesse augmente. En trail, la vitesse est ramenée au plat (correction de pente).
+
+/** Durée minimale en mouvement pour mesurer le découplage (s). */
+export const DRIFT_MIN_SECONDS = 3600
+/** Fenêtres de 10 min en mouvement (lissent les bosses), échauffement exclu, référence = 10 à 30 min. */
+const DRIFT_WINDOW = 600
+const DRIFT_WARMUP = 600
+const DRIFT_BASE_END = 1800
+/** Ampleur en deçà de laquelle on ne parle pas de dérive (fraction). */
+const DRIFT_MIN_RISE = 0.02
+
+export interface DriftPoint {
+  /** Milieu de la fenêtre (s en mouvement). */
+  t: number
+  /** FC / vitesse au plat (bpm par km/h). */
+  ratio: number
+  /** Écart à la référence (fraction). */
+  drift: number
+}
+
+export interface CardiacDrift {
+  points: DriftPoint[]
+  /** Rapport de référence (10 à 30 min). */
+  baseline: number
+  /** Découplage : 20 dernières minutes par rapport à la référence (fraction). */
+  decoupling: number
+  /** Début de la dérive (h en mouvement), null s'il n'y a pas de dérive nette. */
+  onsetH: number | null
+  /** Vitesse de la dérive une fois commencée (fraction par heure). */
+  perHour: number
+  /** Niveau ajusté avant la dérive (fraction, ≈ 0). */
+  level: number
+  /** Durée analysée (s en mouvement). */
+  seconds: number
+}
+
+/**
+ * Découplage cardiaque d'une séance (FC et au moins 1 h en mouvement) : rapport FC / vitesse au
+ * plat par fenêtres de 5 min, comparé à celui de 10 à 30 min. Le début de la dérive est le coude
+ * d'une droite brisée (palier puis hausse) ajustée sur les fenêtres.
+ */
+export function cardiacDrift(act: Activity): CardiacDrift | null {
+  const nRaw = act.moving.length
+  const total = act.moving[nRaw - 1] ?? 0
+  if (total < DRIFT_MIN_SECONDS || !act.hr.some((h) => Number.isFinite(h))) return null
+  const s = series(act)
+  // Distance au plat cumulée à un temps en mouvement donné.
+  const eqAt = (t: number): number => {
+    let lo = 0
+    let hi = s.m.length - 1
+    if (t <= s.m[0]) return s.eq[0]
+    if (t >= s.m[hi]) return s.eq[hi]
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (s.m[mid] <= t) lo = mid
+      else hi = mid
+    }
+    const f = (t - s.m[lo]) / (s.m[hi] - s.m[lo] || 1)
+    return s.eq[lo] + (s.eq[hi] - s.eq[lo]) * f
+  }
+  const raw: { t: number; ratio: number }[] = []
+  let k = 1
+  for (let t0 = 0; t0 + DRIFT_WINDOW <= total; t0 += DRIFT_WINDOW) {
+    const t1 = t0 + DRIFT_WINDOW
+    let sum = 0
+    let w = 0
+    while (k < nRaw && act.moving[k] <= t1) {
+      const dt = act.moving[k] - act.moving[k - 1]
+      if (act.moving[k] > t0 && dt > 0 && dt < 30 && Number.isFinite(act.hr[k])) {
+        sum += act.hr[k] * dt
+        w += dt
+      }
+      k++
+    }
+    const kmh = ((eqAt(t1) - eqAt(t0)) / DRIFT_WINDOW) * 3.6
+    // Fenêtre retenue : FC présente sur 60 % du temps au moins, et on avance vraiment.
+    if (w >= DRIFT_WINDOW * 0.6 && kmh >= 3.6 && t0 >= DRIFT_WARMUP) raw.push({ t: (t0 + t1) / 2, ratio: sum / w / kmh })
+  }
+  if (raw.length < 5) return null
+  const base = raw.filter((p) => p.t <= DRIFT_BASE_END)
+  const ref = base.length >= 2 ? base : raw.slice(0, 2)
+  const baseline = ref.reduce((a, p) => a + p.ratio, 0) / ref.length
+  const points = raw.map((p) => ({ ...p, drift: p.ratio / baseline - 1 }))
+  const end = points.filter((p) => p.t >= points[points.length - 1].t - 1200)
+  const decoupling = end.reduce((a, p) => a + p.drift, 0) / end.length
+  // Droite brisée y = c + pente × max(0, t − b) : coude b qui minimise l'erreur.
+  let best = { sse: Infinity, b: 0, c: 0, slope: 0 }
+  for (let i = 1; i < points.length - 2; i++) {
+    const b = points[i].t
+    const fit = brokenLine(points, b)
+    if (fit && fit.slope > 0 && fit.sse < best.sse) best = { ...fit, b }
+  }
+  const lastT = points[points.length - 1].t
+  const rise = best.slope * (lastT - best.b)
+  const drifts = best.sse < Infinity && rise >= DRIFT_MIN_RISE
+  return {
+    points,
+    baseline,
+    decoupling,
+    onsetH: drifts ? best.b / 3600 : null,
+    perHour: drifts ? best.slope * 3600 : 0,
+    level: drifts ? best.c : 0,
+    seconds: total,
+  }
+}
+
+/** Moindres carrés de y = c + pente × max(0, t − b). */
+function brokenLine(pts: DriftPoint[], b: number): { c: number; slope: number; sse: number } | null {
+  let n = 0, sx = 0, sy = 0, sxx = 0, sxy = 0
+  for (const p of pts) {
+    const x = Math.max(0, p.t - b)
+    n++
+    sx += x
+    sy += p.drift
+    sxx += x * x
+    sxy += x * p.drift
+  }
+  const det = n * sxx - sx * sx
+  if (det <= 0) return null
+  const slope = (n * sxy - sx * sy) / det
+  const c = (sy - slope * sx) / n
+  const sse = pts.reduce((a, p) => a + (p.drift - c - slope * Math.max(0, p.t - b)) ** 2, 0)
+  return { c, slope, sse }
+}
+
