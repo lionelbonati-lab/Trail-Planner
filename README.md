@@ -30,10 +30,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   datée sans toucher au modèle ; liste des séances planifiées.
 - **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
   avec distance, D+/D−, temps, profil et points de repère (km, altitude, temps prévu à chaque point) ; barre
-  réglages / annuler / rétablir / supprimer / OK. Toucher = point sur les chemins, appui long (clic droit) = point
-  hors sentier ; mode « Chemins / Hors sentier » sur la carte ; toucher un point ou un tronçon pour le supprimer,
-  y insérer un point ou changer son mode. Un point posé hors chemin est relié en ligne droite au chemin le plus
-  proche ; sans aucun chemin, le tronçon passe en ligne droite.
+  réglages / annuler / rétablir / supprimer / OK. Un point se pose par un appui maintenu un instant (clic à la
+  souris) ; un toucher bref laisse déplacer la carte. **Hors-route automatique** : sur un chemin (à ~24 px près
+  au zoom courant) le tracé le suit et s'y accroche, hors chemin il passe en ligne droite. Toucher un point ou
+  un tronçon pour le supprimer, y insérer un point ou forcer son mode.
+- **Icônes** (Lucide) dans la navigation et sur les boutons de toute l'appli.
 - **Traceur de parcours sur carte** (onglet « Tracer ») : clic = point, l'itinéraire suit les sentiers
   d'OpenStreetMap (routeur public BRouter, profil randonnée montagne), le chemin le plus court ou une ligne
   droite hors sentier (altitude du modèle de terrain Open-Meteo) ; glisser un point, cliquer sur le tracé pour

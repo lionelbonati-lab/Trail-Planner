@@ -1,4 +1,28 @@
 import type { User } from 'firebase/auth'
+import {
+  ArrowLeft,
+  Calculator,
+  ChartLine,
+  Cloud,
+  CloudOff,
+  Copy,
+  Download,
+  Dumbbell,
+  FileDown,
+  FileUp,
+  Flag,
+  LibraryBig,
+  LogIn,
+  LogOut,
+  Mail,
+  Mountain,
+  RefreshCw,
+  Spline,
+  Trash2,
+  Upload,
+  User as UserIcon,
+  X,
+} from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
@@ -369,15 +393,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar no-print">
-        <a className="brand" href="#/races">⛰ Trail Planner</a>
+        <a className="brand" href="#/races"><Mountain className="inline" /> Trail Planner</a>
         <nav>
-          <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}>Courses</button>
-          <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}>Profil athlète</button>
-          <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}>Calculateur VC</button>
-          <button className={route.tab === 'parcours' ? 'on' : ''} onClick={() => go('parcours')}>Parcours</button>
-          <button className={route.tab === 'tracer' ? 'on' : ''} onClick={() => go('tracer')}>Tracer</button>
-          <button className={route.tab === 'seances' ? 'on' : ''} onClick={() => go('seances')}>Séances</button>
-          <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}>Analyse</button>
+          <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}><Flag /> Courses</button>
+          <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}><UserIcon /> Profil athlète</button>
+          <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}><Calculator /> Calculateur VC</button>
+          <button className={route.tab === 'parcours' ? 'on' : ''} onClick={() => go('parcours')}><LibraryBig /> Parcours</button>
+          <button className={route.tab === 'tracer' ? 'on' : ''} onClick={() => go('tracer')}><Spline /> Tracer</button>
+          <button className={route.tab === 'seances' ? 'on' : ''} onClick={() => go('seances')}><Dumbbell /> Séances</button>
+          <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}><ChartLine /> Analyse</button>
         </nav>
         <InstallButton />
         {sync && <SyncBadge status={sync} />}
@@ -387,7 +411,7 @@ export default function App() {
       <main>
         {error && (
           <div className="banner error no-print">
-            {error} <button className="ghost" onClick={() => setError(null)}>✕</button>
+            {error} <button className="ghost" onClick={() => setError(null)} aria-label="Fermer"><X /></button>
           </div>
         )}
         {!loaded ? (
@@ -430,7 +454,11 @@ export default function App() {
         ) : current ? (
           <>
             <div className="crumbs no-print">
-              {current.kind === 'race' ? <a href="#/races">← Toutes les courses</a> : <a href="#/parcours">← Bibliothèque de parcours</a>}
+              {current.kind === 'race' ? (
+                <a href="#/races"><ArrowLeft className="inline" /> Toutes les courses</a>
+              ) : (
+                <a href="#/parcours"><ArrowLeft className="inline" /> Bibliothèque de parcours</a>
+              )}
               {current.kind === 'route' && <span className="badge">Parcours modèle</span>}
               {current.kind === 'session' && <span className="badge">Séance d'entraînement</span>}
             </div>
@@ -514,9 +542,9 @@ function RaceList(props: {
         title="Mes courses"
         actions={
           <>
-            <button onClick={props.onDraw} title="Dessine le parcours sur la carte">✏️ Tracer sur la carte</button>
+            <button onClick={props.onDraw} title="Dessine le parcours sur la carte"><Spline /> Tracer sur la carte</button>
             <label className="button primary">
-              + Importer un GPX
+              <Upload /> Importer un GPX
               <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { props.onAdd(e.target.files); e.target.value = '' }} />
             </label>
           </>
@@ -543,9 +571,9 @@ function RaceList(props: {
           Données stockées {props.storeKind === 'cloud' ? 'dans ton compte (synchronisées)' : 'dans ce navigateur uniquement'}.
         </p>
         <div className="row">
-          <button onClick={props.onExport}>Exporter (JSON)</button>
+          <button onClick={props.onExport}><FileDown /> Exporter (JSON)</button>
           <label className="button">
-            Importer (JSON)
+            <FileUp /> Importer (JSON)
             <input type="file" accept=".json,application/json" hidden onChange={(e) => { props.onImport(e.target.files); e.target.value = '' }} />
           </label>
         </div>
@@ -571,8 +599,8 @@ function RaceRow({ race, onOpen, onDelete, onDuplicate }: { race: Race; onOpen: 
       <td>{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
       <td>{race.checkpoints.length}</td>
       <td onClick={(e) => e.stopPropagation()}>
-        <button className="ghost" onClick={() => onDuplicate(race)} title="Dupliquer (ex. tester une autre stratégie)">⧉</button>
-        <button className="ghost" onClick={() => onDelete(race.id)} title="Supprimer">✕</button>
+        <button className="ghost" onClick={() => onDuplicate(race)} title="Dupliquer (ex. tester une autre stratégie)" aria-label="Dupliquer"><Copy /></button>
+        <button className="ghost" onClick={() => onDelete(race.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
       </td>
     </tr>
   )
@@ -587,11 +615,11 @@ function AuthBox({ user, cloud, onDeleteAccount }: { user: User | null; cloud: C
   if (user) {
     return (
       <details className="auth account">
-        <summary title={user.email ?? ''}>{user.displayName || user.email}</summary>
+        <summary title={user.email ?? ''}><UserIcon className="inline" /> {user.displayName || user.email}</summary>
         <div className="account-menu">
           <div className="muted">{user.email}</div>
-          <button onClick={() => { rememberSignedIn(false); cloud.signOutAndClear() }}>Se déconnecter</button>
-          <button className="ghost danger" onClick={onDeleteAccount}>Supprimer mon compte…</button>
+          <button onClick={() => { rememberSignedIn(false); cloud.signOutAndClear() }}><LogOut /> Se déconnecter</button>
+          <button className="ghost danger" onClick={onDeleteAccount}><Trash2 /> Supprimer mon compte…</button>
         </div>
       </details>
     )
@@ -600,7 +628,7 @@ function AuthBox({ user, cloud, onDeleteAccount }: { user: User | null; cloud: C
   return (
     <span className="auth">
       <button onClick={() => cloud.signInGoogle().catch((e) => alert(e.message))}>
-        Connexion Google
+        <LogIn /> Connexion Google
       </button>
       {open ? (
         <form
@@ -616,26 +644,26 @@ function AuthBox({ user, cloud, onDeleteAccount }: { user: User | null; cloud: C
           }}
         >
           <input type="email" placeholder="e-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <button type="submit">Recevoir un lien</button>
+          <button type="submit"><Mail /> Recevoir un lien</button>
         </form>
       ) : (
-        <button className="ghost" onClick={() => setOpen(true)}>par e-mail</button>
+        <button className="ghost" onClick={() => setOpen(true)}><Mail /> par e-mail</button>
       )}
     </span>
   )
 }
 
-const SYNC_LABELS: Record<SyncStatus, { text: string; title: string }> = {
-  synced: { text: '☁ Synchronisé', title: 'Toutes les modifications sont enregistrées dans ton compte' },
-  pending: { text: '⟳ Envoi…', title: 'Modifications en cours d\'envoi' },
-  offline: { text: '⚠ Hors ligne', title: 'Modifications gardées sur cet appareil, envoyées au retour du réseau' },
+const SYNC_LABELS: Record<SyncStatus, { text: string; title: string; Icon: typeof Cloud }> = {
+  synced: { text: 'Synchronisé', title: 'Toutes les modifications sont enregistrées dans ton compte', Icon: Cloud },
+  pending: { text: 'Envoi…', title: 'Modifications en cours d\'envoi', Icon: RefreshCw },
+  offline: { text: 'Hors ligne', title: 'Modifications gardées sur cet appareil, envoyées au retour du réseau', Icon: CloudOff },
 }
 
 function SyncBadge({ status }: { status: SyncStatus }) {
   const l = SYNC_LABELS[status]
   return (
     <span className={`sync sync-${status}`} title={l.title}>
-      {l.text}
+      <l.Icon className="inline" /> {l.text}
     </span>
   )
 }
@@ -668,14 +696,14 @@ function InstallButton() {
   if (evt) {
     return (
       <button className="install" onClick={async () => { await evt.prompt(); await evt.userChoice; setEvt(null) }}>
-        ⬇ Installer l'app
+        <Download /> Installer l'app
       </button>
     )
   }
   if (ios) {
     return (
       <button className="install ghost" onClick={() => alert("Dans Safari : touche Partager (carré avec flèche), puis « Sur l'écran d'accueil ».")}>
-        ⬇ Installer l'app
+        <Download /> Installer l'app
       </button>
     )
   }

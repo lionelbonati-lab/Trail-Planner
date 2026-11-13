@@ -78,11 +78,34 @@ export const SNAP_GAP = 15
 
 export class NoPathError extends Error {}
 
+/** Itinéraire BRouter brut (sans raccord ni altitude complétée). */
+async function brouterPoints(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+  mode: Exclude<SegMode, 'line'>,
+  fetcher: Fetcher,
+): Promise<RawPoint[]> {
+  let res: Response
+  try {
+    res = await fetcher(brouterUrl(a, b, mode))
+  } catch {
+    throw new Error('Routeur injoignable (connexion ?).')
+  }
+  if (!res.ok) {
+    const text = (await res.text().catch(() => '')).trim()
+    if (/not mapped|no route|not found/i.test(text)) throw new NoPathError('Aucun chemin trouvé entre ces points.')
+    throw new Error(`Routeur : ${text.slice(0, 80) || `erreur ${res.status}`}`)
+  }
+  return parseBrouter(await res.json())
+}
+
+const withElevation = (pts: RawPoint[], fetcher: Fetcher) => (pts.some((p) => p.ele === null) ? fillElevation(pts, fetcher) : Promise.resolve(pts))
+
 /**
  * Calcule un segment : chemin OSM (BRouter) ou ligne droite, avec altitude. Sur les chemins,
  * un point posé hors chemin (le routeur part du chemin le plus proche) est relié à celui-ci en
  * ligne droite : le tracé va exactement où l'on a cliqué. Sans aucun chemin entre les deux
- * points : NoPathError (le traceur trace alors une ligne droite).
+ * points : NoPathError.
  */
 export async function routeSegment(
   a: { lat: number; lon: number },
@@ -90,27 +113,50 @@ export async function routeSegment(
   mode: SegMode,
   fetcher: Fetcher = fetch,
 ): Promise<RawPoint[]> {
-  let pts: RawPoint[]
-  if (mode === 'line') pts = densify(a, b)
-  else {
-    let res: Response
-    try {
-      res = await fetcher(brouterUrl(a, b, mode))
-    } catch {
-      throw new Error('Routeur injoignable (connexion ?).')
-    }
-    if (!res.ok) {
-      const text = (await res.text().catch(() => '')).trim()
-      if (/not mapped|no route|not found/i.test(text)) throw new NoPathError('Aucun chemin trouvé entre ces points.')
-      throw new Error(`Routeur : ${text.slice(0, 80) || `erreur ${res.status}`}`)
-    }
-    pts = parseBrouter(await res.json())
-    const first = pts[0]
-    const last = pts[pts.length - 1]
-    if (haversine(a.lat, a.lon, first.lat, first.lon) > SNAP_GAP) pts = [...densify(a, first).slice(0, -1), ...pts]
-    if (haversine(last.lat, last.lon, b.lat, b.lon) > SNAP_GAP) pts = [...pts, ...densify(last, b).slice(1)]
+  if (mode === 'line') return withElevation(densify(a, b), fetcher)
+  let pts = await brouterPoints(a, b, mode, fetcher)
+  const first = pts[0]
+  const last = pts[pts.length - 1]
+  if (haversine(a.lat, a.lon, first.lat, first.lon) > SNAP_GAP) pts = [...densify(a, first).slice(0, -1), ...pts]
+  if (haversine(last.lat, last.lon, b.lat, b.lon) > SNAP_GAP) pts = [...pts, ...densify(last, b).slice(1)]
+  return withElevation(pts, fetcher)
+}
+
+/**
+ * Tronçon du traceur, hors-route automatique (comme les applis de randonnée) : si les deux
+ * points sont sur le réseau de chemins (à moins de `snap` m d'un chemin, selon le zoom), le
+ * tronçon suit les chemins et ses extrémités sont accrochées au chemin ; sinon, ou s'il n'y a
+ * aucun chemin, ligne droite (`offroad`), partant du chemin si l'extrémité y était accrochée.
+ */
+export async function routeLeg(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+  mode: SegMode,
+  snap: number,
+  fetcher: Fetcher = fetch,
+): Promise<{ points: RawPoint[]; offroad: boolean }> {
+  if (mode === 'line') return { points: await withElevation(densify(a, b), fetcher), offroad: false }
+  let net: RawPoint[]
+  try {
+    net = await brouterPoints(a, b, mode, fetcher)
+  } catch (e) {
+    if (e instanceof NoPathError) return { points: await withElevation(densify(a, b), fetcher), offroad: true }
+    throw e
   }
-  return pts.some((p) => p.ele === null) ? fillElevation(pts, fetcher) : pts
+  const first = net[0]
+  const last = net[net.length - 1]
+  const startOn = haversine(a.lat, a.lon, first.lat, first.lon) <= snap
+  const endOn = haversine(last.lat, last.lon, b.lat, b.lon) <= snap
+  if (startOn && endOn) return { points: await withElevation(net, fetcher), offroad: false }
+  const from = startOn ? { lat: first.lat, lon: first.lon } : a
+  const to = endOn ? { lat: last.lat, lon: last.lon } : b
+  return { points: await withElevation(densify(from, to), fetcher), offroad: true }
+}
+
+/** Tolérance d'accrochage au chemin (m) : ~24 px à l'écran au zoom courant, entre 12 et 150 m. */
+export function snapTolerance(zoom: number, lat: number): number {
+  const metersPerPixel = (40075016.686 * Math.cos((lat * Math.PI) / 180)) / 2 ** (zoom + 8)
+  return Math.min(150, Math.max(12, 24 * metersPerPixel))
 }
 
 /** Assemble les segments ; starts[k] = indice du point de passage k dans le résultat. */

@@ -1,3 +1,4 @@
+import { Check, Copy, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
@@ -130,15 +131,17 @@ export function AthletePanel({
                   <td className="muted">{(athlete.cs * z.low * 3.6).toFixed(2)} – {(athlete.cs * z.high * 3.6).toFixed(2)} km/h</td>
                   <td><input type="text" value={z.use ?? ''} onChange={(e) => setZ({ use: e.target.value })} style={{ width: 170 }} /></td>
                   <td><input type="text" value={z.sustain ?? ''} onChange={(e) => setZ({ sustain: e.target.value })} style={{ width: 130 }} /></td>
-                  <td><button className="ghost" onClick={() => set('zones', athlete.zones.filter((_, j) => j !== i))}>✕</button></td>
+                  <td><button className="ghost" onClick={() => set('zones', athlete.zones.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
                 </tr>
               )
             })}
           </tbody>
         </table>
         <div className="row">
-          <button className="ghost" onClick={() => set('zones', [...athlete.zones, { name: `Zone ${athlete.zones.length + 1}`, low: 1, high: 1.1 }])}>+ Ajouter une zone</button>
-          <button className="ghost" onClick={() => set('zones', DEFAULT_ZONES.map((z) => ({ ...z })))}>Zones du bilan VC</button>
+          <button className="ghost" onClick={() => set('zones', [...athlete.zones, { name: `Zone ${athlete.zones.length + 1}`, low: 1, high: 1.1 }])}>
+            <Plus /> Ajouter une zone
+          </button>
+          <button className="ghost" onClick={() => set('zones', DEFAULT_ZONES.map((z) => ({ ...z })))}><RotateCcw /> Zones du bilan VC</button>
           {athlete.zones.some((z) => z.color) && (
             <button className="ghost" onClick={() => set('zones', athlete.zones.map(({ color: _c, ...z }) => z))}>Couleurs Garmin</button>
           )}
@@ -170,7 +173,7 @@ export function AthletePanel({
                   <td><Num value={z.high} width={60} min={40} max={240} onChange={(v) => setH({ high: v })} /></td>
                   <td className="muted">{Math.round((z.low / athlete.hrMax) * 100)} – {Math.round((z.high / athlete.hrMax) * 100)} %</td>
                   <td className="muted">{vc}</td>
-                  <td><button className="ghost" onClick={() => set('hrZones', athlete.hrZones.filter((_, j) => j !== i))}>✕</button></td>
+                  <td><button className="ghost" onClick={() => set('hrZones', athlete.hrZones.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
                 </tr>
               )
             })}
@@ -180,7 +183,9 @@ export function AthletePanel({
           <button className="ghost" onClick={() => {
             const last = athlete.hrZones[athlete.hrZones.length - 1]
             set('hrZones', [...athlete.hrZones, { name: `Zone ${athlete.hrZones.length + 1}`, low: last?.high ?? 120, high: (last?.high ?? 120) + 10 }])
-          }}>+ Ajouter une zone</button>
+          }}>
+            <Plus /> Ajouter une zone
+          </button>
         </div>
         <h3>Cible des séances envoyées sur la montre</h3>
         <div className="seg">
@@ -214,14 +219,14 @@ export function AthletePanel({
                   <td><Num value={p.carbs} width={70} min={0} onChange={(v) => setP({ carbs: v })} /></td>
                   <td><Num value={p.sodium} width={70} min={0} onChange={(v) => setP({ sodium: v })} /></td>
                   <td><Num value={p.share} scale={100} width={70} min={0} max={100} onChange={(v) => setP({ share: v })} /></td>
-                  <td><button className="ghost" onClick={() => set('products', athlete.products.filter((_, j) => j !== i))}>✕</button></td>
+                  <td><button className="ghost" onClick={() => set('products', athlete.products.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
                 </tr>
               )
             })}
             <tr>
               <td colSpan={5}>
                 <button className="ghost" onClick={() => set('products', [...athlete.products, { id: crypto.randomUUID(), name: 'Nouveau produit', carbs: 25, sodium: 0, share: 0 }])}>
-                  + Ajouter un produit
+                  <Plus /> Ajouter un produit
                 </button>
                 {Math.abs(athlete.products.reduce((a, p) => a + p.share, 0) - 1) > 0.01 && (
                   <span className="warn-text"> La somme des parts fait {Math.round(athlete.products.reduce((a, p) => a + p.share, 0) * 100)} % (elle est ramenée à 100 %).</span>
@@ -314,8 +319,8 @@ function PointTable<T extends object>({
               </td>
             ))}
             <td>
-              <button className="ghost" onClick={() => onChange(rows.filter((_, j) => j !== i))} title="Supprimer">
-                ✕
+              <button className="ghost" onClick={() => onChange(rows.filter((_, j) => j !== i))} title="Supprimer" aria-label="Supprimer">
+                <Trash2 />
               </button>
             </td>
           </tr>
@@ -323,7 +328,7 @@ function PointTable<T extends object>({
         <tr>
           <td colSpan={cols.length + 1}>
             <button className="ghost" onClick={() => onChange([...rows, { ...blank }])}>
-              + Ajouter une ligne
+              <Plus /> Ajouter une ligne
             </button>
           </td>
         </tr>
@@ -365,7 +370,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
           <div className="row">
             <span>Code à saisir dans les réglages d'EndurancePro (« Code Trail Planner ») :</span>
             <code className="watch-code">{athlete.watchId}</code>
-            <button className="ghost" onClick={copy}>{copied ? 'Copié ✓' : 'Copier'}</button>
+            <button className="ghost" onClick={copy}>{copied ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
           </div>
           <Hint>
             Sur ton téléphone : appli Garmin Connect › ta montre › Activités et applications › EndurancePro › Paramètres › Code Trail

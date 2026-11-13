@@ -21,7 +21,9 @@ import {
   parseBrouter,
   readTrackFile,
   reverseRoute,
+  routeLeg,
   routeSegment,
+  snapTolerance,
   searchPlace,
   splitByWaypoints,
   withNewTrace,
@@ -125,6 +127,38 @@ describe('tracé sur carte : services', () => {
       json({ features: [{ geometry: { coordinates: [[A.lon, A.lat + 0.00005, 1000], [B.lon, B.lat, 1020]] } }] }),
     )
     expect(close).toHaveLength(2)
+  })
+
+  it('hors-route automatique : chemin si les deux points sont dessus, ligne droite sinon', async () => {
+    // Le routeur s'accroche à un chemin passant à ~30 m au sud de B (et pile sur A).
+    const net = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => [
+      [a.lon, a.lat, 1000],
+      [(a.lon + b.lon) / 2 + 0.002, (a.lat + b.lat) / 2, 1100],
+      [b.lon, b.lat - 0.00027, 1200],
+    ]
+    const fetcher: Fetcher = async (url) => {
+      if (url.includes('brouter.de')) return json({ features: [{ geometry: { coordinates: net(A, B) } }] })
+      const lats = new URL(url).searchParams.get('latitude')!.split(',')
+      return json({ elevation: lats.map(() => 990) })
+    }
+    // Tolérance 50 m : B est sur le chemin → itinéraire, extrémité accrochée au chemin.
+    const on = await routeLeg(A, B, 'trail', 50, fetcher)
+    expect(on.offroad).toBe(false)
+    expect(on.points).toHaveLength(3)
+    expect(on.points[2].lat).toBeCloseTo(B.lat - 0.00027, 6)
+    // Tolérance 15 m : B est hors chemin → ligne droite depuis A (accroché), jusqu'au point touché.
+    const off = await routeLeg(A, B, 'trail', 15, fetcher)
+    expect(off.offroad).toBe(true)
+    expect(off.points[0]).toMatchObject({ lat: A.lat, lon: A.lon })
+    expect(off.points[off.points.length - 1]).toMatchObject({ lat: B.lat, lon: B.lon, ele: 990 })
+    expect(off.points.length).toBe(densify(A, B).length)
+    // Aucun chemin : ligne droite.
+    const none = await routeLeg(A, B, 'trail', 50, fakeServices({ brouterStatus: 400, brouterText: 'from-position not mapped' }).fetcher)
+    expect(none.offroad).toBe(true)
+    // Tolérance selon le zoom : ~24 px.
+    expect(snapTolerance(17, 46)).toBeCloseTo(20, 0)
+    expect(snapTolerance(10, 46)).toBe(150)
+    expect(snapTolerance(22, 46)).toBe(12)
   })
 
   it('erreurs du routeur explicites', async () => {

@@ -1,3 +1,24 @@
+import {
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  CalendarPlus,
+  Check,
+  CloudSun,
+  Copy,
+  FileDown,
+  LibraryBig,
+  Map as MapIcon,
+  Moon,
+  Pencil,
+  Play,
+  Plus,
+  Printer,
+  Scissors,
+  Sparkles,
+  Trash2,
+  Users,
+  Watch,
+} from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
@@ -243,24 +264,24 @@ export function RacePlan({
             <>
               {library?.kind === 'route' && (
                 <button className="primary" onClick={() => setPlanning(planning === null ? race.env.start : null)} title="Crée une séance datée sur ce parcours ; le parcours reste un modèle">
-                  📅 Planifier une séance
+                  <CalendarPlus /> Planifier une séance
                 </button>
               )}
               {library && library.kind !== 'route' && (
-                <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement">📚 Ajouter à la bibliothèque</button>
+                <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement"><LibraryBig /> Ajouter à la bibliothèque</button>
               )}
               {onRedraw && (
                 <button onClick={onRedraw} title={race.drawn ? 'Modifier le tracé sur la carte' : 'Rendre la trace modifiable sur la carte (découpée en points à déplacer)'}>
-                  ✏️ Modifier le tracé
+                  <Pencil /> Modifier le tracé
                 </button>
               )}
-              {onLive && <button className={library?.kind === 'route' ? '' : 'primary'} onClick={onLive}>▶ Mode course</button>}
+              {onLive && <button className={library?.kind === 'route' ? '' : 'primary'} onClick={onLive}><Play /> Mode course</button>}
               {share && (
                 <button
                   onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
                   title="Lien en lecture seule pour ton assistance, mis à jour en direct"
                 >
-                  👥 Lien assistance
+                  <Users /> Lien assistance
                 </button>
               )}
               {watch && (
@@ -273,16 +294,16 @@ export function RacePlan({
                   }}
                   title="Envoie cette course au champ de données Trail Planner de ta montre Garmin"
                 >
-                  {watch.active ? '⌚ Sur la montre ✓' : '⌚ Mettre sur la montre'}
+                  {watch.active ? <><Watch /> Sur la montre <Check /></> : <><Watch /> Mettre sur la montre</>}
                 </button>
               )}
-              <button onClick={() => setPrintFormat('a4')}>🖨 Feuille A4</button>
-              <button onClick={() => setPrintFormat('strip')}>🖨 Bande</button>
-              <button onClick={() => setPrintFormat('crew')}>🖨 Assistance</button>
+              <button onClick={() => setPrintFormat('a4')}><Printer /> Feuille A4</button>
+              <button onClick={() => setPrintFormat('strip')}><Printer /> Bande</button>
+              <button onClick={() => setPrintFormat('crew')}><Printer /> Assistance</button>
               <button className="primary" onClick={exportFit} title="Parcours FIT pour Garmin Connect / PacePro (points de ravito, heures prévues)">
-                ⌚ Export Garmin (FIT)
+                <Watch /> Export Garmin (FIT)
               </button>
-              <button onClick={exportGpx} title="Parcours GPX horodaté avec waypoints">GPX</button>
+              <button onClick={exportGpx} title="Parcours GPX horodaté avec waypoints"><FileDown /> GPX</button>
             </>
           }
         >
@@ -300,7 +321,7 @@ export function RacePlan({
                     })
                   }}
                 >
-                  {copied ? 'Copié ✓' : 'Copier'}
+                  {copied ? <><Check /> Copié</> : <><Copy /> Copier</>}
                 </button>
                 <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
                   Arrêter le partage
@@ -345,7 +366,7 @@ export function RacePlan({
                       })
                     }
                   >
-                    {copiedCode ? 'Copié ✓' : 'Copier le code'}
+                    {copiedCode ? <><Check /> Copié</> : <><Copy /> Copier le code</>}
                   </button>
                 )}
                 <button className="ghost" onClick={() => setShowWatch(false)}>Fermer</button>
@@ -376,8 +397,8 @@ export function RacePlan({
           <div className="row profile-tools">
             <span className="muted small">Clic sur le profil :</span>
             <span className="click-mode">
-              <button className={clickMode === 'cycle' ? 'on' : ''} onClick={() => setClickMode('cycle')} title="Le clic coupe la portion de zone : fin de cycle">✂ Fin de cycle</button>
-              <button className={clickMode === 'ravito' ? 'on' : ''} onClick={() => setClickMode('ravito')} title="Le clic ajoute un ravito">➕ Ravito</button>
+              <button className={clickMode === 'cycle' ? 'on' : ''} onClick={() => setClickMode('cycle')} title="Le clic coupe la portion de zone : fin de cycle"><Scissors /> Fin de cycle</button>
+              <button className={clickMode === 'ravito' ? 'on' : ''} onClick={() => setClickMode('ravito')} title="Le clic ajoute un ravito"><Plus /> Ravito</button>
             </span>
             <span className="muted small">Glisser : appliquer une zone à une portion.</span>
           </div>
@@ -434,12 +455,12 @@ export function RacePlan({
                 <>
                   {segment > 0 && (
                     <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, -1) }); setSegment(null) }} title="Supprime la fin de cycle précédente">
-                      ⇤ Fusionner avec la précédente
+                      <ArrowLeftToLine /> Fusionner avec la précédente
                     </button>
                   )}
                   {segment < parts.length - 1 && (
                     <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, 1) }); setSegment(null) }} title="Supprime la fin de cycle suivante">
-                      Fusionner avec la suivante ⇥
+                      Fusionner avec la suivante <ArrowRightToLine />
                     </button>
                   )}
                 </>
@@ -540,7 +561,7 @@ export function RacePlan({
             )}
             <div className="row">
               <button onClick={loadOsm} disabled={osm.busy} title="Échelle SAC, visibilité et revêtement des sentiers (OpenStreetMap)">
-                {osm.busy ? 'OpenStreetMap…' : '🗺 Technicité OpenStreetMap'}
+                {osm.busy ? 'OpenStreetMap…' : <><MapIcon /> Technicité OpenStreetMap</>}
               </button>
               {race.osmTech.length > 0 && <button className="ghost" onClick={() => set({ osmTech: [] })}>Effacer</button>}
             </div>
@@ -554,7 +575,7 @@ export function RacePlan({
             )}
             <div className="row">
               <button onClick={loadWeather} disabled={weather.busy} title="Prévision à 15 jours, sinon normales des 5 dernières années (Open-Meteo)">
-                {weather.busy ? 'Météo…' : '☁ Récupérer la météo'}
+                {weather.busy ? 'Météo…' : <><CloudSun /> Récupérer la météo</>}
               </button>
             </div>
             {race.env.heat.note && (
@@ -588,7 +609,7 @@ export function RacePlan({
               <Num label="Valeur" value={methodValue} onChange={setMethodValue} unit={METHOD_LABELS[method].unit} min={1} />
             </div>
             <div className="row">
-              <button className="primary" onClick={generate}>Générer</button>
+              <button className="primary" onClick={generate}><Sparkles /> Générer</button>
               <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => !c.auto) })}>Effacer les auto</button>
               {track.waypoints.length > 0 && (
                 <button className="ghost" onClick={importWaypoints}>Importer {track.waypoints.length} waypoints GPX</button>
@@ -639,7 +660,7 @@ export function RacePlan({
 
         <Card
           title="Temps de passage"
-          actions={<button onClick={() => addPoint(track.totalDist / 2, 'ravito')}>+ Ajouter un point</button>}
+          actions={<button onClick={() => addPoint(track.totalDist / 2, 'ravito')}><Plus /> Ajouter un point</button>}
         >
           {narrow ? (
             <div className="split-cards">
@@ -655,7 +676,7 @@ export function RacePlan({
                       <span className="muted">km {(s.to / 1000).toFixed(1)}</span>
                     </div>
                     <div className="sc-main">
-                      <span className="sc-time">{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}{s.night && ' 🌙'}</span>
+                      <span className="sc-time">{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}{s.night && <> <Moon className="inline night-icon" aria-label="de nuit" /></>}</span>
                       <span>{formatDuration(s.arrival)}</span>
                       {w && (
                         <span className="muted small">
@@ -749,7 +770,7 @@ export function RacePlan({
                       <td>{formatPace(s.avgPace)}</td>
                       <td><strong>{formatDuration(s.arrival)}</strong></td>
                       <td>
-                        <strong>{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}</strong>{s.night && ' 🌙'}
+                        <strong>{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}</strong>{s.night && <> <Moon className="inline night-icon" aria-label="de nuit" /></>}
                         {(() => {
                           const w = windowOf(s.cp.id)
                           return w ? (
@@ -779,7 +800,7 @@ export function RacePlan({
                         )}
                       </td>
                       <td>{!isFinish && <input type="text" className="wide" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
-                      <td>{!isFinish && <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })}>✕</button>}</td>
+                      <td>{!isFinish && <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })} aria-label="Supprimer"><Trash2 /></button>}</td>
                     </tr>
                   )
                 })}
@@ -836,7 +857,7 @@ function TechOverrides({ race, onChange }: { race: Race; onChange: (r: Race) => 
           <select value={o.level} onChange={(e) => set(race.techOverrides.map((x) => (x.id === o.id ? { ...x, level: Number(e.target.value) as 1 } : x)))}>
             {[1, 2, 3, 4, 5].map((l) => <option key={l} value={l}>Niveau {l}</option>)}
           </select>
-          <button className="ghost" onClick={() => set(race.techOverrides.filter((x) => x.id !== o.id))}>✕</button>
+          <button className="ghost" onClick={() => set(race.techOverrides.filter((x) => x.id !== o.id))} aria-label="Supprimer"><Trash2 /></button>
         </div>
       ))}
       <button className="ghost" onClick={() => set([...race.techOverrides, { id: crypto.randomUUID(), from: 0, to: 1000, level: 3 }])}>
