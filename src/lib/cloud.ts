@@ -33,6 +33,7 @@ import {
 } from 'firebase/firestore'
 import { gunzipBase64, gzipBase64 } from './compress'
 import { normalizeAthlete, normalizeRace } from './defaults'
+import { decodeFromFirestore, encodeForFirestore } from './firestoreCodec'
 import type { ShareSnapshot } from './share'
 import type { Store } from './storage'
 import type { Athlete, Race } from './types'
@@ -75,6 +76,7 @@ export function cloudStore(user: User): Store {
   const gpxCol = (raceId: string) => collection(fs, 'users', user.uid, 'races', raceId, 'gpx')
   // Évite de réécrire (et de relire) le GPX à chaque modification du plan.
   const savedGpx = new Map<string, string>()
+  const savedChunks = new Map<string, number>()
 
   const loadRace = async (id: string, meta: RaceMeta): Promise<Race> => {
     let gpxText = savedGpx.get(id)
@@ -87,6 +89,7 @@ export function cloudStore(user: User): Store {
       gpxText = b64 ? await gunzipBase64(b64) : ''
       savedGpx.set(id, gpxText)
     }
+    savedChunks.set(id, meta.gpxChunks ?? 1)
     const { gpxChunks: _ignored, ...rest } = meta
     return normalizeRace({ ...rest, gpxText })
   }
@@ -96,16 +99,17 @@ export function cloudStore(user: User): Store {
     async loadAthlete() {
       const snap = await getDoc(userDoc)
       const d = snap.data()
-      return normalizeAthlete(d ? { ...(d.athlete as Partial<Athlete>), updatedAt: d.updatedAt } : null)
+      return normalizeAthlete(d ? { ...decodeFromFirestore<Partial<Athlete>>(d.athlete), updatedAt: d.updatedAt } : null)
     },
     async saveAthlete(a) {
       const batch = writeBatch(fs)
-      batch.set(userDoc, { athlete: a, updatedAt: a.updatedAt ?? new Date().toISOString() }, { merge: true })
+      // Document entier (pas de fusion) : un élément supprimé l'est aussi en ligne.
+      batch.set(userDoc, { athlete: encodeForFirestore(a), updatedAt: a.updatedAt ?? new Date().toISOString() })
       await batch.commit()
     },
     async listRaces() {
       const snap = await getDocs(racesCol)
-      const races = await Promise.all(snap.docs.map((d) => loadRace(d.id, d.data() as RaceMeta)))
+      const races = await Promise.all(snap.docs.map((d) => loadRace(d.id, decodeFromFirestore<RaceMeta>(d.data()))))
       return races.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     },
     async isEmpty() {
@@ -126,7 +130,7 @@ export function cloudStore(user: User): Store {
           // Nos propres écritures en attente ne sont pas des changements distants.
           if (!snap.metadata.hasPendingWrites && snap.exists()) {
             const d = snap.data()
-            h.athlete(normalizeAthlete({ ...(d.athlete as Partial<Athlete>), updatedAt: d.updatedAt }))
+            h.athlete(normalizeAthlete({ ...decodeFromFirestore<Partial<Athlete>>(d.athlete), updatedAt: d.updatedAt }))
           }
         },
         (e) => h.error(e),
@@ -143,7 +147,7 @@ export function cloudStore(user: User): Store {
               savedGpx.delete(ch.doc.id)
               h.raceRemoved(ch.doc.id)
             } else if (!ch.doc.metadata.hasPendingWrites) {
-              loadRace(ch.doc.id, ch.doc.data() as RaceMeta).then(h.raceUpsert, (e) => h.error(e))
+              loadRace(ch.doc.id, decodeFromFirestore<RaceMeta>(ch.doc.data())).then(h.raceUpsert, (e) => h.error(e))
             }
           }
         },
@@ -168,11 +172,13 @@ export function cloudStore(user: User): Store {
         for (let i = 0; i < n; i++) {
           batch.set(doc(gpxCol(r.id), String(i)), { data: b64.slice(i * CHUNK, (i + 1) * CHUNK) })
         }
-        batch.set(raceRef, { ...rest, gpxChunks: n })
+        batch.set(raceRef, encodeForFirestore({ ...rest, gpxChunks: n }) as Record<string, unknown>)
+        savedChunks.set(r.id, n)
         await batch.commit()
         savedGpx.set(r.id, gpxText)
       } else {
-        batch.set(raceRef, rest, { merge: true })
+        // Document entier (pas de fusion) : un passage effacé l'est aussi en ligne.
+        batch.set(raceRef, encodeForFirestore({ ...rest, gpxChunks: savedChunks.get(r.id) ?? 1 }) as Record<string, unknown>)
         await batch.commit()
       }
     },
@@ -258,12 +264,9 @@ export async function deleteAccount(user: User): Promise<'deleted' | 'data-only'
 // ---------------------------------------------------------------------------
 // Liens d'assistance
 
-/** Firestore refuse les valeurs undefined : on nettoie par sérialisation. */
-const clean = <T,>(x: T): T => JSON.parse(JSON.stringify(x))
-
 export async function publishShare(shareId: string, snap: ShareSnapshot) {
   if (!db) throw new Error('Partage indisponible : Firebase non configuré.')
-  await setDoc(doc(db, 'shares', shareId), clean(snap))
+  await setDoc(doc(db, 'shares', shareId), encodeForFirestore(snap) as Record<string, unknown>)
 }
 
 export async function deleteShare(shareId: string) {
@@ -278,7 +281,7 @@ export function subscribeShare(shareId: string, cb: (s: ShareSnapshot | null) =>
   }
   return onSnapshot(
     doc(db, 'shares', shareId),
-    (d) => cb(d.exists() ? (d.data() as ShareSnapshot) : null),
+    (d) => cb(d.exists() ? decodeFromFirestore<ShareSnapshot>(d.data()) : null),
     (e) => onError(e),
   )
 }
