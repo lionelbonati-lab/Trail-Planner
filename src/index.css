@@ -495,6 +495,10 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 /* Création automatique de boucle */
 .auto-card .mode-seg button { font-size: 13px; }
+.auto-start { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.auto-start > svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
+.auto-start span { flex: 1; min-width: 160px; }
+.auto-start button { font-size: 13px; padding: 4px 8px; }
 .auto-target { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .auto-target .seg { margin: 0; }
 .auto-target .num input { width: 70px; }

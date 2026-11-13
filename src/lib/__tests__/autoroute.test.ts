@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { destination, distanceForDuration, loopPoints, loopScore, rankBearings, reliefDensity, TERRAINS } from '../autoroute'
 import { haversine } from '../gpx'
 import type { Fetcher } from '../routing'
@@ -39,11 +39,25 @@ describe('création automatique de boucle', () => {
     }
     const mountain = await rankBearings(S, 15000, 'mountain', 0, fetcher)
     const flat = await rankBearings(S, 15000, 'flat', 0, fetcher)
+    // Mêmes points : altitudes déjà connues, pas de nouvelle requête.
+    expect(calls).toBe(1)
+    await rankBearings(S, 15000, 'flat', 22.5, fetcher)
     expect(calls).toBe(2)
     expect(mountain).toHaveLength(8)
     expect([0, 45, 315]).toContain(mountain[0].bearing)
     expect([135, 180, 225]).toContain(flat[0].bearing)
     expect(flat[0].density).toBeLessThan(mountain[0].density)
+  })
+
+  it('altitude saturée (429) : directions dans l’ordre, sans erreur', async () => {
+    const busy: Fetcher = async () => new Response('', { status: 429 })
+    vi.useFakeTimers()
+    const p = rankBearings(S, 15000, 'mountain', 0, busy)
+    await vi.runAllTimersAsync()
+    const plans = await p
+    vi.useRealTimers()
+    expect(plans.map((x) => x.bearing)).toEqual([0, 45, 90, 135, 180, 225, 270, 315])
+    expect(plans.every((x) => Number.isNaN(x.density))).toBe(true)
   })
 
   it('durée → distance avec le km-effort du terrain', () => {

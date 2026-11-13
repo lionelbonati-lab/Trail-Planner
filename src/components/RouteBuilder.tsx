@@ -14,6 +14,7 @@ import {
   FileUp,
   Footprints,
   LocateFixed,
+  MapPin,
   Maximize2,
   Minus,
   Mountain,
@@ -441,15 +442,28 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
       setPlaces(null)
       return true
     },
-    // Clic (souris) : ferme d'abord ce qui est ouvert, sinon ajoute un point.
+    // Clic (souris) : ferme d'abord ce qui est ouvert, sinon ajoute un point (ou place le départ
+    // de la boucle automatique).
     tap: (lat: number, lon: number) => {
-      if (!act.dismiss()) act.add(lat, lon)
+      if (act.dismiss()) return
+      if (autoOpen) act.placeStart(lat, lon)
+      else act.add(lat, lon)
     },
-    // Appui maintenu (téléphone) : ajoute toujours un point.
+    // Appui maintenu (téléphone) : ajoute toujours un point (ou place le départ de la boucle).
     holdAdd: (lat: number, lon: number) => {
       setMenu(false)
       setPlaces(null)
-      act.add(lat, lon)
+      if (autoOpen) act.placeStart(lat, lon)
+      else act.add(lat, lon)
+    },
+    /** Départ de la boucle automatique ; la boucle proposée, partie d'ailleurs, est retirée. */
+    placeStart: (lat: number, lon: number) => {
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+      autoToken.current++
+      setAutoStart({ lat, lon })
+      if (auto?.cands.length) change([])
+      setAuto(null)
+      setAutoEdit(true)
     },
     // En boucle, le départ et l'arrivée bougent ensemble.
     move: (k: number, lat: number, lon: number) =>
@@ -808,9 +822,12 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
   const [autoCfg, setAutoCfg] = useState<{ terrain: Terrain; by: 'dist' | 'time'; km: number; minutes: number }>(
     () => readJson('tp-draw-auto') ?? { terrain: 'hilly', by: 'dist', km: 15, minutes: 90 },
   )
-  const [auto, setAuto] = useState<{ busy: boolean; error: string | null; cands: Cand[]; i: number; offset: number } | null>(null)
+  // `blind` : relief des directions inconnu (service d'altitude saturé), boucles départagées après coup.
+  const [auto, setAuto] = useState<{ busy: boolean; error: string | null; cands: Cand[]; i: number; offset: number; blind?: boolean } | null>(null)
   // Une fois les propositions calculées, la fiche se réduit à la ligne de résultat (la boucle reste visible).
   const [autoEdit, setAutoEdit] = useState(true)
+  // Départ choisi sur la carte (sinon : début du tracé, ou centre de la carte).
+  const [autoStart, setAutoStart] = useState<{ lat: number; lon: number } | null>(null)
   const autoToken = useRef(0)
   const setCfg = (patch: Partial<typeof autoCfg>) => {
     const next = { ...autoCfg, ...patch }
@@ -850,7 +867,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
   const generate = async (offset = 0) => {
     const token = ++autoToken.current
     const c = map.current?.getCenter()
-    const start = wps[0] ? { lat: wps[0].lat, lon: wps[0].lon } : c ? { lat: c.lat, lon: c.lng } : { lat: DEFAULT_CENTER[0], lon: DEFAULT_CENTER[1] }
+    const start = autoStart ?? (wps[0] ? { lat: wps[0].lat, lon: wps[0].lon } : c ? { lat: c.lat, lon: c.lng } : { lat: DEFAULT_CENTER[0], lon: DEFAULT_CENTER[1] })
     setAuto({ busy: true, error: null, cands: [], i: 0, offset })
     try {
       const seconds = autoCfg.minutes * 60
@@ -861,6 +878,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
       const dist = autoCfg.by === 'dist' ? autoCfg.km * 1000 : distanceForDuration(seconds, athlete.cs, intensity, autoCfg.terrain)
       const target = autoCfg.by === 'dist' ? dist : seconds
       const plans = (await rankBearings(start, dist, autoCfg.terrain, offset)).slice(0, 3)
+      const blind = plans.some((p) => Number.isNaN(p.density))
       const cands: Cand[] = []
       for (const plan of plans) {
         let cand = await routeLoop(start, plan.points, target)
@@ -878,7 +896,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
         cands.push(cand)
       }
       cands.sort((a, b) => a.score - b.score)
-      setAuto({ busy: false, error: null, cands, i: 0, offset })
+      setAuto({ busy: false, error: null, cands, i: 0, offset, blind })
       setAutoEdit(false)
       if (mobile) setSheet('mini')
       applyCand(cands[0])
@@ -898,7 +916,40 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
     setSel(null)
     setAutoOpen(true)
     setAutoEdit(true)
+    setAutoStart(null)
   }
+  const closeAuto = () => {
+    autoToken.current++
+    setAutoOpen(false)
+    setAuto(null)
+    setAutoStart(null)
+  }
+  /** Départ de la boucle à ma position. */
+  const startHere = () => {
+    if (!navigator.geolocation) return setNotice('Position indisponible sur cet appareil.')
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        act.placeStart(p.coords.latitude, p.coords.longitude)
+        map.current?.setView([p.coords.latitude, p.coords.longitude], Math.max(14, map.current.getZoom()))
+      },
+      () => setNotice('Position refusée ou indisponible.'),
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
+  // Repère du départ choisi, déplaçable, tant qu'aucune boucle n'est proposée.
+  const startMark = useRef<L.Marker | null>(null)
+  useEffect(() => {
+    startMark.current?.remove()
+    startMark.current = null
+    const m = map.current
+    if (!m || !autoOpen || !autoStart || auto?.cands.length) return
+    const mk = L.marker([autoStart.lat, autoStart.lon], { icon: wpIcon(0, 2, false, null), draggable: true, zIndexOffset: 1000, title: 'Départ de la boucle' })
+    mk.on('dragend', () => {
+      const ll = mk.getLatLng()
+      setAutoStart({ lat: ll.lat, lon: ll.lng })
+    })
+    startMark.current = mk.addTo(m)
+  }, [autoOpen, autoStart, auto?.cands.length])
 
   const clearAll = () => {
     setMenu(false)
@@ -993,8 +1044,9 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
             ) : (
               <div className="draw-tip-wrap">
                 <div className="draw-tip">
-                  {coarse ? 'Appuie un instant sur la carte pour poser le départ' : 'Clique sur la carte pour poser le départ'} · hors d'un chemin, le tracé
-                  passe en ligne droite
+                  {autoOpen
+                    ? `${coarse ? 'Appuie un instant sur la carte' : 'Clique sur la carte'} pour placer le départ de la boucle`
+                    : `${coarse ? 'Appuie un instant sur la carte pour poser le départ' : 'Clique sur la carte pour poser le départ'} · hors d'un chemin, le tracé passe en ligne droite`}
                 </div>
                 {!autoOpen && (
                   <button className="primary auto-cta" onClick={openAuto}><WandSparkles /> Créer une boucle automatiquement</button>
@@ -1015,11 +1067,20 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
           <div className="draw-card auto-card" style={{ bottom: floatBottom + 26 }}>
             <div className="draw-card-head">
               <strong><WandSparkles className="inline" /> Création automatique</strong>
-              <span className="muted">Boucle depuis {wps.length ? 'le départ' : 'le centre de la carte'}</span>
-              <button className="ghost" onClick={() => { autoToken.current++; setAutoOpen(false); setAuto(null) }} aria-label="Fermer"><X /></button>
+              <span className="muted">Boucle depuis {autoStart ? 'le départ placé' : wps.length ? 'le début du tracé' : 'le centre de la carte'}</span>
+              <button className="ghost" onClick={closeAuto} aria-label="Fermer"><X /></button>
             </div>
             {(autoEdit || !auto?.cands.length) && (
             <>
+            <div className="auto-start">
+              <MapPin aria-hidden />
+              <span>
+                {autoStart
+                  ? `Départ placé : ${coarse ? 'appuie ailleurs' : 'clique ailleurs'} ou fais-le glisser pour le déplacer`
+                  : `${coarse ? 'Appuie un instant' : 'Clique'} sur la carte pour placer le départ`}
+              </span>
+              <button className="ghost" onClick={startHere} title="Partir de ma position"><LocateFixed /> Ma position</button>
+            </div>
             <div className="seg mode-seg" role="group" aria-label="Terrain">
               {(Object.keys(TERRAINS) as Terrain[]).map((t) => {
                 const Icon = TERRAIN_ICON[t]
@@ -1048,6 +1109,9 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
             )}
             {auto?.busy && <span className="muted small">Trois boucles calculées sur les chemins, la meilleure est affichée…</span>}
             {auto?.error && <span className="warn-text">{auto.error}</span>}
+            {auto?.blind && !auto.busy && auto.cands.length > 0 && (
+              <span className="muted small">Service d'altitude saturé : directions choisies sans repérer le relief, boucles classées d'après le relief du routeur.</span>
+            )}
             {auto && !auto.busy && auto.cands.length > 0 && (
               <div className="auto-result">
                 <button className="ghost" onClick={() => showCand(auto.i - 1)} aria-label="Proposition précédente"><ChevronLeft /></button>
@@ -1061,7 +1125,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
                   <button className="ghost" onClick={() => setAutoEdit(true)} title="Changer le terrain, la distance ou la durée" aria-label="Réglages"><Settings /></button>
                 )}
                 <button className="ghost" onClick={() => generate((auto.offset + 22.5) % 360)} title="Trois autres boucles, dans d'autres directions" aria-label="Autres propositions"><RefreshCw /></button>
-                <button className="primary" onClick={() => { setAutoOpen(false); setAuto(null) }}><Check /> Garder</button>
+                <button className="primary" onClick={closeAuto}><Check /> Garder</button>
               </div>
             )}
           </div>
