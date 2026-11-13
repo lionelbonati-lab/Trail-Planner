@@ -9,7 +9,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - Profil athlète : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,
   durabilité (courbe log %VC₁ₕ − k·ln T, ou perte linéaire), produits de nutrition.
 - Calculateur de VC : test 3′/7′/12′ (régression distance-temps), R², prédictions, historique.
-- **Analyse d'activités** (GPX ou FIT de montre) : prévu vs réalisé, intensité au fil des heures,
+- **Analyse de n'importe quelle séance** (GPX ou FIT de montre) : temps par zone (allure ramenée au plat),
+  tours de la montre, meilleurs efforts comparés à VC + D′ (VC relevée si dépassée), détection d'un test VC ;
+  prévu vs réalisé, intensité au fil des heures,
   VAM et descente mesurées par tranche de pente, comparaison point par point avec un plan,
   calibration du profil et historique des courses.
 
@@ -28,6 +30,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   datée sans toucher au modèle ; liste des séances planifiées.
 - **Zones d'entraînement** en % de VC réglables dans le profil (zone 1 : 60–70 %, zone 2 : 70–80 %,
   zone 5 : 96–105 %…), utilisées pour les cibles des séances et le choix des zones sur le profil.
+- **Zones d'allure en portions contiguës** (couleurs Garmin) : clic = fin de cycle, poignées à glisser pour
+  déplacer une limite, barre de zones cliquable ; mode « Ravito » sur les compétitions.
 - **Zones d'allure** : glisser sur le profil pour sélectionner une portion et lui donner une cible
   (zones d'entraînement en % de VC, % libre, allure plat équivalente ou allure imposée) ; export en
   entraînement Garmin découpé par distance — pour planifier aussi les allures d'entraînement.

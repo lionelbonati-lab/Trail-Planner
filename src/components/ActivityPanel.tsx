@@ -13,7 +13,9 @@ import { haversine } from '../lib/gpx'
 import { averageIntensity, intensityAt, interp } from '../lib/model'
 import { computePlan } from '../lib/plan'
 import { formatDuration, formatPace } from '../lib/time'
+import { analyzeSession } from '../lib/insights'
 import type { ActivityRecord, Athlete, GradeStat, Race } from '../lib/types'
+import { colorForIndex } from '../lib/zones'
 import { Kpi } from './CsCalculator'
 import { Card, Hint } from './ui'
 
@@ -84,7 +86,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
   return (
     <div className="grid">
       <Card
-        title="Analyser une activité"
+        title="Analyser une séance"
         actions={
           <label className="button primary">
             Importer GPX ou FIT
@@ -93,9 +95,9 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
         }
       >
         <Hint>
-          Importe l'enregistrement d'une course ou d'une sortie (fichier de ta montre, horodaté). L'app compare le
-          réalisé à ce que ton profil prévoyait, mesure ta vitesse ascensionnelle, tes descentes et ta durabilité, et
-          propose de recalibrer ton profil.
+          Importe n'importe quelle séance ou course (GPX ou FIT de ta montre, horodaté) : temps par zone, détail des tours,
+          meilleurs efforts comparés à ta VC et ton D′, détection d'un test VC, et calibration de ta vitesse ascensionnelle,
+          de tes descentes et de ta durabilité.
         </Hint>
         {error && <p className="warn">{error}</p>}
       </Card>
@@ -118,6 +120,8 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
             <h3>Intensité tenue sur le plat (% de VC)</h3>
             <IntensityChart points={analysis.intensity} athlete={athlete} />
           </Card>
+
+          <SessionInsights activity={analysis.activity} athlete={athlete} onChange={onChange} />
 
           <div className="grid two">
             <Card title="Mesures par pente">
@@ -380,5 +384,113 @@ function IntensityChart({ points, athlete }: { points: [number, number][]; athle
         )}
       </svg>
     </>
+  )
+}
+
+/** Analyse générale : temps par zone, tours, meilleurs efforts, test VC détecté. */
+function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['activity']; athlete: Athlete; onChange: (a: Athlete) => void }) {
+  const ins = useMemo(() => analyzeSession(activity, athlete), [activity, athlete])
+  const [done, setDone] = useState<Set<string>>(new Set())
+  const total = ins.zoneTimes.reduce((a, z) => a + z.seconds, 0) || 1
+  const label = (sec: number) => (sec < 3600 ? `${Math.round(sec / 60)}′` : `${sec / 3600} h`)
+  const mark = (k: string) => setDone(new Set([...done, k]))
+  return (
+    <Card title="Séance">
+      <h3>Temps par zone (allure ramenée au plat)</h3>
+      <div className="zone-stack" role="img" aria-label="Répartition du temps par zone">
+        {ins.zoneTimes.filter((z) => z.seconds > 0).map((z) => (
+          <span key={z.index} style={{ width: `${(z.seconds / total) * 100}%`, background: colorForIndex(z.index) }} title={`${z.name} : ${formatDuration(z.seconds)}`} />
+        ))}
+      </div>
+      <div className="zone-legend">
+        {ins.zoneTimes.map((z) => (
+          <span key={z.index}>
+            <i className="zone-swatch" style={{ background: colorForIndex(z.index) }} />
+            {z.name} <strong>{z.seconds < 3600 ? `${Math.floor(z.seconds / 60)}′${String(Math.round(z.seconds % 60)).padStart(2, '0')}` : formatDuration(z.seconds)}</strong>{' '}
+            <span className="muted">({Math.round((z.seconds / total) * 100)} %)</span>
+          </span>
+        ))}
+      </div>
+
+      {(ins.tests.length > 0 || ins.csFloor) && (
+        <div className="banner info suggestions">
+          {ins.tests.map((t) => {
+            const k = `t${t.seconds}`
+            return (
+              <span key={k} className="row tight">
+                Un tour de {Math.round(t.seconds / 60)}′ à fond : <strong>{t.dist} m</strong> ({formatPace(t.seconds / (t.dist / 1000))}/km).
+                {done.has(k) ? (
+                  <span className="ok-text">Enregistré ✓</span>
+                ) : (
+                  <button className="primary" onClick={() => { onChange({ ...athlete, csTrials: [t, ...athlete.csTrials] }); mark(k) }}>
+                    Enregistrer comme test VC {Math.round(t.seconds / 60)}′
+                  </button>
+                )}
+              </span>
+            )
+          })}
+          {ins.csFloor && (
+            <span className="row tight">
+              Ton meilleur effort de {label(ins.csFloor.seconds)} dépasse ce que permettent ta VC et ton D′ : ta VC est d'au moins{' '}
+              <strong>{formatPace(1000 / ins.csFloor.cs)}/km</strong> (actuelle {formatPace(1000 / athlete.cs)}/km).
+              {done.has('cs') ? (
+                <span className="ok-text">Appliqué ✓</span>
+              ) : (
+                <button onClick={() => { onChange({ ...athlete, cs: ins.csFloor!.cs }); mark('cs') }}>Appliquer</button>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
+      {ins.laps.length > 1 && (
+        <>
+          <h3>Tours de la montre</h3>
+          <div className="scroll">
+            <table className="table compact">
+              <thead>
+                <tr><th>#</th><th>Durée</th><th>Distance</th><th>Allure</th><th>D+</th><th>Intensité (plat éq.)</th><th>Zone</th></tr>
+              </thead>
+              <tbody>
+                {ins.laps.map((l) => (
+                  <tr key={l.index}>
+                    <td>{l.index + 1}</td>
+                    <td>{formatDuration(l.duration, true).replace(/^0:/, '')}</td>
+                    <td>{l.distance >= 1000 ? `${(l.distance / 1000).toFixed(2)} km` : `${Math.round(l.distance)} m`}</td>
+                    <td>{l.distance > 0 ? `${formatPace(l.duration / (l.distance / 1000))}/km` : '—'}</td>
+                    <td>{Math.round(l.dPlus)} m</td>
+                    <td>{Math.round(l.intensity * 100)} % VC</td>
+                    <td><i className="zone-swatch" style={{ background: colorForIndex(l.zone) }} />{athlete.zones[l.zone]?.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <h3>Meilleurs efforts (allure ramenée au plat)</h3>
+      <div className="scroll">
+        <table className="table compact">
+          <thead>
+            <tr><th>Durée</th>{ins.best.map((b) => <th key={b.seconds}>{label(b.seconds)}</th>)}</tr>
+          </thead>
+          <tbody>
+            <tr><td>Réalisé</td>{ins.best.map((b) => <td key={b.seconds}>{formatPace(1000 / b.speed)}</td>)}</tr>
+            <tr className="muted"><td>Max. VC + D′</td>{ins.best.map((b) => <td key={b.seconds}>{formatPace(1000 / b.predicted)}</td>)}</tr>
+            <tr>
+              <td>% du max.</td>
+              {ins.best.map((b) => (
+                <td key={b.seconds} className={b.ratio > 1.01 && b.seconds >= 120 && b.seconds <= 1800 ? 'warn-text' : ''}>{Math.round(b.ratio * 100)} %</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <Hint>
+        « Max. VC + D′ » : ce que ton profil permet au mieux sur chaque durée (modèle valable de 2 à 30 min environ). Un effort au-dessus
+        signifie que ta VC (ou ton D′) est sous-estimée ; en dessous, la séance n'était simplement pas un effort maximal.
+      </Hint>
+    </Card>
   )
 }

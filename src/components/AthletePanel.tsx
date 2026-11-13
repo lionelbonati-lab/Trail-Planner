@@ -1,6 +1,7 @@
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES } from '../lib/defaults'
+import { colorForIndex } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, Product, TrainingZone, VamPoint } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
 
@@ -96,7 +97,7 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
 
       <Card title="Zones d'entraînement" className="span2">
         <Hint>
-          En pourcentage de ta VC, comme dans tes séances Nolio. Elles servent aux cibles des séances (échauffement, accélérations)
+          En pourcentage de ta VC, comme dans tes séances Nolio, avec les couleurs Garmin. Elles servent aux cibles des séances (échauffement, accélérations)
           et au choix d'une zone sur le profil d'un parcours.
         </Hint>
         <table className="table compact">
@@ -108,7 +109,7 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
               const setZ = (patch: Partial<TrainingZone>) => set('zones', athlete.zones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
               return (
                 <tr key={i}>
-                  <td><input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 110 }} /></td>
+                  <td><i className="zone-swatch" style={{ background: colorForIndex(i) }} /><input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 110 }} /></td>
                   <td><Num value={z.low} scale={100} width={64} min={20} max={200} onChange={(v) => setZ({ low: v })} /></td>
                   <td><Num value={z.high} scale={100} width={64} min={20} max={200} onChange={(v) => setZ({ high: v })} /></td>
                   <td>{formatPace(1000 / (athlete.cs * z.high))} – {formatPace(1000 / (athlete.cs * z.low))}/km</td>
