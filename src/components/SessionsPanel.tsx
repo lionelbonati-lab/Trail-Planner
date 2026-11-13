@@ -1,6 +1,7 @@
-import { Trash2, Upload, UserCheck, Watch } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { Check, Plus, Trash2, Upload, UserCheck, Watch } from 'lucide-react'
+import { useState } from 'react'
 import { readActivity } from '../lib/activity'
+import { predictTime } from '../lib/cs'
 import { download } from '../lib/exportGpx'
 import { progressSeries, type ProgressSeries } from '../lib/progress'
 import { csFromTrials, describeSteps, OFFERED_SESSIONS, SESSIONS_BY_KEY, type SessionKey, type SessionResult, type SessionVariant } from '../lib/sessions'
@@ -12,12 +13,10 @@ import { Card, Hint, Num } from './ui'
 interface Props {
   athlete: Athlete
   onChange: (a: Athlete) => void
-  /** Calcul à la main (sans la montre), affiché après la séance de test. */
-  manual?: ReactNode
 }
 
-/** Onglet Test VC : séance de test (montre), calcul à la main, historique et évolution. */
-export function SessionsPanel({ athlete, onChange, manual }: Props) {
+/** Onglet Test VC : séance de test (montre ou saisie), tests et évolution. */
+export function SessionsPanel({ athlete, onChange }: Props) {
   const [result, setResult] = useState<{ key: SessionKey; r: SessionResult } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,13 +52,9 @@ export function SessionsPanel({ athlete, onChange, manual }: Props) {
       <Card title="Test de vitesse critique">
         <p>
           De temps à autre, un test mesure ta VC et ton D′. Télécharge l'entraînement pour ta montre, fais la séance, puis
-          importe son enregistrement (GPX ou FIT) : l'app en tire la mesure, propose de mettre ton profil à jour et l'ajoute
-          à ton suivi. Sans la montre, saisis tes essais à la main plus bas.
+          importe son enregistrement (GPX ou FIT) : l'app en tire la distance, calcule VC et D′ et propose de mettre ton profil
+          à jour. Sans la montre, saisis la distance de chaque test dans « Mes tests ».
         </p>
-        <Hint>
-          Montre Garmin (Enduro 3…) : branche-la en USB et copie le fichier .fit dans le dossier <code>GARMIN/NewFiles</code>.
-          Après déconnexion, la séance apparaît dans <em>Entraînement → Entraînements</em>. Les cibles sont calculées depuis ton profil actuel.
-        </Hint>
         {error && <p className="warn">{error}</p>}
       </Card>
 
@@ -112,7 +107,7 @@ export function SessionsPanel({ athlete, onChange, manual }: Props) {
                   ))}
                 </div>
               )}
-              <ol className="steps">{describeSteps(s.steps(athlete, s.variants?.[0]), athlete).map((d) => <li key={d}>{d}</li>)}</ol>
+              <ol className="steps">{describeSteps(s.steps(athlete), athlete).map((d) => <li key={d}>{d}</li>)}</ol>
               {s.key === 'csTest' && <CsTrials athlete={athlete} onChange={onChange} />}
               <ul className="tips">{s.tips.map((t) => <li key={t}>{t}</li>)}</ul>
               {last && <Hint>Dernière séance : {last.date.slice(0, 10)} ({formatDuration(last.elapsed)}).</Hint>}
@@ -120,13 +115,6 @@ export function SessionsPanel({ athlete, onChange, manual }: Props) {
           )
         })}
       </div>
-
-      {manual && (
-        <>
-          <h2 className="section-title">Calcul à la main</h2>
-          {manual}
-        </>
-      )}
 
       <Card title="Évolution">
         <div className="grid two">
@@ -204,23 +192,30 @@ function ProgressChart({ series }: { series: ProgressSeries }) {
 }
 
 /** Tests VC enregistrés (un par séance), corrigeables, et VC / D′ qui en découlent. */
+/** Temps de course : m:ss sous l'heure, h:mm:ss au-delà. */
+function shortTime(seconds: number): string {
+  const t = Math.round(seconds)
+  return t < 3600 ? `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : formatDuration(t, true)
+}
+
 function CsTrials({ athlete, onChange }: Props) {
   const trials = [...athlete.csTrials].sort((a, b) => b.date.localeCompare(a.date))
   const fit = csFromTrials(trials)
   const set = (csTrials: CsTrial[]) => onChange({ ...athlete, csTrials })
-  const addManual = () => {
-    const seconds = Number(prompt('Durée du test en minutes (3, 7 ou 12) ?', '3'))
-    if (!(seconds > 0)) return
-    const dist = Number(prompt(`Distance parcourue en ${seconds} min (m) ?`, ''))
-    if (!(dist > 0)) return
-    set([{ id: crypto.randomUUID(), date: new Date().toISOString(), seconds: seconds * 60, dist, source: 'manual' }, ...athlete.csTrials])
+  // Saisie d'un test fait sans la montre (ou dont l'enregistrement est perdu).
+  const [draft, setDraft] = useState<{ minutes: number; dist: number; day: string } | null>(null)
+  const add = () => {
+    if (!draft || !(draft.dist > 0)) return
+    const date = new Date(`${draft.day}T12:00:00`).toISOString()
+    set([{ id: crypto.randomUUID(), date, seconds: draft.minutes * 60, dist: draft.dist, source: 'manual' }, ...athlete.csTrials])
+    setDraft(null)
   }
   const src = { lap: 'tour montre', gps: 'GPS', manual: 'saisie' } as const
   return (
     <>
       <h3>Mes tests</h3>
       {trials.length === 0 ? (
-        <p className="muted small">Aucun test enregistré. Importe chaque séance après l'avoir faite (ou saisis la distance).</p>
+        <p className="muted small">Aucun test enregistré. Importe chaque séance après l'avoir faite, ou saisis sa distance.</p>
       ) : (
         <table className="table compact">
           <thead>
@@ -240,20 +235,38 @@ function CsTrials({ athlete, onChange }: Props) {
           </tbody>
         </table>
       )}
-      <div className="row">
-        <button className="ghost" onClick={addManual}>+ Saisir un test</button>
-        {fit && (
-          <>
-            <span>
-              VC <strong>{formatPace(1000 / fit.cs)}/km</strong> ({(fit.cs * 3.6).toFixed(2)} km/h), D′ <strong>{Math.round(fit.dPrime)} m</strong>
-              {fit.r2 !== null ? ` · R² ${fit.r2.toFixed(3)}` : ''}
-            </span>
-            {(Math.abs(fit.cs - athlete.cs) > 0.001 || Math.abs(fit.dPrime - athlete.dPrime) > 1) && (
-              <button className="primary" onClick={() => onChange({ ...athlete, cs: fit.cs, dPrime: fit.dPrime })}><UserCheck /> Appliquer au profil</button>
-            )}
-          </>
-        )}
-      </div>
+      {draft ? (
+        <div className="row trial-form">
+          <span className="seg" role="group" aria-label="Durée du test">
+            {[3, 7, 12].map((m) => (
+              <button key={m} className={draft.minutes === m ? 'on' : ''} onClick={() => setDraft({ ...draft, minutes: m })}>{m}′</button>
+            ))}
+          </span>
+          <Num value={draft.dist} unit="m" width={80} min={0} onChange={(v) => setDraft({ ...draft, dist: v })} title="Distance parcourue" />
+          <input type="date" value={draft.day} onChange={(e) => setDraft({ ...draft, day: e.target.value })} aria-label="Date du test" />
+          <button className="primary" onClick={add} disabled={!(draft.dist > 0)}><Check /> Ajouter</button>
+          <button className="ghost" onClick={() => setDraft(null)}>Annuler</button>
+        </div>
+      ) : (
+        <div className="row">
+          <button className="ghost" onClick={() => setDraft({ minutes: 3, dist: 0, day: new Date().toISOString().slice(0, 10) })}><Plus /> Saisir un test</button>
+        </div>
+      )}
+      {fit && (
+        <div className="trial-fit">
+          <span>
+            VC <strong>{formatPace(1000 / fit.cs)}/km</strong> ({(fit.cs * 3.6).toFixed(2)} km/h), D′ <strong>{Math.round(fit.dPrime)} m</strong>
+            {fit.r2 !== null ? ` · R² ${fit.r2.toFixed(3)}` : ''}
+          </span>
+          {(Math.abs(fit.cs - athlete.cs) > 0.001 || Math.abs(fit.dPrime - athlete.dPrime) > 1) && (
+            <button className="primary" onClick={() => onChange({ ...athlete, cs: fit.cs, dPrime: fit.dPrime })}><UserCheck /> Appliquer au profil</button>
+          )}
+          <span className="muted small">
+            Prédictions : {[1500, 3000, 5000, 10000].map((d) => `${(d / 1000).toString().replace('.', ',')} km ${shortTime(predictTime(fit.cs, fit.dPrime, d))}`).join(' · ')}
+          </span>
+          {fit.r2 !== null && fit.r2 < 0.99 && <span className="warn-text small">R² faible : un des tests n'est probablement pas maximal ou mal mesuré.</span>}
+        </div>
+      )}
       <Hint>Calcul sur le test le plus récent de chaque durée, sur 6 semaines au plus. Les lignes grisées ne sont pas utilisées.</Hint>
     </>
   )

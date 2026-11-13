@@ -14,11 +14,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   VAM et descente mesurées par tranche de pente, comparaison point par point avec un plan,
   calibration du profil et historique des courses.
 
-- **Onglet Test VC** (calculateur et séances réunis) : **test VC 3′ / 7′ / 12′ en trois séances séparées**
-  (échauffement de l'entraîneur, distance lue dans le tour « Corps de séance » de la montre, tests conservés d'un jour
-  à l'autre), entraînement structuré **FIT** pour la montre (`GARMIN/NewFiles`), analyse de l'enregistrement et mise à
-  jour du profil ; calcul à la main (régression distance-temps, R², prédictions), historique des tests et
-  **graphiques d'évolution**.
+- **Onglet Test VC** : **test VC 3′ / 7′ / 12′ en trois séances séparées** (échauffement de l'entraîneur, distance lue
+  dans le tour « Corps de séance » de la montre ou saisie à la main, tests conservés d'un jour à l'autre), entraînement
+  structuré **FIT** pour la montre, VC et D′ par régression distance-temps (R², prédictions), mise à jour du profil et
+  **graphiques d'évolution** (VC recalculée à chaque test).
 
 **Plan de course**
 - Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic.
@@ -56,7 +55,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   Import d'un GPX ou d'un FIT dans le traceur (bouton ou glisser-déposer), en remplacement ou à la suite du
   tracé en cours ; altitude complétée si le fichier n'en a pas.
 - **Synchronisation EndurancePro** (datafield Garmin) : depuis le profil, VC, zones, équivalence montée
-  (déduite de la VAM à VC), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
+  (déduite de la VAM à VC), équivalence descente (déduite des coefficients de descente), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
   montre (champ `ep`) ; EndurancePro les lit en arrière-plan pour colorer l'allure et sonner par zone de VC.
 - **Fonds de carte** : Plan IGN et photos aériennes IGN (France), OpenStreetMap (mis à jour en continu),
   OpenStreetMap France, carte nationale suisse, satellite, relief OpenTopoMap ; surcouches sentiers balisés

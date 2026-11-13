@@ -28,6 +28,8 @@ export interface SimpleStep {
    */
   zones?: [number, number] | 'max'
   notes?: string
+  /** Durée affichée à la place de `seconds` (déroulé commun à plusieurs variantes). */
+  duration?: string
 }
 
 export interface RepeatStep {
@@ -378,9 +380,13 @@ export const SESSIONS: SessionDef[] = [
     ],
     steps: (a, v) => {
       const seconds = v?.seconds ?? 180
+      // Sans variante (déroulé affiché pour les trois tests) : durée de l'effort selon le test.
+      const effort = v
+        ? { name: `${Math.round(seconds / 60)}' à fond`, seconds }
+        : { name: 'Effort à fond', seconds, duration: '3, 7 ou 12 min selon le test' }
       return [
         ...coachWarmup(a),
-        { kind: 'active', name: `${Math.round(seconds / 60)}' à fond`, seconds, zones: 'max', notes: 'Effort maximal 10/10 : sans retenue, mais pas sans contrôle' },
+        { kind: 'active', ...effort, zones: 'max', notes: 'Effort maximal 10/10 : sans retenue, mais pas sans contrôle' },
         { kind: 'cooldown', name: 'Récupération Z1', seconds: 10 * MIN, speed: zoneSpeed(a, 1) },
       ]
     },
@@ -468,7 +474,7 @@ export function describeSteps(steps: Step[], a?: Athlete): string[] {
     return s.speed ? ` (${formatPace(1000 / s.speed[1])}–${formatPace(1000 / s.speed[0])}/km)` : ''
   }
   const one = (s: SimpleStep) =>
-    `${s.name} : ${s.meters ? `${(s.meters / 1000).toFixed(2)} km` : s.seconds ? (s.seconds < 60 ? `${s.seconds}"` : s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
+    `${s.name} : ${s.duration ? s.duration : s.meters ? `${(s.meters / 1000).toFixed(2)} km` : s.seconds ? (s.seconds < 60 ? `${s.seconds}"` : s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
     target(s) +
     (s.notes ? ` — ${s.notes}` : '')
   return steps.flatMap((s) => (isRepeat(s) ? [`${s.repeat} × [ ${s.steps.map(one).join(' ; ')} ]`] : [one(s)]))

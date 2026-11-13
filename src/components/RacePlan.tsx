@@ -32,11 +32,10 @@ import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, ty
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
-import { Kpi } from './CsCalculator'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { ZonePicker, ZonesCard } from './Zones'
-import { Card, Hint, Num, Toggle } from './ui'
+import { Card, Hint, Kpi, Num, Toggle } from './ui'
 
 /** Vrai si la requête média correspond (mise à jour au redimensionnement). */
 function useMediaQuery(q: string): boolean {

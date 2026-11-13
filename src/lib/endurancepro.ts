@@ -2,9 +2,10 @@
 // document du code montre (shares/{code}, champ `ep`) et s'en sert pour colorer l'allure et
 // déclencher ses alarmes par zone de vitesse critique.
 //
-//   EP1|cs=247|z=60,70,80,88,96,105,115,150|up=110|vz=660,770,880,970,1060|zt=2
+//   EP1|cs=247|z=60,70,80,88,96,105,115,150|up=110|dn=330|vz=660,770,880,970,1060|zt=2
 //   cs : VC en s/km · z : bornes des zones en % de VC (N+1 valeurs, 7 zones au plus)
 //   up : m de D+ équivalents à 1 km à plat (allure effort d'EndurancePro)
+//   dn : m de D- équivalents à 1 km à plat (allure effort montagne d'EndurancePro)
 //   vz : seuils VAM en m/h (début de Z1, fin de Z1 à Z4) pour les 5 couleurs VAM de la montre
 //   zt : zone au-dessus de laquelle l'alarme sonne (zone de la séance envoyée à la montre), 0 = inchangée
 import type { Athlete, Race } from './types'
@@ -25,6 +26,27 @@ export function climbEquivalence(a: Athlete): number | null {
   return Math.min(250, Math.max(30, Math.round(1000 / k / 10) * 10))
 }
 
+/** Plage du réglage « équivalence descente » d'EndurancePro (m de D- pour 1 km à plat). */
+export const EP_DESCENT_RANGE: [number, number] = [100, 800]
+
+/**
+ * Équivalence descente d'EndurancePro (m de D- comptés comme 1 km à plat dans l'allure effort
+ * montagne), déduite des coefficients de descente du profil : sur une pente g, descendre H m
+ * prend H / g / (v × f) ; EndurancePro compte la distance H / g + H × 1000 / C parcourue à v.
+ * Égaliser les deux donne 1000 / C = (1 / f − 1) / g, moyenné sur les pentes du profil (les
+ * descentes douces, plus rapides que le plat, allègent la moyenne). Arrondi à 10 m, dans la
+ * plage du réglage : 800 m (le plus faible ralentissement possible) si la descente ne te
+ * ralentit pas en moyenne.
+ */
+export function descentEquivalence(a: Athlete): number | null {
+  const pts = a.descent.filter((p) => p.grade < 0 && p.factor > 0)
+  if (!pts.length) return null
+  const [lo, hi] = EP_DESCENT_RANGE
+  const k = pts.reduce((s, p) => s + (1 / p.factor - 1) * (100 / -p.grade), 0) / pts.length
+  if (!(k > 0)) return hi
+  return Math.min(hi, Math.max(lo, Math.round(1000 / k / 10) * 10))
+}
+
 /** Zones du profil triées (7 au plus) et leurs bornes en % de VC. */
 function zoneBounds(a: Athlete): { order: number[]; pct: number[] } {
   const order = a.zones
@@ -40,10 +62,11 @@ function zoneBounds(a: Athlete): { order: number[]; pct: number[] } {
 export function epPayload(a: Athlete, onWatch: Race | null): string {
   const { order, pct } = zoneBounds(a)
   const up = climbEquivalence(a)
+  const dn = descentEquivalence(a)
   const k = onWatch ? wholeRouteZone(onWatch.zones, a) : null
   const zt = k === null ? 0 : order.indexOf(k) + 1
   const vz = epVamThresholds(a)
-  return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', vz ? `vz=${vz.join(',')}` : '', `zt=${zt}`]
+  return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', dn ? `dn=${dn}` : '', vz ? `vz=${vz.join(',')}` : '', `zt=${zt}`]
     .filter(Boolean)
     .join('|')
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
-import { climbEquivalence, epPayload } from '../endurancepro'
+import { climbEquivalence, descentEquivalence, epPayload } from '../endurancepro'
 import { wholeRoute, zoneTarget } from '../zones'
 
 const A = normalizeAthlete({ ...DEFAULT_ATHLETE, cs: 4.0417 })
@@ -35,6 +35,19 @@ describe('réglages EndurancePro', () => {
     // Bornée à la plage du picker de la montre.
     expect(climbEquivalence({ ...A, vam: [{ grade: 40, vam: 3000 }] })).toBe(250)
     expect(climbEquivalence({ ...A, vam: [] })).toBeNull()
+  })
+
+  it('équivalence descente déduite des coefficients de descente (plage 100 à 800 m)', () => {
+    // Profil par défaut : plus rapide que le plat jusqu'à −15 %, la moyenne ralentit à peine → plafond.
+    expect(descentEquivalence(A)).toBe(800)
+    expect(epValue(epPayload(A, null), 'dn')).toBe('800')
+    // Descendeur prudent : 0,6 à −20 %, 0,5 à −30 % → 1000 / C = (0,667 × 5 + 1 × 3,33) / 2 → 300 m.
+    const careful = { ...A, descent: [{ grade: -20, factor: 0.6 }, { grade: -30, factor: 0.5 }] }
+    expect(descentEquivalence(careful)).toBe(300)
+    // Très lent : plancher du réglage ; sans profil de descente : rien d'envoyé.
+    expect(descentEquivalence({ ...A, descent: [{ grade: -30, factor: 0.2 }] })).toBe(100)
+    expect(descentEquivalence({ ...A, descent: [] })).toBeNull()
+    expect(epValue(epPayload({ ...A, descent: [] }, null), 'dn')).toBeNull()
   })
 
   it('séance envoyée à la montre en Z2 sur tout le parcours : alarme au-dessus de Z2', () => {

@@ -18,8 +18,7 @@ import { analyzeSession } from '../lib/insights'
 import { VAM_MIN_GRADE } from '../lib/vam'
 import type { ActivityRecord, Athlete, GradeStat, Race } from '../lib/types'
 import { colorForIndex } from '../lib/zones'
-import { Kpi } from './CsCalculator'
-import { Card, Hint } from './ui'
+import { Card, Hint, Kpi } from './ui'
 
 interface Props {
   athlete: Athlete

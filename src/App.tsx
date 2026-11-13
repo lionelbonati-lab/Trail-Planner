@@ -28,7 +28,6 @@ import { AthletePanel } from './components/AthletePanel'
 import { LiveMode } from './components/LiveMode'
 import { computePlan, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
-import { CsCalculator } from './components/CsCalculator'
 import { LibraryPanel } from './components/LibraryPanel'
 import { RacePlan } from './components/RacePlan'
 import { planSession, toRoute } from './lib/library'
@@ -438,7 +437,7 @@ export default function App() {
             garmin={{ signedIn: !!user, onWatch: races.find((r) => r.id === athlete.watchRaceId) ?? null }}
           />
         ) : route.tab === 'cs' ? (
-          <SessionsPanel athlete={athlete} onChange={updateAthlete} manual={<CsCalculator athlete={athlete} onChange={updateAthlete} />} />
+          <SessionsPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'parcours' ? (
           <LibraryPanel
             races={races}

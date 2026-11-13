@@ -4,7 +4,7 @@ import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES } from '../lib/defaults'
 import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
-import { climbEquivalence, epPayload } from '../lib/endurancepro'
+import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, epPayload } from '../lib/endurancepro'
 import { VAM_ZONE_COUNT, epVamThresholds, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
@@ -471,6 +471,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
   const [copied, setCopied] = useState(false)
   const on = !!athlete.epSync
   const up = climbEquivalence(athlete)
+  const dn = descentEquivalence(athlete)
   const k = onWatch ? wholeRouteZone(onWatch.zones, athlete) : null
   const sorted = [...athlete.zones].sort((a, b) => a.low - b.low).slice(0, 7)
   const vz = epVamThresholds(athlete)
@@ -487,7 +488,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
     <Card title="Montre Garmin : EndurancePro" className="span2">
       <Hint>
         Ton datafield EndurancePro colore ton allure selon tes zones de VC et sonne quand tu sors de la zone visée. Avec la
-        synchronisation, il reprend tout seul ta VC, tes zones, l'équivalence montée déduite de ta VAM, tes zones VAM et la zone de la séance
+        synchronisation, il reprend tout seul ta VC, tes zones, les équivalences montée et descente (déduites de ta VAM et de tes coefficients de descente), tes zones VAM et la zone de la séance
         envoyée à la montre : à chaque mise à jour ici, la montre suit (au lancement d'une activité, puis toutes les 30 min, téléphone
         connecté).
       </Hint>
@@ -526,6 +527,21 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
           <tr>
             <td>Équivalence montée</td>
             <td>{up ? <><strong>{up} m</strong> de D+ = 1 km à plat <span className="muted">(d'après ta VAM à VC ; défaut EndurancePro : 100 m)</span></> : '—'}</td>
+          </tr>
+          <tr>
+            <td>Équivalence descente</td>
+            <td>
+              {dn ? (
+                <>
+                  <strong>{dn} m</strong> de D- = 1 km à plat{' '}
+                  <span className="muted">
+                    (d'après tes coefficients de descente{dn >= EP_DESCENT_RANGE[1] ? ' : en moyenne, la descente te ralentit peu, valeur au plafond du réglage' : dn <= EP_DESCENT_RANGE[0] ? ' : valeur au plancher du réglage' : ''} ; défaut EndurancePro : 330 m)
+                  </span>
+                </>
+              ) : (
+                '—'
+              )}
+            </td>
           </tr>
           <tr>
             <td>Couleurs VAM</td>
