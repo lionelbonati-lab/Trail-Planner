@@ -1,13 +1,27 @@
-import type { Athlete, EnvSettings, KmeSettings, Product, PushSettings, Race, TrainingZone } from './types'
+import type { Athlete, EnvSettings, HrZone, KmeSettings, Product, PushSettings, Race, TrainingZone } from './types'
 
-/** Zones en % de VC (zones 1, 2 et 5 d'après les séances de l'entraîneur ; 3 et 4 à ajuster). */
+/** Zones de vitesse critique (bilan Ibex Outdoor du 07/11/2026), en fraction de VC. */
 export const DEFAULT_ZONES: TrainingZone[] = [
-  { name: 'Zone 1', low: 0.6, high: 0.7 },
-  { name: 'Zone 2', low: 0.7, high: 0.8 },
-  { name: 'Zone 3', low: 0.8, high: 0.9 },
-  { name: 'Zone 4', low: 0.9, high: 0.96 },
-  { name: 'Zone 5', low: 0.96, high: 1.05 },
+  { name: 'Zone 1', low: 0.6, high: 0.7, use: 'Récupération / très facile', sustain: '2 h à 8 h et plus' },
+  { name: 'Zone 2', low: 0.7, high: 0.8, use: 'Endurance facile', sustain: '1 h 30 à 6 h et plus' },
+  { name: 'Zone 3', low: 0.8, high: 0.88, use: 'Endurance soutenue', sustain: '45 min à 3 h et plus' },
+  { name: 'Zone 4', low: 0.88, high: 0.96, use: 'Tempo / proche seuil', sustain: '20 à 100 min' },
+  { name: 'Zone 5', low: 0.96, high: 1.05, use: 'Voisinage de VC', sustain: '8 à 60 min et plus' },
+  { name: 'Zone 6', low: 1.05, high: 1.15, use: 'Supra-VC / intermittent', sustain: '2 à 15 min' },
+  { name: 'Zone 7', low: 1.15, high: 1.5, use: 'Haute intensité / court', sustain: '20 s à 4 min' },
 ]
+
+/** Zones cardiaques par défaut de Garmin (% de FC max : 50-60-70-80-90-100). */
+export function hrZonesFromMax(hrMax: number): HrZone[] {
+  const p = [0.5, 0.6, 0.7, 0.8, 0.9, 1]
+  return [1, 2, 3, 4, 5].map((k) => ({ name: `Zone ${k}`, low: Math.round(hrMax * p[k - 1]), high: Math.round(hrMax * p[k]) }))
+}
+
+/** Anciennes zones par défaut (5 zones, Z3 et Z4 estimées) : remplacées par celles du bilan. */
+function isOldDefaultZones(z: TrainingZone[] | undefined): boolean {
+  const old = [[0.6, 0.7], [0.7, 0.8], [0.8, 0.9], [0.9, 0.96], [0.96, 1.05]]
+  return !!z && z.length === 5 && z.every((x, i) => Math.abs(x.low - old[i][0]) < 1e-6 && Math.abs(x.high - old[i][1]) < 1e-6)
+}
 
 export const DEFAULT_ATHLETE: Athlete = {
   name: 'Moi',
@@ -44,6 +58,9 @@ export const DEFAULT_ATHLETE: Athlete = {
   products: [] as Product[],
   zones: DEFAULT_ZONES,
   csTrials: [],
+  hrZones: hrZonesFromMax(190),
+  hrMax: 190,
+  workoutTarget: 'pace',
 }
 
 export const DEFAULT_ENV: EnvSettings = {
@@ -102,7 +119,10 @@ export function normalizeAthlete(a: Partial<Athlete> | null | undefined): Athlet
     history: a?.history ?? [],
     activities: a?.activities ?? [],
     products: a?.products ?? DEFAULT_PRODUCTS.map((p) => ({ ...p })),
-    zones: a?.zones?.length ? a.zones : DEFAULT_ZONES.map((z) => ({ ...z })),
+    zones: a?.zones?.length && !isOldDefaultZones(a.zones) ? a.zones : DEFAULT_ZONES.map((z) => ({ ...z })),
+    hrZones: a?.hrZones?.length ? a.hrZones : hrZonesFromMax(a?.hrMax ?? 190),
+    hrMax: a?.hrMax ?? 190,
+    workoutTarget: a?.workoutTarget ?? 'pace',
     csTrials: a?.csTrials ?? [],
     durability: { ...DEFAULT_ATHLETE.durability, ...(a?.durability ?? {}) },
   }

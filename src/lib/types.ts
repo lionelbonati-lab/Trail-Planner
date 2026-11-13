@@ -78,6 +78,11 @@ export interface Athlete {
   zones: TrainingZone[]
   /** Résultats des tests VC (3′, 7′, 12′…), faits des jours différents. */
   csTrials: CsTrial[]
+  /** Zones cardiaques (bpm) et FC max. */
+  hrZones: HrZone[]
+  hrMax: number
+  /** Cible des entraînements exportés vers la montre : allure ou fréquence cardiaque. */
+  workoutTarget: 'pace' | 'hr'
   /** Code montre (identifiant du document partagé lu par le champ de données Garmin). */
   watchId?: string
   /** Course actuellement envoyée à la montre. */
@@ -158,6 +163,19 @@ export interface Product {
 export interface TrainingZone {
   name: string
   /** Bornes en fraction de VC (ex. 0.6 – 0.7). */
+  low: number
+  high: number
+  /** Utilisation indicative (ex. « Endurance facile »). */
+  use?: string
+  /** Durée de soutien indicative (ex. « 1 h 30 à 6 h et plus »). */
+  sustain?: string
+  /** Couleur d'affichage (par défaut : couleurs Garmin). */
+  color?: string
+}
+
+/** Zone de fréquence cardiaque (bpm). */
+export interface HrZone {
+  name: string
   low: number
   high: number
 }

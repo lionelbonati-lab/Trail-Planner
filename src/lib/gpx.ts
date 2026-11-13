@@ -18,6 +18,8 @@ export interface RawPoint {
   ele: number | null
   /** Instant (ms Unix), si l'enregistrement est horodaté. */
   time?: number
+  /** Fréquence cardiaque (bpm), si enregistrée. */
+  hr?: number
 }
 
 function attr(s: string, name: string): number | null {
@@ -52,11 +54,15 @@ function parsePoints(xml: string, tagName: string): RawPoint[] {
     const ele = eleStr !== null ? parseFloat(eleStr) : null
     const timeStr = m[2] ? tag(m[2], 'time') : null
     const time = timeStr ? Date.parse(timeStr) : NaN
+    // Fréquence cardiaque dans les extensions (gpxtpx:hr, ns3:hr…).
+    const hrMatch = m[2] ? /<(?:[\w-]+:)?hr>\s*(\d+(?:\.\d+)?)\s*</.exec(m[2]) : null
+    const hr = hrMatch ? parseFloat(hrMatch[1]) : NaN
     out.push({
       lat,
       lon,
       ele: ele !== null && !Number.isNaN(ele) ? ele : null,
       ...(Number.isFinite(time) ? { time } : {}),
+      ...(hr > 0 ? { hr } : {}),
     })
   }
   return out

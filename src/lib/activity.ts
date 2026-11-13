@@ -16,6 +16,8 @@ export interface Activity {
   moving: Float64Array
   /** Tours enregistrés par la montre (FIT uniquement). */
   laps: FitLap[]
+  /** Fréquence cardiaque par point brut (NaN si absente). */
+  hr: Float64Array
 }
 
 /** Lit un fichier d'activité (GPX ou FIT) ; il doit être horodaté. */
@@ -61,7 +63,8 @@ export function activityFromRaw(name: string, raw: RawPoint[], laps: FitLap[] = 
     moving[i] = moving[i - 1] + (v < 0.3 ? 0 : dt)
   }
   const track = trackFromRaw(raw, name, 2)
-  return { name, track, start: t0, dist, elapsed, moving, laps }
+  const hr = Float64Array.from(raw, (p) => p.hr ?? NaN)
+  return { name, track, start: t0, dist, elapsed, moving, laps, hr }
 }
 
 /** Temps écoulé et en mouvement (s) à une distance de la trace. */

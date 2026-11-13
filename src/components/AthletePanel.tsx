@@ -1,8 +1,8 @@
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
-import { DEFAULT_ZONES } from '../lib/defaults'
+import { DEFAULT_ZONES, hrZonesFromMax } from '../lib/defaults'
 import { colorForIndex } from '../lib/zones'
-import type { Athlete, DescentPoint, Durability, Product, TrainingZone, VamPoint } from '../lib/types'
+import type { Athlete, DescentPoint, Durability, HrZone, Product, TrainingZone, VamPoint } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
 
 export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
@@ -97,23 +97,28 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
 
       <Card title="Zones d'entraînement" className="span2">
         <Hint>
-          En pourcentage de ta VC, comme dans tes séances Nolio, avec les couleurs Garmin. Elles servent aux cibles des séances (échauffement, accélérations)
-          et au choix d'une zone sur le profil d'un parcours.
+          Les 7 zones de ton bilan VC, en pourcentage de ta VC, avec les couleurs Garmin (Z6 et Z7 : couleurs des zones de
+          puissance, modifiables). Elles servent aux cibles des séances et au choix d'une zone sur le profil d'un parcours.
         </Hint>
         <table className="table compact">
           <thead>
-            <tr><th>Zone</th><th>De (% VC)</th><th>À (% VC)</th><th>Allure</th><th>Vitesse</th><th /></tr>
+            <tr><th>Zone</th><th>De (% VC)</th><th>À (% VC)</th><th>Allure</th><th>Vitesse</th><th>Utilisation</th><th>Durée tenable</th><th /></tr>
           </thead>
           <tbody>
             {athlete.zones.map((z, i) => {
               const setZ = (patch: Partial<TrainingZone>) => set('zones', athlete.zones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
               return (
                 <tr key={i}>
-                  <td><i className="zone-swatch" style={{ background: colorForIndex(i) }} /><input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 110 }} /></td>
+                  <td className="nowrap">
+                    <input type="color" className="zone-color" value={colorForIndex(i, athlete)} onChange={(e) => setZ({ color: e.target.value })} title="Couleur de la zone" aria-label={`Couleur de ${z.name}`} />
+                    <input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 90 }} />
+                  </td>
                   <td><Num value={z.low} scale={100} width={64} min={20} max={200} onChange={(v) => setZ({ low: v })} /></td>
                   <td><Num value={z.high} scale={100} width={64} min={20} max={200} onChange={(v) => setZ({ high: v })} /></td>
                   <td>{formatPace(1000 / (athlete.cs * z.high))} – {formatPace(1000 / (athlete.cs * z.low))}/km</td>
                   <td className="muted">{(athlete.cs * z.low * 3.6).toFixed(2)} – {(athlete.cs * z.high * 3.6).toFixed(2)} km/h</td>
+                  <td><input type="text" value={z.use ?? ''} onChange={(e) => setZ({ use: e.target.value })} style={{ width: 170 }} /></td>
+                  <td><input type="text" value={z.sustain ?? ''} onChange={(e) => setZ({ sustain: e.target.value })} style={{ width: 130 }} /></td>
                   <td><button className="ghost" onClick={() => set('zones', athlete.zones.filter((_, j) => j !== i))}>✕</button></td>
                 </tr>
               )
@@ -122,8 +127,60 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
         </table>
         <div className="row">
           <button className="ghost" onClick={() => set('zones', [...athlete.zones, { name: `Zone ${athlete.zones.length + 1}`, low: 1, high: 1.1 }])}>+ Ajouter une zone</button>
-          <button className="ghost" onClick={() => set('zones', DEFAULT_ZONES.map((z) => ({ ...z })))}>Valeurs par défaut</button>
+          <button className="ghost" onClick={() => set('zones', DEFAULT_ZONES.map((z) => ({ ...z })))}>Zones du bilan VC</button>
+          {athlete.zones.some((z) => z.color) && (
+            <button className="ghost" onClick={() => set('zones', athlete.zones.map(({ color: _c, ...z }) => z))}>Couleurs Garmin</button>
+          )}
         </div>
+      </Card>
+
+      <Card title="Zones cardiaques" className="span2">
+        <Hint>
+          Pour t'entraîner à la fréquence cardiaque : ces zones servent à l'analyse des séances importées (temps par zone, FC moyenne
+          des tours) et, si tu le choisis, aux cibles des séances envoyées sur la montre. Par défaut, les zones Garmin en % de la FC max ;
+          reprends celles de ton test ou de Garmin Connect si tu les connais.
+        </Hint>
+        <div className="fields">
+          <Num label="FC max" value={athlete.hrMax} onChange={(v) => set('hrMax', v)} unit="bpm" min={100} max={240} />
+          <button className="ghost" onClick={() => set('hrZones', hrZonesFromMax(athlete.hrMax))}>Calculer depuis la FC max</button>
+        </div>
+        <table className="table compact">
+          <thead>
+            <tr><th>Zone</th><th>De (bpm)</th><th>À (bpm)</th><th>% FC max</th><th>Zones VC correspondantes</th><th /></tr>
+          </thead>
+          <tbody>
+            {athlete.hrZones.map((z, i) => {
+              const setH = (patch: Partial<HrZone>) => set('hrZones', athlete.hrZones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+              const vc = vcZonesForHr(i, athlete)
+              return (
+                <tr key={i}>
+                  <td className="nowrap"><i className="zone-swatch" style={{ background: colorForIndex(i) }} /><input type="text" value={z.name} onChange={(e) => setH({ name: e.target.value })} style={{ width: 90 }} /></td>
+                  <td><Num value={z.low} width={60} min={40} max={240} onChange={(v) => setH({ low: v })} /></td>
+                  <td><Num value={z.high} width={60} min={40} max={240} onChange={(v) => setH({ high: v })} /></td>
+                  <td className="muted">{Math.round((z.low / athlete.hrMax) * 100)} – {Math.round((z.high / athlete.hrMax) * 100)} %</td>
+                  <td className="muted">{vc}</td>
+                  <td><button className="ghost" onClick={() => set('hrZones', athlete.hrZones.filter((_, j) => j !== i))}>✕</button></td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        <div className="row">
+          <button className="ghost" onClick={() => {
+            const last = athlete.hrZones[athlete.hrZones.length - 1]
+            set('hrZones', [...athlete.hrZones, { name: `Zone ${athlete.hrZones.length + 1}`, low: last?.high ?? 120, high: (last?.high ?? 120) + 10 }])
+          }}>+ Ajouter une zone</button>
+        </div>
+        <h3>Cible des séances envoyées sur la montre</h3>
+        <div className="seg">
+          <button className={athlete.workoutTarget === 'pace' ? 'on' : ''} onClick={() => set('workoutTarget', 'pace')}>Allure</button>
+          <button className={athlete.workoutTarget === 'hr' ? 'on' : ''} onClick={() => set('workoutTarget', 'hr')}>Fréquence cardiaque</button>
+        </div>
+        <Hint>
+          {athlete.workoutTarget === 'hr'
+            ? 'Chaque étape garde sa durée ou sa distance, mais la montre te guide sur la plage de FC de la zone correspondante (Z6 et Z7 → zone cardiaque la plus haute). Les tests VC restent sans cible : ils se courent à fond.'
+            : 'Chaque étape est guidée par une plage d\'allure (± 5 % autour de la vitesse cible).'}
+        </Hint>
       </Card>
 
       <Card title="Produits de nutrition" className="span2">
@@ -163,6 +220,13 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
       </Card>
     </div>
   )
+}
+
+/** Zones VC associées à une zone cardiaque pour la cible « FC » (Z6 et Z7 → zone cardiaque la plus haute). */
+function vcZonesForHr(i: number, a: Athlete): string {
+  const last = a.hrZones.length - 1
+  const names = a.zones.filter((_, k) => Math.min(k, last) === i).map((z) => z.name.replace(/^Zone\s*/i, 'Z'))
+  return names.join(', ') || '—'
 }
 
 function IntensityTable({ athlete }: { athlete: Athlete }) {

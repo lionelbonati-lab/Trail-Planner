@@ -43,7 +43,7 @@ export function ZonePicker({
           return (
             <button key={z.name} className={on ? 'on' : ''} onClick={() => onApply({ kind: 'intensity', value, label: z.name })} title={`Milieu de zone : ${Math.round(value * 100)} % VC`}>
               <span>
-                <i className="zone-swatch" style={{ background: colorForIndex(k) }} />
+                <i className="zone-swatch" style={{ background: colorForIndex(k, athlete) }} />
                 {z.name}
               </span>
               <small>
@@ -87,7 +87,7 @@ export function ZonesCard({ race, athlete, track, sim, onChange }: { race: Race;
   const setZones = (zones: PaceZone[]) => onChange({ ...race, zones })
   const exportWorkout = () => {
     const steps = zoneSteps(track, sim, parts, athlete)
-    download(`${race.name.replace(/[^\w-]+/g, '_')}_allures.fit`, buildWorkoutFit(race.name.slice(0, 32), steps), 'application/vnd.ant.fit')
+    download(`${race.name.replace(/[^\w-]+/g, '_')}_allures.fit`, buildWorkoutFit(race.name.slice(0, 32), steps, Date.now(), { target: athlete.workoutTarget, athlete }), 'application/vnd.ant.fit')
   }
   const addBoundaries = () => {
     const existing = race.checkpoints
