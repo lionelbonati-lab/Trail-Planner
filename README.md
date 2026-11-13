@@ -28,6 +28,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
   ou depuis une course), étiquettes et recherche, zones d'allure enregistrées ; « Planifier » crée une séance
   datée sans toucher au modèle ; liste des séances planifiées.
+- **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
+  avec distance, D+/D−, temps, profil et points de repère (km, altitude, temps prévu à chaque point) ; barre
+  réglages / annuler / rétablir / supprimer / OK. Toucher = point sur les chemins, appui long (clic droit) = point
+  hors sentier ; mode « Chemins / Hors sentier » sur la carte ; toucher un point ou un tronçon pour le supprimer,
+  y insérer un point ou changer son mode. Un point posé hors chemin est relié en ligne droite au chemin le plus
+  proche ; sans aucun chemin, le tronçon passe en ligne droite.
 - **Traceur de parcours sur carte** (onglet « Tracer ») : clic = point, l'itinéraire suit les sentiers
   d'OpenStreetMap (routeur public BRouter, profil randonnée montagne), le chemin le plus court ou une ligne
   droite hors sentier (altitude du modèle de terrain Open-Meteo) ; glisser un point, cliquer sur le tracé pour
