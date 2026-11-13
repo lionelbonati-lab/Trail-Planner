@@ -78,7 +78,8 @@ export function RacePlan({
 }) {
   const [copied, setCopied] = useState(false)
   const [hoverDist, setHoverDist] = useState<number | null>(null)
-  const narrow = useMediaQuery('(max-width: 720px)')
+  // Le tableau complet demande ≈ 1 230 px ; en dessous, vue en cartes.
+  const narrow = useMediaQuery('(max-width: 1229px)')
   const [editing, setEditing] = useState<string | null>(null)
   const [showMap, setShowMap] = useState(true)
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
@@ -550,7 +551,7 @@ export function RacePlan({
                   <th>Km</th>
                   <th>Tronçon</th>
                   <th>D+ / D−</th>
-                  <th>Temps tronçon</th>
+                  <th>Durée</th>
                   <th>Allure</th>
                   <th>Cumul</th>
                   <th>Heure</th>
@@ -574,7 +575,7 @@ export function RacePlan({
                           </select>
                         )}
                       </td>
-                      <td>{isFinish ? cp.name : <input type="text" value={cp.name} onChange={(e) => setCp(cp.id, { name: e.target.value })} />}</td>
+                      <td>{isFinish ? cp.name : <input type="text" className="wide" value={cp.name} onChange={(e) => setCp(cp.id, { name: e.target.value })} />}</td>
                       <td>{isFinish ? (s.to / 1000).toFixed(1) : <Num value={cp.dist / 1000} width={64} onChange={(v) => setCp(cp.id, { dist: Math.max(0, Math.min(track.totalDist, v * 1000)) })} />}</td>
                       <td>{(s.dist / 1000).toFixed(1)} km<br /><span className="muted">{s.kme.toFixed(1)} km-e</span></td>
                       <td>+{Math.round(s.dPlus)}<br /><span className="muted">−{Math.round(s.dMinus)}</span></td>
@@ -605,13 +606,13 @@ export function RacePlan({
                       </td>
                       <td>
                         {!isFinish && (
-                          <>
-                            <Num value={cp.water} width={44} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
-                            <Num value={cp.carbs} width={44} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
-                          </>
+                          <div className="stack">
+                            <Num value={cp.water} width={48} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
+                            <Num value={cp.carbs} width={48} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
+                          </div>
                         )}
                       </td>
-                      <td>{!isFinish && <input type="text" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
+                      <td>{!isFinish && <input type="text" className="wide" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
                       <td>{!isFinish && <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })}>✕</button>}</td>
                     </tr>
                   )
