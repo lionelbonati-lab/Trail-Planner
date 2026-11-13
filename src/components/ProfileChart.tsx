@@ -47,7 +47,7 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
   const [wrapRef, measured] = useWidth(1000)
   const [hover, setHover] = useState<SimPoint | null>(null)
 
-  const m = { l: 46, r: 12, t: print ? 54 : 46, b: 34 }
+  const m = { l: 46, r: 12, t: print ? 84 : 46, b: 34 }
   const W = width ?? measured
   const H = height
   const iw = W - m.l - m.r

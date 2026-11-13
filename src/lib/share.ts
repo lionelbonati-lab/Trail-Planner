@@ -1,8 +1,6 @@
 // Lien public pour l'assistance : un instantané du plan (et du suivi en direct),
 // lisible sans compte, mis à jour par le propriétaire.
-import { deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { liveStatus } from './live'
-import { db } from './storage'
 import { zonedToUtc } from './time'
 import type { Athlete, Race, SimResult, Track } from './types'
 
@@ -84,31 +82,6 @@ export function buildSnapshot(
       }
     }),
   }
-}
-
-/** Firestore refuse les valeurs undefined : on nettoie par sérialisation. */
-const clean = <T,>(x: T): T => JSON.parse(JSON.stringify(x))
-
-export async function publishShare(shareId: string, snap: ShareSnapshot) {
-  if (!db) throw new Error('Partage indisponible : Firebase non configuré.')
-  await setDoc(doc(db, 'shares', shareId), clean(snap))
-}
-
-export async function deleteShare(shareId: string) {
-  if (!db) return
-  await deleteDoc(doc(db, 'shares', shareId))
-}
-
-export function subscribeShare(shareId: string, cb: (s: ShareSnapshot | null) => void, onError: (e: Error) => void) {
-  if (!db) {
-    onError(new Error('Partage indisponible.'))
-    return () => {}
-  }
-  return onSnapshot(
-    doc(db, 'shares', shareId),
-    (d) => cb(d.exists() ? (d.data() as ShareSnapshot) : null),
-    (e) => onError(e),
-  )
 }
 
 export function shareUrl(shareId: string): string {

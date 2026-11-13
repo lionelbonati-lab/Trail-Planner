@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { subscribeShare, type ShareSnapshot } from '../lib/share'
+import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 
 /** Page publique pour l'assistance : plan, fenêtres de passage et suivi en direct. */
@@ -7,7 +7,19 @@ export function SharePage({ shareId }: { shareId: string }) {
   const [snap, setSnap] = useState<ShareSnapshot | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [, tick] = useState(0)
-  useEffect(() => subscribeShare(shareId, setSnap, (e) => setError(e.message)), [shareId])
+  useEffect(() => {
+    let unsub: (() => void) | undefined
+    let cancelled = false
+    import('../lib/cloud')
+      .then((c) => {
+        if (!cancelled) unsub = c.subscribeShare(shareId, setSnap, (e) => setError(e.message))
+      })
+      .catch((e: Error) => setError(e.message))
+    return () => {
+      cancelled = true
+      unsub?.()
+    }
+  }, [shareId])
   useEffect(() => {
     const id = setInterval(() => tick((x) => x + 1), 30000)
     return () => clearInterval(id)

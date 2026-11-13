@@ -1,6 +1,6 @@
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
-import type { Athlete, DescentPoint, Durability, VamPoint } from '../lib/types'
+import type { Athlete, DescentPoint, Durability, Product, VamPoint } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
 
 export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
@@ -91,6 +91,42 @@ export function AthletePanel({ athlete, onChange }: { athlete: Athlete; onChange
           onChange={(rows) => set('descent', rows)}
           blank={{ grade: -35, factor: 0.65 }}
         />
+      </Card>
+
+      <Card title="Produits de nutrition" className="span2">
+        <Hint>
+          Tes produits habituels et la part des glucides que chacun apporte : le plan nutrition de chaque course en déduit
+          le nombre de gels, flasques ou barres à emporter entre deux ravitos.
+        </Hint>
+        <table className="table compact">
+          <thead>
+            <tr><th>Produit</th><th>Glucides (g)</th><th>Sodium (mg)</th><th>Part des glucides (%)</th><th /></tr>
+          </thead>
+          <tbody>
+            {athlete.products.map((p, i) => {
+              const setP = (patch: Partial<Product>) => set('products', athlete.products.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+              return (
+                <tr key={p.id}>
+                  <td><input type="text" value={p.name} onChange={(e) => setP({ name: e.target.value })} /></td>
+                  <td><Num value={p.carbs} width={70} min={0} onChange={(v) => setP({ carbs: v })} /></td>
+                  <td><Num value={p.sodium} width={70} min={0} onChange={(v) => setP({ sodium: v })} /></td>
+                  <td><Num value={p.share} scale={100} width={70} min={0} max={100} onChange={(v) => setP({ share: v })} /></td>
+                  <td><button className="ghost" onClick={() => set('products', athlete.products.filter((_, j) => j !== i))}>✕</button></td>
+                </tr>
+              )
+            })}
+            <tr>
+              <td colSpan={5}>
+                <button className="ghost" onClick={() => set('products', [...athlete.products, { id: crypto.randomUUID(), name: 'Nouveau produit', carbs: 25, sodium: 0, share: 0 }])}>
+                  + Ajouter un produit
+                </button>
+                {Math.abs(athlete.products.reduce((a, p) => a + p.share, 0) - 1) > 0.01 && (
+                  <span className="warn-text"> La somme des parts fait {Math.round(athlete.products.reduce((a, p) => a + p.share, 0) * 100)} % (elle est ramenée à 100 %).</span>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </Card>
     </div>
   )

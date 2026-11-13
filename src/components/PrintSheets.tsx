@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { formatClock, formatDuration, formatPace, zonedToUtc } from '../lib/time'
 import type { Athlete, Race, SimResult, Track } from '../lib/types'
+import { bagText, type Leg } from '../lib/nutrition'
 import { ProfileChart } from './ProfileChart'
 
 export type PrintFormat = 'a4' | 'strip' | 'crew'
@@ -20,11 +21,13 @@ interface Props {
   athlete: Athlete
   /** Fenêtre de passage (s depuis le départ) : bonne journée → journée difficile. */
   windowOf: (cpId: string) => { early: number; late: number } | null
+  /** Plan nutrition par tronçon. */
+  legs: Leg[]
   onDone: () => void
 }
 
 /** Rend la feuille demandée dans un conteneur dédié, lance l'impression, puis se retire. */
-export function PrintSheets({ format, race, track, sim, athlete, windowOf, onDone }: Props) {
+export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs, onDone }: Props) {
   const doneRef = useRef(onDone)
   doneRef.current = onDone
   useEffect(() => {
@@ -67,7 +70,7 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, onDon
               <span>Arrivée {formatClock(new Date(startMs + sim.totalTime * 1000), tz, true)}</span>
             </div>
           </header>
-          <ProfileChart points={sim.points} splits={sim.splits} timeZone={tz} startMs={startMs} width={1100} height={250} print />
+          <ProfileChart points={sim.points} splits={sim.splits} timeZone={tz} startMs={startMs} width={1100} height={280} print />
           <table className="ptable">
             <thead>
               <tr>
@@ -95,6 +98,25 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, onDon
               ))}
             </tbody>
           </table>
+          {legs.length > 1 && (
+            <table className="ptable bags">
+              <thead>
+                <tr><th>Tronçon</th><th>Durée</th><th>Eau</th><th>Glucides</th><th>Sodium</th><th>À emporter</th></tr>
+              </thead>
+              <tbody>
+                {legs.map((l) => (
+                  <tr key={`${l.from}-${l.to}`}>
+                    <td className="name">{l.from} → {l.to}</td>
+                    <td>{formatDuration(l.duration)}</td>
+                    <td>{l.water} L</td>
+                    <td>{l.carbs} g</td>
+                    <td>{l.sodium} mg</td>
+                    <td className="notes">{bagText(l)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -154,7 +176,10 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, onDon
                     <td>{s.cp.cutoff ? s.cp.cutoff.slice(11, 16) : ''}</td>
                     <td>{s.cp.stopMin ? `${s.cp.stopMin} min` : ''}</td>
                     <td className="notes">
-                      {[s.cp.water ? `${s.cp.water} L d'eau` : '', s.cp.carbs ? `${s.cp.carbs} g glucides` : '', s.cp.notes].filter(Boolean).join(' · ')}
+                      {(() => {
+                        const leg = legs.find((l) => l.fromId === s.cp.id)
+                        return [leg ? bagText(leg) : '', s.cp.notes].filter(Boolean).join(' · ')
+                      })()}
                     </td>
                   </tr>
                 ))}

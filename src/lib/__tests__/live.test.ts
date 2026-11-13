@@ -49,3 +49,22 @@ describe('suivi en direct', () => {
     expect(w.late).toBeGreaterThan(plan.sim.splits[1].arrival)
   })
 })
+
+import { bagText, nutritionPlan } from '../nutrition'
+import { DEFAULT_PRODUCTS } from '../defaults'
+describe('nutrition', () => {
+  it('tronçons départ → ravitos → arrivée, quantités proportionnelles à la durée', () => {
+    const race = newRace('N', gpx())
+    race.checkpoints = [{ id: 'a', dist: 10000, name: 'A', kind: 'ravito', stopMin: 5, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }]
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const legs = nutritionPlan(race, plan.sim, DEFAULT_PRODUCTS)
+    expect(legs.map((l) => `${l.from}>${l.to}`)).toEqual(['Départ>A', 'A>Arrivée'])
+    const h = legs[0].duration / 3600
+    expect(legs[0].carbs).toBe(Math.round(h * race.carbsPerH))
+    expect(legs[0].sodium).toBe(Math.round(h * race.sodiumPerH))
+    const carried = legs[0].products.reduce((a, x) => a + x.count * x.product.carbs, 0)
+    expect(carried).toBeGreaterThanOrEqual(legs[0].carbs - 10)
+    expect(legs[1].duration).toBeCloseTo(plan.sim.totalTime - plan.sim.splits[0].departure, 0)
+    expect(bagText(legs[0])).toMatch(/L d'eau, \d+ × Gel/)
+  })
+})

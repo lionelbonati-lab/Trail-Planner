@@ -1,27 +1,37 @@
-import {
-  GoogleAuthProvider,
-  isSignInWithEmailLink,
-  onAuthStateChanged,
-  sendSignInLinkToEmail,
-  signInWithEmailLink,
-  signInWithPopup,
-  deleteUser,
-  reauthenticateWithPopup,
-  type User,
-} from 'firebase/auth'
+import type { User } from 'firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
 import { LiveMode } from './components/LiveMode'
 import { computePlan, scenarioWindows } from './lib/plan'
-import { buildSnapshot, deleteShare, publishShare, shareUrl } from './lib/share'
+import { buildSnapshot, shareUrl } from './lib/share'
 import { CsCalculator } from './components/CsCalculator'
 import { RacePlan } from './components/RacePlan'
 import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
-import { auth, clearLocalData, cloudStore, hasLocalAthlete, localRaceCount, localStore, signOutAndClear, type Backup, type Store, type SyncStatus } from './lib/storage'
+import { clearLocalData, hasLocalAthlete, localRaceCount, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
+
+type Cloud = typeof import('./lib/cloud')
+
+/** Marqueur local : une session était ouverte, on attend Firebase avant d'afficher les données. */
+const SIGNED_IN_KEY = 'tp.signedIn'
+const wasSignedIn = () => {
+  try {
+    return localStorage.getItem(SIGNED_IN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const rememberSignedIn = (on: boolean) => {
+  try {
+    if (on) localStorage.setItem(SIGNED_IN_KEY, '1')
+    else localStorage.removeItem(SIGNED_IN_KEY)
+  } catch {
+    /* stockage indisponible */
+  }
+}
 import type { Athlete, Race } from './lib/types'
 
 type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live'
@@ -83,7 +93,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [sync, setSync] = useState<SyncStatus | null>(null)
 
-  const store: Store = useMemo(() => (user ? cloudStore(user) : localStore), [user])
+  // Firebase est chargé en arrière-plan ; tant qu'il ne l'est pas, l'app fonctionne en local.
+  const [cloud, setCloud] = useState<Cloud | null>(null)
+  const [authReady, setAuthReady] = useState(() => !wasSignedIn())
+  const store: Store = useMemo(() => (user && cloud ? cloud.cloudStore(user) : localStore), [user, cloud])
 
   useEffect(() => {
     const onHash = () => setRoute(readHash())
@@ -92,22 +105,29 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!auth) return
-    const a = auth
-    // Retour depuis le lien de connexion reçu par e-mail.
-    if (isSignInWithEmailLink(a, window.location.href)) {
-      const email = localStorage.getItem('tp.emailForSignIn') ?? prompt('Confirme ton e-mail') ?? ''
-      signInWithEmailLink(a, email, window.location.href)
-        .then(() => {
-          localStorage.removeItem('tp.emailForSignIn')
-          window.history.replaceState(null, '', window.location.pathname + '#/races')
+    let unsub: (() => void) | undefined
+    let cancelled = false
+    import('./lib/cloud')
+      .then((c) => {
+        if (cancelled) return
+        setCloud(c)
+        // Retour depuis le lien de connexion reçu par e-mail.
+        c.completeEmailLink().catch((e) => setError(`Connexion impossible : ${e.message}`))
+        unsub = c.onUser((u) => {
+          setUser(u)
+          rememberSignedIn(!!u)
+          setAuthReady(true)
         })
-        .catch((e) => setError(`Connexion impossible : ${e.message}`))
+      })
+      .catch(() => setAuthReady(true)) // hors ligne au premier chargement : mode local
+    return () => {
+      cancelled = true
+      unsub?.()
     }
-    return onAuthStateChanged(a, setUser)
   }, [])
 
   useEffect(() => {
+    if (!authReady) return
     let cancelled = false
     let unsubscribe: (() => void) | undefined
     setLoaded(false)
@@ -141,7 +161,7 @@ export default function App() {
       cancelled = true
       unsubscribe?.()
     }
-  }, [store])
+  }, [store, authReady])
 
   const report = (e: unknown) => setError(`Sauvegarde impossible : ${(e as Error).message ?? e}`)
   const saveAthleteLater = useDebounced<Athlete>((a) => store.saveAthlete(a).catch(report))
@@ -236,23 +256,14 @@ export default function App() {
     setLocalCount(0)
   }
   const deleteAccount = async () => {
-    if (!user || store.kind !== 'cloud') return
+    if (!user || !cloud || store.kind !== 'cloud') return
     if (!confirm('Supprimer ton compte et toutes tes données (profil, courses) ? Cette action est définitive.')) return
     try {
-      await store.deleteAll?.()
-      try {
-        await deleteUser(user)
-      } catch (e) {
-        if ((e as { code?: string }).code !== 'auth/requires-recent-login') throw e
-        // Firebase exige une connexion récente pour supprimer le compte.
-        if (user.providerData.some((p) => p.providerId === 'google.com')) {
-          await reauthenticateWithPopup(user, new GoogleAuthProvider())
-          await deleteUser(user)
-        } else {
-          alert('Tes données sont supprimées. Pour supprimer aussi le compte, reconnecte-toi puis recommence.')
-        }
+      if ((await cloud.deleteAccount(user)) === 'data-only') {
+        alert('Tes données sont supprimées. Pour supprimer aussi le compte, reconnecte-toi puis recommence.')
       }
-      await signOutAndClear()
+      rememberSignedIn(false)
+      await cloud.signOutAndClear()
     } catch (e) {
       setError(`Suppression impossible : ${(e as Error).message}`)
     }
@@ -264,16 +275,16 @@ export default function App() {
   const lastShared = useRef(new Map<string, string>())
   const publish = useCallback(
     async (race: Race, a: Athlete, shareId: string) => {
-      if (!user) return
+      if (!user || !cloud) return
       const plan = computePlan(race, a)
       if (!plan) return
       const snap = buildSnapshot(user.uid, race, a, plan.track, plan.sim, scenarioWindows(plan.track, a, plan.opts))
       const key = JSON.stringify({ ...snap, updatedAt: '' })
       if (lastShared.current.get(shareId) === key) return
-      await publishShare(shareId, snap)
+      await cloud.publishShare(shareId, snap)
       lastShared.current.set(shareId, key)
     },
-    [user],
+    [user, cloud],
   )
   const shareRace = async (race: Race) => {
     const shareId = race.shareId ?? crypto.randomUUID()
@@ -291,7 +302,7 @@ export default function App() {
   }
   const unshareRace = async (race: Race) => {
     if (!race.shareId) return
-    await deleteShare(race.shareId).catch(() => undefined)
+    await cloud?.deleteShare(race.shareId).catch(() => undefined)
     lastShared.current.delete(race.shareId)
     updateRace({ ...race, shareId: null })
   }
@@ -316,7 +327,7 @@ export default function App() {
         </nav>
         <InstallButton />
         {sync && <SyncBadge status={sync} />}
-        <AuthBox user={user} onDeleteAccount={deleteAccount} />
+        <AuthBox user={user} cloud={cloud} onDeleteAccount={deleteAccount} />
       </header>
 
       <main>
@@ -465,19 +476,19 @@ function RaceRow({ race, onOpen, onDelete, onDuplicate }: { race: Race; onOpen: 
   )
 }
 
-function AuthBox({ user, onDeleteAccount }: { user: User | null; onDeleteAccount: () => void }) {
+function AuthBox({ user, cloud, onDeleteAccount }: { user: User | null; cloud: Cloud | null; onDeleteAccount: () => void }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [open, setOpen] = useState(false)
-  if (!auth) return <span className="auth muted" title="Configure Firebase pour synchroniser">Stockage local</span>
-  const a = auth
+  if (!cloud) return <span className="auth muted">Stockage local</span>
+  if (!cloud.auth) return <span className="auth muted" title="Configure Firebase pour synchroniser">Stockage local</span>
   if (user) {
     return (
       <details className="auth account">
         <summary title={user.email ?? ''}>{user.displayName || user.email}</summary>
         <div className="account-menu">
           <div className="muted">{user.email}</div>
-          <button onClick={() => signOutAndClear()}>Se déconnecter</button>
+          <button onClick={() => { rememberSignedIn(false); cloud.signOutAndClear() }}>Se déconnecter</button>
           <button className="ghost danger" onClick={onDeleteAccount}>Supprimer mon compte…</button>
         </div>
       </details>
@@ -486,7 +497,7 @@ function AuthBox({ user, onDeleteAccount }: { user: User | null; onDeleteAccount
   if (sent) return <span className="auth muted">Lien envoyé, vérifie tes e-mails.</span>
   return (
     <span className="auth">
-      <button onClick={() => signInWithPopup(a, new GoogleAuthProvider()).catch((e) => alert(e.message))}>
+      <button onClick={() => cloud.signInGoogle().catch((e) => alert(e.message))}>
         Connexion Google
       </button>
       {open ? (
@@ -495,11 +506,7 @@ function AuthBox({ user, onDeleteAccount }: { user: User | null; onDeleteAccount
           onSubmit={async (e) => {
             e.preventDefault()
             try {
-              await sendSignInLinkToEmail(a, email, {
-                url: window.location.origin + window.location.pathname,
-                handleCodeInApp: true,
-              })
-              localStorage.setItem('tp.emailForSignIn', email)
+              await cloud.sendEmailLink(email)
               setSent(true)
             } catch (err) {
               alert((err as Error).message)

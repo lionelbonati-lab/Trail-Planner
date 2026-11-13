@@ -1,6 +1,7 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
+import { bagText, nutritionPlan } from '../lib/nutrition'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
@@ -13,6 +14,19 @@ import { Kpi } from './CsCalculator'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { Card, Hint, Num, Toggle } from './ui'
+
+/** Vrai si la requête média correspond (mise à jour au redimensionnement). */
+function useMediaQuery(q: string): boolean {
+  const [match, setMatch] = useState(() => window.matchMedia?.(q).matches ?? false)
+  useEffect(() => {
+    const m = window.matchMedia?.(q)
+    if (!m) return
+    const on = () => setMatch(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [q])
+  return match
+}
 
 // Carte chargée à la demande (Leaflet ne pèse pas sur le premier affichage).
 const MapView = lazy(() => import('./MapView'))
@@ -64,6 +78,8 @@ export function RacePlan({
 }) {
   const [copied, setCopied] = useState(false)
   const [hoverDist, setHoverDist] = useState<number | null>(null)
+  const narrow = useMediaQuery('(max-width: 720px)')
+  const [editing, setEditing] = useState<string | null>(null)
   const [showMap, setShowMap] = useState(true)
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const { track, opts, sim } = useRaceComputation(race, athlete)
@@ -133,28 +149,11 @@ export function RacePlan({
     set({ checkpoints: cps.sort((a, b) => a.dist - b.dist) })
   }
 
+  const legs = nutritionPlan(race, sim, athlete.products)
+  // Reporte eau et glucides de chaque tronçon sur le point de départ correspondant.
   const fillNutrition = () => {
-    // Quantités entre un ravito et le suivant, selon le temps prévu.
-    const rows = sim.splits
-    const updated = new Map<string, { water: number; carbs: number }>()
-    let lastRavito: string | null = null
-    let acc = 0
-    for (const r of rows) {
-      if (lastRavito) {
-        acc += r.moveTime
-      }
-      if (r.cp.kind === 'ravito' || r.cp.id === '__finish') {
-        if (lastRavito) {
-          updated.set(lastRavito, {
-            water: Math.round((acc / 3600) * race.waterPerH * 10) / 10,
-            carbs: Math.round((acc / 3600) * race.carbsPerH),
-          })
-        }
-        lastRavito = r.cp.id
-        acc = 0
-      }
-    }
-    set({ checkpoints: race.checkpoints.map((c) => (updated.has(c.id) ? { ...c, ...updated.get(c.id)! } : c)) })
+    const byId = new Map(legs.filter((l) => l.fromId).map((l) => [l.fromId!, l]))
+    set({ checkpoints: race.checkpoints.map((c) => (byId.has(c.id) ? { ...c, water: byId.get(c.id)!.water, carbs: byId.get(c.id)!.carbs } : c)) })
   }
 
   const fileBase = race.name.replace(/[^\w-]+/g, '_')
@@ -432,9 +431,11 @@ export function RacePlan({
             <h3>Nutrition</h3>
             <div className="fields">
               <Num label="Glucides" value={race.carbsPerH} onChange={(v) => set({ carbsPerH: v })} unit="g/h" />
-              <Num label="Eau" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
+              <Num label="Eau (à 15 °C)" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
+              <Num label="Sodium" value={race.sodiumPerH} onChange={(v) => set({ sodiumPerH: v })} unit="mg/h" />
             </div>
-            <button className="ghost" onClick={fillNutrition} disabled={ravitos.length === 0}>Calculer eau et glucides entre ravitos</button>
+            <button className="ghost" onClick={fillNutrition} disabled={ravitos.length === 0}>Reporter eau et glucides sur les ravitos</button>
+            <Hint>Tes produits (gels, boissons…) se règlent dans le profil athlète. L'eau augmente de 4 % par °C au-dessus de 15 °C.</Hint>
             <TechOverrides race={race} onChange={onChange} />
           </Card>
         </div>
@@ -473,6 +474,73 @@ export function RacePlan({
           title="Temps de passage"
           actions={<button onClick={() => addPoint(track.totalDist / 2, 'ravito')}>+ Ajouter un point</button>}
         >
+          {narrow ? (
+            <div className="split-cards">
+              {sim.splits.map((s) => {
+                const isFinish = s.cp.id === '__finish'
+                const cp = s.cp
+                const w = windowOf(cp.id)
+                const open = editing === cp.id
+                return (
+                  <div key={cp.id} className={`split-card kind-${cp.kind} ${s.night ? 'is-night' : ''}`}>
+                    <div className="sc-head">
+                      <strong>{cp.name}</strong>
+                      <span className="muted">km {(s.to / 1000).toFixed(1)}</span>
+                    </div>
+                    <div className="sc-main">
+                      <span className="sc-time">{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}{s.night && ' 🌙'}</span>
+                      <span>{formatDuration(s.arrival)}</span>
+                      {w && (
+                        <span className="muted small">
+                          {formatClock(new Date(startMs + w.early * 1000), race.env.timeZone)}–{formatClock(new Date(startMs + w.late * 1000), race.env.timeZone)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="sc-meta muted">
+                      {(s.dist / 1000).toFixed(1)} km · +{Math.round(s.dPlus)}/−{Math.round(s.dMinus)} m · {formatDuration(s.moveTime)} · {formatPace(s.avgPace)}/km
+                      {cp.stopMin ? ` · arrêt ${cp.stopMin} min` : ''}
+                    </div>
+                    {s.cutoffMargin !== null && (
+                      <div className={s.cutoffMargin < 1800 ? 'danger' : s.cutoffMargin < 3600 ? 'warn-text' : 'ok-text'}>
+                        Barrière : {s.cutoffMargin < 0 ? 'hors délai ' : 'marge '}{formatDuration(Math.abs(s.cutoffMargin))}
+                      </div>
+                    )}
+                    {cp.notes && !open && <div className="small">{cp.notes}</div>}
+                    {!isFinish && (
+                      <button className="ghost" onClick={() => setEditing(open ? null : cp.id)}>{open ? 'Fermer' : 'Modifier'}</button>
+                    )}
+                    {open && !isFinish && (
+                      <div className="fields">
+                        <label className="field">
+                          <span className="field-label">Type</span>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, { kind: e.target.value as CheckpointKind })}>
+                            {Object.entries(KIND_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        </label>
+                        <label className="field">
+                          <span className="field-label">Nom</span>
+                          <input type="text" value={cp.name} onChange={(e) => setCp(cp.id, { name: e.target.value })} />
+                        </label>
+                        <Num label="Km" value={cp.dist / 1000} onChange={(v) => setCp(cp.id, { dist: Math.max(0, Math.min(track.totalDist, v * 1000)) })} />
+                        <Num label="Arrêt" value={cp.stopMin} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />
+                        <label className="field">
+                          <span className="field-label">Barrière</span>
+                          <input type="datetime-local" value={cp.cutoff} onChange={(e) => setCp(cp.id, { cutoff: e.target.value })} />
+                        </label>
+                        <Num label="Eau" value={cp.water} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
+                        <Num label="Glucides" value={cp.carbs} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
+                        <label className="field">
+                          <span className="field-label">Notes</span>
+                          <input type="text" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />
+                        </label>
+                        <button className="ghost danger" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })}>Supprimer ce point</button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
           <div className="scroll">
             <table className="table splits">
               <thead>
@@ -551,12 +619,37 @@ export function RacePlan({
               </tbody>
             </table>
           </div>
+          )}
           <Hint>Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant.</Hint>
+        </Card>
+
+        <Card title="Plan nutrition">
+          <div className="scroll">
+            <table className="table">
+              <thead>
+                <tr><th>Tronçon</th><th>Durée</th><th>T° moy.</th><th>Eau</th><th>Glucides</th><th>Sodium</th><th>À emporter</th></tr>
+              </thead>
+              <tbody>
+                {legs.map((l) => (
+                  <tr key={`${l.from}-${l.to}`}>
+                    <td>{l.from} → {l.to}</td>
+                    <td>{formatDuration(l.duration)}</td>
+                    <td>{Math.round(l.temp)} °C</td>
+                    <td>{l.water} L</td>
+                    <td>{l.carbs} g</td>
+                    <td>{l.sodium} mg</td>
+                    <td>{bagText(l)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Hint>Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant).</Hint>
         </Card>
       </div>
 
       {printFormat && (
-        <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} windowOf={windowOf} onDone={() => setPrintFormat(null)} />
+        <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} windowOf={windowOf} legs={legs} onDone={() => setPrintFormat(null)} />
       )}
     </div>
   )

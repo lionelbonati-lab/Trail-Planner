@@ -1,7 +1,7 @@
 // Service worker : l'app reste utilisable hors ligne (en course, sans réseau).
 // Pages : réseau d'abord, cache en secours. Fichiers statiques : cache d'abord,
 // mis à jour en arrière-plan. Les appels externes (Firebase, météo) ne sont pas interceptés.
-const CACHE = 'trail-planner-v2'
+const CACHE = 'trail-planner-v3'
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
 
 // Met en cache la page et les fichiers JS/CSS qu'elle référence (noms avec empreinte).
