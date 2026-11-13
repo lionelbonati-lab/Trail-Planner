@@ -5,6 +5,7 @@
     <iq:application id="e492e667-f7c2-45cd-8b61-3964047d7e5f" type="datafield" name="@Strings.AppName" entry="TrailPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.2.0">
         <iq:products>
             <iq:product id="enduro2"/>
+            <iq:product id="enduro3"/>
             <iq:product id="epix2"/>
             <iq:product id="fenix7"/>
             <iq:product id="fenix7s"/>
