@@ -302,9 +302,17 @@ export interface TechOverride {
   level: 1 | 2 | 3 | 4 | 5
 }
 
+/** race = compétition ; route = parcours modèle de la bibliothèque ; session = séance datée créée depuis un parcours. */
+export type RaceKind = 'race' | 'route' | 'session'
+
 export interface Race {
   id: string
   name: string
+  kind: RaceKind
+  /** Étiquettes libres (côte, plat, piste…), surtout pour la bibliothèque. */
+  tags: string[]
+  /** Parcours modèle d'origine d'une séance planifiée. */
+  templateId: string | null
   gpxText: string
   /** Lissage de l'altitude (±n points de 20 m). */
   smoothing: number
