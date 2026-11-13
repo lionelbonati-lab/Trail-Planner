@@ -15,6 +15,7 @@ import { averageIntensity, intensityAt, interp } from '../lib/model'
 import { computePlan } from '../lib/plan'
 import { formatDuration, formatPace } from '../lib/time'
 import { analyzeSession } from '../lib/insights'
+import { VAM_MIN_GRADE } from '../lib/vam'
 import type { ActivityRecord, Athlete, GradeStat, Race } from '../lib/types'
 import { colorForIndex } from '../lib/zones'
 import { Kpi } from './CsCalculator'
@@ -403,6 +404,13 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
         <>
           <h3>Temps par zone cardiaque</h3>
           <ZoneStack times={ins.hrZoneTimes} color={(k) => colorForIndex(k)} />
+        </>
+      )}
+
+      {ins.vamZoneTimes && (
+        <>
+          <h3>Temps par zone VAM (montées à plus de {VAM_MIN_GRADE} %)</h3>
+          <ZoneStack times={ins.vamZoneTimes} color={(k) => colorForIndex(k, athlete)} />
         </>
       )}
 

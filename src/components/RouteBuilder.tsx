@@ -2,7 +2,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   ArrowDownUp,
-  ArrowLeft,
   ArrowLeftRight,
   Bookmark,
   BookmarkX,
@@ -90,7 +89,6 @@ interface Props {
   /** Course ou parcours dont on modifie le tracé, ou null pour un nouveau tracé. */
   race: Race | null
   onSave: (r: DrawResult) => void
-  onCancel: () => void
 }
 
 /** Segment calculé ; `offroad` : point hors du réseau de chemins, tracé en ligne droite. */
@@ -233,7 +231,7 @@ function ModeSeg({ value, onChange }: { value: SegMode; onChange: (m: SegMode) =
 }
 
 /** Traceur de parcours plein écran : toucher = point sur les chemins, appui long = point hors sentier. */
-export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props) {
+export default function RouteBuilder({ athlete, race, onSave }: Props) {
   const init = useMemo(() => initialState(race, athlete), []) // eslint-disable-line react-hooks/exhaustive-deps
   const cache = useRef(init.cache)
   const [wps, setWps] = useState<Waypoint[]>(init.wps)
@@ -966,7 +964,6 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
         {holdAt && <span className="hold-ring" style={{ left: holdAt.x, top: holdAt.y, animationDuration: `${HOLD_MS}ms` }} aria-hidden />}
 
         <div className="draw-top">
-          <button className="fab" onClick={onCancel} title="Quitter sans enregistrer" aria-label="Retour"><ArrowLeft /></button>
           <form className="draw-search" onSubmit={search}>
             <Search className="draw-search-icon" aria-hidden />
             <input type="search" placeholder="Rechercher un lieu…" value={query} onChange={(e) => setQuery(e.target.value)} />

@@ -4,6 +4,7 @@
 import { timesAt, type Activity } from './activity'
 import { gapFactor } from './model'
 import type { Athlete, CsTrial } from './types'
+import { VAM_MIN_GRADE, vamZoneIndex, vamZonesOf } from './vam'
 import { zoneIndexOfIntensity } from './zones'
 
 interface Series {
@@ -66,6 +67,8 @@ export interface Insights {
   zoneTimes: ZoneTime[]
   /** Temps par zone cardiaque (si la FC est enregistrée). */
   hrZoneTimes: ZoneTime[] | null
+  /** Temps par zone de vitesse ascensionnelle, dans les montées (null sans montée). */
+  vamZoneTimes: ZoneTime[] | null
   laps: LapInfo[]
   best: BestEffort[]
   /** VC minimale qu'impliquent les meilleurs efforts (2 à 30 min), si supérieure à la VC actuelle. */
@@ -94,6 +97,23 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     zoneSec[zoneIndexOfIntensity(intensity, a)] += dt
   }
   const zoneTimes = a.zones.map((z, index) => ({ index, name: z.name, seconds: zoneSec[index] }))
+
+  // Temps par zone VAM : tronçons de 200 m dont la pente dépasse VAM_MIN_GRADE.
+  const vamZones = vamZonesOf(a)
+  let vamZoneTimes: ZoneTime[] | null = null
+  if (vamZones.length) {
+    const sec = vamZones.map(() => 0)
+    for (let from = 0; from < act.track.totalDist; from += SEG) {
+      const i = idxAt(from)
+      const j = idxAt(Math.min(act.track.totalDist, from + SEG))
+      const dt = s.m[j] - s.m[i]
+      const dz = s.e[j] - s.e[i]
+      const dx = s.d[j] - s.d[i]
+      if (j <= i || dt <= 0 || dx <= 0 || (dz / dx) * 100 < VAM_MIN_GRADE) continue
+      sec[vamZoneIndex((dz / dt) * 3600, vamZones)] += dt
+    }
+    if (sec.some((x) => x > 0)) vamZoneTimes = vamZones.map((z, index) => ({ index, name: z.name, seconds: sec[index] }))
+  }
 
   // Tours de la montre : temps → distance le long de la trace.
   const rawTotal = act.dist[act.dist.length - 1] || 1
@@ -182,5 +202,5 @@ export function analyzeSession(act: Activity, a: Athlete): Insights {
     }
   }
 
-  return { zoneTimes, hrZoneTimes, laps, best, csFloor, tests }
+  return { zoneTimes, hrZoneTimes, vamZoneTimes, laps, best, csFloor, tests }
 }

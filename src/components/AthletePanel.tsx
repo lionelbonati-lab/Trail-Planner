@@ -5,8 +5,9 @@ import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES } from '../lib/defaults'
 import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
 import { climbEquivalence, epPayload } from '../lib/endurancepro'
+import { epVamThresholds, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
-import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint } from '../lib/types'
+import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
 import { Card, Hint, Num, PaceField } from './ui'
 
 export function AthletePanel({
@@ -152,6 +153,8 @@ export function AthletePanel({
           )}
         </div>
       </Card>
+
+      <VamZonesCard athlete={athlete} onChange={onChange} />
 
       <Card title="Zones cardiaques" className="span2">
         <Hint>
@@ -375,6 +378,88 @@ function PointTable<T extends object>({
   )
 }
 
+/** Zones de vitesse ascensionnelle : % de la VAM à VC (comme les zones de VC) ou perso en m/h. */
+function VamZonesCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
+  const ref = vamRef(athlete)
+  const custom = athlete.vamZoneMode === 'custom'
+  const zones = vamZonesOf(athlete)
+  const setMode = (mode: Athlete['vamZoneMode']) =>
+    onChange({ ...athlete, vamZoneMode: mode, vamZones: mode === 'custom' && !athlete.vamZones.length ? vamZonesFromCs(athlete) : athlete.vamZones })
+  const setZones = (vamZones: VamZone[]) => onChange({ ...athlete, vamZoneMode: 'custom', vamZones })
+  const gentle = ref ? interpVam(athlete, VAM_GENTLE_GRADE) : 0
+  return (
+    <Card title="Zones de vitesse ascensionnelle" className="span2">
+      <Hint>
+        Pour piloter tes montées à la VAM (m de D+ par heure) : ces zones servent à l'analyse des séances (temps par zone VAM dans
+        les montées) et aux couleurs VAM d'EndurancePro sur la montre, si la synchronisation est activée.
+      </Hint>
+      <div className="seg" role="group" aria-label="Méthode des zones VAM">
+        <button className={!custom ? 'on' : ''} onClick={() => setMode('cs')} title="Mêmes % que tes zones de VC, appliqués à ta VAM à VC">
+          % de ta VAM à VC
+        </button>
+        <button className={custom ? 'on' : ''} onClick={() => setMode('custom')} title="Tes propres valeurs en m/h">
+          Perso
+        </button>
+      </div>
+      <Hint>
+        {!ref
+          ? 'Renseigne ta VAM selon la pente pour calculer ces zones.'
+          : custom
+            ? `Tes zones en m/h. Le % indique où elles se situent par rapport à ta VAM à VC (${ref.vam} m/h sur ${ref.grade} %).`
+            : `Référence : ${ref.vam} m/h, ta meilleure VAM à VC (sur ${ref.grade} %, tableau « Vitesse ascensionnelle selon la pente »). ` +
+              `La VAM suivant l'intensité, chaque zone reprend les % de ta zone de VC. Sur pente plus douce, la même intensité donne ` +
+              `une VAM plus faible (${Math.round(gentle)} m/h à ${VAM_GENTLE_GRADE} % à VC).`}
+      </Hint>
+      {zones.length > 0 && (
+        <table className="table compact">
+          <thead>
+            <tr><th>Zone</th><th>De (m/h)</th><th>À (m/h)</th><th>% VAM à VC</th>{custom ? <th /> : <th>Utilisation</th>}</tr>
+          </thead>
+          <tbody>
+            {zones.map((z, i) => {
+              const setZ = (patch: Partial<VamZone>) => setZones(zones.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+              const pct = (v: number) => (ref ? Math.round((v / ref.vam) * 100) : '—')
+              return (
+                <tr key={i}>
+                  <td className="nowrap">
+                    <i className="zone-swatch" style={{ background: colorForIndex(i, athlete) }} />
+                    {custom ? <input type="text" value={z.name} onChange={(e) => setZ({ name: e.target.value })} style={{ width: 90 }} /> : z.name}
+                  </td>
+                  <td>{custom ? <Num value={z.low} width={64} min={0} max={4000} onChange={(v) => setZ({ low: v })} /> : z.low}</td>
+                  <td>{custom ? <Num value={z.high} width={64} min={0} max={4000} onChange={(v) => setZ({ high: v })} /> : z.high}</td>
+                  <td className="muted">{pct(z.low)} – {pct(z.high)} %</td>
+                  {custom ? (
+                    <td><button className="ghost" onClick={() => setZones(zones.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
+                  ) : (
+                    <td className="muted">{athlete.zones[i]?.use ?? ''}</td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+      {custom && (
+        <div className="row">
+          <button
+            className="ghost"
+            onClick={() => {
+              const last = zones[zones.length - 1]
+              setZones([...zones, { name: `Zone ${zones.length + 1}`, low: last?.high ?? 600, high: (last?.high ?? 600) + 100 }])
+            }}
+          >
+            <Plus /> Ajouter une zone
+          </button>
+          {ref && <button className="ghost" onClick={() => setZones(vamZonesFromCs(athlete))}><RotateCcw /> Repartir des zones calculées</button>}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+/** Pente douce citée en exemple dans l'aide des zones VAM (%). */
+const VAM_GENTLE_GRADE = 10
+
 /** Synchronisation du datafield Garmin EndurancePro : VC, zones, équivalence montée, zone d'alarme. */
 function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athlete; onChange: (a: Athlete) => void; signedIn: boolean; onWatch: Race | null }) {
   const [copied, setCopied] = useState(false)
@@ -382,6 +467,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
   const up = climbEquivalence(athlete)
   const k = onWatch ? wholeRouteZone(onWatch.zones, athlete) : null
   const sorted = [...athlete.zones].sort((a, b) => a.low - b.low).slice(0, 7)
+  const vz = epVamThresholds(athlete)
   const toggle = (v: boolean) =>
     onChange({ ...athlete, epSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
   const copy = () => {
@@ -395,7 +481,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
     <Card title="Montre Garmin : EndurancePro" className="span2">
       <Hint>
         Ton datafield EndurancePro colore ton allure selon tes zones de VC et sonne quand tu sors de la zone visée. Avec la
-        synchronisation, il reprend tout seul ta VC, tes zones, l'équivalence montée déduite de ta VAM et la zone de la séance
+        synchronisation, il reprend tout seul ta VC, tes zones, l'équivalence montée déduite de ta VAM, tes zones VAM et la zone de la séance
         envoyée à la montre : à chaque mise à jour ici, la montre suit (au lancement d'une activité, puis toutes les 30 min, téléphone
         connecté).
       </Hint>
@@ -434,6 +520,28 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
           <tr>
             <td>Équivalence montée</td>
             <td>{up ? <><strong>{up} m</strong> de D+ = 1 km à plat <span className="muted">(d'après ta VAM à VC ; défaut EndurancePro : 100 m)</span></> : '—'}</td>
+          </tr>
+          <tr>
+            <td>Couleurs VAM</td>
+            <td>
+              {vz ? (
+                <>
+                  {['Z1', 'Z2', 'Z3', 'Z4'].map((name, i) => (
+                    <span key={name} className="ep-zone">
+                      <i className="zone-swatch" style={{ background: colorForIndex(i) }} />
+                      {name} {vz[i]}–{vz[i + 1]}
+                    </span>
+                  ))}
+                  <span className="ep-zone">
+                    <i className="zone-swatch" style={{ background: colorForIndex(4) }} />
+                    Z5 et plus &gt; {vz[4]} m/h
+                  </span>
+                  <span className="muted"> (pas de couleur sous {vz[0]} m/h)</span>
+                </>
+              ) : (
+                '—'
+              )}
+            </td>
           </tr>
           <tr>
             <td>Alarme au-dessus de</td>

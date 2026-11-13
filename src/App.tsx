@@ -429,7 +429,6 @@ export default function App() {
               athlete={athlete}
               race={current ?? null}
               onSave={(d) => saveDrawing(d, current ?? null)}
-              onCancel={() => (current ? go('races', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
             />
           </Suspense>
         ) : route.tab === 'athlete' ? (

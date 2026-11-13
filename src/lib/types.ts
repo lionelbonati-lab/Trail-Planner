@@ -89,6 +89,12 @@ export interface Athlete {
   /** Zones en % (fractions) pour la méthode perso, et leur base. */
   hrPct: HrZone[]
   hrBase: 'max' | 'reserve'
+  /**
+   * Zones de vitesse ascensionnelle : en % de la VAM tenue à VC (mêmes % que les zones de VC)
+   * ou saisies en m/h (`vamZones`, utilisées seulement en mode perso).
+   */
+  vamZoneMode: 'cs' | 'custom'
+  vamZones: VamZone[]
   /** Cible des entraînements exportés vers la montre : allure ou fréquence cardiaque. */
   workoutTarget: 'pace' | 'hr'
   /** Code montre (identifiant du document partagé lu par le champ de données Garmin). */
@@ -182,6 +188,9 @@ export interface TrainingZone {
   /** Couleur d'affichage (par défaut : couleurs Garmin). */
   color?: string
 }
+
+/** Zone de vitesse ascensionnelle (m/h). */
+export type VamZone = HrZone
 
 /** Zone de fréquence cardiaque (bpm). */
 export type HrMethod = 'grappe' | 'karvonen' | 'custom'
