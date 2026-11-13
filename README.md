@@ -37,6 +37,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   course, export GPX ; « Modifier le tracé » rouvre un tracé (ou découpe une trace importée en points à déplacer).
   Import d'un GPX ou d'un FIT dans le traceur (bouton ou glisser-déposer), en remplacement ou à la suite du
   tracé en cours ; altitude complétée si le fichier n'en a pas.
+- **Synchronisation EndurancePro** (datafield Garmin) : depuis le profil, VC, zones, équivalence montée
+  (déduite de la VAM à VC) et zone de la séance envoyée à la montre sont publiés dans le document du code
+  montre (champ `ep`) ; EndurancePro les lit en arrière-plan pour colorer l'allure et sonner par zone de VC.
 - **Fonds de carte** : Plan IGN et photos aériennes IGN (France), OpenStreetMap (mis à jour en continu),
   OpenStreetMap France, carte nationale suisse, satellite, relief OpenTopoMap ; surcouches sentiers balisés
   (Waymarked Trails) et chemins de randonnée suisses. Le choix est mémorisé.

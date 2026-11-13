@@ -15,6 +15,7 @@ import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
 import { withNewTrace } from './lib/routing'
+import { epPayload } from './lib/endurancepro'
 import type { DrawResult } from './components/RouteBuilder'
 import { clearLocalData, hasLocalAthlete, localRaceCount, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
 
@@ -304,6 +305,8 @@ export default function App() {
       const plan = computePlan(race, a)
       if (!plan) return
       const snap = buildSnapshot(user.uid, race, a, plan.track, plan.sim, scenarioWindows(plan.track, a, plan.opts))
+      // Document du code montre : réglages EndurancePro en plus du plan (si la synchro est active).
+      if (a.epSync && shareId === a.watchId) snap.ep = epPayload(a, race)
       const key = JSON.stringify({ ...snap, updatedAt: '' })
       if (lastShared.current.get(shareId) === key) return
       await cloud.publishShare(shareId, snap)
@@ -347,9 +350,21 @@ export default function App() {
       for (const r of races) if (r.shareId) publish(r, athlete, r.shareId).catch(() => undefined)
       const onWatch = races.find((r) => r.id === athlete.watchRaceId)
       if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId).catch(() => undefined)
+      else if (athlete.epSync && athlete.watchId && cloud) {
+        // Pas de course sur la montre : seulement les réglages EndurancePro.
+        const ep = epPayload(athlete, null)
+        const key = `ep:${ep}`
+        if (lastShared.current.get(athlete.watchId) !== key) {
+          const watchId = athlete.watchId
+          cloud
+            .publishWatchProfile(watchId, user.uid, ep)
+            .then(() => lastShared.current.set(watchId, key))
+            .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
+        }
+      }
     }, 5000)
     return () => clearTimeout(id)
-  }, [races, athlete, user, publish])
+  }, [races, athlete, user, publish, cloud])
 
   return (
     <div className="app">
@@ -388,7 +403,11 @@ export default function App() {
             />
           </Suspense>
         ) : route.tab === 'athlete' ? (
-          <AthletePanel athlete={athlete} onChange={updateAthlete} />
+          <AthletePanel
+            athlete={athlete}
+            onChange={updateAthlete}
+            garmin={{ signedIn: !!user, onWatch: races.find((r) => r.id === athlete.watchRaceId) ?? null }}
+          />
         ) : route.tab === 'cs' ? (
           <CsCalculator athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'parcours' ? (

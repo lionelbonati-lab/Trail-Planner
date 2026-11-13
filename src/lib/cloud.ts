@@ -270,6 +270,15 @@ export async function publishShare(shareId: string, snap: ShareSnapshot) {
   await setDoc(doc(db, 'shares', shareId), encodeForFirestore(snap) as Record<string, unknown>)
 }
 
+/**
+ * Document du code montre sans course envoyée : seulement les réglages EndurancePro (`ep`).
+ * `w` vide : le champ Trail Planner garde son dernier plan.
+ */
+export async function publishWatchProfile(watchId: string, owner: string, ep: string) {
+  if (!db) throw new Error('Synchronisation indisponible : Firebase non configuré.')
+  await setDoc(doc(db, 'shares', watchId), { owner, updatedAt: new Date().toISOString(), w: '', ep })
+}
+
 export async function deleteShare(shareId: string) {
   if (!db) return
   await deleteDoc(doc(db, 'shares', shareId))
