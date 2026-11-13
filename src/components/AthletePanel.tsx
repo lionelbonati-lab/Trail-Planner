@@ -537,18 +537,36 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
         <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser EndurancePro avec ce profil
       </label>
       {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
-      {on && signedIn && athlete.watchId && (
+      {on && signedIn && (
         <>
-          <div className="row">
-            <span>Code à saisir dans les réglages d'EndurancePro (« Code Trail Planner ») :</span>
-            <code className="watch-code">{athlete.watchId}</code>
-            <button className="ghost" onClick={copy}>{copied ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
+          <div className="row ep-code">
+            <span>Code à saisir sur la montre :</span>
+            {athlete.epCode ? (
+              <strong className="ep-short" aria-label={`Code ${athlete.epCode.split('').join(' ')}`}>
+                {`${athlete.epCode.slice(0, 4)} ${athlete.epCode.slice(4)}`}
+              </strong>
+            ) : (
+              <span className="muted">création du code…</span>
+            )}
           </div>
           <Hint>
-            Sur ton téléphone : appli Garmin Connect › ta montre › Activités et applications › EndurancePro › Paramètres › Code Trail
-            Planner. C'est le même code que pour le champ Trail Planner. Après la première synchro, EndurancePro passe en référence
-            « Zones VC » (dossier Allure du menu montre, modifiable).
+            Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis les 8 chiffres puis valide (00000000
+            efface le code). La ligne affiche ensuite « Synchro hh:mm » à chaque mise à jour. Après la première synchro, EndurancePro
+            passe en référence « Zones VC » (dossier Allure, modifiable).
           </Hint>
+          {athlete.watchId && (
+            <details className="small">
+              <summary>Code long, pour les paramètres téléphone (EndurancePro installé depuis le Store)</summary>
+              <div className="row">
+                <code className="watch-code">{athlete.watchId}</code>
+                <button className="ghost" onClick={copy}>{copied ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
+              </div>
+              <Hint>
+                Garmin Connect › ta montre › Activités et applications › EndurancePro › Paramètres › Code Trail Planner. C'est le même
+                code que pour le champ Trail Planner.
+              </Hint>
+            </details>
+          )}
         </>
       )}
       <table className="table compact">

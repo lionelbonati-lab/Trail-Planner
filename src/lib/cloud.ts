@@ -279,6 +279,23 @@ export async function publishWatchProfile(watchId: string, owner: string, ep: st
   await setDoc(doc(db, 'shares', watchId), { owner, updatedAt: new Date().toISOString(), w: '', ep })
 }
 
+/**
+ * Réserve un code à 8 chiffres pour EndurancePro (saisi sur la montre) : un document de
+ * partage libre, créé à ton nom, qui ne recevra que les réglages EndurancePro.
+ */
+export async function reserveEpCode(owner: string): Promise<string> {
+  if (!db) throw new Error('Synchronisation indisponible : Firebase non configuré.')
+  for (let attempt = 0; attempt < 6; attempt++) {
+    // Premier chiffre non nul : toujours 8 caractères, et jamais 00000000 (qui efface le code sur la montre).
+    const code = String(10000000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000000))
+    const ref = doc(db, 'shares', code)
+    if ((await getDoc(ref)).exists()) continue
+    await setDoc(ref, { owner, updatedAt: new Date().toISOString(), w: '', ep: '' })
+    return code
+  }
+  throw new Error('Aucun code libre trouvé, réessaie.')
+}
+
 export async function deleteShare(shareId: string) {
   if (!db) return
   await deleteDoc(doc(db, 'shares', shareId))

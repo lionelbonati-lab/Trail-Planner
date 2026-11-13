@@ -514,3 +514,5 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .lap-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 16px; font-size: 13px; cursor: pointer; color: var(--muted); background: var(--surface); }
 .lap-chip.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
 .lap-chip input { margin: 0; }
+.ep-code { align-items: baseline; gap: 10px; }
+.ep-short { font-size: 26px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }

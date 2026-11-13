@@ -203,6 +203,13 @@ export default function App() {
     setAthlete(next)
     saveAthleteLater('athlete', next)
   }
+  /** Modifie le profil à partir de sa dernière version (pour les réponses asynchrones). */
+  const patchAthlete = (patch: Partial<Athlete>) =>
+    setAthlete((prev) => {
+      const next = { ...prev, ...patch, updatedAt: new Date().toISOString() }
+      saveAthleteLater('athlete', next)
+      return next
+    })
   const updateRace = (r: Race) => {
     const next = { ...r, updatedAt: new Date().toISOString() }
     setRaces((all) => all.map((x) => (x.id === r.id ? next : x)))
@@ -315,6 +322,8 @@ export default function App() {
     if (!user || !cloud || store.kind !== 'cloud') return
     if (!confirm('Supprimer ton compte et toutes tes données (profil, courses) ? Cette action est définitive.')) return
     try {
+      // Documents lus par la montre (code montre, code EndurancePro) : supprimés avec le compte.
+      for (const id of [athlete.epCode, athlete.watchId]) if (id) await cloud.deleteShare(id).catch(() => undefined)
       if ((await cloud.deleteAccount(user)) === 'data-only') {
         alert('Tes données sont supprimées. Pour supprimer aussi le compte, reconnecte-toi puis recommence.')
       }
@@ -392,9 +401,35 @@ export default function App() {
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
       }
+      // Code court saisi sur la montre : réglages EndurancePro seulement (zone de la course envoyée comprise).
+      if (athlete.epSync && athlete.epCode && cloud) {
+        const ep = epPayload(athlete, onWatch ?? null)
+        const key = `ep:${ep}`
+        const code = athlete.epCode
+        if (lastShared.current.get(code) !== key) {
+          cloud
+            .publishWatchProfile(code, user.uid, ep)
+            .then(() => lastShared.current.set(code, key))
+            .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
+        }
+      }
     }, 5000)
     return () => clearTimeout(id)
   }, [races, athlete, user, publish, cloud])
+  // Synchro EndurancePro activée : réserve le code à 8 chiffres à saisir sur la montre.
+  const reservingEp = useRef(false)
+  useEffect(() => {
+    if (!user || !cloud || !athlete.epSync || athlete.epCode || reservingEp.current) return
+    reservingEp.current = true
+    cloud
+      .reserveEpCode(user.uid)
+      .then((epCode) => patchAthlete({ epCode }))
+      .catch((e) => setError(`Code montre EndurancePro impossible à créer : ${(e as Error).message}`))
+      .finally(() => {
+        reservingEp.current = false
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, cloud, athlete.epSync, athlete.epCode])
 
   return (
     <div className="app">
