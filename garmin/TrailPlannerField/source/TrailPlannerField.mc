@@ -3,6 +3,7 @@ import Toybox.Application;
 import Toybox.Attention;
 import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.Math;
 import Toybox.System;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
@@ -176,6 +177,77 @@ class TrailPlannerField extends WatchUi.DataField {
         return sign + (total / 60) + "h" + (total % 60).format("%02d");
     }
 
+    // Raccourcit un texte pour qu'il tienne dans maxW pixels.
+    function fit(dc as Graphics.Dc, text as String, font, maxW as Number) as String {
+        var t = text;
+        while (t.length() > 3 && dc.getTextWidthInPixels(t, font) > maxW) {
+            t = t.substring(0, t.length() - 1) as String;
+        }
+        return t;
+    }
+
+    // Largeur utilisable à la hauteur y du champ : sur écran rond (Enduro 3, Fenix…),
+    // c'est la corde du cercle à cette hauteur, déduite de la position du champ.
+    function usableWidth(y as Number, h as Number, w as Number) as Number {
+        var ds = System.getDeviceSettings();
+        if (ds.screenShape != System.SCREEN_SHAPE_ROUND) {
+            return w - 6;
+        }
+        var flags = getObscurityFlags();
+        var sh = ds.screenHeight;
+        var fieldTop = (sh - h) / 2;
+        var topEdge = (flags & WatchUi.OBSCURE_TOP) != 0;
+        var bottomEdge = (flags & WatchUi.OBSCURE_BOTTOM) != 0;
+        if (topEdge && !bottomEdge) {
+            fieldTop = 0;
+        } else if (bottomEdge && !topEdge) {
+            fieldTop = sh - h;
+        }
+        var r = ds.screenWidth / 2.0;
+        var dy = fieldTop + y - sh / 2.0;
+        var c2 = r * r - dy * dy;
+        if (c2 <= 0) {
+            return 0;
+        }
+        var chord = (2 * Math.sqrt(c2)).toNumber() - 12;
+        return chord < w - 6 ? chord : w - 6;
+    }
+
+    // Ordre des lignes : la plus courte (l'écart) du côté du bord arrondi, là où l'écran est le plus étroit.
+    function edgeOrder(delta as Array, others as Array) as Array {
+        var flags = getObscurityFlags();
+        var topEdge = (flags & WatchUi.OBSCURE_TOP) != 0;
+        var bottomEdge = (flags & WatchUi.OBSCURE_BOTTOM) != 0;
+        if (topEdge && !bottomEdge) {
+            return [delta].addAll(others);
+        }
+        if (bottomEdge && !topEdge) {
+            return others.add(delta);
+        }
+        return others.size() > 0 ? [others[0], delta].addAll(others.slice(1, null)) : [delta];
+    }
+
+    // Dessine des lignes [texte, police, couleur] centrées dans le champ, en évitant les bords arrondis.
+    function drawLines(dc as Graphics.Dc, lines as Array) as Void {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var flags = getObscurityFlags();
+        var top = (flags & WatchUi.OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
+        var bottom = (flags & WatchUi.OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
+        var total = 0;
+        for (var i = 0; i < lines.size(); i++) {
+            total += dc.getFontHeight(lines[i][1]);
+        }
+        var y = top + (bottom - top - total) / 2;
+        for (var i = 0; i < lines.size(); i++) {
+            var font = lines[i][1];
+            var fh = dc.getFontHeight(font);
+            dc.setColor(lines[i][2], Graphics.COLOR_TRANSPARENT);
+            dc.drawText(w / 2, y, font, fit(dc, lines[i][0], font, usableWidth(y + fh / 2, h, w)), Graphics.TEXT_JUSTIFY_CENTER);
+            y += fh;
+        }
+    }
+
     function onUpdate(dc as Graphics.Dc) as Void {
         var bg = getBackgroundColor();
         var dark = bg == Graphics.COLOR_BLACK;
@@ -184,57 +256,62 @@ class TrailPlannerField extends WatchUi.DataField {
         var green = dark ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
         dc.setColor(fg, bg);
         dc.clear();
-        var w = dc.getWidth();
         var h = dc.getHeight();
-        var cx = w / 2;
-        var center = Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER;
 
         if (plan == null) {
-            dc.drawText(cx, h / 2, Graphics.FONT_XTINY, status, center);
+            drawLines(dc, [[status, Graphics.FONT_XTINY, fg]]);
             return;
         }
         if (!running) {
-            dc.drawText(cx, h * 0.35, Graphics.FONT_XTINY, plan.name, center);
-            dc.drawText(cx, h * 0.62, Graphics.FONT_TINY, "Départ " + clock(plan.start), center);
+            drawLines(dc, [[plan.name, Graphics.FONT_XTINY, fg], ["Départ " + clock(plan.start), Graphics.FONT_SMALL, fg]]);
             return;
         }
         var now = Time.now().value();
         if (now < fuelUntil) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_ORANGE);
             dc.clear();
-            dc.drawText(cx, h / 2, h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, "Manger / boire", center);
+            drawLines(dc, [["Manger / boire", h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, Graphics.COLOR_WHITE]]);
             return;
         }
 
         var deltaColor = delta > 60 ? red : (delta < -60 ? green : fg);
         var nextName = next >= 0 ? plan.cpName[next] : "Arrivée";
         var toNext = next >= 0 ? (plan.cpDist[next] - dist) / 1000.0 : 0.0;
+        var nextLine = toNext.format("%.1f") + " km · " + nextName;
+        // Polices texte (et non chiffres) : « ' », « + » et « h » y sont toujours disponibles.
+        var deltaText = signedMinutes(delta);
 
         if (h < 90) {
-            // Petit champ : écart et prochain point.
-            dc.setColor(deltaColor, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.38, Graphics.FONT_MEDIUM, signedMinutes(delta), center);
-            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-            dc.drawText(cx, h * 0.78, Graphics.FONT_XTINY, nextName + " " + toNext.format("%.1f") + " km", center);
+            // Petit champ (quart d'écran) : écart et prochain point.
+            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_MEDIUM, deltaColor], [[nextLine, Graphics.FONT_XTINY, fg]]));
             return;
         }
 
-        // Grand champ (demi-écran ou plein écran).
-        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.16, Graphics.FONT_XTINY, nextName + " · " + toNext.format("%.1f") + " km", center);
-        dc.setColor(deltaColor, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(cx, h * 0.40, Graphics.FONT_NUMBER_MEDIUM, signedMinutes(delta), center);
-        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        if (next >= 0) {
-            var line = "Prévu " + clock(startUnix + plan.cpPlan[next]) + " · Est. " + clock(nextEta);
-            dc.drawText(cx, h * 0.64, Graphics.FONT_XTINY, line, center);
-        }
+        var cutText = null;
+        var cutColor = fg;
         if (cutIdx >= 0) {
-            dc.setColor(margin < CUTOFF_WARN ? red : fg, Graphics.COLOR_TRANSPARENT);
-            var cutText = margin >= 0 ? "Marge barrière " + signedMinutes(margin) : "Hors délai " + signedMinutes(margin);
-            dc.drawText(cx, h * 0.82, Graphics.FONT_XTINY, cutText, center);
-        } else {
-            dc.drawText(cx, h * 0.82, Graphics.FONT_XTINY, "Arrivée " + clock(finishEta), center);
+            cutText = margin >= 0 ? "Marge BH " + signedMinutes(margin) : "Hors délai " + signedMinutes(margin);
+            cutColor = margin < CUTOFF_WARN ? red : fg;
         }
+
+        if (h < 170) {
+            // Demi-écran (ex. Enduro 3 : 280 × 140) : trois lignes.
+            var third = next >= 0 ? "Est. " + clock(nextEta) : "Arrivée " + clock(finishEta);
+            var thirdColor = fg;
+            if (cutText != null && margin < CUTOFF_WARN) {
+                third = cutText;
+                thirdColor = cutColor;
+            }
+            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_LARGE, deltaColor], [[nextLine, Graphics.FONT_XTINY, fg], [third, Graphics.FONT_XTINY, thirdColor]]));
+            return;
+        }
+
+        // Plein écran : quatre lignes.
+        var lines = [[nextLine, Graphics.FONT_XTINY, fg], [deltaText, Graphics.FONT_LARGE, deltaColor]];
+        if (next >= 0) {
+            lines.add(["Prévu " + clock(startUnix + plan.cpPlan[next]) + " · Est. " + clock(nextEta), Graphics.FONT_XTINY, fg]);
+        }
+        lines.add(cutText != null ? [cutText, Graphics.FONT_XTINY, cutColor] : ["Arrivée " + clock(finishEta), Graphics.FONT_XTINY, fg]);
+        drawLines(dc, lines);
     }
 }

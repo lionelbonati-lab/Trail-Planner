@@ -9,6 +9,11 @@ ClimbPro et PacePro continuent de fonctionner) :
 - **rappels nutrition** (vibration + écran « Manger / boire » 30 s) selon ton plan ;
 - avant le départ : nom de la course et heure de départ prévue.
 
+![Aperçu approximatif sur Enduro 3 (écran rond 280 px)](apercu-enduro3.png)
+
+*Aperçu approximatif (polices Garmin simulées). Sur écran rond, l'écart — le texte le plus court — se
+place du côté du bord arrondi et les textes trop longs sont raccourcis à la largeur disponible.*
+
 L'estimation reprend la logique du mode course de l'app : le retard observé se prolonge sur la suite,
 amorti et borné. La position le long du parcours vient de la navigation du parcours FIT exporté par l'app
 (plus fiable que la distance de la montre) ; sans parcours chargé, la distance parcourue est utilisée.
@@ -25,7 +30,8 @@ la montre la récupère d'elle-même.
    + le profil de ta montre).
 2. Installe **VS Code** et l'extension **Monkey C** (Garmin), puis « Monkey C: Generate a Developer Key ».
 3. Ouvre le dossier `garmin/TrailPlannerField`.
-4. Ta montre doit figurer dans `manifest.xml` (`<iq:products>`). Sinon : « Monkey C: Edit Products ».
+4. Ta montre doit figurer dans `manifest.xml` (`<iq:products>`, l'Enduro 3 y est : `enduro3`).
+   Sinon : « Monkey C: Edit Products ».
 5. « Monkey C: Build for Device » → choisis ta montre → un fichier `.prg` est créé dans `bin/`.
 
 Pour essayer sans montre : « Monkey C: Run » lance le simulateur. Charge un parcours (*Simulation →
