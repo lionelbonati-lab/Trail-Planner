@@ -64,6 +64,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Synchronisation EndurancePro** (datafield Garmin) : depuis le profil, VC, zones, équivalence montée
   (déduite de la VAM à VC), équivalence descente (déduite des coefficients de descente), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
   montre (champ `ep`) ; EndurancePro les lit en arrière-plan pour colorer l'allure et sonner par zone de VC.
+  Code à 8 chiffres, réservé à la synchro, à saisir directement sur la montre (menu Allure › Trail Planner) :
+  pas besoin des paramètres téléphone, absents quand le datafield est installé hors Store.
 - **Fonds de carte** : Plan IGN et photos aériennes IGN (France), OpenStreetMap (mis à jour en continu),
   OpenStreetMap France, carte nationale suisse, satellite, relief OpenTopoMap ; surcouches sentiers balisés
   (Waymarked Trails) et chemins de randonnée suisses. Le choix est mémorisé.
