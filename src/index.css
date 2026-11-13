@@ -28,6 +28,7 @@
 body { margin: 0; background: var(--bg); }
 h1, h2, h3 { margin: 0; font-weight: 650; }
 h2 { font-size: 15px; }
+.section-title { font-size: 17px; margin: 8px 0 -4px; }
 h3 { font-size: 13px; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
 a { color: var(--accent); }
 

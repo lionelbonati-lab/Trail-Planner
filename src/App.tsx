@@ -1,16 +1,15 @@
 import type { User } from 'firebase/auth'
 import {
   ArrowLeft,
-  Calculator,
   ChartLine,
   Cloud,
   CloudOff,
   Copy,
   Download,
-  Dumbbell,
   FileDown,
   FileUp,
   Flag,
+  Gauge,
   LibraryBig,
   LogIn,
   LogOut,
@@ -65,12 +64,14 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances' | 'parcours' | 'tracer'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer'
 
 function readHash(): { tab: Tab; raceId: string | null } {
-  const [tab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
+  const [hashTab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
+  // Calculateur VC et Séances ne font plus qu'un onglet (Test VC) : les anciens liens y mènent.
+  const tab = hashTab === 'seances' ? 'cs' : hashTab
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'seances' || tab === 'parcours' || tab === 'tracer' ? tab : 'races',
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' ? tab : 'races',
     raceId: (tab === 'races' || tab === 'live' || tab === 'tracer') && raceId ? raceId : null,
   }
 }
@@ -403,10 +404,9 @@ export default function App() {
         <nav>
           <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}><Flag /> Courses</button>
           <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}><UserIcon /> Profil athlète</button>
-          <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}><Calculator /> Calculateur VC</button>
           <button className={route.tab === 'parcours' ? 'on' : ''} onClick={() => go('parcours')}><LibraryBig /> Parcours</button>
           <button className={route.tab === 'tracer' ? 'on' : ''} onClick={() => go('tracer')}><Spline /> Tracer</button>
-          <button className={route.tab === 'seances' ? 'on' : ''} onClick={() => go('seances')}><Dumbbell /> Séances</button>
+          <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}><Gauge /> Test VC</button>
           <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}><ChartLine /> Analyse</button>
         </nav>
         <InstallButton />
@@ -438,7 +438,7 @@ export default function App() {
             garmin={{ signedIn: !!user, onWatch: races.find((r) => r.id === athlete.watchRaceId) ?? null }}
           />
         ) : route.tab === 'cs' ? (
-          <CsCalculator athlete={athlete} onChange={updateAthlete} />
+          <SessionsPanel athlete={athlete} onChange={updateAthlete} manual={<CsCalculator athlete={athlete} onChange={updateAthlete} />} />
         ) : route.tab === 'parcours' ? (
           <LibraryPanel
             races={races}
@@ -450,8 +450,6 @@ export default function App() {
             onDelete={removeRace}
             onPlan={(r, start) => addRaceCopy(planSession(r, start))}
           />
-        ) : route.tab === 'seances' ? (
-          <SessionsPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : route.tab === 'live' && current ? (

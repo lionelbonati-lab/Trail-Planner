@@ -22,7 +22,7 @@ export interface ProgressSeries {
 const byDate = (a: ProgressPoint, b: ProgressPoint) => a.t - b.t
 
 export function progressSeries(a: Athlete): ProgressSeries[] {
-  const cs: ProgressPoint[] = a.history.map((h) => ({ t: Date.parse(h.date), value: h.cs * 3.6, source: 'Calculateur VC' }))
+  const cs: ProgressPoint[] = a.history.map((h) => ({ t: Date.parse(h.date), value: h.cs * 3.6, source: 'Calcul à la main' }))
   const vam: ProgressPoint[] = []
   const dur: ProgressPoint[] = []
   const descent: ProgressPoint[] = []

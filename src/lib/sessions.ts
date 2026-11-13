@@ -451,7 +451,7 @@ export const SESSIONS: SessionDef[] = [
 export const SESSIONS_BY_KEY = Object.fromEntries(SESSIONS.map((s) => [s.key, s])) as Record<SessionKey, SessionDef>
 
 /**
- * Séances proposées dans l'onglet Séances : le test VC (protocole de l'entraîneur) seulement.
+ * Séances proposées dans l'onglet Test VC : le test VC (protocole de l'entraîneur) seulement.
  * Sortie longue, navettes tempo, tests de 20 min et descentes ne sont plus proposés ; leurs
  * définitions restent pour relire les résultats déjà enregistrés.
  */

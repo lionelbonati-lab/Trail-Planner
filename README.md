@@ -8,17 +8,17 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 **Profil et calibration**
 - Profil athlète : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,
   durabilité (courbe log %VC₁ₕ − k·ln T, ou perte linéaire), produits de nutrition.
-- Calculateur de VC : test 3′/7′/12′ (régression distance-temps), R², prédictions, historique.
 - **Analyse de n'importe quelle séance** (GPX ou FIT de montre) : temps par zone (allure ramenée au plat),
   tours de la montre, meilleurs efforts comparés à VC + D′ (VC relevée si dépassée), détection d'un test VC ;
   prévu vs réalisé, intensité au fil des heures,
   VAM et descente mesurées par tranche de pente, comparaison point par point avec un plan,
   calibration du profil et historique des courses.
 
-- **Séances d'étalonnage** : sortie longue, navettes tempo en côte, seuil en côte et sur le plat (20 min),
-  **test VC 3′ / 7′ / 12′ en trois séances séparées** (échauffement de l'entraîneur, distance lue dans le tour
-  « Corps de séance » de la montre, tests conservés d'un jour à l'autre), descentes. Cibles tirées du profil, entraînement structuré **FIT** pour la montre
-  (`GARMIN/NewFiles`), analyse dédiée de l'enregistrement, mise à jour du profil et **graphiques d'évolution**.
+- **Onglet Test VC** (calculateur et séances réunis) : **test VC 3′ / 7′ / 12′ en trois séances séparées**
+  (échauffement de l'entraîneur, distance lue dans le tour « Corps de séance » de la montre, tests conservés d'un jour
+  à l'autre), entraînement structuré **FIT** pour la montre (`GARMIN/NewFiles`), analyse de l'enregistrement et mise à
+  jour du profil ; calcul à la main (régression distance-temps, R², prédictions), historique des tests et
+  **graphiques d'évolution**.
 
 **Plan de course**
 - Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic.
