@@ -73,7 +73,17 @@ export async function fillElevation(points: RawPoint[], fetcher: Fetcher = fetch
   return out
 }
 
-/** Calcule un segment : chemin OSM (BRouter) ou ligne droite, avec altitude. */
+/** Écart au-delà duquel un point posé hors chemin est relié en ligne droite au chemin (m). */
+export const SNAP_GAP = 15
+
+export class NoPathError extends Error {}
+
+/**
+ * Calcule un segment : chemin OSM (BRouter) ou ligne droite, avec altitude. Sur les chemins,
+ * un point posé hors chemin (le routeur part du chemin le plus proche) est relié à celui-ci en
+ * ligne droite : le tracé va exactement où l'on a cliqué. Sans aucun chemin entre les deux
+ * points : NoPathError (le traceur trace alors une ligne droite).
+ */
 export async function routeSegment(
   a: { lat: number; lon: number },
   b: { lat: number; lon: number },
@@ -91,9 +101,14 @@ export async function routeSegment(
     }
     if (!res.ok) {
       const text = (await res.text().catch(() => '')).trim()
-      throw new Error(/not mapped|no route|not found/i.test(text) ? 'Aucun chemin trouvé entre ces points.' : `Routeur : ${text.slice(0, 80) || `erreur ${res.status}`}`)
+      if (/not mapped|no route|not found/i.test(text)) throw new NoPathError('Aucun chemin trouvé entre ces points.')
+      throw new Error(`Routeur : ${text.slice(0, 80) || `erreur ${res.status}`}`)
     }
     pts = parseBrouter(await res.json())
+    const first = pts[0]
+    const last = pts[pts.length - 1]
+    if (haversine(a.lat, a.lon, first.lat, first.lon) > SNAP_GAP) pts = [...densify(a, first).slice(0, -1), ...pts]
+    if (haversine(last.lat, last.lon, b.lat, b.lon) > SNAP_GAP) pts = [...pts, ...densify(last, b).slice(1)]
   }
   return pts.some((p) => p.ele === null) ? fillElevation(pts, fetcher) : pts
 }

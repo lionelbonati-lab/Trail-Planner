@@ -332,31 +332,92 @@ tr.muted td { color: var(--muted); }
 .zone-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
 .suggestions { flex-direction: column; align-items: flex-start; margin-top: 10px; }
 
-/* Traceur de parcours */
-.draw-tools { flex-wrap: wrap; gap: 6px; align-items: center; }
-.draw-tools .seg { margin-bottom: 0; }
-.draw-tools form { margin-top: 0; }
-.draw-tools .spacer { flex: 1; }
-.draw-map { height: min(68vh, 720px); cursor: crosshair; }
+/* Traceur de parcours : plein écran, carte + panneau (ordinateur) ou feuille du bas (téléphone) */
+.draw-shell { position: fixed; inset: 0; z-index: 2000; display: flex; background: var(--bg); color: var(--ink); }
+.draw-mapwrap { position: relative; flex: 1; min-width: 0; }
+.draw-map { position: absolute; inset: 0; cursor: crosshair; z-index: 0; }
 .draw-map .leaflet-interactive { cursor: pointer; }
-@media (max-width: 720px) { .draw-map { height: 60vh; } .draw-tools form input { width: 140px !important; } }
-.wp-icon { border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 11px/1 system-ui, sans-serif; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35); cursor: grab; }
+.draw-map.dropping { outline: 3px dashed var(--accent); outline-offset: -3px; }
+.draw-shell .leaflet-bottom { bottom: var(--sheet-h, 0px); }
+.draw-shell .leaflet-top.leaflet-right { top: 0; }
+.fab { width: 44px; height: 44px; border-radius: 50%; border: none; background: #fff; color: #1f2420; box-shadow: 0 2px 8px rgba(0,0,0,0.25); display: inline-flex; align-items: center; justify-content: center; font-size: 20px; padding: 0; flex: none; }
+.fab:disabled { opacity: 0.5; }
+.draw-top { position: absolute; top: 10px; left: 10px; right: 64px; z-index: 1001; display: flex; gap: 8px; align-items: flex-start; }
+.draw-search { flex: 1; max-width: 380px; position: relative; margin: 0; }
+.draw-search input { width: 100%; height: 44px; border-radius: 22px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.25); padding: 0 16px; font-size: 15px; background: #fff; color: #1f2420; }
+.draw-search .place-list { position: absolute; top: 50px; left: 0; right: 0; background: var(--surface); box-shadow: 0 4px 16px rgba(0,0,0,0.2); margin: 0; }
+.draw-banner { position: absolute; top: 62px; left: 50%; transform: translateX(-50%); z-index: 1001; width: min(560px, calc(100% - 20px)); }
+.draw-banner .banner { margin: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+.draw-tip { background: rgba(31,36,32,0.85); color: #fff; border-radius: 18px; padding: 8px 14px; font-size: 13px; text-align: center; width: fit-content; margin: 0 auto; }
+.draw-fabs { position: absolute; right: 10px; z-index: 1001; display: flex; flex-direction: column; gap: 10px; }
+.draw-pill { position: absolute; left: 10px; z-index: 1001; display: inline-flex; background: #fff; border-radius: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); overflow: hidden; }
+.draw-pill button { border: none; border-radius: 0; height: 44px; padding: 0 14px; background: transparent; color: #1f2420; font-weight: 600; font-size: 14px; }
+.draw-pill button.on { background: var(--accent); color: #fff; }
+.draw-card { position: absolute; left: 50%; transform: translateX(-50%); z-index: 1002; background: var(--surface); border-radius: 14px; box-shadow: 0 4px 18px rgba(0,0,0,0.25); padding: 10px 12px; width: min(440px, calc(100% - 20px)); display: grid; gap: 8px; }
+.draw-card-head { display: flex; align-items: baseline; gap: 10px; }
+.draw-card-head .muted { flex: 1; font-size: 13px; }
+.draw-card-row { display: grid; gap: 4px; }
+.draw-card .row { margin-top: 0; }
+.mode-seg { margin: 0; width: 100%; }
+.mode-seg button { flex: 1; padding: 7px 6px; font-size: 13px; }
+.danger-btn { color: var(--danger); }
+.draw-panel { width: 400px; flex: none; display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--line); position: relative; min-height: 0; }
+.draw-panel-body { flex: 1; overflow: auto; padding: 14px 16px; min-height: 0; }
+.draw-name { width: 100%; font-size: 18px; font-weight: 700; border: none; background: var(--accent-soft); border-radius: 10px; padding: 9px 12px; color: var(--ink); }
+.draw-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 10px 0 6px; font-size: 17px; }
+.draw-time { margin-left: auto; font-weight: 700; }
+.pace-chip { padding: 3px 9px; font-size: 13px; border-radius: 14px; display: inline-flex; align-items: center; }
+.draw-status { display: grid; gap: 2px; font-size: 13px; margin-bottom: 6px; }
+.draw-h { margin-top: 14px; }
+.wp-list { list-style: none; padding: 0; margin: 0; }
+.wp-row { width: 100%; display: grid; grid-template-columns: 14px 1fr auto; grid-template-areas: "dot name time" "dot info time"; column-gap: 10px; align-items: center; text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--surface); white-space: normal; }
+.wp-row.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.wp-row.static { display: grid; }
+.wp-row .wp-dot { grid-area: dot; width: 12px; height: 12px; border-radius: 50%; }
+.wp-row .wp-name { grid-area: name; font-weight: 600; }
+.wp-row .muted { grid-area: info; font-size: 12px; }
+.wp-row .wp-time { grid-area: time; font-size: 15px; }
+.wp-dot.wp-start { background: #2f6b4f; }
+.wp-dot.wp-end { background: #1f2420; }
+.wp-dot.wp-mid { background: #fff; border: 3px solid #2f6b4f; }
+.wp-seg { display: block; width: calc(100% - 22px); margin: 0 0 0 16px; padding: 6px 10px; border: none; border-left: 2px dashed var(--line); border-radius: 0; background: transparent; color: var(--muted); font-size: 12px; text-align: left; white-space: normal; }
+.draw-help { margin-top: 12px; }
+.draw-menu { position: absolute; bottom: 64px; left: 8px; z-index: 5; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.2); padding: 10px; display: grid; gap: 6px; width: min(320px, calc(100% - 16px)); }
+.draw-menu button, .draw-menu .button { justify-content: flex-start; text-align: left; }
+.draw-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
+.draw-toolbar .tb { width: 44px; height: 44px; border-radius: 50%; border: none; background: transparent; font-size: 20px; color: var(--accent); padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.draw-toolbar .tb.on { background: var(--accent-soft); }
+.draw-toolbar .tb:disabled { opacity: 0.35; }
+.draw-toolbar .tb-group { display: inline-flex; background: var(--accent-soft); border-radius: 22px; }
+.draw-toolbar .tb-ok { border: none; background: none; color: var(--accent); font-weight: 800; font-size: 17px; padding: 0 8px; }
+.draw-toolbar .tb-ok:disabled { opacity: 0.4; }
+.sheet-handle { display: block; width: 100%; height: 22px; border: none; background: transparent; padding: 0; border-radius: 16px 16px 0 0; }
+.sheet-handle span { display: block; width: 42px; height: 5px; border-radius: 3px; background: #c9c5bb; margin: 9px auto 0; }
+@media (max-width: 899px) {
+  .draw-shell { display: block; }
+  .draw-mapwrap { position: absolute; inset: 0; }
+  .draw-panel { position: absolute; left: 0; right: 0; bottom: 0; width: auto; border-left: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -4px 18px rgba(0,0,0,0.18); max-height: 78vh; z-index: 1003; }
+  .draw-panel:not(.open) .draw-more { display: none; }
+  .draw-panel-body { padding: 2px 14px 6px; }
+  .draw-name { font-size: 16px; padding: 7px 10px; }
+  .draw-summary { font-size: 15px; margin: 6px 0 2px; }
+  .draw-shell .leaflet-control-zoom { display: none; }
+  .draw-pill button { padding: 0 11px; font-size: 13px; }
+}
+.wp-icon, .leaflet-marker-icon.wp-icon { border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 11px/1 system-ui, sans-serif; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35); cursor: grab; }
 .wp-start { background: #2f6b4f; border: 2px solid #fff; }
 .wp-end { background: #1f2420; border: 2px solid #fff; }
 .wp-mid { background: #fff; border: 3px solid #2f6b4f; }
+.wp-icon.wp-sel { box-shadow: 0 0 0 4px #f39c12, 0 1px 3px rgba(0,0,0,0.35); }
 .km-icon { background: rgba(255,255,255,0.9); border: 1px solid #2f6b4f; border-radius: 8px; color: #2f6b4f; font: 600 10px/14px system-ui, sans-serif; text-align: center; pointer-events: none; }
-.draw-stats { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; margin: 10px 0 4px; }
-.draw-stats strong { font-size: 18px; }
-.mini-profile svg { width: 100%; height: 140px; display: block; border-bottom: 1px solid var(--line); touch-action: none; }
+.mini-profile svg { width: 100%; height: 120px; display: block; border-bottom: 1px solid var(--line); touch-action: none; }
 .mini-profile-head { display: flex; justify-content: space-between; font-size: 12px; }
-.place-list { list-style: none; padding: 0; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; max-height: 200px; overflow: auto; }
+.place-list { list-style: none; padding: 0; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; max-height: 240px; overflow: auto; }
 .place-list button { width: 100%; text-align: left; white-space: normal; }
-.draw-save { margin-top: 10px; }
 .pace-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 2px 0 10px; }
 .pace-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .pace-chips button { padding: 4px 9px; font-size: 13px; }
 .pace-chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
 .pace-info { font-size: 12px; flex-basis: 100%; }
-.draw-map.dropping { outline: 3px dashed var(--accent); outline-offset: -3px; }
 .ep-zone { display: inline-flex; align-items: center; margin-right: 12px; white-space: nowrap; }
 label.check { display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer; }

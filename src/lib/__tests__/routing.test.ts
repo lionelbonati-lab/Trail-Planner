@@ -16,6 +16,7 @@ import {
   fillElevationSparse,
   joinSegments,
   nearestIndex,
+  NoPathError,
   outAndBack,
   parseBrouter,
   readTrackFile,
@@ -102,9 +103,34 @@ describe('tracé sur carte : services', () => {
     expect(densify({ lat: 45, lon: 6 }, { lat: 46, lon: 7 }).length).toBeLessThanOrEqual(401)
   })
 
+  it('point posé hors chemin : relié en ligne droite au chemin le plus proche', async () => {
+    // Le routeur part d'un chemin à ~150 m du point cliqué A et s'arrête à ~200 m de B.
+    const offA = { lat: A.lat + 0.00135, lon: A.lon }
+    const offB = { lat: B.lat - 0.0018, lon: B.lon }
+    const calls: string[] = []
+    const fetcher: Fetcher = async (url) => {
+      calls.push(url)
+      if (url.includes('brouter.de')) {
+        return json({ features: [{ geometry: { coordinates: [[offA.lon, offA.lat, 1000], [(offA.lon + offB.lon) / 2, (offA.lat + offB.lat) / 2, 1010], [offB.lon, offB.lat, 1020]] } }] })
+      }
+      const lats = new URL(url).searchParams.get('latitude')!.split(',')
+      return json({ elevation: lats.map(() => 990) })
+    }
+    const pts = await routeSegment(A, B, 'trail', fetcher)
+    expect(pts[0]).toMatchObject({ lat: A.lat, lon: A.lon, ele: 990 })
+    expect(pts[pts.length - 1]).toMatchObject({ lat: B.lat, lon: B.lon, ele: 990 })
+    expect(pts.some((p) => p.ele === 1010)).toBe(true)
+    // Écart sous 15 m : pas de raccord ajouté.
+    const close = await routeSegment(A, B, 'trail', async (url) =>
+      json({ features: [{ geometry: { coordinates: [[A.lon, A.lat + 0.00005, 1000], [B.lon, B.lat, 1020]] } }] }),
+    )
+    expect(close).toHaveLength(2)
+  })
+
   it('erreurs du routeur explicites', async () => {
     const none = fakeServices({ brouterStatus: 400, brouterText: 'to-position not mapped in existing datafile' })
     await expect(routeSegment(A, B, 'trail', none.fetcher)).rejects.toThrow('Aucun chemin trouvé')
+    await expect(routeSegment(A, B, 'trail', none.fetcher)).rejects.toBeInstanceOf(NoPathError)
     const down: Fetcher = async () => {
       throw new TypeError('Failed to fetch')
     }
