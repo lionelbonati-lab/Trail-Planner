@@ -8,6 +8,7 @@ import type {
   Durability,
   EnvSettings,
   KmeSettings,
+  PaceZone,
   PushSettings,
   Race,
   SimPoint,
@@ -131,6 +132,38 @@ export interface SimOptions {
   weather?: WeatherSeries | null
   /** Relances en montée avec le D′. */
   push?: PushSettings
+  /** Zones d'allure imposées. */
+  zones?: PaceZone[]
+}
+
+/** Zones d'entraînement (fraction de VC). */
+export const TRAINING_ZONES: { label: string; value: number }[] = [
+  { label: 'Récupération', value: 0.65 },
+  { label: 'Endurance', value: 0.75 },
+  { label: 'Tempo', value: 0.88 },
+  { label: 'Seuil', value: 0.97 },
+  { label: 'VC', value: 1.0 },
+  { label: 'Au-dessus de la VC', value: 1.1 },
+]
+
+/**
+ * Zone d'allure de chaque pas de trace : l'indice i désigne le pas qui arrive au point i,
+ * rattaché à une zone par son milieu (la dernière zone définie l'emporte). −1 = aucune.
+ */
+export function zoneIndex(track: Track, zones: PaceZone[] | undefined): Int16Array {
+  const pts = track.points
+  const out = new Int16Array(pts.length).fill(-1)
+  if (!zones?.length) return out
+  for (let i = 1; i < pts.length; i++) {
+    const mid = (pts[i - 1].dist + pts[i].dist) / 2
+    for (let z = zones.length - 1; z >= 0; z--) {
+      if (mid >= zones[z].from && mid <= zones[z].to) {
+        out[i] = z
+        break
+      }
+    }
+  }
+  return out
 }
 
 /** Niveau OSM par point de trace (0 = inconnu). */
@@ -243,6 +276,7 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
   const startMs = Number.isNaN(startDate.getTime()) ? Date.now() : startDate.getTime()
   const offsetMs = tzOffsetMs(new Date(startMs), env.timeZone)
   const osm = osmLevels(track, opts.osmTech)
+  const zoneOf = zoneIndex(track, opts.zones)
   const push = opts.push?.enabled && mode !== 'kme' ? opts.push : null
   const dPrime = Math.max(1, athlete.dPrime)
   const wFloor = push ? dPrime * (1 - push.budget) : 0
@@ -292,10 +326,18 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
     const base = intensityAt(t / 3600, athlete.durability)
     const stepTime = (intensity: number) => effDist / Math.max(baseSpeed(athlete, mode, grade, intensity) * e.mult, 0.05)
 
-    // Intensité du pas : relance en montée tant que le D′ le permet.
+    // Intensité du pas : zone imposée, sinon relance en montée tant que le D′ le permet.
+    const zone = zoneOf[i] >= 0 ? opts.zones![zoneOf[i]] : null
     let intensity = base
     let dt = stepTime(base)
-    if (push && grade >= 2 && push.climbPct > base) {
+    if (zone && zone.kind === 'pace') {
+      // Allure imposée telle quelle (le terrain n'est pas pris en compte).
+      dt = dx / (1000 / Math.max(60, zone.value))
+      intensity = Math.min(1.5, 1000 / Math.max(60, zone.value) / athlete.cs)
+    } else if (zone) {
+      intensity = zone.kind === 'intensity' ? zone.value : 1000 / Math.max(60, zone.value) / athlete.cs
+      dt = stepTime(intensity)
+    } else if (push && grade >= 2 && push.climbPct > base) {
       const dtPush = stepTime(push.climbPct)
       const cost = athlete.cs * Math.max(0, push.climbPct - 1) * dtPush
       if (wbal - cost >= wFloor) {
