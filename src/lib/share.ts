@@ -36,6 +36,8 @@ export interface ShareSnapshot {
   rows: ShareRow[]
   /** Plan compact pour le champ de données Garmin (voir watch.ts). */
   w: string
+  /** Code montre si cette course est sur la montre : suivi envoyé par la montre (live/{code}). */
+  liveRef: string | null
 }
 
 export function buildSnapshot(
@@ -67,6 +69,7 @@ export function buildSnapshot(
     profile: track.points.filter((_, i) => i % stride === 0).map((p) => [Math.round(p.dist), Math.round(p.ele)]),
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
+    liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
     rows: sim.splits.map((s, i) => {
       const w = windowOf(s.cp.id)
       const row = status?.rows[i]
