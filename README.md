@@ -32,7 +32,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   d'OpenStreetMap (routeur public BRouter, profil randonnée montagne), le chemin le plus court ou une ligne
   droite hors sentier (altitude du modèle de terrain Open-Meteo) ; glisser un point, cliquer sur le tracé pour
   en insérer un, boucle, aller-retour, sens inverse, annuler (Ctrl+Z), recherche de lieu, bornes kilométriques,
-  profil, distance, D+/D− et temps estimé selon le profil. Enregistré comme parcours d'entraînement ou comme
+  profil, distance, D+/D− et temps estimé selon le profil, à l'allure de course ou dans une zone choisie
+  (Z1…Z7 : temps au milieu de la zone, fourchette haut/bas de zone ; la zone est enregistrée avec le parcours). Enregistré comme parcours d'entraînement ou comme
   course, export GPX ; « Modifier le tracé » rouvre un tracé (ou découpe une trace importée en points à déplacer).
 - **7 zones d'entraînement** en % de VC, celles du bilan VC (Z1 60–70 % récupération … Z5 96–105 %
   voisinage de VC, Z6 105–115 % supra-VC, Z7 > 115 % haute intensité), avec utilisation et durée tenable,

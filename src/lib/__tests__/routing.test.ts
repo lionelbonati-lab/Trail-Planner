@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { newRace } from '../defaults'
+import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
 import { gpxRawPoints, haversine, parseGpx, type RawPoint } from '../gpx'
+import { simulate } from '../model'
+import { planOptions } from '../plan'
+import type { PaceZone } from '../types'
+import { MODEL_TARGET, wholeRoute, wholeRouteZone, zoneTarget } from '../zones'
 import {
   brouterUrl,
   closeLoop,
@@ -199,5 +203,20 @@ describe('tracé sur carte : assemblage', () => {
     expect(joinSegments(segs).points).toHaveLength(raw.length)
     // Très longue trace : 60 points au plus.
     expect(drawnFromRaw(seg([45, 6], [46.5, 6], 5000)).waypoints.length).toBeLessThanOrEqual(60)
+  })
+
+  it('allure simulée : tout le parcours dans une zone du profil', () => {
+    const a = normalizeAthlete({ ...DEFAULT_ATHLETE, cs: 4 })
+    const track = parseGpx(drawnGpx('Plat', seg([45, 6], [45.09, 6], 400).map((p) => ({ ...p, ele: 400 })))) // 10 km plat
+    const time = (zones: PaceZone[]) => simulate(track, a, planOptions({ ...newRace('x', ''), zones }, track)).totalTime
+    const z2 = wholeRoute(zoneTarget(a, 1), track.totalDist)
+    expect(z2).toHaveLength(1)
+    expect(z2[0]).toMatchObject({ from: 0, to: track.totalDist, kind: 'intensity', value: 0.75, label: 'Zone 2' })
+    // 10 km à 75 % de 4 m/s ≈ 55′33″ ; Z4 plus rapide.
+    expect(time(z2) / 60).toBeCloseTo(track.totalDist / (4 * 0.75) / 60, 0)
+    expect(time(wholeRoute(zoneTarget(a, 3), track.totalDist))).toBeLessThan(time(z2))
+    expect(wholeRouteZone(z2, a)).toBe(1)
+    expect(wholeRouteZone([], a)).toBeNull()
+    expect(wholeRoute(MODEL_TARGET, track.totalDist)).toEqual([])
   })
 })
