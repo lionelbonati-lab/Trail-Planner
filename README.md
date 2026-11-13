@@ -14,7 +14,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   calibration du profil et historique des courses.
 
 - **Séances d'étalonnage** : sortie longue, navettes tempo en côte, seuil en côte et sur le plat (20 min),
-  test 3′/7′/12′, descentes. Cibles tirées du profil, entraînement structuré **FIT** pour la montre
+  **test VC 3′ / 7′ / 12′ en trois séances séparées** (échauffement de l'entraîneur, distance lue dans le tour
+  « Corps de séance » de la montre, tests conservés d'un jour à l'autre), descentes. Cibles tirées du profil, entraînement structuré **FIT** pour la montre
   (`GARMIN/NewFiles`), analyse dédiée de l'enregistrement, mise à jour du profil et **graphiques d'évolution**.
 
 **Plan de course**
@@ -25,6 +26,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
   ou depuis une course), étiquettes et recherche, zones d'allure enregistrées ; « Planifier » crée une séance
   datée sans toucher au modèle ; liste des séances planifiées.
+- **Zones d'entraînement** en % de VC réglables dans le profil (zone 1 : 60–70 %, zone 2 : 70–80 %,
+  zone 5 : 96–105 %…), utilisées pour les cibles des séances et le choix des zones sur le profil.
 - **Zones d'allure** : glisser sur le profil pour sélectionner une portion et lui donner une cible
   (zones d'entraînement en % de VC, % libre, allure plat équivalente ou allure imposée) ; export en
   entraînement Garmin découpé par distance — pour planifier aussi les allures d'entraînement.

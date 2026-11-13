@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { activityFromRaw, analyzeActivity, calibrateFromActivities, calibrateOnActivity, readActivity } from '../activity'
 import { DEFAULT_ATHLETE, DEFAULT_ENV, DEFAULT_KME, newRace } from '../defaults'
 import { buildCourseFit } from '../fit'
-import { decodeFitRecords } from '../fitDecode'
+import { decodeFit, decodeFitRecords } from '../fitDecode'
 import { parseGpx, type RawPoint } from '../gpx'
 import { simulate, withFinish } from '../model'
 import { formatDuration } from '../time'
@@ -29,6 +29,11 @@ describe('décodeur FIT', () => {
     const mine = decodeFitRecords(fit)
     const ref: any = await new Promise((res, rej) => new FitParser({ mode: 'list' }).parse(fit.buffer as ArrayBuffer, (e: any, d: any) => (e ? rej(e) : res(d))))
     expect(mine.length).toBe(ref.records.length)
+    // Tour unique du parcours : distance totale.
+    const { laps } = decodeFit(fit)
+    expect(laps).toHaveLength(1)
+    expect(laps[0].distance).toBeCloseTo(track.totalDist, -1)
+    expect(laps[0].timer).toBeCloseTo(sim.totalTime, 0)
     for (const i of [0, 100, mine.length - 1]) {
       expect(mine[i].lat).toBeCloseTo(ref.records[i].position_lat, 6)
       expect(mine[i].ele).toBeCloseTo(ref.records[i].altitude, 0)

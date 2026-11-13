@@ -304,3 +304,7 @@ button.tag.on { background: var(--accent); border-color: var(--accent); color: v
 .row-actions { white-space: nowrap; }
 .plan-row td { background: var(--accent-soft); }
 .badge { margin-left: 10px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+
+.variant-actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+.variant { display: flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+tr.muted td { color: var(--muted); }
