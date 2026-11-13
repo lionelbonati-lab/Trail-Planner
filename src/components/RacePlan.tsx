@@ -10,7 +10,7 @@ import { planOptions } from '../lib/plan'
 import { calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
-import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, SimResult, Track } from '../lib/types'
+import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { Kpi } from './CsCalculator'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
@@ -71,6 +71,7 @@ export function RacePlan({
   onLive,
   share,
   watch,
+  library,
 }: {
   race: Race
   athlete: Athlete
@@ -79,7 +80,9 @@ export function RacePlan({
   onLive?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
   watch?: { available: boolean; code: string | null; active: boolean; activate: () => void }
+  library?: { kind: RaceKind; addToLibrary: () => void; planSession: (start: string) => void }
 }) {
+  const [planning, setPlanning] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [showWatch, setShowWatch] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
@@ -231,7 +234,15 @@ export function RacePlan({
           }
           actions={
             <>
-              {onLive && <button className="primary" onClick={onLive}>▶ Mode course</button>}
+              {library?.kind === 'route' && (
+                <button className="primary" onClick={() => setPlanning(planning === null ? race.env.start : null)} title="Crée une séance datée sur ce parcours ; le parcours reste un modèle">
+                  📅 Planifier une séance
+                </button>
+              )}
+              {library && library.kind !== 'route' && (
+                <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement">📚 Ajouter à la bibliothèque</button>
+              )}
+              {onLive && <button className={library?.kind === 'route' ? '' : 'primary'} onClick={onLive}>▶ Mode course</button>}
               {share && (
                 <button
                   onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
@@ -282,6 +293,19 @@ export function RacePlan({
                 <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
                   Arrêter le partage
                 </button>
+              </span>
+            </div>
+          )}
+          {planning !== null && library && (
+            <div className="banner info">
+              <span className="row tight">
+                Nouvelle séance sur ce parcours le
+                <input type="datetime-local" value={planning} onChange={(e) => setPlanning(e.target.value)} />
+                {race.zones.length > 0 && <span className="muted small">avec ses {race.zones.length} zone(s) d'allure</span>}
+              </span>
+              <span className="row tight">
+                <button className="primary" onClick={() => { library.planSession(planning); setPlanning(null) }}>Créer la séance</button>
+                <button className="ghost" onClick={() => setPlanning(null)}>Annuler</button>
               </span>
             </div>
           )}

@@ -6,7 +6,9 @@ import { LiveMode } from './components/LiveMode'
 import { computePlan, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
 import { CsCalculator } from './components/CsCalculator'
+import { LibraryPanel } from './components/LibraryPanel'
 import { RacePlan } from './components/RacePlan'
+import { planSession, toRoute } from './lib/library'
 import { SessionsPanel } from './components/SessionsPanel'
 import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
@@ -33,14 +35,14 @@ const rememberSignedIn = (on: boolean) => {
     /* stockage indisponible */
   }
 }
-import type { Athlete, Race } from './lib/types'
+import type { Athlete, Race, RaceKind } from './lib/types'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'seances' | 'parcours'
 
 function readHash(): { tab: Tab; raceId: string | null } {
   const [tab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'seances' ? tab : 'races',
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'seances' || tab === 'parcours' ? tab : 'races',
     raceId: (tab === 'races' || tab === 'live') && raceId ? raceId : null,
   }
 }
@@ -183,14 +185,14 @@ export default function App() {
     window.location.hash = raceId ? `/${tab}/${raceId}` : `/${tab}`
   }
 
-  const addGpx = async (files: FileList | null) => {
+  const addGpx = async (files: FileList | null, kind: RaceKind = 'race') => {
     if (!files) return
     for (const f of Array.from(files)) {
       const text = await f.text()
       try {
         const t = parseGpx(text)
         const name = t.name && t.name !== 'Course' ? t.name : f.name.replace(/\.gpx$/i, '')
-        const r = newRace(name, text)
+        const r = { ...newRace(name, text), kind }
         setRaces((all) => [r, ...all])
         await store.saveRace(r)
         go('races', r.id)
@@ -198,6 +200,17 @@ export default function App() {
         setError(`${f.name} : ${(e as Error).message}`)
       }
     }
+  }
+
+  // Bibliothèque : ajout d'une copie comme parcours modèle, et séances datées créées depuis un parcours.
+  const addRaceCopy = async (r: Race, open = true) => {
+    setRaces((all) => [r, ...all])
+    await store.saveRace(r).catch(report)
+    if (open) go('races', r.id)
+  }
+  const removeRace = async (id: string) => {
+    setRaces((all) => all.filter((r) => r.id !== id))
+    await store.deleteRace(id).catch(report)
   }
 
   const deleteRace = async (id: string) => {
@@ -335,6 +348,7 @@ export default function App() {
           <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}>Courses</button>
           <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}>Profil athlète</button>
           <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}>Calculateur VC</button>
+          <button className={route.tab === 'parcours' ? 'on' : ''} onClick={() => go('parcours')}>Parcours</button>
           <button className={route.tab === 'seances' ? 'on' : ''} onClick={() => go('seances')}>Séances</button>
           <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}>Analyse</button>
         </nav>
@@ -355,6 +369,16 @@ export default function App() {
           <AthletePanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'cs' ? (
           <CsCalculator athlete={athlete} onChange={updateAthlete} />
+        ) : route.tab === 'parcours' ? (
+          <LibraryPanel
+            races={races}
+            athlete={athlete}
+            onOpen={(id) => go('races', id)}
+            onAdd={(f) => addGpx(f, 'route')}
+            onUpdate={updateRace}
+            onDelete={removeRace}
+            onPlan={(r, start) => addRaceCopy(planSession(r, start))}
+          />
         ) : route.tab === 'seances' ? (
           <SessionsPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'analyse' ? (
@@ -363,13 +387,22 @@ export default function App() {
           <LiveMode race={current} athlete={athlete} onChange={updateRace} onExit={() => go('races', current.id)} />
         ) : current ? (
           <>
-            <div className="crumbs no-print"><a href="#/races">← Toutes les courses</a></div>
+            <div className="crumbs no-print">
+              {current.kind === 'race' ? <a href="#/races">← Toutes les courses</a> : <a href="#/parcours">← Bibliothèque de parcours</a>}
+              {current.kind === 'route' && <span className="badge">Parcours modèle</span>}
+              {current.kind === 'session' && <span className="badge">Séance d'entraînement</span>}
+            </div>
             <RacePlan
               race={current}
               athlete={athlete}
               onChange={updateRace}
               onAthleteChange={updateAthlete}
               onLive={() => go('live', current.id)}
+              library={{
+                kind: current.kind,
+                addToLibrary: () => addRaceCopy(toRoute(current)),
+                planSession: (start: string) => addRaceCopy(planSession(current, start)),
+              }}
               share={{
                 available: !!user,
                 url: current.shareId ? shareUrl(current.shareId) : null,
@@ -386,7 +419,7 @@ export default function App() {
           </>
         ) : (
           <RaceList
-            races={races}
+            races={races.filter((r) => r.kind === 'race')}
             onOpen={(id) => go('races', id)}
             onAdd={addGpx}
             onDelete={deleteRace}

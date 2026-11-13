@@ -22,6 +22,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
+- **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
+  ou depuis une course), étiquettes et recherche, zones d'allure enregistrées ; « Planifier » crée une séance
+  datée sans toucher au modèle ; liste des séances planifiées.
 - **Zones d'allure** : glisser sur le profil pour sélectionner une portion et lui donner une cible
   (zones d'entraînement en % de VC, % libre, allure plat équivalente ou allure imposée) ; export en
   entraînement Garmin découpé par distance — pour planifier aussi les allures d'entraînement.
