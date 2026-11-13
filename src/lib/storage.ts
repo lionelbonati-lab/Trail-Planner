@@ -134,7 +134,7 @@ const app: FirebaseApp | null =
 
 export const auth: Auth | null = app ? getAuth(app) : null
 // Cache local persistant : les données synchronisées restent consultables hors ligne.
-const db: Firestore | null = app
+export const db: Firestore | null = app
   ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
   : null
 

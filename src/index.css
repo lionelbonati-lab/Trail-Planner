@@ -225,3 +225,26 @@ button.danger { color: var(--danger); }
 .swatch.series-2 { background: var(--series-2); }
 .changes { margin: 0 0 8px; padding-left: 18px; }
 .changes li { margin: 2px 0; }
+.small { font-size: 11px; }
+
+/* Mode course (téléphone) */
+.live { display: grid; gap: 14px; max-width: 720px; margin: 0 auto; }
+.live-hero, .live-next { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; text-align: center; }
+.live-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.live-clock { font-size: 44px; font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.live-delta { font-size: 18px; font-weight: 650; margin-top: 4px; }
+.live-delta.late { color: var(--warn); }
+.live-delta.early { color: var(--ok); }
+.live-sub { color: var(--muted); margin-top: 4px; }
+.live-next-name { font-size: 22px; font-weight: 700; margin: 2px 0; }
+.live-times { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin: 8px 0 12px; }
+.live-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center; }
+button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 100%; justify-content: center; }
+.live-table tr.done td { color: var(--muted); }
+.share-banner a { word-break: break-all; }
+.share h1 { font-size: 22px; margin-bottom: 4px; }
+.share .live-hero { margin: 12px 0; }
+.table tr.done td:first-child::before { content: '✓ '; color: var(--ok); }
+.profile .done-dot { fill: var(--ok); }
+.profile .ravito-dot { fill: var(--ravito); }
+.profile .cp-dot { fill: var(--surface); stroke: var(--profile); stroke-width: 1.5; }

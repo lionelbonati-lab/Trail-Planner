@@ -5,5 +5,14 @@ service cloud.firestore {
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // Liens d'assistance : lisibles par quiconque a le lien (identifiant aléatoire),
+    // modifiables uniquement par leur propriétaire.
+    match /shares/{shareId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid
+                    && request.resource.data.owner == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
+    }
   }
 }

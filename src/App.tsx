@@ -12,6 +12,9 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
+import { LiveMode } from './components/LiveMode'
+import { computePlan, scenarioWindows } from './lib/plan'
+import { buildSnapshot, deleteShare, publishShare, shareUrl } from './lib/share'
 import { CsCalculator } from './components/CsCalculator'
 import { RacePlan } from './components/RacePlan'
 import { Card, Hint } from './components/ui'
@@ -21,13 +24,13 @@ import { parseGpx } from './lib/gpx'
 import { auth, clearLocalData, cloudStore, hasLocalAthlete, localRaceCount, localStore, signOutAndClear, type Backup, type Store, type SyncStatus } from './lib/storage'
 import type { Athlete, Race } from './lib/types'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live'
 
 function readHash(): { tab: Tab; raceId: string | null } {
   const [tab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' ? tab : 'races',
-    raceId: tab === 'races' && raceId ? raceId : null,
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' ? tab : 'races',
+    raceId: (tab === 'races' || tab === 'live') && raceId ? raceId : null,
   }
 }
 
@@ -257,6 +260,50 @@ export default function App() {
 
   const current = route.raceId ? races.find((r) => r.id === route.raceId) : null
 
+  // --- Liens d'assistance -----------------------------------------------------
+  const lastShared = useRef(new Map<string, string>())
+  const publish = useCallback(
+    async (race: Race, a: Athlete, shareId: string) => {
+      if (!user) return
+      const plan = computePlan(race, a)
+      if (!plan) return
+      const snap = buildSnapshot(user.uid, race, a, plan.track, plan.sim, scenarioWindows(plan.track, a, plan.opts))
+      const key = JSON.stringify({ ...snap, updatedAt: '' })
+      if (lastShared.current.get(shareId) === key) return
+      await publishShare(shareId, snap)
+      lastShared.current.set(shareId, key)
+    },
+    [user],
+  )
+  const shareRace = async (race: Race) => {
+    const shareId = race.shareId ?? crypto.randomUUID()
+    try {
+      await publish(race, athlete, shareId)
+      if (!race.shareId) updateRace({ ...race, shareId })
+    } catch (e) {
+      const msg = (e as Error).message
+      setError(
+        /permission/i.test(msg)
+          ? "Partage refusé par Firebase : mets à jour les règles Firestore (contenu du fichier firestore.rules)."
+          : `Partage impossible : ${msg}`,
+      )
+    }
+  }
+  const unshareRace = async (race: Race) => {
+    if (!race.shareId) return
+    await deleteShare(race.shareId).catch(() => undefined)
+    lastShared.current.delete(race.shareId)
+    updateRace({ ...race, shareId: null })
+  }
+  // Les liens existants suivent le plan et le direct (envoi groupé toutes les 5 s au plus).
+  useEffect(() => {
+    if (!user) return
+    const id = setTimeout(() => {
+      for (const r of races) if (r.shareId) publish(r, athlete, r.shareId).catch(() => undefined)
+    }, 5000)
+    return () => clearTimeout(id)
+  }, [races, athlete, user, publish])
+
   return (
     <div className="app">
       <header className="topbar no-print">
@@ -286,10 +333,24 @@ export default function App() {
           <CsCalculator athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
+        ) : route.tab === 'live' && current ? (
+          <LiveMode race={current} athlete={athlete} onChange={updateRace} onExit={() => go('races', current.id)} />
         ) : current ? (
           <>
             <div className="crumbs no-print"><a href="#/races">← Toutes les courses</a></div>
-            <RacePlan race={current} athlete={athlete} onChange={updateRace} onAthleteChange={updateAthlete} />
+            <RacePlan
+              race={current}
+              athlete={athlete}
+              onChange={updateRace}
+              onAthleteChange={updateAthlete}
+              onLive={() => go('live', current.id)}
+              share={{
+                available: !!user,
+                url: current.shareId ? shareUrl(current.shareId) : null,
+                create: () => shareRace(current),
+                remove: () => unshareRace(current),
+              }}
+            />
           </>
         ) : (
           <RaceList

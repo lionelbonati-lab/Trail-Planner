@@ -18,11 +18,13 @@ interface Props {
   track: Track
   sim: SimResult
   athlete: Athlete
+  /** Fenêtre de passage (s depuis le départ) : bonne journée → journée difficile. */
+  windowOf: (cpId: string) => { early: number; late: number } | null
   onDone: () => void
 }
 
 /** Rend la feuille demandée dans un conteneur dédié, lance l'impression, puis se retire. */
-export function PrintSheets({ format, race, track, sim, athlete, onDone }: Props) {
+export function PrintSheets({ format, race, track, sim, athlete, windowOf, onDone }: Props) {
   const doneRef = useRef(onDone)
   doneRef.current = onDone
   useEffect(() => {
@@ -134,7 +136,7 @@ export function PrintSheets({ format, race, track, sim, athlete, onDone }: Props
             </div>
             <div className="sheet-kpis"><span>Arrivée prévue {formatClock(new Date(startMs + sim.totalTime * 1000), tz, true)}</span></div>
           </header>
-          <p className="crew-hint">Fenêtre de passage : de −8 % (bonne journée) à +12 % (journée difficile) du temps prévu.</p>
+          <p className="crew-hint">Fenêtre de passage : « au plus tôt » = bonne journée, « au plus tard » = journée difficile (VC −5 %, fatigue plus marquée, arrêts plus longs).</p>
           <table className="ptable crew">
             <thead>
               <tr><th>Ravito</th><th>Km</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Barrière</th><th>Arrêt</th><th>À préparer</th></tr>
@@ -146,9 +148,9 @@ export function PrintSheets({ format, race, track, sim, athlete, onDone }: Props
                   <tr key={s.cp.id}>
                     <td className="name">{s.cp.name}</td>
                     <td>{(s.to / 1000).toFixed(1)}</td>
-                    <td>{formatClock(new Date(startMs + s.arrival * 0.92 * 1000), tz, longRace)}</td>
+                    <td>{formatClock(new Date(startMs + (windowOf(s.cp.id)?.early ?? s.arrival * 0.92) * 1000), tz, longRace)}</td>
                     <td><strong>{formatClock(s.arrivalClock, tz, longRace)}</strong></td>
-                    <td>{formatClock(new Date(startMs + s.arrival * 1.12 * 1000), tz, longRace)}</td>
+                    <td>{formatClock(new Date(startMs + (windowOf(s.cp.id)?.late ?? s.arrival * 1.12) * 1000), tz, longRace)}</td>
                     <td>{s.cp.cutoff ? s.cp.cutoff.slice(11, 16) : ''}</td>
                     <td>{s.cp.stopMin ? `${s.cp.stopMin} min` : ''}</td>
                     <td className="notes">

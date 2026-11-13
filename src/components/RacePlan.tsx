@@ -4,7 +4,7 @@ import { buildCourseFit } from '../lib/fit'
 import { fetchRaceWeather } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
 import { planOptions } from '../lib/plan'
-import { calibrateDurability, simulate, type SimOptions } from '../lib/model'
+import { calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, SimResult, Track } from '../lib/types'
@@ -48,12 +48,17 @@ export function RacePlan({
   athlete,
   onChange,
   onAthleteChange,
+  onLive,
+  share,
 }: {
   race: Race
   athlete: Athlete
   onChange: (r: Race) => void
   onAthleteChange: (a: Athlete) => void
+  onLive?: () => void
+  share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
 }) {
+  const [copied, setCopied] = useState(false)
   const { track, opts, sim } = useRaceComputation(race, athlete)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
@@ -67,6 +72,18 @@ export function RacePlan({
     set({ checkpoints: race.checkpoints.map((c) => (c.id === id ? { ...c, ...patch, auto: patch.dist !== undefined || patch.name !== undefined || patch.kind !== undefined ? false : c.auto } : c)) })
 
   const startMs = zonedToUtc(race.env.start, race.env.timeZone).getTime()
+
+  // Scénarios : fenêtre de passage entre une bonne journée et une journée difficile.
+  const scenarios = useMemo(() => {
+    if (!track || !opts) return null
+    const run = (k: 'good' | 'hard') => simulate(track, ...scenarioInputs(athlete, opts, k))
+    return { good: run('good'), hard: run('hard') }
+  }, [track, opts, athlete])
+  const windowOf = (cpId: string) => {
+    const g = scenarios?.good.splits.find((x) => x.cp.id === cpId)
+    const h = scenarios?.hard.splits.find((x) => x.cp.id === cpId)
+    return g && h ? { early: g.arrival, late: h.arrival } : null
+  }
 
   const compareResults = useMemo(() => {
     if (!compare || !track || !opts) return null
@@ -182,6 +199,15 @@ export function RacePlan({
           }
           actions={
             <>
+              {onLive && <button className="primary" onClick={onLive}>▶ Mode course</button>}
+              {share && (
+                <button
+                  onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
+                  title="Lien en lecture seule pour ton assistance, mis à jour en direct"
+                >
+                  👥 Lien assistance
+                </button>
+              )}
               <button onClick={() => setPrintFormat('a4')}>🖨 Feuille A4</button>
               <button onClick={() => setPrintFormat('strip')}>🖨 Bande</button>
               <button onClick={() => setPrintFormat('crew')}>🖨 Assistance</button>
@@ -192,14 +218,50 @@ export function RacePlan({
             </>
           }
         >
+          {share?.url && (
+            <div className="banner info share-banner">
+              <span>
+                Lien assistance : <a href={share.url} target="_blank" rel="noreferrer">{share.url}</a>
+              </span>
+              <span className="row tight">
+                <button
+                  onClick={() => {
+                    navigator.clipboard?.writeText(share.url!).then(() => {
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                    })
+                  }}
+                >
+                  {copied ? 'Copié ✓' : 'Copier'}
+                </button>
+                <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
+                  Arrêter le partage
+                </button>
+              </span>
+            </div>
+          )}
           <div className="kpis">
             <Kpi label="Distance" value={`${(track.totalDist / 1000).toFixed(1)} km`} sub={`${sim.totalKme.toFixed(1)} km-e`} />
             <Kpi label="Dénivelé" value={`+${Math.round(track.dPlus)} m`} sub={`−${Math.round(track.dMinus)} m`} />
             <Kpi label="Temps prévu" value={formatDuration(sim.totalTime)} sub={`dont ${formatDuration(totalStops)} d'arrêts`} />
+            {scenarios && (
+              <Kpi
+                label="Fourchette"
+                value={`${formatDuration(scenarios.good.totalTime)} – ${formatDuration(scenarios.hard.totalTime)}`}
+                sub={`${SCENARIOS.good.label.toLowerCase()} → ${SCENARIOS.hard.label.toLowerCase()}`}
+              />
+            )}
             <Kpi label="Arrivée" value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
             <Kpi label="Allure moy." value={`${formatPace(sim.totalTime / (track.totalDist / 1000))}/km`} sub={`${formatPace(sim.totalTime / sim.totalKme)}/km-e`} />
+            {race.push.enabled && (
+              <Kpi
+                label="D′ au plus bas"
+                value={`${Math.round((sim.minWbal / Math.max(1, athlete.dPrime)) * 100)} %`}
+                sub={`${Math.round(sim.minWbal)} m sur ${Math.round(athlete.dPrime)} m`}
+              />
+            )}
           </div>
-          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} />
+          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} dPrime={race.push.enabled ? athlete.dPrime : undefined} />
           <Hint>Clique sur le profil pour ajouter un ravito à cet endroit. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).</Hint>
         </Card>
 
@@ -227,6 +289,17 @@ export function RacePlan({
               <Num label="D− (0 = ignoré)" value={race.kme.downPer1km} onChange={(v) => set({ kme: { ...race.kme, downPer1km: v } })} unit="m = 1 km" min={0} />
               <Num label="Lissage altitude" value={race.smoothing} onChange={(v) => set({ smoothing: Math.round(v) })} min={0} max={10} title="0 = brut ; plus haut = D+ plus faible" />
             </div>
+            <Toggle label="Relancer les montées (D′)" checked={race.push.enabled} onChange={(v) => set({ push: { ...race.push, enabled: v } })} />
+            {race.push.enabled && (
+              <div className="fields sub">
+                <Num label="Intensité en montée" value={race.push.climbPct} scale={100} unit="% VC" min={50} max={150} onChange={(v) => set({ push: { ...race.push, climbPct: v } })} />
+                <Num label="D′ utilisable" value={race.push.budget} scale={100} unit="%" min={0} max={100} onChange={(v) => set({ push: { ...race.push, budget: v } })} />
+              </div>
+            )}
+            <Hint>
+              Avec les relances, tu montes plus vite que ta VC tant qu'il te reste du D′ ({Math.round(athlete.dPrime)} m) ; il se
+              recharge quand tu repasses sous ta VC.
+            </Hint>
             <div className="row">
               <Toggle label="Comparer les modes" checked={compare} onChange={setCompare} />
               <button className="ghost" onClick={calibrate} title="Ajuste ta durabilité pour retrouver un temps réalisé">Calibrer sur un temps réel…</button>
@@ -384,7 +457,17 @@ export function RacePlan({
                       <td>{formatDuration(s.moveTime)}</td>
                       <td>{formatPace(s.avgPace)}</td>
                       <td><strong>{formatDuration(s.arrival)}</strong></td>
-                      <td><strong>{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}</strong>{s.night && ' 🌙'}</td>
+                      <td>
+                        <strong>{formatClock(s.arrivalClock, race.env.timeZone, sim.totalTime > 20 * 3600)}</strong>{s.night && ' 🌙'}
+                        {(() => {
+                          const w = windowOf(s.cp.id)
+                          return w ? (
+                            <div className="muted small" title="Fenêtre : bonne journée → journée difficile">
+                              {formatClock(new Date(startMs + w.early * 1000), race.env.timeZone)}–{formatClock(new Date(startMs + w.late * 1000), race.env.timeZone)}
+                            </div>
+                          ) : null
+                        })()}
+                      </td>
                       <td>{isFinish ? '' : <Num value={cp.stopMin} width={44} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />}</td>
                       <td>
                         {!isFinish && (
@@ -417,7 +500,7 @@ export function RacePlan({
       </div>
 
       {printFormat && (
-        <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} onDone={() => setPrintFormat(null)} />
+        <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} windowOf={windowOf} onDone={() => setPrintFormat(null)} />
       )}
     </div>
   )
