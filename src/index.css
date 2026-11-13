@@ -352,3 +352,8 @@ tr.muted td { color: var(--muted); }
 .place-list { list-style: none; padding: 0; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; max-height: 200px; overflow: auto; }
 .place-list button { width: 100%; text-align: left; white-space: normal; }
 .draw-save { margin-top: 10px; }
+.pace-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 2px 0 10px; }
+.pace-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.pace-chips button { padding: 4px 9px; font-size: 13px; }
+.pace-chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.pace-info { font-size: 12px; flex-basis: 100%; }

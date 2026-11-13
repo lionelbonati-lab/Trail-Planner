@@ -136,16 +136,36 @@ export function zoneShort(z: PaceZone, a: Athlete): string {
 // --- Découpage du parcours en portions contiguës ----------------------------------
 
 const MIN_LEN = 20
-type Target = Pick<PaceZone, 'kind' | 'value' | 'label'>
+export type Target = Pick<PaceZone, 'kind' | 'value' | 'label'>
 
 export const MODEL_TARGET: Target = { kind: 'model', value: 0, label: '' }
 
 const seg = (from: number, to: number, t: Target): PaceZone => ({ id: crypto.randomUUID(), from, to, kind: t.kind, value: t.value, label: t.label })
 
+/** Cible « milieu de la zone k » du profil (k = 0 pour la zone 1). */
+export function zoneTarget(a: Athlete, k: number): Target {
+  const z = a.zones[k]
+  return z ? { kind: 'intensity', value: (z.low + z.high) / 2, label: z.name } : MODEL_TARGET
+}
+
 /** Zone 1 du profil (portions avant/après une zone placée). */
 export function zone1Target(a: Athlete): Target {
-  const z = a.zones[0]
-  return z ? { kind: 'intensity', value: (z.low + z.high) / 2, label: z.name } : MODEL_TARGET
+  return zoneTarget(a, 0)
+}
+
+/** Une seule portion couvrant tout le parcours (aucune pour l'allure modèle). */
+export function wholeRoute(t: Target, total: number): PaceZone[] {
+  return t.kind === 'model' || total <= 0 ? [] : [seg(0, total, t)]
+}
+
+/**
+ * Zone du profil appliquée à tout le parcours, si c'est le cas (une seule portion,
+ * libellée du nom d'une zone) : son indice, sinon null.
+ */
+export function wholeRouteZone(zones: PaceZone[], a: Athlete): number | null {
+  if (zones.length !== 1 || zones[0].kind !== 'intensity' || zones[0].from > 1) return null
+  const k = a.zones.findIndex((z) => z.name === zones[0].label)
+  return k >= 0 ? k : null
 }
 
 /**

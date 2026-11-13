@@ -214,9 +214,10 @@ export default function App() {
   // Traceur : nouveau parcours, ou tracé modifié d'une course existante.
   const saveDrawing = async (d: DrawResult, edited: Race | null) => {
     if (edited) {
-      updateRace({ ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name })
+      const next = { ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name }
+      updateRace(d.zones ? { ...next, zones: d.zones } : next)
       go('races', edited.id)
-    } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn })
+    } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [] })
   }
   const removeRace = async (id: string) => {
     setRaces((all) => all.filter((r) => r.id !== id))

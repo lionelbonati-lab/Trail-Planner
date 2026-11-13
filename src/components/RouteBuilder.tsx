@@ -24,8 +24,9 @@ import {
   type SegMode,
   type Waypoint,
 } from '../lib/routing'
-import { formatDuration } from '../lib/time'
-import type { Athlete, Race, RaceKind, Track } from '../lib/types'
+import { formatDuration, formatPace } from '../lib/time'
+import type { Athlete, PaceZone, Race, RaceKind, Track } from '../lib/types'
+import { colorForIndex, MODEL_COLOR, wholeRoute, wholeRouteZone, zoneTarget, type Target } from '../lib/zones'
 import { LAYERS } from './mapLayers'
 import { Card, Hint } from './ui'
 
@@ -36,7 +37,12 @@ export interface DrawResult {
   drawn: DrawnRoute
   /** Longueur de la trace (m). */
   total: number
+  /** Zones d'allure à enregistrer avec le parcours, ou null pour garder celles de la course. */
+  zones: PaceZone[] | null
 }
+
+/** Allure simulée : modèle de course, zones déjà placées sur le parcours, ou une zone du profil (indice). */
+type Pace = 'model' | 'route' | number
 
 interface Props {
   athlete: Athlete
@@ -84,7 +90,7 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /** Points de passage et segments déjà connus (tracé à modifier, ou brouillon). */
-function initialState(race: Race | null): { wps: Waypoint[]; cache: Map<string, Seg>; name: string; kind: RaceKind } {
+function initialState(race: Race | null, a: Athlete): { wps: Waypoint[]; cache: Map<string, Seg>; name: string; kind: RaceKind; pace: Pace } {
   const cache = new Map<string, Seg>()
   if (race) {
     let wps: Waypoint[] = []
@@ -98,10 +104,12 @@ function initialState(race: Race | null): { wps: Waypoint[]; cache: Map<string, 
     } catch {
       /* GPX illisible : tracé vide */
     }
-    return { wps, cache, name: race.name, kind: race.kind }
+    const pace: Pace = wholeRouteZone(race.zones, a) ?? (race.zones.length ? 'route' : 'model')
+    return { wps, cache, name: race.name, kind: race.kind, pace }
   }
-  const draft = readJson<{ wps: Waypoint[]; name: string; kind: RaceKind }>(DRAFT_KEY)
-  return { wps: draft?.wps ?? [], cache, name: draft?.name ?? 'Nouveau parcours', kind: draft?.kind ?? 'route' }
+  const draft = readJson<{ wps: Waypoint[]; name: string; kind: RaceKind; pace?: Pace }>(DRAFT_KEY)
+  const pace = typeof draft?.pace === 'number' && draft.pace < a.zones.length ? draft.pace : 'model'
+  return { wps: draft?.wps ?? [], cache, name: draft?.name ?? 'Nouveau parcours', kind: draft?.kind ?? 'route', pace }
 }
 
 const same = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.abs(a.lat - b.lat) < 1e-7 && Math.abs(a.lon - b.lon) < 1e-7
@@ -115,7 +123,7 @@ function wpIcon(k: number, n: number, loop: boolean): L.DivIcon {
 
 /** Traceur de parcours : clic = point, itinéraire sur les sentiers ou en ligne droite. */
 export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props) {
-  const init = useMemo(() => initialState(race), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const init = useMemo(() => initialState(race, athlete), []) // eslint-disable-line react-hooks/exhaustive-deps
   const cache = useRef(init.cache)
   const [wps, setWps] = useState<Waypoint[]>(init.wps)
   const history = useRef<Waypoint[][]>([])
@@ -123,6 +131,7 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
   const [tick, setTick] = useState(0)
   const [name, setName] = useState(init.name)
   const [kind, setKind] = useState<RaceKind>(init.kind)
+  const [pace, setPace] = useState<Pace>(init.pace)
   const [hover, setHover] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
@@ -152,17 +161,29 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       return null
     }
   }, [joined]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Zones d'allure de la simulation (et de l'enregistrement).
+  const paceZones = (t: Target | null): PaceZone[] =>
+    t ? wholeRoute(t, track?.totalDist ?? 0) : pace === 'route' && race ? race.zones : []
+  const replacesZones = !!race?.zones.length && wholeRouteZone(race.zones, athlete) === null && pace !== 'route'
   const estimate = useMemo(() => {
     if (!track) return null
-    try {
+    const run = (zones: PaceZone[]) => {
       // Sans nuit, chaleur ni pluie : altitude et technicité (déduite de la pente) seulement.
-      const r = newRace(name, '')
+      const r = { ...newRace(name, ''), zones }
       r.env = { ...r.env, night: { ...r.env.night, enabled: false }, heat: { ...r.env.heat, enabled: false }, rain: { ...r.env.rain, enabled: false } }
       return simulate(track, athlete, planOptions(r, track)).totalTime
+    }
+    try {
+      if (typeof pace !== 'number') return { time: run(paceZones(null)), range: null }
+      const z = athlete.zones[pace]
+      if (!z) return { time: run([]), range: null }
+      const at = (value: number) => run(paceZones({ kind: 'intensity', value, label: z.name }))
+      // Haut de zone = plus rapide ; bas de zone = plus lent.
+      return { time: at((z.low + z.high) / 2), range: [at(z.high), at(z.low)] as [number, number] }
     } catch {
       return null
     }
-  }, [track, athlete]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [track, athlete, pace]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calcule les segments manquants.
   useEffect(() => {
@@ -180,8 +201,8 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
 
   // Brouillon d'un nouveau tracé, retrouvé si la page est rechargée.
   useEffect(() => {
-    if (!race) writeJson(DRAFT_KEY, { wps, name, kind })
-  }, [wps, name, kind, race])
+    if (!race) writeJson(DRAFT_KEY, { wps, name, kind, pace })
+  }, [wps, name, kind, pace, race])
 
   // Actions (lues par les gestionnaires de la carte, créés une seule fois).
   const change = (next: Waypoint[]) => {
@@ -386,12 +407,14 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       gpxText: drawnGpx(nm, joined.points),
       drawn: { waypoints: wps.map((w, k) => ({ ...w, i: joined.starts[k] })) },
       total: track.totalDist,
+      // Zone du profil : tout le parcours dans cette zone ; allure de course : aucune zone.
+      zones: typeof pace === 'number' ? paceZones(zoneTarget(athlete, pace)) : pace === 'model' ? [] : null,
     }
   }
   const save = () => {
     const r = result()
     if (!r) return
-    if (!race) writeJson(DRAFT_KEY, { wps: [], name: 'Nouveau parcours', kind })
+    if (!race) writeJson(DRAFT_KEY, { wps: [], name: 'Nouveau parcours', kind, pace })
     onSave(r)
   }
   const exportGpx = () => {
@@ -448,8 +471,11 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
           <span><strong>{track ? (track.totalDist / 1000).toFixed(2) : '—'}</strong> km</span>
           <span>D+ <strong>{track ? Math.round(track.dPlus) : '—'}</strong> m</span>
           <span>D− <strong>{track ? Math.round(track.dMinus) : '—'}</strong> m</span>
-          <span title="Selon ton profil (VC, VAM, durabilité), avec l'altitude et la technicité déduite de la pente ; sans arrêt, nuit ni chaleur">
-            Temps estimé <strong>{estimate ? formatDuration(estimate) : '—'}</strong>
+          <span title="Selon ton profil (VC, VAM, durabilité ou zone choisie), avec l'altitude et la technicité déduite de la pente ; sans arrêt, nuit ni chaleur">
+            Temps estimé <strong>{estimate ? formatDuration(estimate.time) : '—'}</strong>
+            {estimate?.range && (
+              <span className="muted"> ({formatDuration(estimate.range[0])} – {formatDuration(estimate.range[1])})</span>
+            )}
           </span>
           <span className="muted">{wps.length} point{wps.length > 1 ? 's' : ''}</span>
           {pending > 0 && <span className="muted">Calcul de {pending} segment{pending > 1 ? 's' : ''}…</span>}
@@ -459,6 +485,37 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
               {mode !== 'line' && ' · ou passe en « Ligne droite » pour ce passage'}
             </span>
           )}
+        </div>
+        <div className="pace-pick">
+          <span className="field-label">Allure simulée</span>
+          <div className="pace-chips" role="group" aria-label="Allure simulée">
+            <button className={pace === 'model' ? 'on' : ''} onClick={() => setPace('model')} title="Allure de course : intensité selon la durée (durabilité)">
+              <i className="zone-swatch" style={{ background: MODEL_COLOR }} />Course
+            </button>
+            {race && race.zones.length > 0 && wholeRouteZone(race.zones, athlete) === null && (
+              <button className={pace === 'route' ? 'on' : ''} onClick={() => setPace('route')} title="Les zones d'allure déjà placées sur ce parcours">
+                Zones du parcours
+              </button>
+            )}
+            {athlete.zones.map((z, k) => (
+              <button
+                key={k}
+                className={pace === k ? 'on' : ''}
+                onClick={() => setPace(k)}
+                title={`${z.name}${z.use ? ` · ${z.use}` : ''} : ${Math.round(z.low * 100)}–${Math.round(z.high * 100)} % VC, ${formatPace(1000 / (athlete.cs * z.high))}–${formatPace(1000 / (athlete.cs * z.low))}/km sur le plat`}
+              >
+                <i className="zone-swatch" style={{ background: colorForIndex(k, athlete) }} />
+                {z.name.replace(/^Zone\s*/i, 'Z')}
+              </button>
+            ))}
+          </div>
+          <span className="muted pace-info">
+            {typeof pace === 'number' && athlete.zones[pace]
+              ? `${athlete.zones[pace].use ? `${athlete.zones[pace].use} · ` : ''}${Math.round(athlete.zones[pace].low * 100)}–${Math.round(athlete.zones[pace].high * 100)} % VC · ${formatPace(1000 / (athlete.cs * athlete.zones[pace].high))}–${formatPace(1000 / (athlete.cs * athlete.zones[pace].low))}/km sur le plat (montées raides à la VAM de la zone). Temps au milieu de la zone, entre parenthèses haut et bas de zone. Enregistrée avec le parcours${replacesZones ? ', à la place des zones déjà placées' : ''}.`
+              : pace === 'route'
+                ? 'Zones déjà placées sur le parcours.'
+                : `Intensité de course : elle baisse avec la durée selon ta durabilité.${replacesZones ? ' Les zones placées sur le parcours seront retirées à l’enregistrement.' : ''}`}
+          </span>
         </div>
         {track && <MiniProfile track={track} onHover={setHover} />}
         <div className="fields draw-save">
