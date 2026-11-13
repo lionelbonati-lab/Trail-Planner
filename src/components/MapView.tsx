@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { indexAt } from '../lib/gpx'
 import { formatClock } from '../lib/time'
 import type { SplitRow, Track } from '../lib/types'
-import { LAYERS } from './mapLayers'
+import { addLayers } from './mapLayers'
 
 interface Props {
   track: Track
@@ -29,10 +29,8 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick }: 
   useEffect(() => {
     if (!el.current) return
     const m = L.map(el.current, { scrollWheelZoom: false })
-    const layers = Object.fromEntries(Object.entries(LAYERS).map(([k, f]) => [k, f()]))
-    Object.values(layers)[0].addTo(m)
-    L.control.layers(layers, undefined, { position: 'topright' }).addTo(m)
     const latlngs = track.points.map((p) => [p.lat, p.lon] as [number, number])
+    addLayers(m, latlngs[0])
     const line = L.polyline(latlngs, { color: '#2f6b4f', weight: 4, opacity: 0.9 }).addTo(m)
     L.circleMarker(latlngs[0], { radius: 6, color: '#2f6b4f', fillColor: '#ffffff', fillOpacity: 1, weight: 3 }).bindTooltip('Départ').addTo(m)
     m.fitBounds(line.getBounds(), { padding: [20, 20] })

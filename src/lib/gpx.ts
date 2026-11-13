@@ -94,6 +94,12 @@ export function parseGpx(xml: string, smoothing = 2): Track {
   return track
 }
 
+/** Nom d'un GPX (métadonnées ou trace), sans les noms des waypoints. */
+export function gpxName(xml: string): string | null {
+  const n = tag(xml.replace(/<wpt\b[\s\S]*?<\/wpt>/g, ''), 'name')
+  return n ? decodeXml(n) : null
+}
+
 /** Points bruts d'un GPX (trkpt, ou rtept à défaut), avec heure si présente. */
 export function gpxRawPoints(xml: string): RawPoint[] {
   let raw = parsePoints(xml, 'trkpt')
