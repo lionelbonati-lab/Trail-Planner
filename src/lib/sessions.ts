@@ -15,8 +15,10 @@ export type StepKind = 'warmup' | 'active' | 'recovery' | 'rest' | 'cooldown'
 export interface SimpleStep {
   kind: StepKind
   name: string
-  /** Durée (s), ou null = jusqu'à l'appui sur « Lap ». */
+  /** Durée (s), ou null = jusqu'à l'appui sur « Lap » (sauf si `meters` est donné). */
   seconds: number | null
+  /** Distance (m) : prioritaire sur la durée. */
+  meters?: number
   /** Fourchette de vitesse (m/s), ou rien = cible libre. */
   speed?: [number, number]
   notes?: string
@@ -369,7 +371,7 @@ export const SESSIONS_BY_KEY = Object.fromEntries(SESSIONS.map((s) => [s.key, s]
 /** Déroulé lisible d'une séance. */
 export function describeSteps(steps: Step[]): string[] {
   const one = (s: SimpleStep) =>
-    `${s.name} : ${s.seconds ? (s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
+    `${s.name} : ${s.meters ? `${(s.meters / 1000).toFixed(2)} km` : s.seconds ? (s.seconds < 3600 ? `${Math.round(s.seconds / 60)} min` : formatDuration(s.seconds)) : 'jusqu’à « Lap »'}` +
     (s.speed ? ` (${formatPace(1000 / s.speed[1])}–${formatPace(1000 / s.speed[0])}/km)` : '') +
     (s.notes ? ` — ${s.notes}` : '')
   return steps.flatMap((s) => (isRepeat(s) ? [`${s.repeat} × [ ${s.steps.map(one).join(' ; ')} ]`] : [one(s)]))

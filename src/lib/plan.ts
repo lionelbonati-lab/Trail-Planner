@@ -13,6 +13,7 @@ export function planOptions(race: Race, track: Track): SimOptions {
     osmTech: race.osmTech,
     weather: race.weather,
     push: race.push,
+    zones: race.zones,
   }
 }
 

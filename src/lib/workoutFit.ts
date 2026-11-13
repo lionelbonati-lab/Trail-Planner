@@ -5,6 +5,7 @@ import { isRepeat, type SimpleStep, type Step } from './sessions'
 
 const INTENSITY: Record<SimpleStep['kind'], number> = { active: 0, rest: 1, warmup: 2, cooldown: 3, recovery: 4 }
 const DURATION_TIME = 0
+const DURATION_DISTANCE = 1
 const DURATION_OPEN = 5
 const DURATION_REPEAT = 6
 const TARGET_SPEED = 0
@@ -32,8 +33,8 @@ export function buildWorkoutFit(name: string, steps: Step[], now = Date.now()): 
     flat.push([
       flat.length,
       s.name,
-      s.seconds ? DURATION_TIME : DURATION_OPEN,
-      s.seconds ? Math.round(s.seconds * 1000) : 0,
+      s.meters ? DURATION_DISTANCE : s.seconds ? DURATION_TIME : DURATION_OPEN,
+      s.meters ? Math.round(s.meters * 100) : s.seconds ? Math.round(s.seconds * 1000) : 0,
       speed ? TARGET_SPEED : TARGET_OPEN,
       0,
       speed ? Math.round(speed[0] * 1000) : 0,

@@ -17,6 +17,10 @@ interface Props {
   dPrime?: number
   /** Survol : distance (m) ou null, pour synchroniser la carte. */
   onHover?: (dist: number | null) => void
+  /** Glisser sur le profil : portion sélectionnée [from, to] (m). */
+  onSelect?: (from: number, to: number) => void
+  /** Zones d'allure à afficher (bandes colorées). */
+  zones?: { from: number; to: number; label: string; color: string }[]
 }
 
 const TECH_COLORS = ['transparent', '#f5c542', '#f08a24', '#d9452b', '#7a1f6b']
@@ -42,8 +46,9 @@ function useWidth(fallback: number) {
   return [ref, w] as const
 }
 
-export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime, onHover }: Props) {
+export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime, onHover, onSelect, zones }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const [drag, setDrag] = useState<{ x0: number; from: number; to: number } | null>(null)
   const [wrapRef, measured] = useWidth(1000)
   const [hover, setHover] = useState<SimPoint | null>(null)
 
@@ -131,22 +136,61 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
       ref={svgRef}
       className={`profile ${print ? 'print' : ''}`}
       viewBox={`0 0 ${W} ${H}`}
-      style={{ width: '100%', height: 'auto', display: 'block' }}
-      onMouseMove={
+      style={{ width: '100%', height: 'auto', display: 'block', touchAction: onSelect ? 'pan-y' : undefined }}
+      // Glisser horizontalement sélectionne une portion ; le défilement vertical reste possible au doigt.
+      onPointerDown={
+        print || (!onPick && !onSelect)
+          ? undefined
+          : (e) => {
+              const p = pick(e.clientX)
+              if (!p) return
+              ;(e.currentTarget as SVGSVGElement).setPointerCapture?.(e.pointerId)
+              setDrag({ x0: e.clientX, from: p.dist, to: p.dist })
+            }
+      }
+      onPointerMove={
         print
           ? undefined
           : (e) => {
               const p = pick(e.clientX)
               setHover(p)
               onHover?.(p ? p.dist : null)
+              if (drag && p) setDrag({ ...drag, to: p.dist })
             }
       }
-      onMouseLeave={() => {
+      onPointerUp={(e) => {
+        if (!drag) return
+        const moved = Math.abs(e.clientX - drag.x0) > 6
+        const p = pick(e.clientX)
+        setDrag(null)
+        if (moved && onSelect) {
+          const to = p ? p.dist : drag.to
+          onSelect(Math.min(drag.from, to), Math.max(drag.from, to))
+        } else if (!moved && onPick && p) onPick(p.dist)
+      }}
+      onPointerCancel={() => setDrag(null)}
+      onPointerLeave={() => {
         setHover(null)
         onHover?.(null)
       }}
-      onClick={onPick ? (e) => { const p = pick(e.clientX); if (p) onPick(p.dist) } : undefined}
     >
+      {zones?.map((z, i) => (
+        <g key={`z${i}`} className="zone-band">
+          <rect x={geo.x(z.from)} y={m.t} width={Math.max(1, geo.x(z.to) - geo.x(z.from))} height={ih} fill={z.color} />
+          {geo.x(z.to) - geo.x(z.from) > 40 && (
+            <text x={geo.x(z.from) + 4} y={m.t + ih - 6} className="zone-label">{z.label}</text>
+          )}
+        </g>
+      ))}
+      {drag && Math.abs(geo.x(drag.to) - geo.x(drag.from)) > 2 && (
+        <rect
+          x={geo.x(Math.min(drag.from, drag.to))}
+          y={m.t}
+          width={Math.abs(geo.x(drag.to) - geo.x(drag.from))}
+          height={ih}
+          className="selection"
+        />
+      )}
       {geo.night.map((b, i) => (
         <rect key={i} x={geo.x(b.from)} y={m.t} width={Math.max(1, geo.x(b.to) - geo.x(b.from))} height={ih} className="night" />
       ))}

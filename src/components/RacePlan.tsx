@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
 import { bagText, nutritionPlan } from '../lib/nutrition'
+import { zoneColor, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
@@ -13,6 +14,7 @@ import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, SimResult, Tr
 import { Kpi } from './CsCalculator'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
+import { ZonePicker, ZonesCard } from './Zones'
 import { Card, Hint, Num, Toggle } from './ui'
 
 /** Vrai si la requête média correspond (mise à jour au redimensionnement). */
@@ -83,6 +85,7 @@ export function RacePlan({
   const [copiedCode, setCopiedCode] = useState(false)
   const watchCode = watch?.code ?? null
   const [hoverDist, setHoverDist] = useState<number | null>(null)
+  const [selection, setSelection] = useState<{ from: number; to: number } | null>(null)
   // Le tableau complet demande ≈ 1 230 px ; en dessous, vue en cartes.
   const narrow = useMediaQuery('(max-width: 1229px)')
   const [editing, setEditing] = useState<string | null>(null)
@@ -334,8 +337,33 @@ export function RacePlan({
               />
             )}
           </div>
-          <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} onPick={(d) => addPoint(d)} dPrime={race.push.enabled ? athlete.dPrime : undefined} onHover={setHoverDist} />
-          <Hint>Clique sur le profil ou sur la trace de la carte pour ajouter un ravito à cet endroit. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).</Hint>
+          <ProfileChart
+            points={sim.points}
+            splits={sim.splits}
+            timeZone={race.env.timeZone}
+            startMs={startMs}
+            onPick={(d) => addPoint(d)}
+            onSelect={(from, to) => setSelection({ from, to })}
+            zones={race.zones.map((z) => ({ from: z.from, to: z.to, label: z.label || zoneText(z, athlete).split(' (')[0], color: zoneColor(z, athlete) }))}
+            dPrime={race.push.enabled ? athlete.dPrime : undefined}
+            onHover={setHoverDist}
+          />
+          {selection && (
+            <ZonePicker
+              athlete={athlete}
+              from={selection.from}
+              to={selection.to}
+              onApply={(z) => {
+                set({ zones: [...race.zones, { ...z, id: crypto.randomUUID(), from: selection.from, to: selection.to }] })
+                setSelection(null)
+              }}
+              onCancel={() => setSelection(null)}
+            />
+          )}
+          <Hint>
+            Clique sur le profil (ou sur la trace de la carte) pour ajouter un ravito. <strong>Glisse sur le profil</strong> pour sélectionner
+            une portion et lui donner une allure cible. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).
+          </Hint>
           <div className="row">
             <Toggle label="Carte" checked={showMap} onChange={setShowMap} />
           </div>
@@ -345,6 +373,8 @@ export function RacePlan({
             </Suspense>
           )}
         </Card>
+
+        {race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
         <div className="grid three">
           <Card title="Départ et calcul">

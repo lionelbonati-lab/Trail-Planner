@@ -240,6 +240,22 @@ export interface TechInterval {
   label: string
 }
 
+/**
+ * Zone d'allure imposée sur une portion du parcours (entraînement ou stratégie) :
+ * - `intensity` : fraction de VC (zones d'entraînement ou valeur libre), adaptée au terrain ;
+ * - `flatPace` : allure plat équivalente (s/km), adaptée au terrain ;
+ * - `pace` : allure imposée telle quelle (s/km), sans tenir compte du terrain.
+ */
+export interface PaceZone {
+  id: string
+  from: number
+  to: number
+  kind: 'intensity' | 'flatPace' | 'pace'
+  value: number
+  /** Nom de la zone (Endurance, Tempo…) ou vide si valeur libre. */
+  label: string
+}
+
 /** Suivi en direct de la course. */
 export interface LiveState {
   /** Départ réel (ISO UTC). */
@@ -305,6 +321,8 @@ export interface Race {
   sodiumPerH: number
   push: PushSettings
   osmTech: TechInterval[]
+  /** Zones d'allure imposées sur des portions du parcours. */
+  zones: PaceZone[]
   weather: WeatherSeries | null
   live: LiveState | null
   /** Identifiant du lien public pour l'assistance. */
