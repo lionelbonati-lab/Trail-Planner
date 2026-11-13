@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
 import { bagText, nutritionPlan } from '../lib/nutrition'
-import { zoneColor, zoneText } from '../lib/zones'
+import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
@@ -89,6 +89,9 @@ export function RacePlan({
   const watchCode = watch?.code ?? null
   const [hoverDist, setHoverDist] = useState<number | null>(null)
   const [selection, setSelection] = useState<{ from: number; to: number } | null>(null)
+  const [segment, setSegment] = useState<number | null>(null)
+  // Clic sur le profil : fin de cycle (entraînement) ou ravito (compétition).
+  const [clickMode, setClickMode] = useState<'cycle' | 'ravito'>(race.kind === 'race' ? 'ravito' : 'cycle')
   // Le tableau complet demande ≈ 1 230 px ; en dessous, vue en cartes.
   const narrow = useMediaQuery('(max-width: 1229px)')
   const [editing, setEditing] = useState<string | null>(null)
@@ -162,6 +165,7 @@ export function RacePlan({
   }
 
   const legs = nutritionPlan(race, sim, athlete.products)
+  const parts = partition(race.zones, track.totalDist)
   // Reporte eau et glucides de chaque tronçon sur le point de départ correspondant.
   const fillNutrition = () => {
     const byId = new Map(legs.filter((l) => l.fromId).map((l) => [l.fromId!, l]))
@@ -361,32 +365,83 @@ export function RacePlan({
               />
             )}
           </div>
+          <div className="row profile-tools">
+            <span className="muted small">Clic sur le profil :</span>
+            <span className="click-mode">
+              <button className={clickMode === 'cycle' ? 'on' : ''} onClick={() => setClickMode('cycle')} title="Le clic coupe la portion de zone : fin de cycle">✂ Fin de cycle</button>
+              <button className={clickMode === 'ravito' ? 'on' : ''} onClick={() => setClickMode('ravito')} title="Le clic ajoute un ravito">➕ Ravito</button>
+            </span>
+            <span className="muted small">Glisser : appliquer une zone à une portion.</span>
+          </div>
           <ProfileChart
             points={sim.points}
             splits={sim.splits}
             timeZone={race.env.timeZone}
             startMs={startMs}
-            onPick={(d) => addPoint(d)}
-            onSelect={(from, to) => setSelection({ from, to })}
-            zones={race.zones.map((z) => ({ from: z.from, to: z.to, label: z.label || zoneText(z, athlete).split(' (')[0], color: zoneColor(z, athlete) }))}
+            onPick={(d) => (clickMode === 'cycle' ? set({ zones: splitAt(race.zones, track.totalDist, d) }) : addPoint(d))}
+            onSelect={(from, to) => {
+              setSegment(null)
+              setSelection({ from, to })
+            }}
+            zones={parts.map((z) => ({ from: z.from, to: z.to, label: zoneShort(z, athlete), color: zoneColor(z, athlete) }))}
+            onSegmentClick={(i) => {
+              setSelection(null)
+              setSegment(i)
+            }}
+            onBoundaryMove={(i, d) => set({ zones: moveBoundary(parts, i, d) })}
             dPrime={race.push.enabled ? athlete.dPrime : undefined}
             onHover={setHoverDist}
           />
           {selection && (
             <ZonePicker
               athlete={athlete}
-              from={selection.from}
-              to={selection.to}
-              onApply={(z) => {
-                set({ zones: [...race.zones, { ...z, id: crypto.randomUUID(), from: selection.from, to: selection.to }] })
+              title={
+                <>
+                  <strong>Portion km {(selection.from / 1000).toFixed(1)} → {(selection.to / 1000).toFixed(1)}</strong> ({((selection.to - selection.from) / 1000).toFixed(1)} km) :
+                  choisis sa zone.{race.zones.length === 0 && ' Avant et après, le parcours passe en zone 1 (modifiable).'}
+                </>
+              }
+              onApply={(t) => {
+                set({ zones: applyRange(race.zones, track.totalDist, selection.from, selection.to, t, zone1Target(athlete)) })
                 setSelection(null)
               }}
               onCancel={() => setSelection(null)}
             />
           )}
+          {segment !== null && parts[segment] && (
+            <ZonePicker
+              athlete={athlete}
+              current={parts[segment]}
+              title={
+                <>
+                  <strong>
+                    Portion {segment + 1} : km {(parts[segment].from / 1000).toFixed(1)} → {(parts[segment].to / 1000).toFixed(1)}
+                  </strong>{' '}
+                  ({zoneText(parts[segment], athlete)})
+                </>
+              }
+              onApply={(t) => set({ zones: setTarget(parts, segment, t) })}
+              onCancel={() => setSegment(null)}
+              extra={
+                <>
+                  {segment > 0 && (
+                    <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, -1) }); setSegment(null) }} title="Supprime la fin de cycle précédente">
+                      ⇤ Fusionner avec la précédente
+                    </button>
+                  )}
+                  {segment < parts.length - 1 && (
+                    <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, 1) }); setSegment(null) }} title="Supprime la fin de cycle suivante">
+                      Fusionner avec la suivante ⇥
+                    </button>
+                  )}
+                </>
+              }
+            />
+          )}
           <Hint>
-            Clique sur le profil (ou sur la trace de la carte) pour ajouter un ravito. <strong>Glisse sur le profil</strong> pour sélectionner
-            une portion et lui donner une allure cible. Bandes grises : nuit. Barre colorée sous le profil : technicité (jaune 2 → violet 5).
+            <strong>Fin de cycle</strong> : un clic coupe la portion ; glisse une limite (poignée sous le profil) pour la déplacer ; clique sur
+            une portion de la barre de zones pour changer sa zone (couleurs Garmin). <strong>Ravito</strong> : un clic ajoute un ravito (aussi
+            possible sur la carte). Bandes grises : nuit. Barre jaune → violet : technicité.
           </Hint>
           <div className="row">
             <Toggle label="Carte" checked={showMap} onChange={setShowMap} />

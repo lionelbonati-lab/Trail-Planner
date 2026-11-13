@@ -273,7 +273,8 @@ export interface PaceZone {
   id: string
   from: number
   to: number
-  kind: 'intensity' | 'flatPace' | 'pace'
+  /** `model` = allure de course du modèle (aucune cible). */
+  kind: 'intensity' | 'flatPace' | 'pace' | 'model'
   value: number
   /** Nom de la zone (Endurance, Tempo…) ou vide si valeur libre. */
   label: string

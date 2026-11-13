@@ -19,11 +19,24 @@ interface Props {
   onHover?: (dist: number | null) => void
   /** Glisser sur le profil : portion sélectionnée [from, to] (m). */
   onSelect?: (from: number, to: number) => void
-  /** Zones d'allure à afficher (bandes colorées). */
+  /** Portions de zones (contiguës) : bandes colorées et barre de zones sous le profil. */
   zones?: { from: number; to: number; label: string; color: string }[]
+  /** Clic sur une portion de la barre de zones. */
+  onSegmentClick?: (index: number) => void
+  /** Limite entre la portion i et la suivante déplacée à la souris (m). */
+  onBoundaryMove?: (index: number, dist: number) => void
 }
 
 const TECH_COLORS = ['transparent', '#f5c542', '#f08a24', '#d9452b', '#7a1f6b']
+
+/** Couleur claire (texte foncé par-dessus) ? */
+function lightColor(hex: string): boolean {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return 0.299 * r + 0.587 * g + 0.114 * b > 170
+}
 
 function niceStep(range: number, target: number): number {
   const raw = range / target
@@ -46,17 +59,32 @@ function useWidth(fallback: number) {
   return [ref, w] as const
 }
 
-export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime, onHover, onSelect, zones }: Props) {
+export function ProfileChart({ points, splits, timeZone, startMs, height = 260, width, onPick, print, dPrime, onHover, onSelect, zones, onSegmentClick, onBoundaryMove }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [drag, setDrag] = useState<{ x0: number; from: number; to: number } | null>(null)
+  // Limite de zone en cours de déplacement (indice de la portion à gauche, position en m).
+  const [bdrag, setBdrag] = useState<{ i: number; d: number } | null>(null)
   const [wrapRef, measured] = useWidth(1000)
   const [hover, setHover] = useState<SimPoint | null>(null)
 
-  const m = { l: 46, r: 12, t: print ? 84 : 46, b: 34 }
+  const bar = !print && !!zones?.length
+  const BAR_H = 18
+  // Aperçu pendant le déplacement d'une limite.
+  const shownZones = (zones ?? []).map((z, i) => {
+    if (!bdrag) return z
+    const lo = (zones![bdrag.i].from ?? 0) + 20
+    const hi = (zones![bdrag.i + 1]?.to ?? z.to) - 20
+    const d = Math.max(lo, Math.min(hi, bdrag.d))
+    if (i === bdrag.i) return { ...z, to: d }
+    if (i === bdrag.i + 1) return { ...z, from: d }
+    return z
+  })
+  const m = { l: 46, r: 12, t: print ? 84 : 46, b: bar ? 62 : 34 }
   const W = width ?? measured
   const H = height
   const iw = W - m.l - m.r
   const ih = H - m.t - m.b
+  const barY = H - m.b + 26
 
   const geo = useMemo(() => {
     const total = points[points.length - 1]?.dist ?? 1
@@ -155,10 +183,16 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
               const p = pick(e.clientX)
               setHover(p)
               onHover?.(p ? p.dist : null)
-              if (drag && p) setDrag({ ...drag, to: p.dist })
+              if (bdrag && p) setBdrag({ ...bdrag, d: p.dist })
+              else if (drag && p) setDrag({ ...drag, to: p.dist })
             }
       }
       onPointerUp={(e) => {
+        if (bdrag) {
+          onBoundaryMove?.(bdrag.i, bdrag.d)
+          setBdrag(null)
+          return
+        }
         if (!drag) return
         const moved = Math.abs(e.clientX - drag.x0) > 6
         const p = pick(e.clientX)
@@ -168,20 +202,57 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
           onSelect(Math.min(drag.from, to), Math.max(drag.from, to))
         } else if (!moved && onPick && p) onPick(p.dist)
       }}
-      onPointerCancel={() => setDrag(null)}
+      onPointerCancel={() => {
+        setDrag(null)
+        setBdrag(null)
+      }}
       onPointerLeave={() => {
         setHover(null)
         onHover?.(null)
       }}
     >
-      {zones?.map((z, i) => (
-        <g key={`z${i}`} className="zone-band">
-          <rect x={geo.x(z.from)} y={m.t} width={Math.max(1, geo.x(z.to) - geo.x(z.from))} height={ih} fill={z.color} />
-          {geo.x(z.to) - geo.x(z.from) > 40 && (
-            <text x={geo.x(z.from) + 4} y={m.t + ih - 6} className="zone-label">{z.label}</text>
-          )}
-        </g>
+      {shownZones.map((z, i) => (
+        <rect key={`z${i}`} className="zone-band" x={geo.x(z.from)} y={m.t} width={Math.max(1, geo.x(z.to) - geo.x(z.from))} height={ih} fill={z.color} />
       ))}
+      {bar && (
+        <g className="zone-bar">
+          {shownZones.map((z, i) => {
+            const x0 = geo.x(z.from)
+            const w = Math.max(1, geo.x(z.to) - x0)
+            return (
+              <g
+                key={`s${i}`}
+                className="zone-seg"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onSegmentClick?.(i)}
+              >
+                <title>{`${z.label} · km ${(z.from / 1000).toFixed(1)} → ${(z.to / 1000).toFixed(1)}`}</title>
+                <rect x={x0} y={barY} width={w} height={BAR_H} fill={z.color} />
+                {w > 34 && (
+                  <text x={x0 + w / 2} y={barY + BAR_H / 2 + 4} textAnchor="middle" className="zone-seg-label" style={{ fill: lightColor(z.color) ? '#1f2420' : '#ffffff' }}>
+                    {z.label.length * 6 > w - 6 ? z.label.slice(0, Math.max(1, Math.floor((w - 6) / 6))) : z.label}
+                  </text>
+                )}
+              </g>
+            )
+          })}
+          {shownZones.slice(0, -1).map((z, i) => (
+            <g
+              key={`b${i}`}
+              className={`zone-handle ${bdrag?.i === i ? 'active' : ''}`}
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                ;(svgRef.current as SVGSVGElement | null)?.setPointerCapture?.(e.pointerId)
+                setBdrag({ i, d: z.to })
+              }}
+            >
+              <title>Glisser pour déplacer la limite</title>
+              <line x1={geo.x(z.to)} x2={geo.x(z.to)} y1={m.t} y2={barY + BAR_H} />
+              <rect x={geo.x(z.to) - 6} y={barY - 3} width={12} height={BAR_H + 6} rx={3} />
+            </g>
+          ))}
+        </g>
+      )}
       {drag && Math.abs(geo.x(drag.to) - geo.x(drag.from)) > 2 && (
         <rect
           x={geo.x(Math.min(drag.from, drag.to))}
@@ -203,7 +274,7 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
       {geo.xTicks.map((k) => (
         <text key={k} x={geo.x(k * 1000)} y={H - m.b + 16} textAnchor="middle" className="tick">{k}</text>
       ))}
-      <text x={W - m.r} y={H - 4} textAnchor="end" className="tick">km</text>
+      <text x={W - m.r} y={bar ? H - m.b + 16 : H - 4} textAnchor="end" className="tick">km</text>
       <path d={geo.area} className="area" />
       <path d={geo.line} className="line" />
       {geo.tech.map((b, i) => (
