@@ -37,6 +37,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   souris) ; un toucher bref laisse déplacer la carte. **Hors-route automatique** : sur un chemin (à ~24 px près
   au zoom courant) le tracé le suit et s'y accroche, hors chemin il passe en ligne droite. Toucher un point ou
   un tronçon pour le supprimer, y insérer un point ou forcer son mode.
+- **Création automatique de boucle** (traceur) : terrain plat, vallonné ou montagne (D+ par km visé), distance ou
+  durée (convertie avec ton profil et l'allure choisie). Trois directions retenues d'après le relief du modèle de
+  terrain, boucles calculées sur les chemins, taille ajustée à la distance ou à la durée ; propositions à parcourir,
+  la boucle retenue reste modifiable.
 - **Icônes** (Lucide) dans la navigation et sur les boutons de toute l'appli.
 - **Traceur de parcours sur carte** (onglet « Tracer ») : clic = point, l'itinéraire suit les sentiers
   d'OpenStreetMap (routeur public BRouter, profil randonnée montagne), le chemin le plus court ou une ligne

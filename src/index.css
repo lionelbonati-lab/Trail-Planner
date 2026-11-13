@@ -492,3 +492,13 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .mini-profile { position: relative; }
 .mini-profile-marks { position: relative; height: 16px; }
 .mini-profile-marks span { position: absolute; transform: translateX(-50%); top: 0; width: 16px; height: 16px; border-radius: 50%; background: #2f6b4f; color: #fff; font: 700 10px/16px system-ui, sans-serif; text-align: center; }
+
+/* Création automatique de boucle */
+.auto-card .mode-seg button { font-size: 13px; }
+.auto-target { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.auto-target .seg { margin: 0; }
+.auto-target .num input { width: 70px; }
+.auto-result { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; }
+.auto-result .spacer { flex: 1; }
+.draw-tip-wrap { display: grid; justify-items: center; gap: 8px; }
+.auto-cta { box-shadow: 0 2px 10px rgba(0,0,0,0.2); border-radius: 20px; padding: 8px 14px; }

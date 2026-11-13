@@ -8,13 +8,18 @@ import {
   BookmarkX,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eraser,
   FileDown,
   FileUp,
   Footprints,
   LocateFixed,
   Maximize2,
+  Minus,
+  Mountain,
   Plus,
+  RefreshCw,
   Redo2,
   Repeat2,
   Route,
@@ -25,6 +30,8 @@ import {
   TrendingDown,
   TrendingUp,
   Undo2,
+  WandSparkles,
+  Waves,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -32,7 +39,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { newRace } from '../lib/defaults'
 import { download } from '../lib/exportGpx'
 import { elevationGain, gpxRawPoints, haversine, indexAt, trackFromRaw, type RawPoint } from '../lib/gpx'
-import { simulate } from '../lib/model'
+import { averageIntensity, simulate } from '../lib/model'
+import { distanceForDuration, loopPoints, loopScore, rankBearings, TERRAINS, type Terrain } from '../lib/autoroute'
 import { planOptions } from '../lib/plan'
 import {
   closeLoop,
@@ -59,6 +67,7 @@ import { formatDuration, formatPace } from '../lib/time'
 import type { Athlete, PaceZone, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { colorForIndex, MODEL_COLOR, wholeRoute, wholeRouteZone, zoneTarget, type Target } from '../lib/zones'
 import { addLayers } from './mapLayers'
+import { Num } from './ui'
 
 export interface DrawResult {
   name: string
@@ -86,6 +95,20 @@ interface Props {
 
 /** Segment calculé ; `offroad` : point hors du réseau de chemins, tracé en ligne droite. */
 type Seg = { status: 'ok'; points: RawPoint[]; offroad?: boolean } | { status: 'loading' } | { status: 'error'; message: string }
+
+/** Proposition de la création automatique : boucle routée et ses chiffres. */
+interface Cand {
+  wps: Waypoint[]
+  legs: { points: RawPoint[]; offroad: boolean }[]
+  dist: number
+  dPlus: number
+  density: number
+  time: number
+  score: number
+}
+/** Accrochage des points proposés au chemin le plus proche (m) : plus large qu'au doigt. */
+const AUTO_SNAP = 400
+const TERRAIN_ICON: Record<Terrain, LucideIcon> = { flat: Minus, hilly: Waves, mountain: Mountain }
 
 /** Hauteurs de la feuille du bas (téléphone) : chiffres seuls, avec la barre d'édition, ou dépliée. */
 type SheetState = 'mini' | 'peek' | 'full'
@@ -648,7 +671,8 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
       const picked = sel?.kind === 'wp' && sel.k === k
       L.marker(k === 0 && loop ? at(0) : at(k), {
         draggable: true,
-        icon: wpIcon(k, loop ? n - 1 : n, picked, letters.get(k) ?? null),
+        // En boucle, l'arrivée est le départ (épingle) : aucun drapeau sur le dernier point posé.
+        icon: wpIcon(k, n, picked, letters.get(k) ?? null),
         zIndexOffset: picked ? 2000 : k === 0 || k === n - 1 ? 1000 : 0,
         autoPan: true,
         title: k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === n - 1 ? 'Arrivée' : `Point ${k}`,
@@ -781,6 +805,103 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
     if (r) download(`${r.name.replace(/[^\w-]+/g, '_')}.gpx`, r.gpxText)
     setMenu(false)
   }
+  // --- Création automatique d'une boucle ------------------------------------------------
+  const [autoOpen, setAutoOpen] = useState(false)
+  const [autoCfg, setAutoCfg] = useState<{ terrain: Terrain; by: 'dist' | 'time'; km: number; minutes: number }>(
+    () => readJson('tp-draw-auto') ?? { terrain: 'hilly', by: 'dist', km: 15, minutes: 90 },
+  )
+  const [auto, setAuto] = useState<{ busy: boolean; error: string | null; cands: Cand[]; i: number; offset: number } | null>(null)
+  // Une fois les propositions calculées, la fiche se réduit à la ligne de résultat (la boucle reste visible).
+  const [autoEdit, setAutoEdit] = useState(true)
+  const autoToken = useRef(0)
+  const setCfg = (patch: Partial<typeof autoCfg>) => {
+    const next = { ...autoCfg, ...patch }
+    setAutoCfg(next)
+    writeJson('tp-draw-auto', next)
+  }
+  /** Durée simulée d'une trace à l'allure choisie (sans nuit, chaleur ni pluie). */
+  const simTime = (tr: Track): number => {
+    const zone = typeof pace === 'number' && athlete.zones[pace] ? wholeRoute(zoneTarget(athlete, pace), tr.totalDist) : []
+    const r = { ...newRace(name, ''), zones: zone }
+    r.env = { ...r.env, night: { ...r.env.night, enabled: false }, heat: { ...r.env.heat, enabled: false }, rain: { ...r.env.rain, enabled: false } }
+    return simulate(tr, athlete, planOptions(r, tr)).totalTime
+  }
+  /** Boucle départ → points → départ, sur les chemins, points accrochés au chemin le plus proche. */
+  const routeLoop = async (start: { lat: number; lon: number }, points: { lat: number; lon: number }[], target: number): Promise<Cand> => {
+    const ring = [start, ...points, start]
+    const legs = await Promise.all(ring.slice(1).map((b, k) => limited(() => routeLeg(ring[k], b, 'trail', AUTO_SNAP))))
+    const at = (k: number) => (k === 0 ? legs[0].points[0] : legs[k - 1].points[legs[k - 1].points.length - 1])
+    const loopWps: Waypoint[] = ring.map((_, k) => ({ lat: at(k).lat, lon: at(k).lon, mode: 'trail' as SegMode }))
+    loopWps[loopWps.length - 1] = { ...loopWps[0] }
+    const tr = trackFromRaw(joinSegments(legs.map((l) => l.points)).points, 'auto')
+    const time = simTime(tr)
+    const density = tr.dPlus / Math.max(0.1, tr.totalDist / 1000)
+    const error = autoCfg.by === 'dist' ? tr.totalDist / target - 1 : time / target - 1
+    const offroad = legs.filter((l) => l.offroad).length
+    return { wps: loopWps, legs, dist: tr.totalDist, dPlus: tr.dPlus, density, time, score: loopScore({ error, density, offroad, terrain: autoCfg.terrain }) }
+  }
+  const applyCand = (c: Cand) => {
+    c.legs.forEach((l, k) => cache.current.set(segmentKey(c.wps[k], c.wps[k + 1], 'trail'), { status: 'ok', points: l.points, offroad: l.offroad }))
+    change(c.wps)
+    if (!name.trim() || /^Boucle /.test(name)) setName(`Boucle ${TERRAINS[autoCfg.terrain].label.toLowerCase()} ${(c.dist / 1000).toFixed(1).replace('.', ',')} km`)
+    map.current?.fitBounds(L.latLngBounds(c.legs.flatMap((l) => l.points.map((p) => [p.lat, p.lon] as [number, number]))), {
+      paddingTopLeft: [30, 80],
+      paddingBottomRight: [30, (mobile ? 70 : 0) + 150],
+    })
+  }
+  const generate = async (offset = 0) => {
+    const token = ++autoToken.current
+    const c = map.current?.getCenter()
+    const start = wps[0] ? { lat: wps[0].lat, lon: wps[0].lon } : c ? { lat: c.lat, lon: c.lng } : { lat: DEFAULT_CENTER[0], lon: DEFAULT_CENTER[1] }
+    setAuto({ busy: true, error: null, cands: [], i: 0, offset })
+    try {
+      const seconds = autoCfg.minutes * 60
+      const intensity =
+        typeof pace === 'number' && athlete.zones[pace]
+          ? (athlete.zones[pace].low + athlete.zones[pace].high) / 2
+          : averageIntensity(seconds / 3600, athlete.durability)
+      const dist = autoCfg.by === 'dist' ? autoCfg.km * 1000 : distanceForDuration(seconds, athlete.cs, intensity, autoCfg.terrain)
+      const target = autoCfg.by === 'dist' ? dist : seconds
+      const plans = (await rankBearings(start, dist, autoCfg.terrain, offset)).slice(0, 3)
+      const cands: Cand[] = []
+      for (const plan of plans) {
+        let cand = await routeLoop(start, plan.points, target)
+        // Trop long ou trop court : on ajuste la taille de la boucle (deux fois au plus).
+        let size = dist
+        for (let tries = 0; tries < 2; tries++) {
+          const ratio = autoCfg.by === 'dist' ? cand.dist / target : cand.time / target
+          if (Math.abs(ratio - 1) <= 0.1) break
+          size /= ratio
+          const again = await routeLoop(start, loopPoints(start, size, plan.bearing), target)
+          if (again.score < cand.score) cand = again
+          else break
+        }
+        if (token !== autoToken.current) return
+        cands.push(cand)
+      }
+      cands.sort((a, b) => a.score - b.score)
+      setAuto({ busy: false, error: null, cands, i: 0, offset })
+      setAutoEdit(false)
+      if (mobile) setSheet('mini')
+      applyCand(cands[0])
+    } catch (e) {
+      if (token === autoToken.current) setAuto({ busy: false, error: (e as Error).message, cands: [], i: 0, offset })
+    }
+  }
+  const showCand = (i: number) => {
+    if (!auto?.cands.length) return
+    const n = auto.cands.length
+    const j = (i + n) % n
+    setAuto({ ...auto, i: j })
+    applyCand(auto.cands[j])
+  }
+  const openAuto = () => {
+    setMenu(false)
+    setSel(null)
+    setAutoOpen(true)
+    setAutoEdit(true)
+  }
+
   const clearAll = () => {
     setMenu(false)
     if (wps.length && confirm('Effacer tout le tracé ?')) change([])
@@ -873,9 +994,14 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
             ) : notice ? (
               <div className="banner info"><span>{notice}</span><button className="ghost" onClick={() => setNotice(null)} aria-label="Fermer"><X /></button></div>
             ) : (
-              <div className="draw-tip">
-                {coarse ? 'Appuie un instant sur la carte pour poser le départ' : 'Clique sur la carte pour poser le départ'} · hors d'un chemin, le tracé
-                passe en ligne droite
+              <div className="draw-tip-wrap">
+                <div className="draw-tip">
+                  {coarse ? 'Appuie un instant sur la carte pour poser le départ' : 'Clique sur la carte pour poser le départ'} · hors d'un chemin, le tracé
+                  passe en ligne droite
+                </div>
+                {!autoOpen && (
+                  <button className="primary auto-cta" onClick={openAuto}><WandSparkles /> Créer une boucle automatiquement</button>
+                )}
               </div>
             )}
           </div>
@@ -888,7 +1014,61 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
         </div>
         )}
 
-        {sel ? (
+        {autoOpen ? (
+          <div className="draw-card auto-card" style={{ bottom: floatBottom + 26 }}>
+            <div className="draw-card-head">
+              <strong><WandSparkles className="inline" /> Création automatique</strong>
+              <span className="muted">Boucle depuis {wps.length ? 'le départ' : 'le centre de la carte'}</span>
+              <button className="ghost" onClick={() => { autoToken.current++; setAutoOpen(false); setAuto(null) }} aria-label="Fermer"><X /></button>
+            </div>
+            {(autoEdit || !auto?.cands.length) && (
+            <>
+            <div className="seg mode-seg" role="group" aria-label="Terrain">
+              {(Object.keys(TERRAINS) as Terrain[]).map((t) => {
+                const Icon = TERRAIN_ICON[t]
+                return (
+                  <button key={t} className={autoCfg.terrain === t ? 'on' : ''} onClick={() => setCfg({ terrain: t })} title={`${TERRAINS[t].min}–${TERRAINS[t].max} m de D+ par km`}>
+                    <Icon aria-hidden /> {TERRAINS[t].label}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="auto-target">
+              <span className="seg">
+                <button className={autoCfg.by === 'dist' ? 'on' : ''} onClick={() => setCfg({ by: 'dist' })}>Distance</button>
+                <button className={autoCfg.by === 'time' ? 'on' : ''} onClick={() => setCfg({ by: 'time' })}>Durée</button>
+              </span>
+              {autoCfg.by === 'dist' ? (
+                <Num value={autoCfg.km} unit="km" width={70} min={1} max={200} onChange={(v) => setCfg({ km: v })} />
+              ) : (
+                <Num value={autoCfg.minutes} unit={`min (${formatDuration(autoCfg.minutes * 60)})`} width={70} min={10} max={1440} onChange={(v) => setCfg({ minutes: v })} />
+              )}
+              <button className="primary" onClick={() => generate(auto?.offset ?? 0)} disabled={auto?.busy}>
+                <WandSparkles /> {auto?.busy ? 'Calcul…' : 'Générer'}
+              </button>
+            </div>
+            </>
+            )}
+            {auto?.busy && <span className="muted small">Trois boucles calculées sur les chemins, la meilleure est affichée…</span>}
+            {auto?.error && <span className="warn-text">{auto.error}</span>}
+            {auto && !auto.busy && auto.cands.length > 0 && (
+              <div className="auto-result">
+                <button className="ghost" onClick={() => showCand(auto.i - 1)} aria-label="Proposition précédente"><ChevronLeft /></button>
+                <span>
+                  <strong>{auto.i + 1}/{auto.cands.length}</strong> · {km(auto.cands[auto.i].dist)} km · <TrendingUp className="inline" /> {Math.round(auto.cands[auto.i].dPlus)} m
+                  <span className="muted"> ({Math.round(auto.cands[auto.i].density)} m/km)</span> · {shortTime(auto.cands[auto.i].time)}
+                </span>
+                <button className="ghost" onClick={() => showCand(auto.i + 1)} aria-label="Proposition suivante"><ChevronRight /></button>
+                <span className="spacer" />
+                {!autoEdit && (
+                  <button className="ghost" onClick={() => setAutoEdit(true)} title="Changer le terrain, la distance ou la durée" aria-label="Réglages"><Settings /></button>
+                )}
+                <button className="ghost" onClick={() => generate((auto.offset + 22.5) % 360)} title="Trois autres boucles, dans d'autres directions" aria-label="Autres propositions"><RefreshCw /></button>
+                <button className="primary" onClick={() => { setAutoOpen(false); setAuto(null) }}><Check /> Garder</button>
+              </div>
+            )}
+          </div>
+        ) : sel ? (
           <div className="draw-card" style={{ bottom: floatBottom + 26 }}>
             {sel.kind === 'wp' && wps[sel.k] ? (
               <>
@@ -1113,6 +1293,7 @@ export default function RouteBuilder({ athlete, race, onSave, onCancel }: Props)
 
         {menu && (
           <div className="draw-menu" role="menu">
+            <button onClick={openAuto}><WandSparkles /> Créer une boucle automatiquement</button>
             <span className="field-label">Nouveaux points (Sentiers : hors-route automatique)</span>
             <ModeSeg value={mode} onChange={pickMode} />
             <button onClick={() => { setMenu(false); change(closeLoop(wps, mode)) }} disabled={wps.length < 2 || loop}><Repeat2 /> Boucler vers le départ</button>
