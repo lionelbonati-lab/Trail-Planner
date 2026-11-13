@@ -1,6 +1,7 @@
 // Lien public pour l'assistance : un instantané du plan (et du suivi en direct),
 // lisible sans compte, mis à jour par le propriétaire.
 import { liveStatus } from './live'
+import { watchPlan } from './watch'
 import { zonedToUtc } from './time'
 import type { Athlete, Race, SimResult, Track } from './types'
 
@@ -33,6 +34,8 @@ export interface ShareSnapshot {
   profile: [number, number][]
   live: { startedAt: string; lastUpdate: string | null } | null
   rows: ShareRow[]
+  /** Plan compact pour le champ de données Garmin (voir watch.ts). */
+  w: string
 }
 
 export function buildSnapshot(
@@ -63,6 +66,7 @@ export function buildSnapshot(
     dPlus: track.dPlus,
     profile: track.points.filter((_, i) => i % stride === 0).map((p) => [Math.round(p.dist), Math.round(p.ele)]),
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
+    w: watchPlan(race, athlete, track, sim),
     rows: sim.splits.map((s, i) => {
       const w = windowOf(s.cp.id)
       const row = status?.rows[i]

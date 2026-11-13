@@ -68,6 +68,7 @@ export function RacePlan({
   onAthleteChange,
   onLive,
   share,
+  watch,
 }: {
   race: Race
   athlete: Athlete
@@ -75,8 +76,12 @@ export function RacePlan({
   onAthleteChange: (a: Athlete) => void
   onLive?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
+  watch?: { available: boolean; code: string | null; active: boolean; activate: () => void }
 }) {
   const [copied, setCopied] = useState(false)
+  const [showWatch, setShowWatch] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
+  const watchCode = watch?.code ?? null
   const [hoverDist, setHoverDist] = useState<number | null>(null)
   // Le tableau complet demande ≈ 1 230 px ; en dessous, vue en cartes.
   const narrow = useMediaQuery('(max-width: 1229px)')
@@ -232,6 +237,19 @@ export function RacePlan({
                   👥 Lien assistance
                 </button>
               )}
+              {watch && (
+                <button
+                  className={watch.active ? 'on-watch' : ''}
+                  onClick={() => {
+                    if (!watch.available) return alert('Connecte-toi pour envoyer ton plan à la montre.')
+                    setShowWatch(true)
+                    if (!watch.active) watch.activate()
+                  }}
+                  title="Envoie cette course au champ de données Trail Planner de ta montre Garmin"
+                >
+                  {watch.active ? '⌚ Sur la montre ✓' : '⌚ Mettre sur la montre'}
+                </button>
+              )}
               <button onClick={() => setPrintFormat('a4')}>🖨 Feuille A4</button>
               <button onClick={() => setPrintFormat('strip')}>🖨 Bande</button>
               <button onClick={() => setPrintFormat('crew')}>🖨 Assistance</button>
@@ -261,6 +279,36 @@ export function RacePlan({
                 <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
                   Arrêter le partage
                 </button>
+              </span>
+            </div>
+          )}
+          {showWatch && (
+            <div className="banner info watch-banner">
+              <div>
+                <strong>Montre Garmin</strong> — {watch?.active ? 'cette course est sur ta montre' : 'envoi en cours…'}. Code montre (à saisir une seule fois) :{' '}
+                {watchCode ? <code className="watch-code">{watchCode}</code> : <span className="muted">création…</span>}
+                <ol className="watch-steps">
+                  <li>Installe le champ de données « Trail Planner » sur ta montre.</li>
+                  <li>Saisis ce code dans les réglages du champ (une seule fois, voir le guide d'installation).</li>
+                  <li>Ajoute le champ à un écran de ton activité Trail.</li>
+                  <li>Avant le départ, ouvre l'activité quelques minutes, téléphone à proximité : la montre télécharge la course (contrôle toutes les 5 min). Ensuite, tout fonctionne sans réseau.</li>
+                  <li>Pour changer de course, clique « Mettre sur la montre » sur une autre course. Les modifications du plan sont envoyées automatiquement.</li>
+                </ol>
+              </div>
+              <span className="row tight">
+                {watchCode && (
+                  <button
+                    onClick={() =>
+                      navigator.clipboard?.writeText(watchCode).then(() => {
+                        setCopiedCode(true)
+                        setTimeout(() => setCopiedCode(false), 2000)
+                      })
+                    }
+                  >
+                    {copiedCode ? 'Copié ✓' : 'Copier le code'}
+                  </button>
+                )}
+                <button className="ghost" onClick={() => setShowWatch(false)}>Fermer</button>
               </span>
             </div>
           )}

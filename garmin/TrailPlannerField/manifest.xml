@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!-- Champ de données Trail Planner (Connect IQ). Ajoute ta montre dans <iq:products> si elle n'y est pas
+     (VS Code : « Monkey C: Edit Products »). -->
+<iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
+    <iq:application id="e492e667-f7c2-45cd-8b61-3964047d7e5f" type="datafield" name="@Strings.AppName" entry="TrailPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.2.0">
+        <iq:products>
+            <iq:product id="enduro2"/>
+            <iq:product id="epix2"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7x"/>
+            <iq:product id="fr255"/>
+            <iq:product id="fr265"/>
+            <iq:product id="fr955"/>
+            <iq:product id="fr965"/>
+        </iq:products>
+        <iq:permissions>
+            <iq:uses-permission id="Background"/>
+            <iq:uses-permission id="Communications"/>
+        </iq:permissions>
+        <iq:languages>
+            <iq:language>fre</iq:language>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+        <iq:barrels/>
+    </iq:application>
+</iq:manifest>

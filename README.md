@@ -30,6 +30,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   recalcul de la suite, position GPS, écran maintenu allumé, hors ligne.
 - **Lien assistance** public en lecture seule, mis à jour en direct.
 
+**Montre Garmin**
+- Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,
+  rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique.
+  Voir `garmin/README.md`.
+
 **Compte et appareils**
 - Multi-utilisateurs Firebase (Google ou lien e-mail), synchronisation temps réel, hors ligne,
   déconnexion propre, suppression du compte. Application installable (PWA).

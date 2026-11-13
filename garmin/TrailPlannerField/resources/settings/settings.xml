@@ -1,0 +1,11 @@
+<settings>
+    <setting propertyKey="@Properties.code" title="@Strings.CodeTitle" prompt="@Strings.CodePrompt">
+        <settingConfig type="alphaNumeric" />
+    </setting>
+    <setting propertyKey="@Properties.fuelMin" title="@Strings.FuelTitle">
+        <settingConfig type="numeric" min="-1" max="120" />
+    </setting>
+    <setting propertyKey="@Properties.vibrate" title="@Strings.VibrateTitle">
+        <settingConfig type="boolean" />
+    </setting>
+</settings>

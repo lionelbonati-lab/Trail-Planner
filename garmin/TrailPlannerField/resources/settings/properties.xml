@@ -1,0 +1,6 @@
+<properties>
+    <!-- Code montre : à saisir dans l'app Garmin Connect, ou ici avant de compiler (installation par câble). -->
+    <property id="code" type="string"></property>
+    <property id="fuelMin" type="number">-1</property>
+    <property id="vibrate" type="boolean">true</property>
+</properties>
