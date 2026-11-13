@@ -1,4 +1,4 @@
-import type { Athlete, EnvSettings, KmeSettings, Race } from './types'
+import type { Athlete, EnvSettings, KmeSettings, Product, PushSettings, Race } from './types'
 
 export const DEFAULT_ATHLETE: Athlete = {
   name: 'Moi',
@@ -31,6 +31,8 @@ export const DEFAULT_ATHLETE: Athlete = {
     minPct: 0.45,
   },
   history: [],
+  activities: [],
+  products: [] as Product[],
 }
 
 export const DEFAULT_ENV: EnvSettings = {
@@ -40,7 +42,17 @@ export const DEFAULT_ENV: EnvSettings = {
   heat: { enabled: true, tMax: 22, tMin: 10, refAlt: 500, threshold: 18, perDeg: 0.01 },
   altitude: { enabled: true, threshold: 1500, per1000: 0.05 },
   tech: { enabled: true, factors: [1, 0.95, 0.88, 0.78, 0.65] },
+  rain: { enabled: true, perMm: 0.02 },
 }
+
+export const DEFAULT_PUSH: PushSettings = { enabled: false, climbPct: 1.05, budget: 0.6 }
+
+/** Produits proposés à un nouveau profil (modifiables). */
+export const DEFAULT_PRODUCTS: Product[] = [
+  { id: 'gel', name: 'Gel', carbs: 25, sodium: 50, share: 0.5 },
+  { id: 'boisson', name: 'Boisson (500 ml)', carbs: 30, sodium: 300, share: 0.3 },
+  { id: 'barre', name: 'Barre', carbs: 30, sodium: 100, share: 0.2 },
+]
 
 export const DEFAULT_KME: KmeSettings = { upPer1km: 100, downPer1km: 0 }
 
@@ -57,6 +69,12 @@ export function newRace(name: string, gpxText: string): Race {
     techOverrides: [],
     carbsPerH: 60,
     waterPerH: 0.5,
+    sodiumPerH: 500,
+    push: { ...DEFAULT_PUSH },
+    osmTech: [],
+    weather: null,
+    live: null,
+    shareId: null,
     updatedAt: new Date().toISOString(),
   }
 }
@@ -67,6 +85,8 @@ export function normalizeAthlete(a: Partial<Athlete> | null | undefined): Athlet
     ...DEFAULT_ATHLETE,
     ...a,
     history: a?.history ?? [],
+    activities: a?.activities ?? [],
+    products: a?.products ?? DEFAULT_PRODUCTS.map((p) => ({ ...p })),
     durability: { ...DEFAULT_ATHLETE.durability, ...(a?.durability ?? {}) },
   }
 }
@@ -82,7 +102,13 @@ export function normalizeRace(r: Race): Race {
       heat: { ...DEFAULT_ENV.heat, ...r.env?.heat },
       altitude: { ...DEFAULT_ENV.altitude, ...r.env?.altitude },
       tech: { ...DEFAULT_ENV.tech, ...r.env?.tech },
+      rain: { ...DEFAULT_ENV.rain, ...r.env?.rain },
     },
     kme: { ...DEFAULT_KME, ...r.kme },
+    push: { ...DEFAULT_PUSH, ...r.push },
+    osmTech: r.osmTech ?? [],
+    weather: r.weather ?? null,
+    live: r.live ?? null,
+    shareId: r.shareId ?? null,
   }
 }

@@ -3,7 +3,8 @@ import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
 import { fetchRaceWeather } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
-import { calibrateDurability, simulate, withFinish, type SimOptions } from '../lib/model'
+import { planOptions } from '../lib/plan'
+import { calibrateDurability, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, SimResult, Track } from '../lib/types'
@@ -36,19 +37,7 @@ export function useRaceComputation(race: Race, athlete: Athlete) {
     }
   }, [race.gpxText, race.smoothing])
 
-  const opts = useMemo<SimOptions | null>(
-    () =>
-      track
-        ? {
-            mode: race.mode,
-            kme: race.kme,
-            env: race.env,
-            checkpoints: withFinish(race, track),
-            techOverrides: race.techOverrides,
-          }
-        : null,
-    [track, race],
-  )
+  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(race, track) : null), [track, race])
 
   const sim = useMemo<SimResult | null>(() => (track && opts ? simulate(track, athlete, opts) : null), [track, opts, athlete])
   return { track, opts, sim }

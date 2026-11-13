@@ -10,6 +10,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
 import { CsCalculator } from './components/CsCalculator'
 import { RacePlan } from './components/RacePlan'
@@ -20,12 +21,12 @@ import { parseGpx } from './lib/gpx'
 import { auth, clearLocalData, cloudStore, hasLocalAthlete, localRaceCount, localStore, signOutAndClear, type Backup, type Store, type SyncStatus } from './lib/storage'
 import type { Athlete, Race } from './lib/types'
 
-type Tab = 'races' | 'athlete' | 'cs'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse'
 
 function readHash(): { tab: Tab; raceId: string | null } {
   const [tab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   return {
-    tab: tab === 'athlete' || tab === 'cs' ? tab : 'races',
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' ? tab : 'races',
     raceId: tab === 'races' && raceId ? raceId : null,
   }
 }
@@ -264,6 +265,7 @@ export default function App() {
           <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}>Courses</button>
           <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}>Profil athlète</button>
           <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}>Calculateur VC</button>
+          <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}>Analyse</button>
         </nav>
         <InstallButton />
         {sync && <SyncBadge status={sync} />}
@@ -282,6 +284,8 @@ export default function App() {
           <AthletePanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'cs' ? (
           <CsCalculator athlete={athlete} onChange={updateAthlete} />
+        ) : route.tab === 'analyse' ? (
+          <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : current ? (
           <>
             <div className="crumbs no-print"><a href="#/races">← Toutes les courses</a></div>

@@ -8,12 +8,15 @@ import type {
   Durability,
   EnvSettings,
   KmeSettings,
+  PushSettings,
   Race,
   SimPoint,
   SimResult,
   SplitRow,
+  TechInterval,
   TechOverride,
   Track,
+  WeatherSeries,
 } from './types'
 
 /** Interpolation linéaire dans une table triée par x, bornée aux extrémités. */
@@ -92,12 +95,13 @@ export function autoTech(gradePct: number): 1 | 2 | 3 | 4 | 5 {
   return 1
 }
 
-export function techAt(dist: number, gradePct: number, overrides: TechOverride[]): number {
+/** Technicité : tronçon manuel en priorité, sinon le plus élevé entre OSM et l'estimation par la pente. */
+export function techAt(dist: number, gradePct: number, overrides: TechOverride[], osm = 0): number {
   for (let i = overrides.length - 1; i >= 0; i--) {
     const o = overrides[i]
     if (dist >= o.from && dist <= o.to) return o.level
   }
-  return autoTech(gradePct)
+  return Math.max(osm, autoTech(gradePct))
 }
 
 /** Température (°C) à une heure locale donnée, sur un cycle min 6 h / max 15 h. */
@@ -121,6 +125,90 @@ export interface SimOptions {
   env: EnvSettings
   checkpoints: Checkpoint[]
   techOverrides: TechOverride[]
+  /** Technicité OpenStreetMap (prise en compte si plus élevée que l'estimation par la pente). */
+  osmTech?: TechInterval[]
+  /** Météo heure par heure (remplace le cycle min/max quand elle couvre l'instant). */
+  weather?: WeatherSeries | null
+  /** Relances en montée avec le D′. */
+  push?: PushSettings
+}
+
+/** Niveau OSM par point de trace (0 = inconnu). */
+export function osmLevels(track: Track, intervals: TechInterval[] | undefined): Uint8Array {
+  const out = new Uint8Array(track.points.length)
+  if (!intervals?.length) return out
+  const sorted = [...intervals].sort((a, b) => a.from - b.from)
+  let j = 0
+  track.points.forEach((p, i) => {
+    while (j < sorted.length && sorted[j].to < p.dist) j++
+    for (let k = j; k < sorted.length && sorted[k].from <= p.dist; k++) {
+      if (p.dist <= sorted[k].to) out[i] = Math.max(out[i], sorted[k].level)
+    }
+  })
+  return out
+}
+
+/** Météo horaire interpolée en (distance, instant) : température ramenée à l'altitude `ele`. */
+export function weatherAt(
+  w: WeatherSeries | null | undefined,
+  dist: number,
+  ms: number,
+  ele: number,
+): { temp: number; precip: number } | null {
+  if (!w || !w.points.length) return null
+  const h = (ms - Date.parse(w.start)) / 3600000
+  const n = w.points[0].temp.length
+  if (!(h >= 0 && h <= n - 1)) return null
+  const i0 = Math.floor(h)
+  const i1 = Math.min(n - 1, i0 + 1)
+  const fh = h - i0
+  const at = (p: WeatherSeries['points'][number]) => ({
+    temp: p.temp[i0] + fh * (p.temp[i1] - p.temp[i0]) - 0.0065 * (ele - p.elevation),
+    precip: p.precip[i0] + fh * (p.precip[i1] - p.precip[i0]),
+  })
+  const pts = w.points
+  if (dist <= pts[0].dist) return at(pts[0])
+  for (let k = 1; k < pts.length; k++) {
+    if (dist <= pts[k].dist) {
+      const a = at(pts[k - 1])
+      const b = at(pts[k])
+      const f = (dist - pts[k - 1].dist) / (pts[k].dist - pts[k - 1].dist || 1)
+      return { temp: a.temp + f * (b.temp - a.temp), precip: a.precip + f * (b.precip - a.precip) }
+    }
+  }
+  return at(pts[pts.length - 1])
+}
+
+export interface StepContext {
+  ms: number
+  lat: number
+  lon: number
+  dist: number
+  ele: number
+  tech: number
+  offsetMs: number
+}
+
+/**
+ * Conditions et multiplicateur de vitesse d'environnement pour un pas :
+ * technicité, nuit, chaleur, pluie, altitude.
+ */
+export function environment(env: EnvSettings, c: StepContext, weather?: WeatherSeries | null) {
+  const night = isNightAt(c.ms, c.lat, c.lon)
+  const w = weatherAt(weather, c.dist, c.ms, c.ele)
+  const temp =
+    w?.temp ??
+    diurnalTemp((c.ms + c.offsetMs) / 3600000, env.heat.tMin, env.heat.tMax) - 0.0065 * (c.ele - env.heat.refAlt)
+  const precip = w?.precip ?? 0
+  let mult = 1
+  if (env.tech.enabled) mult *= env.tech.factors[c.tech - 1] ?? 1
+  if (env.night.enabled && night) mult *= 1 - (env.night.penalty + env.night.perTech * (c.tech - 1))
+  if (env.heat.enabled) mult *= 1 - env.heat.perDeg * Math.max(0, temp - env.heat.threshold)
+  if (env.rain?.enabled && precip > 0) {
+    mult *= 1 - Math.min(0.3, env.rain.perMm * precip * (c.tech >= 3 ? 1.5 : 1))
+  }
+  if (env.altitude.enabled) mult *= 1 - (env.altitude.per1000 * Math.max(0, c.ele - env.altitude.threshold)) / 1000
+  return { mult: Math.max(0.2, mult), night, temp, precip }
 }
 
 /** Vitesse instantanée (m/s, horizontale) sur un pas de trace, hors facteurs d'environnement. */
@@ -153,6 +241,10 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
   const startDate = zonedToUtc(env.start, env.timeZone)
   const startMs = Number.isNaN(startDate.getTime()) ? Date.now() : startDate.getTime()
   const offsetMs = tzOffsetMs(new Date(startMs), env.timeZone)
+  const osm = osmLevels(track, opts.osmTech)
+  const push = opts.push?.enabled && mode !== 'kme' ? opts.push : null
+  const dPrime = Math.max(1, athlete.dPrime)
+  const wFloor = push ? dPrime * (1 - push.budget) : 0
 
   const cps = [...opts.checkpoints].sort((a, b) => a.dist - b.dist)
   const arrivals = new Map<string, number>()
@@ -161,13 +253,13 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
   const out: SimPoint[] = []
   let t = 0
   let totalKme = 0
+  let wbal = dPrime
+  let minWbal = dPrime
 
   const pushPoint = (i: number, tech: number) => {
-    const ms = startMs + t * 1000
-    const localHour = (ms + offsetMs) / 3600000
-    const temp =
-      diurnalTemp(localHour, env.heat.tMin, env.heat.tMax) - 0.0065 * (pts[i].ele - env.heat.refAlt)
-    out.push({ dist: pts[i].dist, ele: pts[i].ele, t, night: isNightAt(ms, pts[i].lat, pts[i].lon), tech, temp })
+    const p = pts[i]
+    const e = environment(env, { ms: startMs + t * 1000, lat: p.lat, lon: p.lon, dist: p.dist, ele: p.ele, tech, offsetMs }, opts.weather)
+    out.push({ dist: p.dist, ele: p.ele, t, night: e.night, tech, temp: e.temp, precip: e.precip, wbal })
   }
 
   // Points de passage au départ.
@@ -188,36 +280,33 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
     }
     const dz = b.ele - a.ele
     const grade = (dz / dx) * 100
-    const tech = techAt((a.dist + b.dist) / 2, grade, opts.techOverrides)
-
-    const intensity = intensityAt(t / 3600, athlete.durability)
-    let v = baseSpeed(athlete, mode, grade, intensity)
+    const tech = techAt((a.dist + b.dist) / 2, grade, opts.techOverrides, osm[i])
 
     // Distance « effective » à parcourir : km-e en mode km-effort.
-    let effDist = dx
     const stepKme = kmeOf(dx, Math.max(0, dz), Math.max(0, -dz), kme)
     totalKme += stepKme
-    if (mode === 'kme') effDist = stepKme * 1000
+    const effDist = mode === 'kme' ? stepKme * 1000 : dx
 
-    // Facteurs d'environnement (multiplicatifs).
-    const ms = startMs + t * 1000
-    let mult = 1
-    if (env.tech.enabled) mult *= env.tech.factors[tech - 1] ?? 1
-    if (env.night.enabled && isNightAt(ms, b.lat, b.lon)) {
-      mult *= 1 - (env.night.penalty + env.night.perTech * (tech - 1))
-    }
-    if (env.heat.enabled) {
-      const localHour = (ms + offsetMs) / 3600000
-      const temp =
-        diurnalTemp(localHour, env.heat.tMin, env.heat.tMax) - 0.0065 * (b.ele - env.heat.refAlt)
-      mult *= 1 - env.heat.perDeg * Math.max(0, temp - env.heat.threshold)
-    }
-    if (env.altitude.enabled) {
-      mult *= 1 - (env.altitude.per1000 * Math.max(0, b.ele - env.altitude.threshold)) / 1000
-    }
-    v *= Math.max(0.2, mult)
+    const e = environment(env, { ms: startMs + t * 1000, lat: b.lat, lon: b.lon, dist: b.dist, ele: b.ele, tech, offsetMs }, opts.weather)
+    const base = intensityAt(t / 3600, athlete.durability)
+    const stepTime = (intensity: number) => effDist / Math.max(baseSpeed(athlete, mode, grade, intensity) * e.mult, 0.05)
 
-    const dt = effDist / Math.max(v, 0.05)
+    // Intensité du pas : relance en montée tant que le D′ le permet.
+    let intensity = base
+    let dt = stepTime(base)
+    if (push && grade >= 2 && push.climbPct > base) {
+      const dtPush = stepTime(push.climbPct)
+      const cost = athlete.cs * Math.max(0, push.climbPct - 1) * dtPush
+      if (wbal - cost >= wFloor) {
+        intensity = push.climbPct
+        dt = dtPush
+      }
+    }
+    // Bilan D′ (W′bal, forme différentielle) : dépense au-dessus de VC, recharge en dessous.
+    if (intensity > 1) wbal -= athlete.cs * (intensity - 1) * dt
+    else wbal += ((dPrime - wbal) * athlete.cs * (1 - intensity) * dt) / dPrime
+    wbal = Math.min(dPrime, wbal)
+    minWbal = Math.min(minWbal, wbal)
 
     // Points de passage franchis pendant ce pas : arrivée interpolée, puis arrêt.
     while (cpIdx < cps.length && cps[cpIdx].dist <= b.dist) {
@@ -237,7 +326,36 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
   }
 
   const splits = buildSplits(track, out, cps, arrivals, startMs, kme, env.timeZone)
-  return { points: out, splits, totalTime: t, totalKme }
+  return { points: out, splits, totalTime: t, totalKme, minWbal }
+}
+
+export type ScenarioKey = 'good' | 'plan' | 'hard'
+
+export const SCENARIOS: Record<ScenarioKey, { label: string; cs: number; durability: number; stops: number }> = {
+  good: { label: 'Bonne journée', cs: 1.03, durability: 0.8, stops: 0.8 },
+  plan: { label: 'Prévu', cs: 1, durability: 1, stops: 1 },
+  hard: { label: 'Journée difficile', cs: 0.95, durability: 1.3, stops: 1.5 },
+}
+
+/** Variante de l'athlète et des arrêts pour un scénario. */
+export function scenarioInputs(athlete: Athlete, opts: SimOptions, key: ScenarioKey): [Athlete, SimOptions] {
+  const sc = SCENARIOS[key]
+  if (key === 'plan') return [athlete, opts]
+  const d = athlete.durability
+  return [
+    {
+      ...athlete,
+      cs: athlete.cs * sc.cs,
+      vam: athlete.vam.map((v) => ({ ...v, vam: v.vam * sc.cs })),
+      durability: { ...d, k: d.k * sc.durability, lossPerH: d.lossPerH * sc.durability },
+    },
+    { ...opts, checkpoints: opts.checkpoints.map((c) => ({ ...c, stopMin: c.stopMin * sc.stops })) },
+  ]
+}
+
+export function simulateScenarios(track: Track, athlete: Athlete, opts: SimOptions): Record<ScenarioKey, SimResult> {
+  const run = (k: ScenarioKey) => simulate(track, ...scenarioInputs(athlete, opts, k))
+  return { good: run('good'), plan: run('plan'), hard: run('hard') }
 }
 
 function buildSplits(

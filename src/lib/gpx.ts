@@ -1,4 +1,4 @@
-import type { GpxWaypoint, Track, TrackPoint } from './types'
+import type { Track, TrackPoint } from './types'
 
 const R = 6371000
 
@@ -12,10 +12,12 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
-interface RawPoint {
+export interface RawPoint {
   lat: number
   lon: number
   ele: number | null
+  /** Instant (ms Unix), si l'enregistrement est horodaté. */
+  time?: number
 }
 
 function attr(s: string, name: string): number | null {
@@ -48,7 +50,14 @@ function parsePoints(xml: string, tagName: string): RawPoint[] {
     if (lat === null || lon === null || Number.isNaN(lat) || Number.isNaN(lon)) continue
     const eleStr = m[2] ? tag(m[2], 'ele') : null
     const ele = eleStr !== null ? parseFloat(eleStr) : null
-    out.push({ lat, lon, ele: ele !== null && !Number.isNaN(ele) ? ele : null })
+    const timeStr = m[2] ? tag(m[2], 'time') : null
+    const time = timeStr ? Date.parse(timeStr) : NaN
+    out.push({
+      lat,
+      lon,
+      ele: ele !== null && !Number.isNaN(ele) ? ele : null,
+      ...(Number.isFinite(time) ? { time } : {}),
+    })
   }
   return out
 }
@@ -62,9 +71,35 @@ export const STEP = 20
  * ±`smoothing` points : plus de lissage donne un D+ plus faible.
  */
 export function parseGpx(xml: string, smoothing = 2): Track {
+  const raw = gpxRawPoints(xml)
+  const name = decodeXml(tag(xml.replace(/<wpt\b[\s\S]*?<\/wpt>/g, ''), 'name') ?? 'Course')
+  const track = trackFromRaw(raw, name, smoothing)
+
+  const wptRe = /<wpt\b([^>]*?)(?:\/>|>([\s\S]*?)<\/wpt>)/g
+  let m: RegExpExecArray | null
+  while ((m = wptRe.exec(xml))) {
+    const lat = attr(m[1], 'lat')
+    const lon = attr(m[1], 'lon')
+    if (lat === null || lon === null) continue
+    const wname = decodeXml((m[2] && tag(m[2], 'name')) || 'Point')
+    track.waypoints.push({ name: wname, lat, lon, dist: projectOnTrack(track.points, lat, lon) })
+  }
+  track.waypoints.sort((a, b) => a.dist - b.dist)
+  return track
+}
+
+/** Points bruts d'un GPX (trkpt, ou rtept à défaut), avec heure si présente. */
+export function gpxRawPoints(xml: string): RawPoint[] {
   let raw = parsePoints(xml, 'trkpt')
   if (raw.length < 2) raw = parsePoints(xml, 'rtept')
   if (raw.length < 2) throw new Error('Aucune trace trouvée dans le fichier GPX.')
+  return raw
+}
+
+/** Construit une trace rééchantillonnée et lissée à partir de points bruts (copiés). */
+export function trackFromRaw(input: RawPoint[], name: string, smoothing = 2): Track {
+  const raw = input.map((p) => ({ ...p }))
+  if (raw.length < 2) throw new Error('Trace trop courte.')
 
   // Altitudes manquantes : on prend la dernière connue.
   let lastEle = raw.find((p) => p.ele !== null)?.ele ?? 0
@@ -102,22 +137,7 @@ export function parseGpx(xml: string, smoothing = 2): Track {
 
   const points = smoothElevation(resampled, smoothing)
   const { dPlus, dMinus } = elevationGain(points, 0, total)
-
-  const name = decodeXml(tag(xml.replace(/<wpt\b[\s\S]*?<\/wpt>/g, ''), 'name') ?? 'Course')
-
-  const waypoints: GpxWaypoint[] = []
-  const wptRe = /<wpt\b([^>]*?)(?:\/>|>([\s\S]*?)<\/wpt>)/g
-  let m: RegExpExecArray | null
-  while ((m = wptRe.exec(xml))) {
-    const lat = attr(m[1], 'lat')
-    const lon = attr(m[1], 'lon')
-    if (lat === null || lon === null) continue
-    const wname = decodeXml((m[2] && tag(m[2], 'name')) || 'Point')
-    waypoints.push({ name: wname, lat, lon, dist: projectOnTrack(points, lat, lon) })
-  }
-  waypoints.sort((a, b) => a.dist - b.dist)
-
-  return { name, points, waypoints, totalDist: total, dPlus, dMinus }
+  return { name, points, waypoints: [], totalDist: total, dPlus, dMinus }
 }
 
 /** Moyenne glissante centrée sur ±half points. */
