@@ -410,7 +410,7 @@ function SessionInsights({ activity, athlete, onChange }: { activity: Analysis['
       {ins.vamZoneTimes && (
         <>
           <h3>Temps par zone VAM (montées à plus de {VAM_MIN_GRADE} %)</h3>
-          <ZoneStack times={ins.vamZoneTimes} color={(k) => colorForIndex(k, athlete)} />
+          <ZoneStack times={ins.vamZoneTimes} color={(k) => colorForIndex(k)} />
         </>
       )}
 

@@ -63,8 +63,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Zones cardiaques en %** : méthode Grappe (échelle ESIE, i1 à i5 en % de FC max), Karvonen (% de la FC de
   réserve, avec la FC repos) ou perso (% de FC max ou de réserve) ; les bpm en sont déduits. Temps par zone
   cardiaque et FC moyenne des tours à l'analyse ; séances sur la montre guidées à l'allure ou à la FC.
-- **Zones de vitesse ascensionnelle** (VAM, m/h) : mêmes % que les zones de VC appliqués à la VAM tenue à VC
-  (la meilleure du tableau VAM selon la pente), ou valeurs perso en m/h. Temps par zone VAM dans les montées
+- **Zones de vitesse ascensionnelle** (VAM, m/h) : 5 zones comme la FC. Z1 à Z4 reprennent les % des zones de
+  VC appliqués à la VAM tenue à VC (la meilleure du tableau VAM selon la pente), Z5 couvre 96 % et plus ; ou
+  valeurs perso en m/h. Temps par zone VAM dans les montées
   (pente > 10 %) à l'analyse des séances ; les seuils Z1 à Z4 sont envoyés aux couleurs VAM d'EndurancePro.
 - **Poids du sac** dans les coefficients de calcul de chaque course : temps allongé de 1 % par kg, ou au prorata
   du poids corporel du profil.

@@ -1,6 +1,7 @@
-// Zones de vitesse ascensionnelle (VAM, m/h). Dans le modèle, la VAM est proportionnelle à
-// l'intensité (VAM à VC × %VC) : les zones VAM reprennent donc les % des zones de VC, appliqués
-// à la VAM tenue à VC. Le mode perso garde des valeurs saisies en m/h.
+// Zones de vitesse ascensionnelle (VAM, m/h) : 5 zones, comme la FC et comme les couleurs VAM
+// d'EndurancePro. Dans le modèle, la VAM est proportionnelle à l'intensité (VAM à VC × %VC) :
+// Z1 à Z4 reprennent les % des zones de VC correspondantes, appliqués à la VAM tenue à VC, et Z5
+// couvre tout le reste (voisinage de VC et au-delà). Le mode perso garde des valeurs en m/h.
 import { interp } from './model'
 import type { Athlete, VamZone } from './types'
 
@@ -17,11 +18,23 @@ export function vamRef(a: Pick<Athlete, 'vam'>): { vam: number; grade: number } 
 
 const round10 = (v: number) => Math.round(v / 10) * 10
 
-/** Zones VAM déduites des zones de VC et de la VAM à VC (m/h, arrondies à 10). */
+/** Nombre de zones VAM (comme la FC et les couleurs VAM de la montre). */
+export const VAM_ZONE_COUNT = 5
+
+/**
+ * Zones VAM déduites des zones de VC et de la VAM à VC (m/h, arrondies à 10) : les 4 premières
+ * zones de VC telles quelles, puis une Z5 jusqu'au haut de la dernière zone de VC.
+ */
 export function vamZonesFromCs(a: Pick<Athlete, 'vam' | 'zones'>): VamZone[] {
   const ref = vamRef(a)
-  if (!ref) return []
-  return a.zones.map((z) => ({ name: z.name, low: round10(z.low * ref.vam), high: round10(z.high * ref.vam) }))
+  const sorted = [...a.zones].sort((x, y) => x.low - y.low)
+  if (!ref || !sorted.length) return []
+  const top = Math.max(...sorted.map((z) => z.high))
+  return sorted.slice(0, VAM_ZONE_COUNT).map((z, i, kept) => ({
+    name: `Zone ${i + 1}`,
+    low: round10(z.low * ref.vam),
+    high: round10((i === kept.length - 1 ? top : z.high) * ref.vam),
+  }))
 }
 
 /** Zones VAM du coureur selon le mode choisi. */

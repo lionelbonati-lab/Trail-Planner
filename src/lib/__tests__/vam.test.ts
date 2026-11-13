@@ -14,14 +14,18 @@ describe('zones de vitesse ascensionnelle', () => {
     expect(vamRef({ vam: [] })).toBeNull()
   })
 
-  it('mêmes % que les zones de VC, appliqués à la VAM à VC (arrondis à 10 m/h)', () => {
+  it('5 zones comme la FC : Z1 à Z4 aux % des zones de VC, Z5 jusqu’en haut (arrondis à 10 m/h)', () => {
     const z = vamZonesFromCs(A)
-    expect(z).toHaveLength(7)
+    expect(z).toHaveLength(5)
     expect(z[0]).toEqual({ name: 'Zone 1', low: 660, high: 770 })
     expect(z[2]).toEqual({ name: 'Zone 3', low: 880, high: 970 })
-    expect(z[4].low).toBe(1060)
-    expect(z[6].high).toBe(1650)
+    expect(z[3]).toEqual({ name: 'Zone 4', low: 970, high: 1060 })
+    expect(z[4]).toEqual({ name: 'Zone 5', low: 1060, high: 1650 })
     expect(vamZonesOf(A)).toEqual(z)
+    // Zones de VC dans le désordre ou moins de 5 : triées, toutes reprises.
+    const three = vamZonesFromCs({ ...A, zones: [A.zones[2], A.zones[0], A.zones[1]] })
+    expect(three.map((x) => x.low)).toEqual([660, 770, 880])
+    expect(three[2].high).toBe(970)
   })
 
   it('mode perso : valeurs saisies en m/h', () => {
@@ -31,14 +35,14 @@ describe('zones de vitesse ascensionnelle', () => {
     ]
     expect(vamZonesOf({ ...A, vamZoneMode: 'custom', vamZones: custom })).toEqual(custom)
     // Perso sans zones saisies : on garde les zones calculées.
-    expect(vamZonesOf({ ...A, vamZoneMode: 'custom', vamZones: [] })).toHaveLength(7)
+    expect(vamZonesOf({ ...A, vamZoneMode: 'custom', vamZones: [] })).toHaveLength(5)
   })
 
   it('zone d’une VAM : bornes basses incluses, extrêmes rattachés aux zones extrêmes', () => {
     const z = vamZonesFromCs(A)
     expect(vamZoneIndex(880, z)).toBe(2)
     expect(vamZoneIndex(300, z)).toBe(0)
-    expect(vamZoneIndex(2500, z)).toBe(6)
+    expect(vamZoneIndex(2500, z)).toBe(4)
   })
 
   it('seuils EndurancePro : début de Z1 puis fin de Z1 à Z4, dans les plages de la montre', () => {
