@@ -93,7 +93,7 @@ async function brouterPoints(
   }
   if (!res.ok) {
     const text = (await res.text().catch(() => '')).trim()
-    if (/not mapped|no route|not found/i.test(text)) throw new NoPathError('Aucun chemin trouvé entre ces points.')
+    if (/not mapped|no route|not found|no track|island|position/i.test(text)) throw new NoPathError('Aucun chemin trouvé entre ces points.')
     throw new Error(`Routeur : ${text.slice(0, 80) || `erreur ${res.status}`}`)
   }
   return parseBrouter(await res.json())
@@ -126,7 +126,8 @@ export async function routeSegment(
  * Tronçon du traceur, hors-route automatique (comme les applis de randonnée) : si les deux
  * points sont sur le réseau de chemins (à moins de `snap` m d'un chemin, selon le zoom), le
  * tronçon suit les chemins et ses extrémités sont accrochées au chemin ; sinon, ou s'il n'y a
- * aucun chemin, ligne droite (`offroad`), partant du chemin si l'extrémité y était accrochée.
+ * aucun chemin (ou si le routeur échoue), ligne droite (`offroad`), partant du chemin si l'extrémité y
+ * était accrochée. Seule une altitude impossible à obtenir (pas de réseau du tout) reste une erreur.
  */
 export async function routeLeg(
   a: { lat: number; lon: number },
@@ -139,9 +140,10 @@ export async function routeLeg(
   let net: RawPoint[]
   try {
     net = await brouterPoints(a, b, mode, fetcher)
-  } catch (e) {
-    if (e instanceof NoPathError) return { points: await withElevation(densify(a, b), fetcher), offroad: true }
-    throw e
+  } catch {
+    // Aucun chemin, ou tout autre refus du routeur (point isolé du réseau, délai dépassé, réponse
+    // d'erreur illisible pour le navigateur…) : ligne droite, comme un point hors sentier.
+    return { points: await withElevation(densify(a, b), fetcher), offroad: true }
   }
   const first = net[0]
   const last = net[net.length - 1]

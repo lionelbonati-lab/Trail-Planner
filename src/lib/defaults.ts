@@ -1,3 +1,4 @@
+import { GARMIN_PCT, GRAPPE_PCT, hrZonesOf, withHrZones } from './hr'
 import type { Athlete, EnvSettings, HrZone, KmeSettings, Product, PushSettings, Race, TrainingZone } from './types'
 
 /** Zones de vitesse critique (bilan Ibex Outdoor du 07/11/2026), en fraction de VC. */
@@ -58,8 +59,13 @@ export const DEFAULT_ATHLETE: Athlete = {
   products: [] as Product[],
   zones: DEFAULT_ZONES,
   csTrials: [],
-  hrZones: hrZonesFromMax(190),
+  weight: 70,
+  hrZones: hrZonesOf({ hrMethod: 'grappe', hrPct: GRAPPE_PCT, hrBase: 'max', hrMax: 190, hrRest: 50 }),
   hrMax: 190,
+  hrRest: 50,
+  hrMethod: 'grappe',
+  hrPct: GARMIN_PCT.map((z) => ({ ...z })),
+  hrBase: 'max',
   workoutTarget: 'pace',
 }
 
@@ -71,6 +77,7 @@ export const DEFAULT_ENV: EnvSettings = {
   altitude: { enabled: true, threshold: 1500, per1000: 0.05 },
   tech: { enabled: true, factors: [1, 0.95, 0.88, 0.78, 0.65] },
   rain: { enabled: true, perMm: 0.02 },
+  bag: { enabled: false, kg: 3, relative: false },
 }
 
 export const DEFAULT_PUSH: PushSettings = { enabled: false, climbPct: 1.05, budget: 0.6 }
@@ -114,19 +121,30 @@ export function newRace(name: string, gpxText: string): Race {
 
 /** Complète un objet chargé (ancienne version) avec les valeurs par défaut. */
 export function normalizeAthlete(a: Partial<Athlete> | null | undefined): Athlete {
-  return {
+  const hrMax = a?.hrMax ?? 190
+  const legacy = !a?.hrMethod && !!a?.hrZones?.length
+  return withHrZones({
     ...DEFAULT_ATHLETE,
     ...a,
     history: a?.history ?? [],
     activities: a?.activities ?? [],
     products: a?.products ?? DEFAULT_PRODUCTS.map((p) => ({ ...p })),
     zones: a?.zones?.length && !isOldDefaultZones(a.zones) ? a.zones : DEFAULT_ZONES.map((z) => ({ ...z })),
-    hrZones: a?.hrZones?.length ? a.hrZones : hrZonesFromMax(a?.hrMax ?? 190),
-    hrMax: a?.hrMax ?? 190,
+    hrMax,
+    hrRest: a?.hrRest ?? 50,
+    weight: a?.weight ?? 70,
+    // Profil d'avant les zones en % : ses zones en bpm sont reprises en % de FC max (méthode perso).
+    hrMethod: a?.hrMethod ?? (legacy ? 'custom' : 'grappe'),
+    hrBase: a?.hrBase ?? 'max',
+    hrPct: a?.hrPct?.length
+      ? a.hrPct
+      : legacy
+        ? a!.hrZones!.map((z) => ({ name: z.name, low: Math.round((z.low / hrMax) * 1000) / 1000, high: Math.round((z.high / hrMax) * 1000) / 1000 }))
+        : GARMIN_PCT.map((z) => ({ ...z })),
     workoutTarget: a?.workoutTarget ?? 'pace',
     csTrials: a?.csTrials ?? [],
     durability: { ...DEFAULT_ATHLETE.durability, ...(a?.durability ?? {}) },
-  }
+  })
 }
 
 export function normalizeRace(r: Race): Race {
@@ -141,6 +159,7 @@ export function normalizeRace(r: Race): Race {
       altitude: { ...DEFAULT_ENV.altitude, ...r.env?.altitude },
       tech: { ...DEFAULT_ENV.tech, ...r.env?.tech },
       rain: { ...DEFAULT_ENV.rain, ...r.env?.rain },
+      bag: { ...DEFAULT_ENV.bag!, ...r.env?.bag },
     },
     kme: { ...DEFAULT_KME, ...r.kme },
     push: { ...DEFAULT_PUSH, ...r.push },

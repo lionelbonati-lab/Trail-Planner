@@ -28,7 +28,7 @@ import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { parseGpx } from '../lib/gpx'
 import { planOptions } from '../lib/plan'
-import { calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
+import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
@@ -548,6 +548,22 @@ export function RacePlan({
               <div className="fields sub">
                 <Num label="Au-dessus de" value={race.env.altitude.threshold} onChange={(v) => setEnv('altitude', { ...race.env.altitude, threshold: v })} unit="m" />
                 <Num label="Pénalité" value={race.env.altitude.per1000} scale={100} onChange={(v) => setEnv('altitude', { ...race.env.altitude, per1000: v })} unit="% / 1000 m" />
+              </div>
+            )}
+            <Toggle label="Poids du sac" checked={!!race.env.bag?.enabled} onChange={(v) => setEnv('bag', { kg: 3, relative: false, ...race.env.bag, enabled: v })} />
+            {race.env.bag?.enabled && (
+              <div className="fields sub">
+                <Num label="Sac" value={race.env.bag.kg} unit="kg" min={0} max={30} onChange={(v) => setEnv('bag', { ...race.env.bag!, kg: v })} />
+                <label className="field">
+                  <span className="field-label">Effet</span>
+                  <span className="seg">
+                    <button className={!race.env.bag.relative ? 'on' : ''} onClick={() => setEnv('bag', { ...race.env.bag!, relative: false })} title="Temps allongé de 1 % par kg">1 % par kg</button>
+                    <button className={race.env.bag.relative ? 'on' : ''} onClick={() => setEnv('bag', { ...race.env.bag!, relative: true })} title="Masse du sac rapportée au poids corporel du profil">
+                      Au prorata du poids ({athlete.weight} kg)
+                    </button>
+                  </span>
+                </label>
+                <span className="muted small">Temps +{Math.round((bagFactor(race.env, athlete.weight) - 1) * 1000) / 10} %</span>
               </div>
             )}
             <Toggle label="Technicité" checked={race.env.tech.enabled} onChange={(v) => setEnv('tech', { ...race.env.tech, enabled: v })} />

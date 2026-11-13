@@ -450,6 +450,13 @@ export const SESSIONS: SessionDef[] = [
 
 export const SESSIONS_BY_KEY = Object.fromEntries(SESSIONS.map((s) => [s.key, s])) as Record<SessionKey, SessionDef>
 
+/**
+ * Séances proposées dans l'onglet Séances : test VC (protocole de l'entraîneur) et descentes.
+ * Sortie longue, navettes tempo et tests de 20 min ne sont plus proposés ; leurs définitions
+ * restent pour relire les résultats déjà enregistrés.
+ */
+export const OFFERED_SESSIONS = SESSIONS.filter((s) => s.key === 'csTest' || s.key === 'descents')
+
 /** Déroulé lisible d'une séance. */
 export function describeSteps(steps: Step[], a?: Athlete): string[] {
   const hr = a?.workoutTarget === 'hr'

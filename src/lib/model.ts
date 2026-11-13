@@ -227,7 +227,14 @@ export interface StepContext {
  * Conditions et multiplicateur de vitesse d'environnement pour un pas :
  * technicité, nuit, chaleur, pluie, altitude.
  */
-export function environment(env: EnvSettings, c: StepContext, weather?: WeatherSeries | null) {
+/** Ralentissement dû au sac : 1 % par kg, ou au prorata du poids corporel (masse transportée). */
+export function bagFactor(env: EnvSettings, bodyKg = 70): number {
+  const b = env.bag
+  if (!b?.enabled || !(b.kg > 0)) return 1
+  return b.relative ? 1 + b.kg / Math.max(30, bodyKg) : 1 + 0.01 * b.kg
+}
+
+export function environment(env: EnvSettings, c: StepContext, weather?: WeatherSeries | null, bodyKg = 70) {
   const night = isNightAt(c.ms, c.lat, c.lon)
   const w = weatherAt(weather, c.dist, c.ms, c.ele)
   const temp =
@@ -242,6 +249,7 @@ export function environment(env: EnvSettings, c: StepContext, weather?: WeatherS
     mult *= 1 - Math.min(0.3, env.rain.perMm * precip * (c.tech >= 3 ? 1.5 : 1))
   }
   if (env.altitude.enabled) mult *= 1 - (env.altitude.per1000 * Math.max(0, c.ele - env.altitude.threshold)) / 1000
+  mult /= bagFactor(env, bodyKg)
   return { mult: Math.max(0.2, mult), night, temp, precip }
 }
 
@@ -293,7 +301,7 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
 
   const pushPoint = (i: number, tech: number) => {
     const p = pts[i]
-    const e = environment(env, { ms: startMs + t * 1000, lat: p.lat, lon: p.lon, dist: p.dist, ele: p.ele, tech, offsetMs }, opts.weather)
+    const e = environment(env, { ms: startMs + t * 1000, lat: p.lat, lon: p.lon, dist: p.dist, ele: p.ele, tech, offsetMs }, opts.weather, athlete.weight)
     out.push({ dist: p.dist, ele: p.ele, t, night: e.night, tech, temp: e.temp, precip: e.precip, wbal })
   }
 
@@ -322,7 +330,7 @@ export function simulate(track: Track, athlete: Athlete, opts: SimOptions): SimR
     totalKme += stepKme
     const effDist = mode === 'kme' ? stepKme * 1000 : dx
 
-    const e = environment(env, { ms: startMs + t * 1000, lat: b.lat, lon: b.lon, dist: b.dist, ele: b.ele, tech, offsetMs }, opts.weather)
+    const e = environment(env, { ms: startMs + t * 1000, lat: b.lat, lon: b.lon, dist: b.dist, ele: b.ele, tech, offsetMs }, opts.weather, athlete.weight)
     const base = intensityAt(t / 3600, athlete.durability)
     const stepTime = (intensity: number) => effDist / Math.max(baseSpeed(athlete, mode, grade, intensity) * e.mult, 0.05)
 

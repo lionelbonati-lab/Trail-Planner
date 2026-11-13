@@ -56,10 +56,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **7 zones d'entraînement** en % de VC, celles du bilan VC (Z1 60–70 % récupération … Z5 96–105 %
   voisinage de VC, Z6 105–115 % supra-VC, Z7 > 115 % haute intensité), avec utilisation et durée tenable,
   réglables dans le profil. Couleurs Garmin (Z6 et Z7 : couleurs des zones de puissance), modifiables par zone.
-- **Zones cardiaques** : FC max et zones en bpm (par défaut zones Garmin en % de FC max), temps par zone
-  cardiaque et FC moyenne des tours à l'analyse d'une séance (FC lue dans le GPX ou le FIT). Les séances
-  envoyées sur la montre peuvent être guidées à l'allure ou à la fréquence cardiaque (zone VC n → zone
-  cardiaque n ; tests à fond et étapes de moins de 2 min sans cible).
+- **Zones cardiaques en %** : méthode Grappe (échelle ESIE, i1 à i5 en % de FC max), Karvonen (% de la FC de
+  réserve, avec la FC repos) ou perso (% de FC max ou de réserve) ; les bpm en sont déduits. Temps par zone
+  cardiaque et FC moyenne des tours à l'analyse ; séances sur la montre guidées à l'allure ou à la FC.
+- **Poids du sac** dans les coefficients de calcul de chaque course : temps allongé de 1 % par kg, ou au prorata
+  du poids corporel du profil.
 - **Zones d'allure en portions contiguës** (couleurs Garmin) : clic = fin de cycle, poignées à glisser pour
   déplacer une limite, barre de zones cliquable ; mode « Ravito » sur les compétitions.
 - **Zones d'allure** : glisser sur le profil pour sélectionner une portion et lui donner une cible

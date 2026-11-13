@@ -10,8 +10,11 @@ import { analyzeSession } from '../insights'
 import { describeSteps, SESSIONS_BY_KEY, zoneSpeed } from '../sessions'
 import { buildWorkoutFit } from '../workoutFit'
 import { colorForIndex, GARMIN_ZONE_COLORS, stepHrRange } from '../zones'
+import { GARMIN_PCT, hrZonesOf } from '../hr'
+import { bagFactor, simulate } from '../model'
+import { DEFAULT_ENV } from '../defaults'
 
-const A = normalizeAthlete({ ...DEFAULT_ATHLETE, cs: 4, dPrime: 200, hrMax: 190, hrZones: hrZonesFromMax(190) })
+const A = normalizeAthlete({ ...DEFAULT_ATHLETE, cs: 4, dPrime: 200, hrMax: 190, hrMethod: 'custom', hrBase: 'max', hrPct: GARMIN_PCT })
 
 const parseFit = (fit: Uint8Array): Promise<any> =>
   new Promise((res, rej) => new FitParser({ mode: 'list' }).parse(fit.buffer as ArrayBuffer, (e: any, x: any) => (e ? rej(e) : res(x))))
@@ -143,5 +146,52 @@ describe('zones cardiaques', () => {
     expect(desc.find((l) => l.includes('à fond'))).not.toMatch(/bpm/)
     // Allure par défaut.
     expect(describeSteps(SESSIONS_BY_KEY.long.steps(A), A).some((l) => l.includes('/km'))).toBe(true)
+  })
+})
+
+describe('zones cardiaques en %', () => {
+  it('Grappe (ESIE) : i1 à i5 en % de la FC max', () => {
+    const z = hrZonesOf({ hrMethod: 'grappe', hrPct: [], hrBase: 'max', hrMax: 190, hrRest: 50 })
+    expect(z.map((x) => x.name)).toEqual(['i1 Légère', 'i2 Moyenne', 'i3 Soutenue', 'i4 Seuil', 'i5 Sur-critique'])
+    expect(z.map((x) => [x.low, x.high])).toEqual([[95, 143], [143, 162], [162, 175], [175, 182], [182, 190]])
+  })
+
+  it('Karvonen : % de la FC de réserve ajoutés à la FC repos', () => {
+    const z = hrZonesOf({ hrMethod: 'karvonen', hrPct: [], hrBase: 'max', hrMax: 190, hrRest: 50 })
+    // Réserve 140 bpm : zone 1 = 50 + 50 % × 140 = 120 → 50 + 60 % × 140 = 134.
+    expect(z.map((x) => [x.low, x.high])).toEqual([[120, 134], [134, 148], [148, 162], [162, 176], [176, 190]])
+  })
+
+  it('perso : % de la FC max ou de la FC de réserve', () => {
+    const pct = [{ name: 'EF', low: 0.6, high: 0.75 }]
+    expect(hrZonesOf({ hrMethod: 'custom', hrPct: pct, hrBase: 'max', hrMax: 200, hrRest: 50 })[0]).toMatchObject({ low: 120, high: 150 })
+    expect(hrZonesOf({ hrMethod: 'custom', hrPct: pct, hrBase: 'reserve', hrMax: 200, hrRest: 50 })[0]).toMatchObject({ low: 140, high: 163 })
+  })
+
+  it('ancien profil en bpm : repris en % de FC max (méthode perso), sans changer les zones', () => {
+    const old = { ...DEFAULT_ATHLETE, hrMax: 180, hrZones: [{ name: 'Zone 1', low: 108, high: 126 }, { name: 'Zone 2', low: 126, high: 144 }] } as Record<string, unknown>
+    delete old.hrMethod
+    delete old.hrPct
+    const a = normalizeAthlete(old)
+    expect(a.hrMethod).toBe('custom')
+    expect(a.hrPct.map((z) => [z.low, z.high])).toEqual([[0.6, 0.7], [0.7, 0.8]])
+    expect(a.hrZones.map((z) => [z.low, z.high])).toEqual([[108, 126], [126, 144]])
+    // Nouveau profil : Grappe par défaut.
+    expect(normalizeAthlete({}).hrMethod).toBe('grappe')
+  })
+})
+
+describe('poids du sac', () => {
+  it('1 % par kg, ou au prorata du poids corporel', () => {
+    expect(bagFactor({ ...DEFAULT_ENV, bag: { enabled: false, kg: 5, relative: false } })).toBe(1)
+    expect(bagFactor({ ...DEFAULT_ENV, bag: { enabled: true, kg: 5, relative: false } })).toBeCloseTo(1.05, 6)
+    expect(bagFactor({ ...DEFAULT_ENV, bag: { enabled: true, kg: 7, relative: true } }, 70)).toBeCloseTo(1.1, 6)
+  })
+
+  it('allonge le temps prévu de la course', () => {
+    const track = { name: 't', waypoints: [], totalDist: 10000, dPlus: 0, dMinus: 0, points: Array.from({ length: 501 }, (_, k) => ({ lat: 45 + k * 0.00018, lon: 6, ele: 500, dist: k * 20 })) }
+    const env = { ...DEFAULT_ENV, night: { ...DEFAULT_ENV.night, enabled: false }, heat: { ...DEFAULT_ENV.heat, enabled: false } }
+    const run = (bag: typeof env.bag) => simulate(track, A, { mode: 'physio', kme: { upPer1km: 100, downPer1km: 0 }, env: { ...env, bag }, checkpoints: [], techOverrides: [], osmTech: [], weather: null, push: { enabled: false, climbPct: 1, budget: 0 }, zones: [] }).totalTime
+    expect(run({ enabled: true, kg: 5, relative: false }) / run(undefined)).toBeCloseTo(1.05, 2)
   })
 })

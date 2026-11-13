@@ -155,6 +155,18 @@ describe('tracé sur carte : services', () => {
     // Aucun chemin : ligne droite.
     const none = await routeLeg(A, B, 'trail', 50, fakeServices({ brouterStatus: 400, brouterText: 'from-position not mapped' }).fetcher)
     expect(none.offroad).toBe(true)
+    // Autres refus du routeur (réponses réelles de BRouter, ou réponse d'erreur bloquée) : ligne droite aussi.
+    for (const text of ['no track found at pass=0', 'target island detected for section 0', 'operation killed by thread-priority-watchdog after 61 seconds']) {
+      const r = await routeLeg(A, B, 'trail', 50, fakeServices({ brouterStatus: 500, brouterText: text }).fetcher)
+      expect(r.offroad).toBe(true)
+      expect(r.points[r.points.length - 1]).toMatchObject({ lat: B.lat, lon: B.lon })
+    }
+    const blocked = fakeServices()
+    const cors: Fetcher = async (url, init) => {
+      if (url.includes('brouter.de')) throw new TypeError('Failed to fetch')
+      return blocked.fetcher(url, init)
+    }
+    expect((await routeLeg(A, B, 'trail', 50, cors)).offroad).toBe(true)
     // Tolérance selon le zoom : ~24 px.
     expect(snapTolerance(17, 46)).toBeCloseTo(20, 0)
     expect(snapTolerance(10, 46)).toBe(150)
