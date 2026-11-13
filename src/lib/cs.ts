@@ -60,7 +60,7 @@ export const PROTOCOLS: TestProtocol[] = [
     id: '3-7-12',
     label: "3 essais 3' / 7' / 12'",
     description:
-      "Trois efforts maximaux de 3, 7 et 12 min, chacun dans une séance à part (jours différents), sur piste. Saisis la distance parcourue sur chacun — ou importe tes séances dans Séances → Test VC.",
+      "Trois efforts maximaux de 3, 7 et 12 min, chacun dans une séance à part (jours différents), sur piste. Saisis la distance parcourue sur chacun — ou importe tes séances plus haut (test de vitesse critique).",
     trials: [
       { fixed: 'time', value: 180 },
       { fixed: 'time', value: 420 },

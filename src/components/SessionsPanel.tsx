@@ -1,5 +1,5 @@
 import { Trash2, Upload, UserCheck, Watch } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { readActivity } from '../lib/activity'
 import { download } from '../lib/exportGpx'
 import { progressSeries, type ProgressSeries } from '../lib/progress'
@@ -12,9 +12,12 @@ import { Card, Hint, Num } from './ui'
 interface Props {
   athlete: Athlete
   onChange: (a: Athlete) => void
+  /** Calcul à la main (sans la montre), affiché après la séance de test. */
+  manual?: ReactNode
 }
 
-export function SessionsPanel({ athlete, onChange }: Props) {
+/** Onglet Test VC : séance de test (montre), calcul à la main, historique et évolution. */
+export function SessionsPanel({ athlete, onChange, manual }: Props) {
   const [result, setResult] = useState<{ key: SessionKey; r: SessionResult } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -47,11 +50,11 @@ export function SessionsPanel({ athlete, onChange }: Props) {
 
   return (
     <div className="grid">
-      <Card title="Séances d'étalonnage">
+      <Card title="Test de vitesse critique">
         <p>
-          De temps à autre, une séance ciblée mesure une partie de ton profil. Télécharge l'entraînement pour ta montre,
-          fais la séance, puis importe son enregistrement (GPX ou FIT) : l'app en tire la mesure, propose de mettre ton profil
-          à jour et l'ajoute à ton suivi.
+          De temps à autre, un test mesure ta VC et ton D′. Télécharge l'entraînement pour ta montre, fais la séance, puis
+          importe son enregistrement (GPX ou FIT) : l'app en tire la mesure, propose de mettre ton profil à jour et l'ajoute
+          à ton suivi. Sans la montre, saisis tes essais à la main plus bas.
         </p>
         <Hint>
           Montre Garmin (Enduro 3…) : branche-la en USB et copie le fichier .fit dans le dossier <code>GARMIN/NewFiles</code>.
@@ -117,6 +120,13 @@ export function SessionsPanel({ athlete, onChange }: Props) {
           )
         })}
       </div>
+
+      {manual && (
+        <>
+          <h2 className="section-title">Calcul à la main</h2>
+          {manual}
+        </>
+      )}
 
       <Card title="Évolution">
         <div className="grid two">

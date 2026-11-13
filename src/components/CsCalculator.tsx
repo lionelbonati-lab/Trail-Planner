@@ -47,7 +47,7 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
 
   return (
     <div className="grid two">
-      <Card title={`Test ${proto.label}`}>
+      <Card title={`Saisie : ${proto.label}`}>
         <Hint>{proto.description}</Hint>
         <table className="table">
           <thead>
@@ -106,7 +106,7 @@ export function CsCalculator({ athlete, onChange }: { athlete: Athlete; onChange
               const used = fit?.used ?? [...athlete.csTrials].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3)
               setRows(used.sort((a, b) => a.seconds - b.seconds).map((t) => ({ time: formatDuration(t.seconds, true).replace(/^0:/, ''), dist: String(t.dist) })))
             }}
-            title="Reprend les distances de tes tests importés dans Séances → Test VC"
+            title="Reprend les distances de tes tests importés plus haut"
           >
             Charger mes tests
           </button>
