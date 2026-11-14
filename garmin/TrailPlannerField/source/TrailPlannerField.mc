@@ -11,6 +11,8 @@ import Toybox.WatchUi;
 
 // Champ de données : avance/retard sur le plan, prochain point, heure estimée,
 // marge sur la prochaine barrière horaire et rappels de nutrition.
+// Heures prévues : fixes pendant toute l'activité. Heures estimées des points : recalculées à chaque
+// passage (bouton Lap ou détection GPS) d'après ce qui a déjà été fait, fixes entre deux passages.
 class TrailPlannerField extends WatchUi.DataField {
     // Le retard (ou l'avance) se prolonge sur la suite, amorti de 30 % et borné (comme l'app web).
     const DAMPING = 0.7;
@@ -39,6 +41,12 @@ class TrailPlannerField extends WatchUi.DataField {
     var offCount = 0;         // relevés GPS consécutifs hors du tracé
     var offRoute = false;     // hors du tracé depuis 5 relevés
     var offBy = 0;            // écart au tracé (m)
+    var etas = [] as Array<Number>; // heure estimée (s Unix) de chaque point, recalculée aux passages
+    var lapped = {};          // points validés par un tour (bouton Lap)
+    var lapOffset = 0.0;      // sans tracé GPS : correction de distance apportée par les tours (m)
+    var lastWalked = 0.0;     // distance montre au dernier calcul (m)
+    var lapMsg = "";          // nom du point validé par le dernier tour
+    var lapMsgUntil = 0;      // s Unix : affichage du passage jusqu'à cet instant
 
     function initialize() {
         DataField.initialize();
@@ -60,12 +68,15 @@ class TrailPlannerField extends WatchUi.DataField {
             matched = -1.0;
             offCount = 0;
             offRoute = false;
+            etas = [] as Array<Number>;
             if (running && old != null && plan != null) {
                 passes = remap(passes, old, plan);
                 alerted = remap(alerted, old, plan);
+                lapped = remap(lapped, old, plan);
             } else {
                 passes = {};
                 alerted = {};
+                lapped = {};
                 nextFuel = 0.0;
             }
         }
@@ -159,7 +170,101 @@ class TrailPlannerField extends WatchUi.DataField {
                 d = along;
             }
         }
-        return d;
+        return d + lapOffset;
+    }
+
+    // Heures estimées des points d'après ce qui a déjà été fait : rythme réel au dernier point passé
+    // (temps réel / temps prévu, amorti et borné comme dans l'app web), appliqué à la suite ; les arrêts
+    // prévus ne sont pas étirés. Avant le premier passage : heures prévues. Appelé à chaque passage.
+    function updateEstimates() as Void {
+        var n = plan.cpDist.size();
+        var ref = -1;
+        for (var i = 0; i < n; i++) {
+            if (passes.hasKey(i)) {
+                ref = i;
+            }
+        }
+        var ratio = 1.0;
+        var t0 = startUnix;        // départ du dernier point passé (s Unix)
+        var base = 0;              // même instant, en temps prévu (s depuis le départ)
+        if (ref >= 0) {
+            var planned = plan.cpPlan[ref];
+            if (planned > 600) {
+                var raw = (passes[ref] - startUnix).toFloat() / planned;
+                if (raw < 0.7) {
+                    raw = 0.7;
+                }
+                if (raw > 1.6) {
+                    raw = 1.6;
+                }
+                ratio = 1.0 + DAMPING * (raw - 1.0);
+            }
+            t0 = passes[ref] + plan.cpStop[ref];
+            base = planned + plan.cpStop[ref];
+        }
+        etas = [] as Array<Number>;
+        for (var j = 0; j < n; j++) {
+            if (passes.hasKey(j)) {
+                etas.add(passes[j] as Number);
+            } else if (j > ref) {
+                var rest = plan.cpPlan[j] - base;
+                etas.add(t0 + ((rest > 0 ? rest : 0) * ratio).toNumber());
+            } else {
+                etas.add(startUnix + plan.cpPlan[j]); // point sauté
+            }
+        }
+        var restF = plan.finishTime() - base;
+        finishEta = t0 + ((restF > 0 ? restF : 0) * ratio).toNumber();
+    }
+
+    // Bouton Lap : passage au point le plus proche pas encore validé par un tour, à moins de 300 m de
+    // la position calée sur le tracé (8 % de la distance sans tracé GPS). Heure de passage = maintenant,
+    // position recalée sur le point, heures estimées des points suivants recalculées. Un tour loin de
+    // tout point (tour auto au km…) est ignoré.
+    function onTimerLap() as Void {
+        if (plan == null || !running || Application.Properties.getValue("lapPass") == false) {
+            return;
+        }
+        var gps = plan.hasRoute() && matched >= 0;
+        var win = gps ? 300.0 : dist * 0.08;
+        if (win < 300.0) {
+            win = 300.0;
+        }
+        var best = -1;
+        var bestGap = 0.0;
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (lapped.hasKey(i)) {
+                continue;
+            }
+            var gap = plan.cpDist[i] - dist;
+            if (gap < 0) {
+                gap = -gap;
+            }
+            if (gap <= win && (best < 0 || gap < bestGap)) {
+                best = i;
+                bestGap = gap;
+            }
+        }
+        if (best < 0) {
+            return;
+        }
+        var now = Time.now().value();
+        var at = plan.cpDist[best].toFloat();
+        lapped.put(best, true);
+        passes.put(best, now);
+        if (gps) {
+            matched = at;
+            matchedAt = lastWalked;
+            offCount = 0;
+            offRoute = false;
+        } else {
+            lapOffset += at - dist;
+        }
+        dist = at;
+        updateEstimates();
+        lapMsg = plan.cpName[best];
+        lapMsgUntil = now + 5;
+        lastSaved = 0; // suivi envoyé au prochain calcul
     }
 
     function fuelInterval() as Number {
@@ -204,32 +309,44 @@ class TrailPlannerField extends WatchUi.DataField {
             matchedAt = 0.0;
             offCount = 0;
             offRoute = false;
+            lapped = {};
+            lapOffset = 0.0;
+            etas = [] as Array<Number>;
         }
         lastElapsed = elapsed;
+        lastWalked = info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
         var d = courseDistance(info);
         dist = d;
 
+        // Écart au plan à l'endroit où l'on est (mis à jour en continu).
         var planned = plan.plannedAt(d);
         delta = d > 200 ? elapsed - planned : 0.0;
-        var ratio = 1.0;
-        if (planned > 600) {
-            var raw = elapsed / planned;
-            if (raw < 0.7) {
-                raw = 0.7;
-            }
-            if (raw > 1.6) {
-                raw = 1.6;
-            }
-            ratio = 1.0 + DAMPING * (raw - 1.0);
-        }
         var now = Time.now().value();
         startUnix = now - elapsed.toNumber();
-        next = plan.nextIndex(d);
-        if (next >= 0) {
-            nextEta = now + ((plan.cpPlan[next] - planned) * ratio).toNumber();
+
+        // Passages aux points détectés par la position (un tour Lap les valide aussi, voir onTimerLap).
+        var changed = false;
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (!passes.hasKey(i) && d >= plan.cpDist[i] - 30) {
+                passes.put(i, now);
+                changed = true;
+            }
         }
-        var lastPlan = plan.finishTime();
-        finishEta = now + ((lastPlan - planned) * ratio).toNumber();
+        // Heures estimées : recalculées seulement à un passage (et au début de l'activité).
+        if (changed || etas.size() != plan.cpDist.size()) {
+            updateEstimates();
+        }
+        // Prochain point : le premier pas encore passé au-delà de la position.
+        next = -1;
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (!passes.hasKey(i) && plan.cpDist[i] > d + 50) {
+                next = i;
+                break;
+            }
+        }
+        if (next >= 0) {
+            nextEta = etas[next];
+        }
 
         // Prochaine barrière horaire et alerte (une fois par point).
         cutIdx = -1;
@@ -237,7 +354,7 @@ class TrailPlannerField extends WatchUi.DataField {
             for (var i = next; i < plan.cpCut.size(); i++) {
                 if (plan.cpCut[i] > 0) {
                     cutIdx = i;
-                    margin = plan.cpCut[i] - (now + ((plan.cpPlan[i] - planned) * ratio).toNumber());
+                    margin = plan.cpCut[i] - etas[i];
                     break;
                 }
             }
@@ -247,14 +364,6 @@ class TrailPlannerField extends WatchUi.DataField {
             vibrate(true);
         }
 
-        // Passages aux points (pour le suivi de l'assistance).
-        var changed = false;
-        for (var i = 0; i < plan.cpDist.size(); i++) {
-            if (!passes.hasKey(i) && d >= plan.cpDist[i] - 30) {
-                passes.put(i, now);
-                changed = true;
-            }
-        }
         if (changed || now - lastSaved >= 60) {
             saveProgress(info, now, d);
         }
@@ -407,6 +516,11 @@ class TrailPlannerField extends WatchUi.DataField {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_ORANGE);
             dc.clear();
             drawLines(dc, [["Manger / boire", h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, Graphics.COLOR_WHITE]]);
+            return;
+        }
+        if (now < lapMsgUntil) {
+            // Tour validé : point de passage noté, estimations recalculées.
+            drawLines(dc, [["Passage", Graphics.FONT_XTINY, fg], [lapMsg, h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, green]]);
             return;
         }
 

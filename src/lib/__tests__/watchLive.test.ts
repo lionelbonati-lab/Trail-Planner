@@ -3,7 +3,7 @@ import { DEFAULT_ATHLETE, newRace } from '../defaults'
 import { plannedAt } from '../live'
 import { computePlan } from '../plan'
 import { watchPlan } from '../watch'
-import { parsePasses, parseWatchPlan, plannedAtWatch, watchStatus } from '../watchLive'
+import { parsePasses, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus } from '../watchLive'
 
 function gpx(): string {
   const pts: string[] = []
@@ -39,5 +39,33 @@ describe('suivi depuis la montre', () => {
     expect(st.etas[1]).toBeGreaterThan(s + w.cps[1].planned)
     expect(st.finishEta).toBeGreaterThan(s + plan.sim.totalTime)
     expect(parsePasses('0:10,x:3,2:30').size).toBe(2)
+  })
+
+  it('heures estimées recalculées à chaque passage seulement, d’après ce qui a été fait', () => {
+    const s = 1_800_000_000
+    // Avant le premier passage : heures prévues, quelle que soit la position.
+    const before = watchStatus({ t: s + 1500, s, d: 3000, p: '' }, w, s + 1500)
+    expect(before.etas).toEqual(w.cps.map((cp) => s + cp.planned))
+    // Passage en A avec 20 % de retard : la suite est recalculée (retard amorti à 14 %, arrêt non étiré).
+    const passA = s + Math.round(w.cps[0].planned * 1.2)
+    const st1 = watchStatus({ t: passA + 600, s, d: 6500, p: `0:${passA}` }, w, passA + 600)
+    const exp = passA + w.cps[0].stop + (w.cps[1].planned - w.cps[0].planned - w.cps[0].stop) * (1 + 0.7 * 0.2)
+    expect(st1.etas[1]).toBeCloseTo(exp, 0)
+    // Relevé suivant plus loin, sans nouveau passage : estimations inchangées (l'écart, lui, bouge).
+    const st2 = watchStatus({ t: passA + 1800, s, d: 8500, p: `0:${passA}` }, w, passA + 1800)
+    expect(st2.etas).toEqual(st1.etas)
+    expect(st2.delta).not.toBe(st1.delta)
+    // Passage en B en avance : nouvelles estimations pour l'arrivée.
+    const passB = s + Math.round(w.cps[1].planned * 0.95)
+    const st3 = watchStatus({ t: passB + 60, s, d: 10100, p: `0:${passA},1:${passB}` }, w, passB + 60)
+    expect(st3.etas[2]).toBeLessThan(st1.etas[2])
+    expect(st3.finishEta).toBeCloseTo(st3.etas[2], 0)
+  })
+
+  it('départ libre : départ de la montre tant que l’activité dure (relevé de moins de 12 h)', () => {
+    const s = 1_800_000_000
+    expect(watchStartMs({ t: s + 4 * 3600, s, d: 0 }, s + 9 * 3600)).toBe(s * 1000)
+    expect(watchStartMs({ t: s + 600, s, d: 0 }, s + 13 * 3600)).toBeNull()
+    expect(watchStartMs(null, s)).toBeNull()
   })
 })

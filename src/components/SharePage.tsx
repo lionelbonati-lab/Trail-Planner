@@ -3,7 +3,7 @@ import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
-import { estimatedDist, parseWatchPlan, watchStatus, type WatchReport } from '../lib/watchLive'
+import { estimatedDist, parseWatchPlan, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
 import type { MapPoint, Runner } from './ShareMap'
 
@@ -313,12 +313,13 @@ export function ShareView({
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
   const nowSec0 = nowMs / 1000
-  // Départ libre : heures recalées sur le départ réel (montre, sinon mode course), ou sur
-  // maintenant tant que le coureur n'est pas parti.
-  const freshReport = report && nowSec0 - report.t < WATCH_FRESH_S ? report : null
-  const freeStarted = !!(freshReport || snap.live)
+  // Départ libre : heures recalées sur le départ réel (montre, sinon mode course), puis fixes pendant
+  // toute l'activité (même si le dernier relevé de la montre date) ; sur maintenant tant que le coureur
+  // n'est pas parti.
+  const watchStart = watchStartMs(report, nowSec0)
+  const freeStarted = watchStart !== null || !!snap.live
   if (snap.freeStart) {
-    const real = freshReport ? freshReport.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : Math.ceil(nowMs / 60000) * 60000
+    const real = watchStart ?? (snap.live ? Date.parse(snap.live.startedAt) : Math.ceil(nowMs / 60000) * 60000)
     const off = real - Date.parse(snap.start)
     if (Math.abs(off) >= 30000) {
       const shift = (iso: string | null) => (iso ? new Date(Date.parse(iso) + off).toISOString() : iso)

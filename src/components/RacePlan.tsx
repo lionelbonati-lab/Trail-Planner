@@ -84,11 +84,12 @@ function useMinuteClock(on: boolean): number {
   return t
 }
 
-export function useRaceComputation(race: Race, athlete: Athlete) {
-  // Départ libre : départ maintenant (mis à jour chaque minute) tant que la course n'a pas démarré,
-  // puis le vrai départ du mode course ; sinon l'heure de départ saisie.
-  const now = useMinuteClock(!!race.freeStart && !race.live)
-  const start = race.freeStart ? utcToZonedInput(race.live ? Date.parse(race.live.startedAt) : now, race.env.timeZone) : race.env.start
+export function useRaceComputation(race: Race, athlete: Athlete, watchStart: number | null = null) {
+  // Départ libre : départ maintenant (mis à jour chaque minute) tant que l'activité n'a pas démarré,
+  // puis le vrai départ (mode course, sinon montre), fixe jusqu'à la fin ; sinon l'heure saisie.
+  const started = race.live ? Date.parse(race.live.startedAt) : watchStart
+  const now = useMinuteClock(!!race.freeStart && started === null)
+  const start = race.freeStart ? utcToZonedInput(started ?? now, race.env.timeZone) : race.env.start
   const effective = useMemo(() => (start === race.env.start ? race : { ...race, env: { ...race.env, start } }), [race, start])
   const track = useMemo<Track | null>(() => {
     try {
@@ -101,7 +102,7 @@ export function useRaceComputation(race: Race, athlete: Athlete) {
   const opts = useMemo<SimOptions | null>(() => (track ? planOptions(effective, track) : null), [track, effective])
 
   const sim = useMemo<SimResult | null>(() => (track && opts ? simulate(track, athlete, opts) : null), [track, opts, athlete])
-  return { track, opts, sim, start }
+  return { track, opts, sim, start, started: race.freeStart ? started : null }
 }
 
 export function RacePlan({
@@ -115,6 +116,7 @@ export function RacePlan({
   watch,
   library,
   toRace,
+  watchStart = null,
 }: {
   race: Race
   athlete: Athlete
@@ -128,6 +130,8 @@ export function RacePlan({
   library?: { kind: RaceKind; addToLibrary: () => void }
   /** Parcours : envoi vers une course (nouvelle course si `target` est null, sinon tracé remplacé). */
   toRace?: { races: { id: string; name: string }[]; send: (target: string | null, name: string) => string; open: (id: string) => void }
+  /** Départ libre : départ réel donné par la montre (ms), si l'activité est en cours. */
+  watchStart?: number | null
 }) {
   // Parcours : panneau « Vers une course » (cible, nom) puis résultat.
   const [sending, setSending] = useState<{ target: string | null; name: string } | null>(null)
@@ -169,7 +173,7 @@ export function RacePlan({
     return () => window.removeEventListener('keydown', onKey)
   }, [pickAccess])
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
-  const { track, opts, sim, start } = useRaceComputation(race, athlete)
+  const { track, opts, sim, start, started } = useRaceComputation(race, athlete, watchStart)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
   const [printFormat, setPrintFormat] = useState<PrintFormat | null>(null)
@@ -183,7 +187,7 @@ export function RacePlan({
 
   // Départ libre : départ maintenant ou vrai départ (voir useRaceComputation).
   // Départ libre lancé : instant exact du départ (le champ `start` est arrondi à la minute).
-  const startMs = race.freeStart && race.live ? Date.parse(race.live.startedAt) : zonedToUtc(start, race.env.timeZone).getTime()
+  const startMs = started ?? zonedToUtc(start, race.env.timeZone).getTime()
 
   // Scénarios : fenêtre de passage entre une bonne journée et une journée difficile.
   const scenarios = useMemo(() => {
@@ -515,7 +519,7 @@ export function RacePlan({
                 sub={`${SCENARIOS.good.label.toLowerCase()} → ${SCENARIOS.hard.label.toLowerCase()}`}
               />
             )}
-            <Kpi label={race.freeStart && !race.live ? 'Arrivée (départ maintenant)' : 'Arrivée'} value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
+            <Kpi label={race.freeStart && started === null ? 'Arrivée (départ maintenant)' : 'Arrivée'} value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
             <Kpi label="Allure moy." value={`${formatPace(sim.totalTime / (track.totalDist / 1000))}/km`} sub={`${formatPace(sim.totalTime / sim.totalKme)}/km-e`} />
             {race.push.enabled && (
               <Kpi
@@ -678,7 +682,7 @@ export function RacePlan({
                 <div className="field">
                   <span className="field-label">Départ</span>
                   <span>
-                    <strong>libre</strong> · {race.live ? 'parti à' : 'maintenant :'} {formatClock(new Date(startMs), race.env.timeZone)}
+                    <strong>libre</strong> · {started === null ? 'maintenant :' : race.live ? 'parti à' : 'parti à (montre)'} {formatClock(new Date(startMs), race.env.timeZone)}
                   </span>
                 </div>
               ) : (

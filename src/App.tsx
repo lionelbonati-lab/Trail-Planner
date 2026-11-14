@@ -62,6 +62,7 @@ const rememberSignedIn = (on: boolean) => {
   }
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
+import { watchStartMs, type WatchReport } from './lib/watchLive'
 
 type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer'
 
@@ -347,6 +348,33 @@ export default function App() {
 
   const current = route.raceId ? races.find((r) => r.id === route.raceId) : null
 
+  // Départ libre d'une course sur la montre, sans le mode course du téléphone : départ réel donné par
+  // la montre, pour que les heures prévues du plan restent fixes pendant toute l'activité.
+  const [watchReport, setWatchReport] = useState<WatchReport | null>(null)
+  const watchRefs =
+    current?.freeStart && !current.live && user && athlete.watchRaceId === current.id
+      ? [athlete.watchId, athlete.epCode].filter((r): r is string => !!r).join(',')
+      : ''
+  useEffect(() => {
+    setWatchReport(null)
+    if (!watchRefs || !cloud) return
+    const latest = new Map<string, WatchReport | null>()
+    const unsubs = watchRefs.split(',').map((ref) =>
+      cloud.subscribeLive(ref, (r) => {
+        latest.set(ref, r)
+        setWatchReport([...latest.values()].reduce<WatchReport | null>((a, b) => (b && (!a || b.t > a.t) ? b : a), null))
+      }),
+    )
+    return () => unsubs.forEach((u) => u())
+  }, [watchRefs, cloud])
+  const [nowSec, setNowSec] = useState(() => Date.now() / 1000)
+  useEffect(() => {
+    if (!watchReport) return
+    const id = setInterval(() => setNowSec(Date.now() / 1000), 60000)
+    return () => clearInterval(id)
+  }, [watchReport])
+  const watchStart = watchRefs ? watchStartMs(watchReport, Math.max(nowSec, watchReport?.t ?? 0)) : null
+
   // --- Liens d'assistance -----------------------------------------------------
   const lastShared = useRef(new Map<string, string>())
   const publish = useCallback(
@@ -513,6 +541,7 @@ export default function App() {
             <RacePlan
               race={current}
               athlete={athlete}
+              watchStart={watchStart}
               onChange={updateRace}
               onAthleteChange={updateAthlete}
               onLive={() => go('live', current.id)}
