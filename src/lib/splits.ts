@@ -1,5 +1,5 @@
 import { kmeOf } from './model'
-import type { Checkpoint, KmeSettings, SimPoint, Track } from './types'
+import type { Checkpoint, CheckpointKind, KmeSettings, SimPoint, Track } from './types'
 
 export type AutoSplitMethod = 'distance' | 'peaks' | 'slope' | 'kme' | 'time'
 
@@ -196,18 +196,24 @@ export function mergeAutoPoints(existing: Checkpoint[], auto: AutoPoint[]): Chec
   return [...manual, ...added].sort((a, b) => a.dist - b.dist)
 }
 
-/** Temps d'arrêt le plus fréquent parmi les ravitos (3 min par défaut, sans ravito). */
-export function commonRavitoStop(cps: Checkpoint[]): number {
+/**
+ * Points concernés par un temps d'arrêt commun : les ravitos d'une course (`kind` = 'ravito'),
+ * ou tous les points d'un parcours (`kind` = null).
+ */
+const stopTarget = (c: Checkpoint, kind: CheckpointKind | null) => kind === null || c.kind === kind
+
+/** Temps d'arrêt le plus fréquent parmi ces points (`fallback` s'il n'y en a aucun). */
+export function commonStop(cps: Checkpoint[], kind: CheckpointKind | null = 'ravito', fallback = 3): number {
   const counts = new Map<number, number>()
-  for (const c of cps) if (c.kind === 'ravito') counts.set(c.stopMin, (counts.get(c.stopMin) ?? 0) + 1)
-  let best = 3
+  for (const c of cps) if (stopTarget(c, kind)) counts.set(c.stopMin, (counts.get(c.stopMin) ?? 0) + 1)
+  let best = fallback
   let n = 0
   for (const [v, k] of counts) if (k > n || (k === n && v > best)) [best, n] = [v, k]
   return best
 }
 
-/** Même temps d'arrêt (min) à tous les ravitos ; les autres points sont inchangés. */
-export function setRavitoStops(cps: Checkpoint[], stopMin: number): Checkpoint[] {
+/** Même temps d'arrêt (min) à tous ces points ; les autres sont inchangés. */
+export function setStops(cps: Checkpoint[], stopMin: number, kind: CheckpointKind | null = 'ravito'): Checkpoint[] {
   const v = Math.max(0, stopMin)
-  return cps.map((c) => (c.kind === 'ravito' && c.stopMin !== v ? { ...c, stopMin: v } : c))
+  return cps.map((c) => (stopTarget(c, kind) && c.stopMin !== v ? { ...c, stopMin: v } : c))
 }

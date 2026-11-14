@@ -31,7 +31,7 @@ import { indexAt, parseGpx } from '../lib/gpx'
 import { FINISH_ID } from '../lib/assist'
 import { planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { commonRavitoStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setRavitoStops, type AutoSplitMethod } from '../lib/splits'
+import { commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistCard } from './AssistCard'
@@ -312,8 +312,11 @@ export function RacePlan({
     [sim.splits, race.finishAccess, track],
   )
   const ravitos = sim.splits.filter((s) => s.cp.kind === 'ravito')
-  const ravitoCount = race.checkpoints.filter((c) => c.kind === 'ravito').length
-  const stopAll = bulkStop ?? commonRavitoStop(race.checkpoints)
+  // Arrêt commun : à chaque ravito d'une course, à chaque point d'un parcours.
+  const stopKind = isRoute ? null : 'ravito'
+  const stopCount = race.checkpoints.filter((c) => isRoute || c.kind === 'ravito').length
+  const stopAll = bulkStop ?? commonStop(race.checkpoints, stopKind, isRoute ? 0 : 3)
+  const stopWord = isRoute ? (stopCount > 1 ? 'points' : 'point') : stopCount > 1 ? 'ravitos' : 'ravito'
   const totalStops = race.checkpoints.reduce((a, c) => a + c.stopMin * 60, 0)
   const nightShare = sim.points.filter((p) => p.night).length / sim.points.length
 
@@ -878,14 +881,14 @@ export function RacePlan({
           title="Temps de passage"
           actions={<button onClick={() => addPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>}
         >
-          {!isRoute && ravitoCount > 0 && (
+          {stopCount > 0 && (
             <div className="row bulk-stop">
-              <Num label="Arrêt à chaque ravito" value={stopAll} unit="min" min={0} width={56} onChange={(v) => setBulkStop(Math.max(0, v))} />
+              <Num label={`Arrêt à chaque ${isRoute ? 'point' : 'ravito'}`} value={stopAll} unit="min" min={0} width={56} onChange={(v) => setBulkStop(Math.max(0, v))} />
               <button
-                onClick={() => { set({ checkpoints: setRavitoStops(race.checkpoints, stopAll) }); setBulkStop(null) }}
-                disabled={race.checkpoints.every((c) => c.kind !== 'ravito' || c.stopMin === stopAll)}
+                onClick={() => { set({ checkpoints: setStops(race.checkpoints, stopAll, stopKind) }); setBulkStop(null) }}
+                disabled={race.checkpoints.every((c) => !(isRoute || c.kind === 'ravito') || c.stopMin === stopAll)}
               >
-                <Check /> Appliquer {ravitoCount > 1 ? `aux ${ravitoCount} ravitos` : 'au ravito'}
+                <Check /> Appliquer {stopCount > 1 ? `aux ${stopCount} ${stopWord}` : `au ${stopWord}`}
               </button>
             </div>
           )}
