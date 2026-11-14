@@ -58,3 +58,17 @@ self.addEventListener('fetch', (e) => {
     }),
   )
 })
+
+// Notification de passage (page assistance) : la toucher ramène sur la page.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const url = e.notification.data && e.notification.data.url
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const same = list.find((c) => url && c.url === url)
+      const target = same || list[0]
+      if (target && 'focus' in target) return target.focus()
+      return url ? self.clients.openWindow(url) : undefined
+    }),
+  )
+})

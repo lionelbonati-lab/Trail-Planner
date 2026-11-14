@@ -58,9 +58,17 @@ describe('page assistance', () => {
     expect(b).toMatchObject({ assist: false, access: false, lon: 6 })
     expect(b.lat).toBeCloseTo(45 + 10000 / 111195, 4)
     expect(finish).toMatchObject({ name: 'Arrivée', assist: true })
-    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} />)
+    // Onglet Suivi (par défaut) : liens par point, carte fermée (case à cocher), pas de trajets.
+    const suivi = renderToStaticMarkup(<ShareView snap={s2} report={null} />)
+    expect(suivi).toContain('Y aller (accès assistance)')
+    expect(suivi).toContain('Carte en direct')
+    expect(suivi).not.toContain('share-map-loading')
+    expect(suivi).not.toContain('Trajet de l&#x27;assistance')
+    // Onglet Trajets : tous les points cochables ; ceux d'assistance cochés d'office.
+    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} initialTab="trajets" />)
     expect(html).toContain('Trajet de l&#x27;assistance')
-    expect(html).toContain('Y aller (accès assistance)')
+    expect(html).toContain('Sommet B')
+    expect(html).toContain('assistance non prévue')
     // Ravito A (accès) puis arrivée : une étape et la destination, depuis la position du téléphone.
     expect(html).toContain(`https://www.google.com/maps/dir/?api=1&amp;destination=${finish.lat!.toFixed(5)},${finish.lon!.toFixed(5)}&amp;waypoints=45.05000,6.01200&amp;travelmode=driving`)
   })

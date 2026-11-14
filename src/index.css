@@ -545,3 +545,7 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .livetrack summary { cursor: pointer; font-weight: 600; }
 .livetrack form input { flex: 1; min-width: 200px; }
 .livetrack .button { text-decoration: none; }
+.share-tabs { margin: 8px 0 12px; display: flex; }
+.share-tabs button { flex: 1; justify-content: center; }
+.map-toggle { margin: 12px 0 0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.notify-box { margin: 12px 0; gap: 8px 12px; flex-wrap: wrap; align-items: center; }
