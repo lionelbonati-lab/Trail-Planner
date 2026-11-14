@@ -8,6 +8,13 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 **Profil et calibration**
 - Profil athlète : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,
   durabilité (courbe log %VC₁ₕ − k·ln T, ou perte linéaire), produits de nutrition.
+- **Estimer mon niveau sans test VC** (profil athlète ; bandeau sur le plan tant que le profil est celui par
+  défaut) : à partir d'une course ou d'un entraînement déjà fait, l'app cherche le niveau (VC et VAM) qui
+  redonne le temps réalisé. Avec l'enregistrement (GPX / FIT, temps en mouvement) : pour un effort de course,
+  VAM par pente, descente et durabilité mesurées en plus, puis VC réajustée. Avec le temps seulement : temps
+  d'arrivée sur une course ou un parcours de l'app (arrêts prévus comptés). Effort au choix : course à fond, ou
+  entraînement dans une zone du profil (le niveau de course en est déduit). Aperçu (temps retrouvé, VC, VAM)
+  avant d'appliquer.
 - **Analyse de n'importe quelle séance** (GPX ou FIT de montre) : temps par zone (allure ramenée au plat),
   tours de la montre, meilleurs efforts comparés à VC + D′ (VC relevée si dépassée), détection d'un test VC ;
   prévu vs réalisé, intensité au fil des heures,

@@ -5,6 +5,7 @@ import {
   CloudSun,
   Copy,
   FileDown,
+  Gauge,
   Flag,
   LibraryBig,
   Map as MapIcon,
@@ -29,6 +30,7 @@ import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { indexAt, parseGpx } from '../lib/gpx'
 import { FINISH_ID } from '../lib/assist'
+import { isDefaultLevel } from '../lib/level'
 import { planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, type AutoSplitMethod } from '../lib/splits'
@@ -462,6 +464,15 @@ export function RacePlan({
                 <button className="primary" onClick={() => toRace.open(sent.id)}>Ouvrir la course</button>
                 <button className="ghost" onClick={() => setSent(null)} aria-label="Fermer">OK</button>
               </span>
+            </div>
+          )}
+          {isDefaultLevel(athlete) && (
+            <div className="banner info">
+              <span>
+                <strong>Profil par défaut</strong> (VC 4'15/km) : ces temps ne sont pas encore les tiens. Sans test VC, estime ton niveau
+                à partir d'une course ou d'un entraînement déjà fait.
+              </span>
+              <a className="button primary" href="#/athlete"><Gauge /> Estimer mon niveau</a>
             </div>
           )}
           {showWatch && (
