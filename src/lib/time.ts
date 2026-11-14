@@ -83,3 +83,15 @@ export function paceToSpeed(secPerKm: number): number {
 export function speedToPace(mps: number): number {
   return 1000 / mps
 }
+
+/**
+ * Heure « hh:mm » saisie → instant, au jour de la course (fuseau `tz`), en reculant d'un jour
+ * si l'heure est plus d'une heure dans le futur. `null` si le format est invalide.
+ */
+export function pastClockToMs(txt: string, tz: string, nowMs = Date.now()): number | null {
+  const m = /^(\d{1,2})[:h](\d{2})$/.exec(txt.trim())
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(nowMs))
+  const ms = zonedToUtc(`${day}T${m[1].padStart(2, '0')}:${m[2]}`, tz).getTime()
+  return ms > nowMs + 3600000 ? ms - 86400000 : ms
+}

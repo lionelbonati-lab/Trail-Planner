@@ -120,7 +120,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 - **Départ libre** (entraînements) : heures du plan calculées pour un départ maintenant (mises à jour chaque
   minute), puis calées sur le vrai départ (mode course) ; la page assistance les recale sur le départ donné par
-  la montre ; le champ Trail Planner affiche « Départ libre ».
+  la montre ; le champ Trail Planner affiche « Départ libre ». En mode course : « Départ maintenant » ou « Déjà
+  parti à… » (heure saisie), et « Corriger l'heure de départ » une fois lancé (passages gardés).
 - **Sur téléphone**, les cadres se plient et se déplient d'un toucher sur leur titre (état gardé) ; dans le plan,
   les cadres secondaires sont pliés d'office.
 
