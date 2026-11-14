@@ -97,7 +97,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Fourchette** bonne journée / prévu / journée difficile pour chaque point.
 - Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires,
   **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits).
-- Impression : A4 (profil, temps, sacs de ravito), bande, fiche assistance.
+- Impression : A4 (profil, temps, sacs de ravito) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 
 **Le jour J**

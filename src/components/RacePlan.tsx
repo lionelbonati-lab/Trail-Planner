@@ -363,7 +363,8 @@ export function RacePlan({
                   {watch.active ? <><Watch /> Sur la montre <Check /></> : <><Watch /> Mettre sur la montre</>}
                 </button>
               )}
-              <button onClick={() => setPrintFormat('a4')}><Printer /> Feuille A4</button>
+              {/* Feuille A4 (sacs de ravito…) et fiche assistance : courses uniquement. */}
+              {!isRoute && <button onClick={() => setPrintFormat('a4')}><Printer /> Feuille A4</button>}
               <button onClick={() => setPrintFormat('strip')}><Printer /> Bande</button>
               {!isRoute && <button onClick={() => setPrintFormat('crew')}><Printer /> Assistance</button>}
               <button className="primary" onClick={exportFit} title="Parcours FIT pour Garmin Connect / PacePro (points de ravito, heures prévues)">
