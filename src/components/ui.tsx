@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { formatPace, parseDuration } from '../lib/time'
 
@@ -96,16 +97,59 @@ export function Toggle({ label, checked, onChange }: { label: ReactNode; checked
   )
 }
 
-export function Card({ title, children, actions, className }: { title?: ReactNode; children: ReactNode; actions?: ReactNode; className?: string }) {
+/**
+ * Cadre. Sur téléphone, un cadre à titre se plie et se déplie d'un toucher sur son titre (état
+ * gardé sur l'appareil) ; `fold` : état par défaut (« closed » pour les cadres secondaires), ou
+ * false pour un cadre toujours ouvert. Sur ordinateur, les cadres restent ouverts.
+ */
+export function Card({
+  title,
+  children,
+  actions,
+  className,
+  fold = 'open',
+}: {
+  title?: ReactNode
+  children: ReactNode
+  actions?: ReactNode
+  className?: string
+  fold?: 'open' | 'closed' | false
+}) {
+  const key = typeof title === 'string' && fold ? `tp-fold-${title}` : null
+  const [folded, setFolded] = useState(() => {
+    if (!key) return false
+    try {
+      const v = localStorage.getItem(key)
+      return v === null ? fold === 'closed' : v === '1'
+    } catch {
+      return fold === 'closed'
+    }
+  })
+  const toggle = () => {
+    setFolded(!folded)
+    try {
+      if (key) localStorage.setItem(key, folded ? '0' : '1')
+    } catch {
+      /* stockage indisponible : l'état reste le temps de la visite */
+    }
+  }
   return (
-    <section className={`card ${className ?? ''}`}>
+    <section className={`card ${key ? 'foldable' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
       {(title || actions) && (
         <header className="card-head">
-          {title && <h2>{title}</h2>}
+          {title &&
+            (key ? (
+              <button type="button" className="card-fold" onClick={toggle} aria-expanded={!folded}>
+                <h2>{title}</h2>
+                <ChevronDown className="fold-chevron" aria-hidden />
+              </button>
+            ) : (
+              <h2>{title}</h2>
+            ))}
           {actions && <div className="card-actions">{actions}</div>}
         </header>
       )}
-      {children}
+      <div className="card-body">{children}</div>
     </section>
   )
 }

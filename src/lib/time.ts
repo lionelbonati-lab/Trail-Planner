@@ -34,6 +34,11 @@ export function zonedToUtc(local: string, timeZone: string): Date {
   return new Date(guess - off2)
 }
 
+/** Date et heure locales (« AAAA-MM-JJTHH:MM », comme un champ datetime-local) d'un instant dans un fuseau. */
+export function utcToZonedInput(ms: number, timeZone: string): string {
+  return new Date(ms + tzOffsetMs(new Date(ms), timeZone)).toISOString().slice(0, 16)
+}
+
 export function formatClock(date: Date, timeZone: string, withDay = false): string {
   if (Number.isNaN(date.getTime())) return '—'
   return new Intl.DateTimeFormat('fr-FR', {

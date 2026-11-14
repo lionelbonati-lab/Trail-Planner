@@ -308,7 +308,7 @@ class TrailPlannerField extends WatchUi.DataField {
             return;
         }
         if (!running) {
-            drawLines(dc, [[plan.name, Graphics.FONT_XTINY, fg], ["Départ " + clock(plan.start), Graphics.FONT_SMALL, fg]]);
+            drawLines(dc, [[plan.name, Graphics.FONT_XTINY, fg], [(plan.start > 0) ? "Départ " + clock(plan.start) : "Départ libre", Graphics.FONT_SMALL, fg]]);
             return;
         }
         var now = Time.now().value();

@@ -312,6 +312,23 @@ export function ShareView({
   }
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
+  const nowSec0 = nowMs / 1000
+  // Départ libre : heures recalées sur le départ réel (montre, sinon mode course), ou sur
+  // maintenant tant que le coureur n'est pas parti.
+  const freshReport = report && nowSec0 - report.t < WATCH_FRESH_S ? report : null
+  const freeStarted = !!(freshReport || snap.live)
+  if (snap.freeStart) {
+    const real = freshReport ? freshReport.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : Math.ceil(nowMs / 60000) * 60000
+    const off = real - Date.parse(snap.start)
+    if (Math.abs(off) >= 30000) {
+      const shift = (iso: string | null) => (iso ? new Date(Date.parse(iso) + off).toISOString() : iso)
+      snap = {
+        ...snap,
+        start: new Date(real).toISOString(),
+        rows: snap.rows.map((r) => ({ ...r, planned: shift(r.planned)!, early: shift(r.early), late: shift(r.late), eta: shift(r.eta)! })),
+      }
+    }
+  }
   const tz = snap.timeZone
   const clock = (iso: string | null, day = false) => (iso ? formatClock(new Date(iso), tz, day) : '')
   // Relevé de la montre : remplace passages et estimations quand il est récent.
@@ -363,7 +380,13 @@ export function ShareView({
       <main className="share">
         <h1>{snap.raceName}</h1>
         <p className="muted">
-          {snap.athleteName} · départ {formatClock(new Date(snap.start), tz, true)} · {(snap.totalDist / 1000).toFixed(1)} km, +{Math.round(snap.dPlus)} m
+          {snap.athleteName} ·{' '}
+          {snap.freeStart
+            ? freeStarted
+              ? `parti à ${formatClock(new Date(snap.start), tz)}`
+              : 'départ libre (heures pour un départ maintenant)'
+            : `départ ${formatClock(new Date(snap.start), tz, true)}`}{' '}
+          · {(snap.totalDist / 1000).toFixed(1)} km, +{Math.round(snap.dPlus)} m
         </p>
         <div className="seg share-tabs" role="tablist" aria-label="Affichage">
           <button role="tab" aria-selected={tab === 'suivi'} className={tab === 'suivi' ? 'on' : ''} onClick={() => setTab('suivi')}>
