@@ -24,6 +24,8 @@ describe('page assistance', () => {
 
   it('sans relevé de montre : plan seul', () => {
     expect(snap.liveRef).toBe('abcdef0123456789')
+    // Tracé simplifié pour la carte : la ligne droite du parcours de test tient en deux points.
+    expect(snap.route).toEqual([[0, 45, 6], [Math.round(plan.track.totalDist), expect.closeTo(45.17986, 4), 6]])
     const html = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
     expect(html).toContain('Le suivi en direct apparaîtra ici')
     expect(html).toContain('Ravito A')

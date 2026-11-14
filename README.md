@@ -98,7 +98,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 **Le jour J**
 - **Mode course** sur téléphone : chrono, prochain point, passages d'un appui, avance/retard,
   recalcul de la suite, position GPS, écran maintenu allumé, hors ligne.
-- **Lien assistance** public en lecture seule, mis à jour en direct.
+- **Lien assistance** public en lecture seule, mis à jour en direct. **Carte en direct** pour l'assistance : partie courue en gris,
+  reste du parcours en magenta, points de passage cochés une fois passés, position du coureur (GPS de la montre,
+  sinon distance parcourue) suivie automatiquement.
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,

@@ -1,8 +1,12 @@
 import { Check, Mountain } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { parseWatchPlan, watchStatus, type WatchReport } from '../lib/watchLive'
+
+import type { MapPoint, Runner } from './ShareMap'
+
+const ShareMap = lazy(() => import('./ShareMap'))
 
 /** Un relevé de montre plus ancien que ceci n'est plus considéré comme « en direct ». */
 const WATCH_FRESH_S = 3 * 3600
@@ -93,6 +97,24 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
   const lastDone = [...snap.rows].reverse().find((r) => r.actual)
   const next = snap.rows.find((r) => !r.actual)
   const elapsed = snap.live ? (nowMs - Date.parse(snap.live.startedAt)) / 1000 : null
+  // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
+  const runner: Runner | null =
+    watch && report
+      ? {
+          dist: watch.dist,
+          lat: report.lat,
+          lon: report.lon,
+          label: `km ${(watch.dist / 1000).toFixed(1).replace('.', ',')} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
+        }
+      : snap.live && lastDone
+        ? { dist: lastDone.dist, label: `Dernier passage : ${lastDone.name} à ${clock(lastDone.actual)}` }
+        : null
+  const mapPoints: MapPoint[] = snap.rows.map((r) => ({
+    dist: r.dist,
+    kind: r.kind,
+    done: !!r.actual,
+    text: `${r.name} · km ${(r.dist / 1000).toFixed(1).replace('.', ',')} · ${r.actual ? `passé à ${clock(r.actual, long)}` : `prévu ${clock(r.planned, long)}`}`,
+  }))
 
   return (
     <div className="app">
@@ -130,6 +152,11 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
           </section>
         ) : (
           <p className="hint">Le suivi en direct apparaîtra ici dès le départ.</p>
+        )}
+        {snap.route && snap.route.length >= 2 && (
+          <Suspense fallback={<div className="share-map share-map-loading" />}>
+            <ShareMap route={snap.route} points={mapPoints} runner={runner} />
+          </Suspense>
         )}
         <table className="table">
           <thead>
