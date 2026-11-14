@@ -516,3 +516,16 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .lap-chip input { margin: 0; }
 .ep-code { align-items: baseline; gap: 10px; }
 .ep-short { font-size: 26px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.share-map-wrap { margin: 12px 0; }
+.share-map-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.share-map-head h3 { margin: 0; }
+.share-map-head button.on { color: var(--accent); }
+.share-map { height: 380px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-top: 8px; isolation: isolate; background: #e8ebe6; }
+@media (max-width: 600px) { .share-map { height: 320px; } }
+.runner-icon { width: 18px; height: 18px; border-radius: 50%; background: #1d6fe0; border: 3px solid #fff; box-sizing: border-box; animation: runner-pulse 1.8s ease-out infinite; }
+@keyframes runner-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(29, 111, 224, 0.55); }
+  70% { box-shadow: 0 0 0 16px rgba(29, 111, 224, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(29, 111, 224, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .runner-icon { animation: none; box-shadow: 0 0 0 4px rgba(29, 111, 224, 0.35); } }

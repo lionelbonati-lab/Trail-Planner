@@ -1,6 +1,7 @@
 // Lien public pour l'assistance : un instantané du plan (et du suivi en direct),
 // lisible sans compte, mis à jour par le propriétaire.
 import { liveStatus } from './live'
+import { simplifyRoute, type RoutePoint } from './routeGeo'
 import { watchPlan } from './watch'
 import { zonedToUtc } from './time'
 import type { Athlete, Race, SimResult, Track } from './types'
@@ -32,6 +33,8 @@ export interface ShareSnapshot {
   dPlus: number
   /** Profil simplifié : [distance (m), altitude (m)]. */
   profile: [number, number][]
+  /** Tracé simplifié pour la carte : [distance (m), lat, lon] (absent des anciens partages). */
+  route?: RoutePoint[]
   live: { startedAt: string; lastUpdate: string | null } | null
   rows: ShareRow[]
   /** Plan compact pour le champ de données Garmin (voir watch.ts). */
@@ -71,6 +74,7 @@ export function buildSnapshot(
     totalDist: track.totalDist,
     dPlus: track.dPlus,
     profile: track.points.filter((_, i) => i % stride === 0).map((p) => [Math.round(p.dist), Math.round(p.ele)]),
+    route: simplifyRoute(track.points),
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
     liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
