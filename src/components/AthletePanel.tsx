@@ -8,15 +8,19 @@ import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, epPayload } fro
 import { VAM_ZONE_COUNT, epVamThresholds, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
+import { LevelCard } from './LevelCard'
 import { Card, Hint, Num, PaceField } from './ui'
 
 export function AthletePanel({
   athlete,
   onChange,
   garmin,
+  races = [],
 }: {
   athlete: Athlete
   onChange: (a: Athlete) => void
+  /** Courses et parcours : temps réalisé sur l'un d'eux pour estimer le niveau sans test VC. */
+  races?: Race[]
   /** Connexion (la synchro passe par le compte) et course/séance envoyée à la montre. */
   garmin?: { signedIn: boolean; onWatch: Race | null }
 }) {
@@ -29,6 +33,7 @@ export function AthletePanel({
 
   return (
     <div className="grid two">
+      <LevelCard athlete={athlete} races={races} onChange={onChange} />
       <Card title="Profil physiologique">
         <div className="fields">
           <label className="field">

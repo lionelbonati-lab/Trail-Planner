@@ -509,6 +509,7 @@ export default function App() {
         ) : route.tab === 'athlete' ? (
           <AthletePanel
             athlete={athlete}
+            races={races}
             onChange={updateAthlete}
             garmin={{ signedIn: !!user, onWatch: races.find((r) => r.id === athlete.watchRaceId) ?? null }}
           />
