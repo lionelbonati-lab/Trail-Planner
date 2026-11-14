@@ -13,7 +13,8 @@ export function planOptions(race: Race, track: Track): SimOptions {
     osmTech: race.osmTech,
     weather: race.weather,
     push: race.push,
-    zones: race.zones,
+    // Une course se calcule à l'intensité de course : ses zones éventuelles sont ignorées.
+    zones: race.kind === 'race' ? [] : race.zones,
   }
 }
 

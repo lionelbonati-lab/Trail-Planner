@@ -30,7 +30,7 @@ import { computePlan, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
 import { LibraryPanel } from './components/LibraryPanel'
 import { RacePlan } from './components/RacePlan'
-import { planSession, toRoute } from './lib/library'
+import { raceFromRoute, replaceRaceTrack, toRoute } from './lib/library'
 import { SessionsPanel } from './components/SessionsPanel'
 import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
@@ -71,7 +71,7 @@ function readHash(): { tab: Tab; raceId: string | null } {
   const tab = hashTab === 'seances' ? 'cs' : hashTab
   return {
     tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' ? tab : 'races',
-    raceId: (tab === 'races' || tab === 'live' || tab === 'tracer') && raceId ? raceId : null,
+    raceId: (tab === 'races' || tab === 'live' || tab === 'tracer' || tab === 'parcours') && raceId ? raceId : null,
   }
 }
 
@@ -230,18 +230,29 @@ export default function App() {
         const r = { ...newRace(name, text), kind }
         setRaces((all) => [r, ...all])
         await store.saveRace(r)
-        go('races', r.id)
+        go(kind === 'route' ? 'parcours' : 'races', r.id)
       } catch (e) {
         setError(`${f.name} : ${(e as Error).message}`)
       }
     }
   }
 
-  // Bibliothèque : ajout d'une copie comme parcours modèle, et séances datées créées depuis un parcours.
+  // Bibliothèque : ajout d'une copie comme parcours (ou d'une course créée depuis un parcours).
   const addRaceCopy = async (r: Race, open = true) => {
     setRaces((all) => [r, ...all])
     await store.saveRace(r).catch(report)
-    if (open) go('races', r.id)
+    if (open) go(r.kind === 'route' ? 'parcours' : 'races', r.id)
+  }
+  /** Parcours envoyé vers une course : nouvelle course (copie), ou tracé d'une course existante remplacé. */
+  const sendRouteToRace = (routeRace: Race, target: string | null, name: string): string => {
+    const existing = target ? races.find((r) => r.id === target) : undefined
+    if (existing) {
+      updateRace(replaceRaceTrack(existing, routeRace))
+      return existing.id
+    }
+    const r = raceFromRoute(routeRace, name)
+    void addRaceCopy(r, false)
+    return r.id
   }
   // Traceur : nouveau parcours, ou tracé modifié d'une course existante.
   const saveDrawing = async (d: DrawResult, edited: Race | null) => {
@@ -254,7 +265,7 @@ export default function App() {
       const next = { ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name }
       const checkpoints = [...next.checkpoints, ...markPoints(next.checkpoints)].sort((a, b) => a.dist - b.dist)
       updateRace({ ...next, checkpoints, ...(d.zones ? { zones: d.zones } : {}) })
-      go('races', edited.id)
+      go(edited.kind === 'route' ? 'parcours' : 'races', edited.id)
     } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [], checkpoints: markPoints([]) })
   }
   const removeRace = async (id: string) => {
@@ -475,21 +486,20 @@ export default function App() {
           />
         ) : route.tab === 'cs' ? (
           <SessionsPanel athlete={athlete} onChange={updateAthlete} />
-        ) : route.tab === 'parcours' ? (
+        ) : route.tab === 'parcours' && !current ? (
           <LibraryPanel
             races={races}
             athlete={athlete}
-            onOpen={(id) => go('races', id)}
+            onOpen={(id) => go('parcours', id)}
             onAdd={(f) => addGpx(f, 'route')}
             onDraw={() => go('tracer')}
             onUpdate={updateRace}
             onDelete={removeRace}
-            onPlan={(r, start) => addRaceCopy(planSession(r, start))}
           />
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : route.tab === 'live' && current ? (
-          <LiveMode race={current} athlete={athlete} onChange={updateRace} onExit={() => go('races', current.id)} />
+          <LiveMode race={current} athlete={athlete} onChange={updateRace} onExit={() => go(current.kind === 'route' ? 'parcours' : 'races', current.id)} />
         ) : current ? (
           <>
             <div className="crumbs no-print">
@@ -498,8 +508,7 @@ export default function App() {
               ) : (
                 <a href="#/parcours"><ArrowLeft className="inline" /> Bibliothèque de parcours</a>
               )}
-              {current.kind === 'route' && <span className="badge">Parcours modèle</span>}
-              {current.kind === 'session' && <span className="badge">Séance d'entraînement</span>}
+              {current.kind === 'route' && <span className="badge">Parcours</span>}
             </div>
             <RacePlan
               race={current}
@@ -511,8 +520,16 @@ export default function App() {
               library={{
                 kind: current.kind,
                 addToLibrary: () => addRaceCopy(toRoute(current)),
-                planSession: (start: string) => addRaceCopy(planSession(current, start)),
               }}
+              toRace={
+                current.kind === 'route'
+                  ? {
+                      races: races.filter((r) => r.kind === 'race').map((r) => ({ id: r.id, name: r.name })),
+                      send: (target, name) => sendRouteToRace(current, target, name),
+                      open: (id) => go('races', id),
+                    }
+                  : undefined
+              }
               share={{
                 available: !!user,
                 url: current.shareId ? shareUrl(current.shareId) : null,

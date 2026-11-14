@@ -513,7 +513,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
   const on = !!athlete.epSync
   const up = climbEquivalence(athlete)
   const dn = descentEquivalence(athlete)
-  const k = onWatch ? wholeRouteZone(onWatch.zones, athlete) : null
+  const k = onWatch && onWatch.kind !== 'race' ? wholeRouteZone(onWatch.zones, athlete) : null
   const sorted = [...athlete.zones].sort((a, b) => a.low - b.low).slice(0, 7)
   const vz = epVamThresholds(athlete)
   const toggle = (v: boolean) =>
