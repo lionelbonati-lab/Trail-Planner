@@ -105,10 +105,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   Garmin LiveTrack : l'assistance colle le lien reçu par e-mail au départ (envoi automatique de Garmin), gardé
   sur son téléphone.
 - **Navigation de l'assistance** : dans le plan, case « Assistance autorisée » par point (ravitos et arrivée
-  d'office) et accès assistance (parking, salle) placé sur la carte. Sur la page assistance, lien « Y aller »
-  (Google Maps, en voiture) vers chaque point (son accès s'il est placé), liste à cocher des points d'assistance
-  (gardée sur le téléphone) et itinéraire Google Maps entre les points cochés pas encore passés, découpé par
-  3 étapes (limite de Google Maps sur téléphone).
+  d'office) et accès assistance (parking, salle) placé sur la carte. Page assistance en deux onglets : **Suivi**
+  (direct, carte affichée par une case à cocher, lien « Y aller » Google Maps vers chaque point, son accès s'il
+  est placé) et **Trajets** (tous les points à cocher, ceux d'assistance cochés d'office, gardés sur le
+  téléphone ; itinéraire Google Maps entre les points cochés pas encore passés, découpé par 3 étapes).
+- **Notifications de passage** pour l'assistance (page ouverte, même en arrière-plan) : nom du point, heure,
+  écart au plan compté depuis le vrai départ ; un toucher ramène sur la page.
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,

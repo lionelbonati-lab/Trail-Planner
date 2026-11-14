@@ -1,4 +1,4 @@
-import { Check, Mountain, Navigation, Radio, Route } from 'lucide-react'
+import { Activity, Bell, BellOff, Check, Map as MapIcon, Mountain, Navigation, Radio, Route } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
@@ -137,28 +137,156 @@ function LiveTrackBox({ shareId }: { shareId?: string }) {
   )
 }
 
-/** Points décochés par l'équipe sur ce téléphone, par lien assistance. */
-function useUnchecked(shareId: string | undefined): [Set<string>, (id: string, on: boolean) => void] {
+/** Lecture / écriture sûres du stockage du téléphone (absent en navigation privée ou au rendu serveur). */
+function readStore(key: string): string | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+function writeStore(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, value)
+  } catch {
+    /* stockage indisponible : le choix reste le temps de la visite */
+  }
+}
+
+/** Réglage booléen gardé sur ce téléphone. */
+function useStoredFlag(key: string, initial: boolean): [boolean, (v: boolean) => void] {
+  const [v, setV] = useState(() => {
+    const s = readStore(key)
+    return s === null ? initial : s === '1'
+  })
+  return [
+    v,
+    (next: boolean) => {
+      setV(next)
+      writeStore(key, next ? '1' : '0')
+    },
+  ]
+}
+
+/**
+ * Points cochés par l'équipe pour son trajet, gardés sur ce téléphone : choix explicites par
+ * point ; sans choix, un point est coché si l'assistance y est autorisée.
+ */
+function useTripChoices(shareId: string | undefined): [Record<string, boolean>, (id: string, on: boolean) => void] {
   const key = `tp-assist-${shareId ?? 'local'}`
-  const [off, setOff] = useState<Set<string>>(() => {
+  const [choices, setChoices] = useState<Record<string, boolean>>(() => {
     try {
-      return new Set(JSON.parse(localStorage.getItem(key) ?? '[]') as string[])
+      const v = JSON.parse(readStore(key) ?? '{}') as unknown
+      // Ancien format : liste des points décochés.
+      if (Array.isArray(v)) return Object.fromEntries(v.map((id) => [String(id), false]))
+      return v && typeof v === 'object' ? (v as Record<string, boolean>) : {}
     } catch {
-      return new Set()
+      return {}
     }
   })
-  const toggle = (id: string, on: boolean) => {
-    const next = new Set(off)
-    if (on) next.delete(id)
-    else next.add(id)
-    setOff(next)
-    try {
-      localStorage.setItem(key, JSON.stringify([...next]))
-    } catch {
-      /* stockage indisponible : la coche ne sera pas gardée */
-    }
+  const set = (id: string, on: boolean) => {
+    const next = { ...choices, [id]: on }
+    setChoices(next)
+    writeStore(key, JSON.stringify(next))
   }
-  return [off, toggle]
+  return [choices, set]
+}
+
+/** Notification système (via le service worker si possible : seule voie sur Android). */
+async function showNotice(title: string, body: string, tag: string) {
+  const opts = { body, tag, icon: './icon-192.png', badge: './icon-192.png', data: { url: location.href }, vibrate: [200, 100, 200] } as NotificationOptions
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration()
+    if (reg) {
+      await reg.showNotification(title, opts)
+      return
+    }
+  } catch {
+    /* repli ci-dessous */
+  }
+  try {
+    new Notification(title, opts)
+  } catch {
+    /* notifications indisponibles */
+  }
+}
+
+/**
+ * Notifications au passage d'un point (passage réel : montre ou mode course), tant que la page
+ * est ouverte. Les passages déjà connus à l'ouverture ne sont pas notifiés.
+ */
+function useCrossingAlerts(
+  rows: ShareSnapshot['rows'],
+  who: string,
+  shareId: string | undefined,
+  fmt: (iso: string | null) => string,
+  /** Départ réel et départ prévu (ms) : l'écart au plan se compte depuis le vrai départ. */
+  startMs: number,
+  planStartMs: number,
+) {
+  const supported = typeof window !== 'undefined' && 'Notification' in window
+  const [enabled, setEnabledFlag] = useStoredFlag(`tp-notify-${shareId ?? 'local'}`, false)
+  const [permission, setPermission] = useState<string>(supported ? Notification.permission : 'unsupported')
+  const passedKey = rows
+    .filter((r) => r.actual)
+    .map((r) => r.id)
+    .join(',')
+  useEffect(() => {
+    const key = `tp-notified-${shareId ?? 'local'}`
+    const passed = rows.filter((r) => r.actual)
+    const stored = readStore(key)
+    if (stored === null) {
+      writeStore(key, JSON.stringify(passed.map((r) => r.id)))
+      return
+    }
+    let seen: string[] = []
+    try {
+      seen = JSON.parse(stored) as string[]
+    } catch {
+      seen = []
+    }
+    const fresh = passed.filter((r) => !seen.includes(r.id))
+    if (!fresh.length) return
+    writeStore(key, JSON.stringify([...seen, ...fresh.map((r) => r.id)]))
+    if (!enabled || !supported || Notification.permission !== 'granted') return
+    for (const r of fresh) {
+      const late = r.actual ? Math.round((Date.parse(r.actual) - startMs - (Date.parse(r.planned) - planStartMs)) / 60000) : 0
+      const plan = late === 0 ? "à l'heure prévue" : `${late > 0 ? '+' : '−'}${Math.abs(late)} min sur le plan`
+      void showNotice(`${who} · ${r.name}`, `Passé à ${fmt(r.actual)} · km ${(r.dist / 1000).toFixed(1).replace('.', ',')} · ${plan}`, `tp-${shareId ?? 'local'}-${r.id}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passedKey, enabled])
+  const enable = async () => {
+    if (!supported) return
+    const p = await Notification.requestPermission()
+    setPermission(p)
+    setEnabledFlag(p === 'granted')
+  }
+  return { supported, permission, enabled: enabled && permission === 'granted', enable, disable: () => setEnabledFlag(false) }
+}
+
+/** Activation des notifications de passage. */
+function NotifyBox({ alerts }: { alerts: ReturnType<typeof useCrossingAlerts> }) {
+  if (!alerts.supported) {
+    return <p className="muted small">Notifications non disponibles sur ce navigateur (sur iPhone : ajoute d'abord cette page à l'écran d'accueil).</p>
+  }
+  if (alerts.permission === 'denied') {
+    return <p className="muted small"><BellOff className="inline" /> Notifications bloquées pour ce site : autorise-les dans les réglages du navigateur.</p>
+  }
+  return (
+    <div className="notify-box row">
+      {alerts.enabled ? (
+        <>
+          <span><Bell className="inline" /> Notification à chaque passage d'un point</span>
+          <button className="ghost" onClick={alerts.disable}>Désactiver</button>
+        </>
+      ) : (
+        <button onClick={() => void alerts.enable()}><Bell /> Me prévenir à chaque passage</button>
+      )}
+      <span className="muted small">Tant que cette page reste ouverte (même en arrière-plan), avec le délai des relevés de la montre.</span>
+    </div>
+  )
 }
 
 /** Affichage du lien assistance (séparé du chargement, pour pouvoir le tester). */
@@ -167,13 +295,22 @@ export function ShareView({
   report,
   nowMs = Date.now(),
   shareId,
+  initialTab,
 }: {
   snap: ShareSnapshot
   report: WatchReport | null
   nowMs?: number
   shareId?: string
+  /** Onglet affiché à l'ouverture (sinon le dernier choisi sur ce téléphone). */
+  initialTab?: 'suivi' | 'trajets'
 }) {
-  const [unchecked, setChecked] = useUnchecked(shareId)
+  const [choices, setChoice] = useTripChoices(shareId)
+  const [tab, setTabState] = useState<'suivi' | 'trajets'>(() => initialTab ?? (readStore('tp-share-tab') === 'trajets' ? 'trajets' : 'suivi'))
+  const setTab = (t: 'suivi' | 'trajets') => {
+    setTabState(t)
+    writeStore('tp-share-tab', t)
+  }
+  const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
   const tz = snap.timeZone
   const clock = (iso: string | null, day = false) => (iso ? formatClock(new Date(iso), tz, day) : '')
@@ -210,6 +347,9 @@ export function ShareView({
       : snap.live && lastDone
         ? { dist: lastDone.dist, label: `Dernier passage : ${lastDone.name} à ${clock(lastDone.actual)}` }
         : null
+  const planStartMs = Date.parse(snap.start)
+  const startMs = watch && report ? report.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : planStartMs
+  const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs)
   const mapPoints: MapPoint[] = snap.rows.map((r) => ({
     dist: r.dist,
     kind: r.kind,
@@ -225,6 +365,18 @@ export function ShareView({
         <p className="muted">
           {snap.athleteName} · départ {formatClock(new Date(snap.start), tz, true)} · {(snap.totalDist / 1000).toFixed(1)} km, +{Math.round(snap.dPlus)} m
         </p>
+        <div className="seg share-tabs" role="tablist" aria-label="Affichage">
+          <button role="tab" aria-selected={tab === 'suivi'} className={tab === 'suivi' ? 'on' : ''} onClick={() => setTab('suivi')}>
+            <Activity /> Suivi
+          </button>
+          <button role="tab" aria-selected={tab === 'trajets'} className={tab === 'trajets' ? 'on' : ''} onClick={() => setTab('trajets')}>
+            <Route /> Trajets
+          </button>
+        </div>
+        {tab === 'trajets' ? (
+          <AssistTrip rows={snap.rows} choices={choices} onCheck={setChoice} clock={(iso) => clock(iso, long)} live={!!snap.live || !!watch} />
+        ) : (
+        <>
         <MiniProfile profile={snap.profile} rows={snap.rows} position={watch ? watch.dist : null} />
         {watch && report ? (
           <section className="live-hero">
@@ -257,12 +409,19 @@ export function ShareView({
         ) : (
           <p className="hint">Le suivi en direct apparaîtra ici dès le départ.</p>
         )}
+        <NotifyBox alerts={alerts} />
         <LiveTrackBox shareId={shareId} />
-        <AssistTrip rows={snap.rows} unchecked={unchecked} onCheck={setChecked} clock={(iso) => clock(iso, long)} live={!!snap.live || !!watch} />
         {snap.route && snap.route.length >= 2 && (
-          <Suspense fallback={<div className="share-map share-map-loading" />}>
-            <ShareMap route={snap.route} points={mapPoints} runner={runner} />
-          </Suspense>
+          <>
+            <label className="check map-toggle">
+              <input type="checkbox" checked={showMap} onChange={(e) => setShowMap(e.target.checked)} /> <MapIcon className="inline" /> Carte en direct
+            </label>
+            {showMap && (
+              <Suspense fallback={<div className="share-map share-map-loading" />}>
+                <ShareMap route={snap.route} points={mapPoints} runner={runner} />
+              </Suspense>
+            )}
+          </>
         )}
         <table className="table">
           <thead>
@@ -292,6 +451,8 @@ export function ShareView({
             ))}
           </tbody>
         </table>
+        </>
+        )}
         <p className="hint">Mis à jour {formatClock(new Date(snap.updatedAt), tz, true)}. Cette page se met à jour toute seule.</p>
       </main>
     </div>
@@ -299,42 +460,46 @@ export function ShareView({
 }
 
 /**
- * Trajet de l'assistance : points où elle est autorisée, à cocher (coches gardées sur ce
- * téléphone), et itinéraire Google Maps entre les points cochés pas encore passés.
+ * Trajets de l'assistance : tous les points du parcours, à cocher (coches gardées sur ce
+ * téléphone ; ceux où l'assistance est autorisée le sont d'office), et itinéraire Google Maps
+ * entre les points cochés pas encore passés.
  */
 function AssistTrip({
   rows,
-  unchecked,
+  choices,
   onCheck,
   clock,
   live,
 }: {
   rows: ShareSnapshot['rows']
-  unchecked: Set<string>
+  choices: Record<string, boolean>
   onCheck: (id: string, on: boolean) => void
   clock: (iso: string | null) => string
   live: boolean
 }) {
-  const points = rows.filter((r) => r.assist && r.lat !== undefined && r.lon !== undefined)
-  if (!points.length) return null
-  const todo = points.filter((r) => !r.actual && !unchecked.has(r.id))
+  const points = rows.filter((r) => r.lat !== undefined && r.lon !== undefined)
+  if (!points.length) return <p className="hint">Les points de ce parcours n'ont pas encore de coordonnées : le coureur doit rouvrir son plan.</p>
+  const checked = (r: (typeof rows)[number]) => !r.actual && (choices[r.id] ?? !!r.assist)
+  const todo = points.filter(checked)
   const legs = tripLegs(todo.map((r) => ({ lat: r.lat!, lon: r.lon! })))
   return (
     <section className="assist-trip">
       <h3><Route className="inline" /> Trajet de l'assistance</h3>
+      <p className="muted small">Coche les points où tu veux aller : ceux où l'assistance est autorisée le sont d'office.</p>
       <ul>
         {points.map((r) => {
           const done = !!r.actual
           return (
             <li key={r.id} className={done ? 'muted' : ''}>
               <label>
-                <input type="checkbox" checked={!done && !unchecked.has(r.id)} disabled={done} onChange={(e) => onCheck(r.id, e.target.checked)} />
+                <input type="checkbox" checked={checked(r)} disabled={done} onChange={(e) => onCheck(r.id, e.target.checked)} />
                 <span>
                   <strong>{r.name}</strong> <span className="muted small">km {(r.dist / 1000).toFixed(1).replace('.', ',')}</span>
                   <br />
                   <span className="small">
                     {done ? `passé à ${clock(r.actual)}` : `${live ? 'estimé' : 'prévu'} ${clock(live ? r.eta : r.planned)}`}
                     {r.access ? ' · accès assistance' : ''}
+                    {!r.assist && <span className="muted"> · assistance non prévue</span>}
                   </span>
                 </span>
               </label>
