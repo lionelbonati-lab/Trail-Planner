@@ -540,3 +540,8 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .assist-trip li label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .assist-trip .trip-links { display: flex; flex-direction: column; gap: 6px; }
 .assist-trip .trip-links a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; justify-content: center; }
+.livetrack { margin: 12px 0; }
+.livetrack details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+.livetrack summary { cursor: pointer; font-weight: 600; }
+.livetrack form input { flex: 1; min-width: 200px; }
+.livetrack .button { text-decoration: none; }

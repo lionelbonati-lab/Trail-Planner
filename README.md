@@ -100,7 +100,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   recalcul de la suite, position GPS, écran maintenu allumé, hors ligne.
 - **Lien assistance** public en lecture seule, mis à jour en direct. **Carte en direct** pour l'assistance : partie courue en gris,
   reste du parcours en magenta, points de passage cochés une fois passés, position du coureur (GPS de la montre,
-  sinon distance parcourue) suivie automatiquement.
+  sinon distance parcourue) suivie automatiquement ; entre deux relevés de la montre (5 min au mieux, limite
+  Garmin), position estimée d'après le rythme mesuré, arrêts aux ravitos compris (une heure au plus). Encart
+  Garmin LiveTrack : l'assistance colle le lien reçu par e-mail au départ (envoi automatique de Garmin), gardé
+  sur son téléphone.
 - **Navigation de l'assistance** : dans le plan, case « Assistance autorisée » par point (ravitos et arrivée
   d'office) et accès assistance (parking, salle) placé sur la carte. Sur la page assistance, lien « Y aller »
   (Google Maps, en voiture) vers chaque point (son accès s'il est placé), liste à cocher des points d'assistance

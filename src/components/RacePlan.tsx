@@ -339,6 +339,11 @@ export function RacePlan({
             <div className="banner info share-banner">
               <span>
                 Lien assistance : <a href={share.url} target="_blank" rel="noreferrer">{share.url}</a>
+                <span className="muted small">
+                  {' '}— Position plus fréquente que les 5 min de la montre : active une fois Garmin LiveTrack en démarrage automatique dans
+                  Garmin Connect (Sécurité et suivi › LiveTrack), avec l'e-mail de ton assistance. Garmin lui envoie le lien à chaque départ ;
+                  elle le colle sur sa page assistance.
+                </span>
               </span>
               <span className="row tight">
                 <button
