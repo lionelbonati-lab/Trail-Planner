@@ -61,7 +61,7 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
   const cutoffMs = (c: string) => (c ? zonedToUtc(c, tz).getTime() : null)
   const status = race.live && sim ? liveStatus(race.live, sim, now, (s) => cutoffMs(s.cp.cutoff)) : null
 
-  if (!track || !sim) return <Card title={race.name}><p className="warn">Impossible de lire le GPX de cette course.</p></Card>
+  if (!track || !sim) return <Card title={race.name} fold={false}><p className="warn">Impossible de lire le GPX de cette course.</p></Card>
 
   const plannedStart = zonedToUtc(race.env.start, tz).getTime()
   const setLive = (live: Race['live']) => onChange({ ...race, live })
@@ -86,7 +86,7 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
     return (
       <div className="live">
         <button className="ghost" onClick={onExit}><ArrowLeft /> Plan</button>
-        <Card title={`Mode course · ${race.name}`}>
+        <Card title={`Mode course · ${race.name}`} fold={false}>
           {free ? (
             <p>
               Départ libre : les heures du plan se calent sur ton départ (arrivée vers {formatClock(new Date(now + sim.totalTime * 1000), tz)} si tu

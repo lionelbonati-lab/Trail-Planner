@@ -110,6 +110,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
   return (
     <div className="grid">
       <Card
+        fold="open"
         title="Analyser une séance"
         actions={
           <label className="button primary">
@@ -128,7 +129,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
 
       {analysis && (
         <>
-          <Card title={analysis.record.name}>
+          <Card title={analysis.record.name} fold="open">
             <div className="kpis">
               <Kpi label="Distance" value={`${(analysis.record.dist / 1000).toFixed(1)} km`} sub={`+${Math.round(analysis.record.dPlus)} m`} />
               <Kpi label="Temps total" value={formatDuration(analysis.record.elapsed)} sub={`${formatDuration(analysis.record.elapsed - analysis.record.moving)} d'arrêt`} />

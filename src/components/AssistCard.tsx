@@ -22,7 +22,7 @@ interface Props {
 export function AssistCard({ race, track, splits, picking, onPick, onCheckpoint, onRace }: Props) {
   const long = splits.length ? splits[splits.length - 1].arrival > 20 * 3600 : false
   return (
-    <Card title="Assistance" className="span2" fold="closed">
+    <Card title="Assistance" className="span2">
       <Hint>
         Coche les points où ton assistance a le droit de venir (règlement de la course) : ils forment son trajet sur la page assistance.
         Place un <strong>accès</strong> (parking, salle du ravito) pour que son lien GPS l'y mène ; sinon il mène au point du parcours.

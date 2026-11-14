@@ -98,16 +98,17 @@ export function Toggle({ label, checked, onChange }: { label: ReactNode; checked
 }
 
 /**
- * Cadre. Sur téléphone, un cadre à titre se plie et se déplie d'un toucher sur son titre (état
- * gardé sur l'appareil) ; `fold` : état par défaut (« closed » pour les cadres secondaires), ou
- * false pour un cadre toujours ouvert. Sur ordinateur, les cadres restent ouverts.
+ * Cadre. Sur téléphone, un cadre à titre se plie et se déplie d'un toucher sur son titre, et chaque
+ * page s'ouvre cadres pliés (pas de page à rallonge) : `fold` = « closed » (par défaut), « open » pour
+ * le contenu principal d'une page, ou false pour un cadre toujours ouvert. L'état n'est gardé que le
+ * temps de la page. Sur ordinateur, les cadres restent ouverts.
  */
 export function Card({
   title,
   children,
   actions,
   className,
-  fold = 'open',
+  fold = 'closed',
 }: {
   title?: ReactNode
   children: ReactNode
@@ -115,30 +116,16 @@ export function Card({
   className?: string
   fold?: 'open' | 'closed' | false
 }) {
-  const key = typeof title === 'string' && fold ? `tp-fold-${title}` : null
-  const [folded, setFolded] = useState(() => {
-    if (!key) return false
-    try {
-      const v = localStorage.getItem(key)
-      return v === null ? fold === 'closed' : v === '1'
-    } catch {
-      return fold === 'closed'
-    }
-  })
-  const toggle = () => {
-    setFolded(!folded)
-    try {
-      if (key) localStorage.setItem(key, folded ? '0' : '1')
-    } catch {
-      /* stockage indisponible : l'état reste le temps de la visite */
-    }
-  }
+  // Seul un cadre à titre texte se plie (titre éditable, cadre sans titre : toujours ouvert).
+  const foldable = typeof title === 'string' && fold !== false
+  const [folded, setFolded] = useState(foldable && fold === 'closed')
+  const toggle = () => setFolded(!folded)
   return (
-    <section className={`card ${key ? 'foldable' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
+    <section className={`card ${foldable ? 'foldable' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
       {(title || actions) && (
         <header className="card-head">
           {title &&
-            (key ? (
+            (foldable ? (
               <button type="button" className="card-fold" onClick={toggle} aria-expanded={!folded}>
                 <h2>{title}</h2>
                 <ChevronDown className="fold-chevron" aria-hidden />
