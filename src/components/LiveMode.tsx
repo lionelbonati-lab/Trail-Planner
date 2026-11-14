@@ -1,7 +1,7 @@
 import { ArrowLeft, Check, LocateFixed, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { liveStatus, locate, plannedAt } from '../lib/live'
-import { formatClock, formatDuration, zonedToUtc } from '../lib/time'
+import { formatClock, formatDuration, pastClockToMs, zonedToUtc } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { useRaceComputation } from './RacePlan'
 import { Card, Hint } from './ui'
@@ -51,6 +51,7 @@ function useWakeLock(on: boolean) {
 
 export function LiveMode({ race, athlete, onChange, onExit }: Props) {
   const { track, sim } = useRaceComputation(race, athlete)
+  const free = !!race.freeStart
   const now = useNow()
   const [awake, setAwake] = useState(true)
   const [gps, setGps] = useState<{ busy: boolean; text: string | null }>({ busy: false, text: null })
@@ -72,17 +73,37 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
     setLive({ ...race.live, passages })
   }
 
+  // Départ libre : départ déjà pris (oubli du bouton) → heure saisie, jamais dans le futur.
+  const startedEarlier = () => {
+    const txt = prompt('Heure de départ (hh:mm)', formatClock(new Date(), tz))
+    if (txt === null || !txt.trim()) return
+    const ms = pastClockToMs(txt, tz)
+    if (ms === null) return alert('Format attendu : hh:mm')
+    setLive({ startedAt: new Date(Math.min(ms, Date.now())).toISOString(), passages: {} })
+  }
+
   if (!race.live || !status) {
     return (
       <div className="live">
         <button className="ghost" onClick={onExit}><ArrowLeft /> Plan</button>
         <Card title={`Mode course · ${race.name}`}>
-          <p>Départ prévu {formatClock(new Date(plannedStart), tz, true)}. Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.</p>
+          {free ? (
+            <p>
+              Départ libre : les heures du plan se calent sur ton départ (arrivée vers {formatClock(new Date(now + sim.totalTime * 1000), tz)} si tu
+              pars maintenant). Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.
+            </p>
+          ) : (
+            <p>Départ prévu {formatClock(new Date(plannedStart), tz, true)}. Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.</p>
+          )}
           <div className="live-actions">
             <button className="primary big" onClick={() => setLive({ startedAt: new Date().toISOString(), passages: {} })}>▶ Départ maintenant</button>
-            <button className="big" onClick={() => setLive({ startedAt: new Date(plannedStart).toISOString(), passages: {} })}>
-              Départ à l'heure prévue ({formatClock(new Date(plannedStart), tz)})
-            </button>
+            {free ? (
+              <button className="big" onClick={startedEarlier}>Déjà parti à…</button>
+            ) : (
+              <button className="big" onClick={() => setLive({ startedAt: new Date(plannedStart).toISOString(), passages: {} })}>
+                Départ à l'heure prévue ({formatClock(new Date(plannedStart), tz)})
+              </button>
+            )}
           </div>
           <Hint>Fonctionne sans réseau. Si tu es connecté, ton assistance voit tes passages en direct via le lien de partage.</Hint>
         </Card>
@@ -100,13 +121,18 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
     const txt = prompt('Heure de passage (hh:mm) — vide pour effacer', def)
     if (txt === null) return
     if (!txt.trim()) return mark(cpId, null)
-    const m = /^(\d{1,2})[:h](\d{2})$/.exec(txt.trim())
-    if (!m) return alert('Format attendu : hh:mm')
-    // Date locale du jour (fuseau de la course), en reculant d'un jour si l'heure est dans le futur.
-    const day = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
-    let ms = zonedToUtc(`${day}T${m[1].padStart(2, '0')}:${m[2]}`, tz).getTime()
-    if (ms > Date.now() + 3600000) ms -= 86400000
+    const ms = pastClockToMs(txt, tz)
+    if (ms === null) return alert('Format attendu : hh:mm')
     mark(cpId, new Date(ms).toISOString())
+  }
+
+  // Départ appuyé en retard (ou trop tôt) : heure corrigée, passages gardés.
+  const fixStart = () => {
+    const txt = prompt('Heure de départ (hh:mm)', formatClock(new Date(t0), tz))
+    if (txt === null || !txt.trim()) return
+    const ms = pastClockToMs(txt, tz)
+    if (ms === null) return alert('Format attendu : hh:mm')
+    setLive({ ...race.live!, startedAt: new Date(Math.min(ms, Date.now())).toISOString() })
   }
 
   const whereAmI = () => {
@@ -195,6 +221,7 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
       </Card>
 
       <div className="row">
+        <button className="ghost" onClick={fixStart} title="Bouton de départ appuyé trop tard ou trop tôt"><Pencil /> Corriger l'heure de départ</button>
         <button className="ghost danger" onClick={() => confirm('Effacer le suivi (départ et passages) ?') && setLive(null)}>Réinitialiser le suivi</button>
       </div>
     </div>

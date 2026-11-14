@@ -180,7 +180,8 @@ export function RacePlan({
     set({ checkpoints: race.checkpoints.map((c) => (c.id === id ? { ...c, ...patch, auto: patch.dist !== undefined || patch.name !== undefined || patch.kind !== undefined ? false : c.auto } : c)) })
 
   // Départ libre : départ maintenant ou vrai départ (voir useRaceComputation).
-  const startMs = zonedToUtc(start, race.env.timeZone).getTime()
+  // Départ libre lancé : instant exact du départ (le champ `start` est arrondi à la minute).
+  const startMs = race.freeStart && race.live ? Date.parse(race.live.startedAt) : zonedToUtc(start, race.env.timeZone).getTime()
 
   // Scénarios : fenêtre de passage entre une bonne journée et une journée difficile.
   const scenarios = useMemo(() => {
