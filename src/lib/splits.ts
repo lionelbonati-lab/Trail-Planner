@@ -195,3 +195,19 @@ export function mergeAutoPoints(existing: Checkpoint[], auto: AutoPoint[]): Chec
     }))
   return [...manual, ...added].sort((a, b) => a.dist - b.dist)
 }
+
+/** Temps d'arrêt le plus fréquent parmi les ravitos (3 min par défaut, sans ravito). */
+export function commonRavitoStop(cps: Checkpoint[]): number {
+  const counts = new Map<number, number>()
+  for (const c of cps) if (c.kind === 'ravito') counts.set(c.stopMin, (counts.get(c.stopMin) ?? 0) + 1)
+  let best = 3
+  let n = 0
+  for (const [v, k] of counts) if (k > n || (k === n && v > best)) [best, n] = [v, k]
+  return best
+}
+
+/** Même temps d'arrêt (min) à tous les ravitos ; les autres points sont inchangés. */
+export function setRavitoStops(cps: Checkpoint[], stopMin: number): Checkpoint[] {
+  const v = Math.max(0, stopMin)
+  return cps.map((c) => (c.kind === 'ravito' && c.stopMin !== v ? { ...c, stopMin: v } : c))
+}
