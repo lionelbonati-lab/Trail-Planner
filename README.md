@@ -101,6 +101,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Lien assistance** public en lecture seule, mis à jour en direct. **Carte en direct** pour l'assistance : partie courue en gris,
   reste du parcours en magenta, points de passage cochés une fois passés, position du coureur (GPS de la montre,
   sinon distance parcourue) suivie automatiquement.
+- **Navigation de l'assistance** : dans le plan, case « Assistance autorisée » par point (ravitos et arrivée
+  d'office) et accès assistance (parking, salle) placé sur la carte. Sur la page assistance, lien « Y aller »
+  (Google Maps, en voiture) vers chaque point (son accès s'il est placé), liste à cocher des points d'assistance
+  (gardée sur le téléphone) et itinéraire Google Maps entre les points cochés pas encore passés, découpé par
+  3 étapes (limite de Google Maps sur téléphone).
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,

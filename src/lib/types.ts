@@ -370,6 +370,15 @@ export interface Checkpoint {
   notes: string
   /** Point créé par le découpage automatique (remplacé à chaque régénération). */
   auto: boolean
+  /** Assistance autorisée à ce point (par défaut : les ravitos). */
+  assist?: boolean
+  /** Accès pour l'assistance (parking, salle du ravito) : destination du lien GPS de la page assistance. */
+  access?: GeoPoint
+}
+
+export interface GeoPoint {
+  lat: number
+  lon: number
 }
 
 /** Technicité manuelle sur un intervalle [from, to] (m). */
@@ -415,6 +424,8 @@ export interface Race {
   shareId: string | null
   /** Tracé dessiné sur la carte (points cliqués), pour pouvoir le modifier. */
   drawn: DrawnRoute | null
+  /** Accès assistance à l'arrivée (l'arrivée n'est pas un point de passage enregistré). */
+  finishAccess?: GeoPoint
   updatedAt: string
 }
 

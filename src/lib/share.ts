@@ -1,5 +1,7 @@
 // Lien public pour l'assistance : un instantané du plan (et du suivi en direct),
 // lisible sans compte, mis à jour par le propriétaire.
+import { assistAllowed, FINISH_ID } from './assist'
+import { indexAt } from './gpx'
 import { liveStatus } from './live'
 import { simplifyRoute, type RoutePoint } from './routeGeo'
 import { watchPlan } from './watch'
@@ -20,6 +22,13 @@ export interface ShareRow {
   cutoff: string | null
   actual: string | null
   eta: string
+  /** Destination du lien GPS : accès assistance s'il est placé, sinon point du parcours. */
+  lat?: number
+  lon?: number
+  /** La destination est un accès assistance placé par le coureur. */
+  access?: boolean
+  /** Assistance autorisée à ce point. */
+  assist?: boolean
 }
 
 export interface ShareSnapshot {
@@ -95,9 +104,19 @@ export function buildSnapshot(
         cutoff: cutoff(s.cp.cutoff),
         actual: race.live?.passages[s.cp.id] ?? null,
         eta: iso(row?.eta ?? s.arrival),
+        ...navTarget(s.cp.access ?? (s.cp.id === FINISH_ID ? race.finishAccess : undefined), track, s.to),
+        assist: assistAllowed(s.cp),
       }
     }),
   }
+}
+
+/** Destination du lien GPS d'un point : son accès assistance, sinon le point du parcours. */
+function navTarget(access: { lat: number; lon: number } | undefined, track: Track, dist: number) {
+  const r5 = (x: number) => Math.round(x * 1e5) / 1e5
+  if (access) return { lat: r5(access.lat), lon: r5(access.lon), access: true }
+  const p = track.points[indexAt(track.points, dist)]
+  return { lat: r5(p.lat), lon: r5(p.lon), access: false }
 }
 
 export function shareUrl(shareId: string): string {

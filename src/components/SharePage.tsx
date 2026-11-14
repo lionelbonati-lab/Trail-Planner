@@ -1,4 +1,5 @@
-import { Check, Mountain } from 'lucide-react'
+import { Check, Mountain, Navigation, Route } from 'lucide-react'
+import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
@@ -71,11 +72,46 @@ export function SharePage({ shareId }: { shareId: string }) {
   if (snap === undefined) return <main><p className="muted">Chargement…</p></main>
   if (snap === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
 
-  return <ShareView snap={snap} report={report} />
+  return <ShareView snap={snap} report={report} shareId={shareId} />
+}
+
+/** Points décochés par l'équipe sur ce téléphone, par lien assistance. */
+function useUnchecked(shareId: string | undefined): [Set<string>, (id: string, on: boolean) => void] {
+  const key = `tp-assist-${shareId ?? 'local'}`
+  const [off, setOff] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(key) ?? '[]') as string[])
+    } catch {
+      return new Set()
+    }
+  })
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(off)
+    if (on) next.delete(id)
+    else next.add(id)
+    setOff(next)
+    try {
+      localStorage.setItem(key, JSON.stringify([...next]))
+    } catch {
+      /* stockage indisponible : la coche ne sera pas gardée */
+    }
+  }
+  return [off, toggle]
 }
 
 /** Affichage du lien assistance (séparé du chargement, pour pouvoir le tester). */
-export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: ShareSnapshot; report: WatchReport | null; nowMs?: number }) {
+export function ShareView({
+  snap: input,
+  report,
+  nowMs = Date.now(),
+  shareId,
+}: {
+  snap: ShareSnapshot
+  report: WatchReport | null
+  nowMs?: number
+  shareId?: string
+}) {
+  const [unchecked, setChecked] = useUnchecked(shareId)
   let snap = input
   const tz = snap.timeZone
   const clock = (iso: string | null, day = false) => (iso ? formatClock(new Date(iso), tz, day) : '')
@@ -153,6 +189,7 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
         ) : (
           <p className="hint">Le suivi en direct apparaîtra ici dès le départ.</p>
         )}
+        <AssistTrip rows={snap.rows} unchecked={unchecked} onCheck={setChecked} clock={(iso) => clock(iso, long)} live={!!snap.live || !!watch} />
         {snap.route && snap.route.length >= 2 && (
           <Suspense fallback={<div className="share-map share-map-loading" />}>
             <ShareMap route={snap.route} points={mapPoints} runner={runner} />
@@ -165,7 +202,17 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
           <tbody>
             {snap.rows.map((r) => (
               <tr key={r.id} className={`${r.kind === 'ravito' ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
-                <td>{r.name}{r.notes && <div className="muted small">{r.notes}</div>}</td>
+                <td>
+                  {r.name}
+                  {r.notes && <div className="muted small">{r.notes}</div>}
+                  {r.lat !== undefined && r.lon !== undefined && (
+                    <div>
+                      <a className="nav-link" href={navUrl({ lat: r.lat, lon: r.lon })} target="_blank" rel="noreferrer">
+                        <Navigation className="inline" /> Y aller{r.access ? ' (accès assistance)' : ''}
+                      </a>
+                    </div>
+                  )}
+                </td>
                 <td>{(r.dist / 1000).toFixed(1)}</td>
                 <td>{clock(r.early, long)}</td>
                 <td><strong>{clock(r.planned, long)}</strong></td>
@@ -179,6 +226,75 @@ export function ShareView({ snap: input, report, nowMs = Date.now() }: { snap: S
         <p className="hint">Mis à jour {formatClock(new Date(snap.updatedAt), tz, true)}. Cette page se met à jour toute seule.</p>
       </main>
     </div>
+  )
+}
+
+/**
+ * Trajet de l'assistance : points où elle est autorisée, à cocher (coches gardées sur ce
+ * téléphone), et itinéraire Google Maps entre les points cochés pas encore passés.
+ */
+function AssistTrip({
+  rows,
+  unchecked,
+  onCheck,
+  clock,
+  live,
+}: {
+  rows: ShareSnapshot['rows']
+  unchecked: Set<string>
+  onCheck: (id: string, on: boolean) => void
+  clock: (iso: string | null) => string
+  live: boolean
+}) {
+  const points = rows.filter((r) => r.assist && r.lat !== undefined && r.lon !== undefined)
+  if (!points.length) return null
+  const todo = points.filter((r) => !r.actual && !unchecked.has(r.id))
+  const legs = tripLegs(todo.map((r) => ({ lat: r.lat!, lon: r.lon! })))
+  return (
+    <section className="assist-trip">
+      <h3><Route className="inline" /> Trajet de l'assistance</h3>
+      <ul>
+        {points.map((r) => {
+          const done = !!r.actual
+          return (
+            <li key={r.id} className={done ? 'muted' : ''}>
+              <label>
+                <input type="checkbox" checked={!done && !unchecked.has(r.id)} disabled={done} onChange={(e) => onCheck(r.id, e.target.checked)} />
+                <span>
+                  <strong>{r.name}</strong> <span className="muted small">km {(r.dist / 1000).toFixed(1).replace('.', ',')}</span>
+                  <br />
+                  <span className="small">
+                    {done ? `passé à ${clock(r.actual)}` : `${live ? 'estimé' : 'prévu'} ${clock(live ? r.eta : r.planned)}`}
+                    {r.access ? ' · accès assistance' : ''}
+                  </span>
+                </span>
+              </label>
+              <a className="nav-link" href={navUrl({ lat: r.lat!, lon: r.lon! })} target="_blank" rel="noreferrer" aria-label={`Y aller : ${r.name}`}>
+                <Navigation className="inline" /> Y aller
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+      {legs.length === 0 ? (
+        <p className="muted small">Coche au moins un point à venir pour préparer le trajet.</p>
+      ) : (
+        <div className="trip-links">
+          {legs.map((l, i) => (
+            <a key={l.url} className="button primary" href={l.url} target="_blank" rel="noreferrer">
+              <Route />
+              {legs.length === 1
+                ? `Itinéraire Google Maps (${todo.length} point${todo.length > 1 ? 's' : ''})`
+                : `Trajet ${i + 1} : ${i === 0 ? 'ma position' : todo[l.from - 1].name} → ${todo[l.to].name}`}
+            </a>
+          ))}
+          <span className="muted small">
+            Départ de ta position, puis les points cochés dans l'ordre de la course.
+            {legs.length > 1 ? ' Google Maps sur téléphone accepte 3 étapes par trajet : chaque trajet repart du dernier point du précédent.' : ''}
+          </span>
+        </div>
+      )}
+    </section>
   )
 }
 
