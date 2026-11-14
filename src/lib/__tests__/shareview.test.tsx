@@ -49,6 +49,22 @@ describe('page assistance', () => {
     expect(html).toContain('class="me"')
   })
 
+  it('navigation : lien par point (accès assistance s’il est placé) et trajet entre les points cochés', () => {
+    const r2 = { ...race, checkpoints: race.checkpoints.map((c) => (c.id === 'a' ? { ...c, access: { lat: 45.05, lon: 6.012 } } : c)) }
+    const p2 = computePlan(r2, athlete)!
+    const s2 = buildSnapshot('uid', r2, athlete, p2.track, p2.sim, scenarioWindows(p2.track, athlete, p2.opts))
+    const [a, b, finish] = s2.rows
+    expect(a).toMatchObject({ assist: true, access: true, lat: 45.05, lon: 6.012 })
+    expect(b).toMatchObject({ assist: false, access: false, lon: 6 })
+    expect(b.lat).toBeCloseTo(45 + 10000 / 111195, 4)
+    expect(finish).toMatchObject({ name: 'Arrivée', assist: true })
+    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} />)
+    expect(html).toContain('Trajet de l&#x27;assistance')
+    expect(html).toContain('Y aller (accès assistance)')
+    // Ravito A (accès) puis arrivée : une étape et la destination, depuis la position du téléphone.
+    expect(html).toContain(`https://www.google.com/maps/dir/?api=1&amp;destination=${finish.lat!.toFixed(5)},${finish.lon!.toFixed(5)}&amp;waypoints=45.05000,6.01200&amp;travelmode=driving`)
+  })
+
   it('relevé trop ancien : ignoré', () => {
     const s = Math.round(Date.parse(snap.start) / 1000)
     const html = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 600, s, d: 2000 }} nowMs={(s + 600 + 4 * 3600) * 1000} />)

@@ -8,6 +8,7 @@ import {
   FileDown,
   LibraryBig,
   Map as MapIcon,
+  MapPin,
   Moon,
   Pencil,
   Play,
@@ -26,12 +27,14 @@ import { bagText, nutritionPlan } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
-import { parseGpx } from '../lib/gpx'
+import { indexAt, parseGpx } from '../lib/gpx'
+import { FINISH_ID } from '../lib/assist'
 import { planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
+import { AssistCard } from './AssistCard'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { ZonePicker, ZonesCard } from './Zones'
@@ -119,6 +122,21 @@ export function RacePlan({
   const narrow = useMediaQuery('(max-width: 1229px)')
   const [editing, setEditing] = useState<string | null>(null)
   const [showMap, setShowMap] = useState(true)
+  // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
+  const [pickAccess, setPickAccess] = useState<string | null>(null)
+  const startPick = (id: string | null) => {
+    setPickAccess(id)
+    if (id) {
+      setShowMap(true)
+      setTimeout(() => document.getElementById('race-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+    }
+  }
+  useEffect(() => {
+    if (!pickAccess) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPickAccess(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pickAccess])
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const { track, opts, sim } = useRaceComputation(race, athlete)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
@@ -248,6 +266,17 @@ export function RacePlan({
     if (confirm(`Durabilité calibrée : ${val}. Appliquer au profil ?`)) onAthleteChange({ ...athlete, durability: d })
   }
 
+  // Accès assistance placés, pour la carte (reliés à leur point du parcours).
+  const accessMarks = useMemo(
+    () =>
+      sim.splits.flatMap((s) => {
+        const at = s.cp.id === FINISH_ID ? race.finishAccess : s.cp.access
+        if (!at) return []
+        const p = track.points[indexAt(track.points, s.to)]
+        return [{ name: s.cp.name, at, trail: { lat: p.lat, lon: p.lon } }]
+      }),
+    [sim.splits, race.finishAccess, track],
+  )
   const ravitos = sim.splits.filter((s) => s.cp.kind === 'ravito')
   const totalStops = race.checkpoints.reduce((a, c) => a + c.stopMin * 60, 0)
   const nightShare = sim.points.filter((p) => p.night).length / sim.points.length
@@ -488,11 +517,48 @@ export function RacePlan({
             <Toggle label="Carte" checked={showMap} onChange={setShowMap} />
           </div>
           {showMap && (
-            <Suspense fallback={<div className="map map-loading">Chargement de la carte…</div>}>
-              <MapView track={track} splits={sim.splits} timeZone={race.env.timeZone} hoverDist={hoverDist} onPick={(d) => addPoint(d)} />
-            </Suspense>
+            <div id="race-map">
+              {pickAccess && (
+                <div className="banner info">
+                  <span>
+                    <MapPin className="inline" /> Clique sur la carte à l'endroit où ton assistance se gare pour «{' '}
+                    {sim.splits.find((x) => x.cp.id === pickAccess)?.cp.name} » (parking, salle du ravito).
+                  </span>
+                  <button className="ghost" onClick={() => setPickAccess(null)}>Annuler</button>
+                </div>
+              )}
+              <Suspense fallback={<div className="map map-loading">Chargement de la carte…</div>}>
+                <MapView
+                  track={track}
+                  splits={sim.splits}
+                  timeZone={race.env.timeZone}
+                  hoverDist={hoverDist}
+                  onPick={(d) => addPoint(d)}
+                  accessPick={
+                    pickAccess
+                      ? (at) => {
+                          if (pickAccess === FINISH_ID) set({ finishAccess: at })
+                          else setCp(pickAccess, { access: at })
+                          setPickAccess(null)
+                        }
+                      : null
+                  }
+                  accesses={accessMarks}
+                />
+              </Suspense>
+            </div>
           )}
         </Card>
+
+        <AssistCard
+          race={race}
+          track={track}
+          splits={sim.splits}
+          picking={pickAccess}
+          onPick={startPick}
+          onCheckpoint={setCp}
+          onRace={(patch) => set(patch)}
+        />
 
         {race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
