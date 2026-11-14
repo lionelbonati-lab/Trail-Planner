@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace } from '../defaults'
 import { computePlan } from '../plan'
-import { fuelInterval, watchPlan, watchUrl } from '../watch'
+import { fuelInterval, routeLine, WATCH_PLAN_MAX, watchPlan, watchUrl } from '../watch'
 
 function gpx(): string {
   const pts: string[] = []
@@ -30,7 +30,9 @@ describe('plan montre', () => {
     expect(K.length).toBeLessThan(40)
     const c = lines[4].split('|')
     expect(c).toEqual(['C', '10000', String(Math.round(plan.sim.splits[0].arrival)), String(Date.parse('2026-06-06T07:00:00Z') / 1000), 'r', 'Col du Bonhomme', '180'])
-    expect(lines[lines.length - 1]).toMatch(/^C\|\d+\|\d+\|0\|i\|Arrivée\|0$/)
+    const C = lines.filter((l) => l.startsWith('C|'))
+    expect(C[C.length - 1]).toMatch(/^C\|\d+\|\d+\|0\|i\|Arrivée\|0$/)
+    expect(lines[lines.length - 1]).toMatch(/^G\|/)
     expect(fuelInterval({ ...race, carbsPerH: 90 }, DEFAULT_ATHLETE)).toBe(17)
     expect(watchUrl('p', 's')).toBe('https://firestore.googleapis.com/v1/projects/p/databases/%28default%29/documents/shares/s?mask.fieldPaths=w')
   })
@@ -43,6 +45,69 @@ describe('plan montre', () => {
     const plan = computePlan(race, DEFAULT_ATHLETE)!
     const w = watchPlan(race, DEFAULT_ATHLETE, plan.track, plan.sim)
     console.log('taille plan montre UTMB :', w.length, 'caractères')
-    expect(w.length).toBeLessThan(4500)
+    // Le tracé remplit la place restante, sans dépasser la limite de la tâche de fond.
+    expect(new TextEncoder().encode(w).length).toBeLessThanOrEqual(WATCH_PLAN_MAX)
+    const g = w.split('\n').find((l) => l.startsWith('G|'))!
+    const r = decodeRoute(g)
+    expect(Number(g.split('|')[1])).toBeLessThanOrEqual(150)
+    expect(r.length).toBeGreaterThan(150)
+    expect(r[r.length - 1].d).toBe(Math.round(plan.track.totalDist))
+  })
+
+  it('tracé (ligne G) : sommets sur le parcours à leur distance, plus fins si la place le permet', () => {
+    const race = newRace('Lacets', zigzag())
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const w = watchPlan(race, DEFAULT_ATHLETE, plan.track, plan.sim)
+    const g = w.split('\n').find((l) => l.startsWith('G|'))!
+    const tol = Number(g.split('|')[1])
+    expect(tol).toBe(8)
+    const r = decodeRoute(g)
+    expect(r[0].d).toBe(0)
+    expect(r[r.length - 1].d).toBe(Math.round(plan.track.totalDist))
+    // Chaque sommet est le point du parcours à sa distance (à l'arrondi près).
+    for (const v of r) {
+      const p = plan.track.points.reduce((a, b) => (Math.abs(b.dist - v.d) < Math.abs(a.dist - v.d) ? b : a))
+      expect(Math.abs(p.lat - v.lat) * 111000).toBeLessThan(3)
+      expect(Math.abs(p.lon - v.lon) * 78000).toBeLessThan(3)
+    }
+    // Moins de place : tolérance relevée ; trop peu : pas de tracé.
+    const small = routeLine(plan.track.points, g.length - 1)
+    expect(small === null || Number(small.split('|')[1]) > 8).toBe(true)
+    expect(routeLine(plan.track.points, 50)).toBeNull()
+    expect(routeLine(plan.track.points, g.length)).toBe(g)
   })
 })
+
+/** Ligne G décodée comme sur la montre : distance (m) et position (degrés) de chaque sommet. */
+function decodeRoute(g: string): { d: number; lat: number; lon: number }[] {
+  const [, , origin, data] = g.split('|')
+  let [d, lat, lon] = origin.split(':').map(Number)
+  const out = [{ d, lat: lat / 1e5, lon: lon / 1e5 }]
+  const v = data.split(',').map(Number)
+  for (let i = 0; i + 2 < v.length; i += 3) {
+    d += v[i]
+    lat += v[i + 1]
+    lon += v[i + 2]
+    out.push({ d, lat: lat / 1e5, lon: lon / 1e5 })
+  }
+  return out
+}
+
+/** Montée en lacets (8 virages de 200 m) puis ligne droite. */
+function zigzag(): string {
+  const pts: string[] = []
+  let lat = 45
+  let lon = 6
+  for (let leg = 0; leg < 8; leg++) {
+    for (let k = 0; k < 10; k++) {
+      lon += ((leg % 2 ? -1 : 1) * 20) / 78600
+      lat += 2 / 111195
+      pts.push(`<trkpt lat="${lat}" lon="${lon}"><ele>${500 + pts.length * 2}</ele></trkpt>`)
+    }
+  }
+  for (let k = 0; k < 100; k++) {
+    lat += 20 / 111195
+    pts.push(`<trkpt lat="${lat}" lon="${lon}"><ele>${660}</ele></trkpt>`)
+  }
+  return `<gpx><trk><trkseg>${pts.join('')}</trkseg></trk></gpx>`
+}

@@ -18,8 +18,18 @@ ClimbPro et PacePro continuent de fonctionner) :
 place du côté du bord arrondi et les textes trop longs sont raccourcis à la largeur disponible.*
 
 L'estimation reprend la logique du mode course de l'app : le retard observé se prolonge sur la suite,
-amorti et borné. La position le long du parcours vient de la navigation du parcours FIT exporté par l'app
-(plus fiable que la distance de la montre) ; sans parcours chargé, la distance parcourue est utilisée.
+amorti et borné.
+
+**Position le long du parcours : GPS calé sur le tracé.** Le plan contient le tracé simplifié du
+parcours ; à chaque seconde, la position GPS est ramenée sur ce tracé, près de l'endroit attendu (dernier
+calage + distance faite depuis). La distance de la montre ne sert qu'entre deux relevés : pas d'erreur
+cumulée (distance GPS trop longue ou trop courte), et un raccourci ou un détour se recale dès le retour sur
+le tracé. Hors du tracé (5 s de suite), la distance reste figée et le champ affiche **« Hors parcours ·
+N m »** en rouge ; sans GPS (tunnel…), elle avance avec la distance de la montre. Un aller-retour ou une
+boucle qui repasse au même endroit ne trompe pas le calage (il cherche près de la position attendue).
+Si le parcours change (modifié dans l'app web), la montre reçoit le nouveau plan dans les 5 min et se
+recale sur tout le parcours, en gardant les passages déjà notés. Plan d'une ancienne version (sans
+tracé) : navigation du parcours FIT si elle est active, sinon distance parcourue.
 
 ## 1. Envoyer une course à la montre (app web)
 
@@ -60,8 +70,8 @@ Puis, sur la montre : activité **Trail → Paramètres → Écrans de données*
 
 ## 4. Le jour de la course
 
-1. Dans l'app web, la course est « Sur la montre ✓ » ; exporte aussi son parcours FIT et charge-le sur la
-   montre (navigation).
+1. Dans l'app web, la course est « Sur la montre ✓ ». Le parcours FIT (navigation, flèches) reste utile
+   pour te guider, mais le champ n'en a plus besoin : il a son propre tracé.
 2. Quelques minutes avant le départ, **ouvre l'activité Trail avec le parcours, téléphone à proximité** :
    le champ télécharge le plan (contrôle toutes les 5 min, minimum imposé par Garmin) et affiche
    « Départ hh:mm ».
@@ -76,7 +86,10 @@ connecté ?), « Code inconnu » (code erroné ou course pas encore envoyée), �
 
 - Écrit sans accès au SDK Garmin : la première compilation peut demander de petites corrections
   (signale-les, avec le message d'erreur).
-- Mémoire limitée : le plan est compacté (≈ 2–4 Ko pour un ultra comme l'UTMB, précision ±1 min).
+- Mémoire limitée : le plan tient en 7 Ko au plus (limite de la tâche de fond Garmin : 8 Ko). Le tracé
+  prend la place restante : simplifié à 8 m près sur un trail court, jusqu'à 100–150 m sur un ultra avec
+  beaucoup de points (UTMB) ; dans les lacets simplifiés, la distance de la montre prend le relais à
+  l'intérieur du segment, et l'écart reste de l'ordre de 100–200 m au lieu de plusieurs km cumulés.
 - Suivi pour l'assistance : toutes les 5 min au mieux (minimum imposé par Garmin), et seulement si le
   téléphone est avec toi, l'app Garmin Connect connectée et du réseau mobile. Sans réseau, les passages
   restent sur la montre et partent au prochain envoi réussi.

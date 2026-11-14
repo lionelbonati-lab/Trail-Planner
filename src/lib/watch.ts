@@ -7,7 +7,12 @@
 //   K|<d>:<t>,<d>:<t>,…    courbe distance (m) → temps de déplacement prévu (s, arrêts exclus),
 //                          simplifiée à ±45 s près (points là où l'allure change)
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>   (un par point)
+//   G|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,<dd>,<dlat>,<dlon>,…
+//                          tracé simplifié pour caler la position GPS sur le parcours : premier point
+//                          (lat / lon en 1e-5 degré), puis écarts de distance (m) et de position
+//                          d'un point au suivant. Absent si le plan dépasserait WATCH_PLAN_MAX.
 // Temps prévu à une distance d = K interpolé + somme des arrêts des points situés avant d.
+import { simplifyRoute } from './routeGeo'
 import { zonedToUtc } from './time'
 import type { Athlete, Race, SimResult, Track } from './types'
 
@@ -74,7 +79,46 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
       return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${clean(s.cp.name, 16)}|${Math.round(s.cp.stopMin * 60)}`
     }),
   ]
-  return lines.join('\n')
+  const base = lines.join('\n')
+  // Taille en octets (accents des noms sur 2 octets) ; la ligne G n'a que des caractères ASCII.
+  const route = routeLine(track.points, WATCH_PLAN_MAX - new TextEncoder().encode(base).length - 1)
+  return route ? `${base}\n${route}` : base
+}
+
+/**
+ * Taille maximale du plan (octets) : la tâche de fond de la montre transmet au plus 8 Ko
+ * (Background.exit) ; marge gardée pour la mémoire de la tâche de fond.
+ */
+export const WATCH_PLAN_MAX = 7000
+
+/**
+ * Tolérances essayées pour simplifier le tracé (m) : la plus fine qui tient dans la place restante.
+ * Grosse tolérance (ultra avec beaucoup de points) : la montre borne alors la distance au segment
+ * où elle se trouve et compte la distance montre à l'intérieur (lacets simplifiés).
+ */
+const ROUTE_TOLS = [8, 12, 18, 25, 35, 50, 70, 100, 150, 200]
+
+/** Ligne G : tracé simplifié, écarts d'un point au suivant ; null s'il ne tient pas dans `budget` caractères. */
+export function routeLine(points: { dist: number; lat: number; lon: number }[], budget: number): string | null {
+  if (points.length < 2 || budget < 100) return null
+  const e5 = (x: number) => Math.round(x * 1e5)
+  for (const tol of ROUTE_TOLS) {
+    const r = simplifyRoute(points, tol, Infinity)
+    let [d0, la, lo] = [r[0][0], e5(r[0][1]), e5(r[0][2])]
+    const head = `G|${tol}|${d0}:${la}:${lo}|`
+    const parts: number[] = []
+    for (const [d, lat, lon] of r.slice(1)) {
+      const a = e5(lat)
+      const o = e5(lon)
+      parts.push(d - d0, a - la, o - lo)
+      d0 = d
+      la = a
+      lo = o
+    }
+    const line = head + parts.join(',')
+    if (line.length <= budget) return line
+  }
+  return null
 }
 
 /** URL lue par la montre : seul le champ `w` du lien assistance (réponse de quelques Ko). */

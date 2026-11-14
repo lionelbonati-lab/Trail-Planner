@@ -33,15 +33,42 @@ class TrailPlannerField extends WatchUi.DataField {
     var passes = {};          // indice du point -> instant de passage (s Unix)
     var lastElapsed = 0.0;    // pour détecter une nouvelle activité
     var lastSaved = 0;        // dernier enregistrement du suivi (s Unix)
+    var planText = null;      // texte du plan chargé (seul un plan modifié est relu)
+    var matched = -1.0;       // m le long du parcours au dernier calage GPS (-1 : pas encore calé)
+    var matchedAt = 0.0;      // distance montre (m) à ce calage
+    var offCount = 0;         // relevés GPS consécutifs hors du tracé
+    var offRoute = false;     // hors du tracé depuis 5 relevés
+    var offBy = 0;            // écart au tracé (m)
 
     function initialize() {
         DataField.initialize();
         reload();
     }
 
+    // Appelé à chaque téléchargement du plan (toutes les 5 min) : seul un plan nouveau ou modifié est
+    // relu. Il faut alors recaler la position sur tout le parcours ; en course, les passages et alertes
+    // déjà notés sont gardés (rapportés aux points du nouveau plan).
     function reload() as Void {
         var text = Application.Storage.getValue("plan");
-        plan = text instanceof String ? parsePlan(text) : null;
+        if (!(text instanceof String)) {
+            plan = null;
+            planText = null;
+        } else if (planText == null || !text.equals(planText)) {
+            var old = plan;
+            plan = parsePlan(text);
+            planText = plan != null ? text : null;
+            matched = -1.0;
+            offCount = 0;
+            offRoute = false;
+            if (running && old != null && plan != null) {
+                passes = remap(passes, old, plan);
+                alerted = remap(alerted, old, plan);
+            } else {
+                passes = {};
+                alerted = {};
+                nextFuel = 0.0;
+            }
+        }
         var code = Application.Properties.getValue("code");
         var err = Application.Storage.getValue("fetchError");
         if (!(code instanceof String) || code.length() < 8) {
@@ -57,9 +84,82 @@ class TrailPlannerField extends WatchUi.DataField {
         } else {
             status = "";
         }
-        alerted = {};
-        nextFuel = 0.0;
-        passes = {};
+    }
+
+    // Points notés (passages, alertes) d'un plan à l'autre : même point à moins de 100 m près.
+    function remap(marks as Dictionary, old, cur) as Dictionary {
+        var out = {};
+        var keys = marks.keys();
+        for (var k = 0; k < keys.size(); k++) {
+            var i = keys[k] as Number;
+            if (i >= old.cpDist.size()) {
+                continue;
+            }
+            for (var j = 0; j < cur.cpDist.size(); j++) {
+                var gap = cur.cpDist[j] - old.cpDist[i];
+                if (gap > -100 && gap < 100) {
+                    out.put(j, marks[i]);
+                    break;
+                }
+            }
+        }
+        return out;
+    }
+
+    // Distance le long du parcours (m).
+    // Avec le tracé du plan (ligne G) : position GPS calée sur le tracé, près de la position attendue
+    // (dernier calage + distance montre parcourue depuis) ; la distance montre ne sert qu'entre deux
+    // relevés, sans erreur cumulée ni souci de parcours modifié (raccourci, détour). Hors du tracé, la
+    // distance reste figée (« Hors parcours ») ; sans position GPS, elle avance avec la distance montre.
+    // Sans tracé (plan d'une ancienne version) : navigation du parcours si elle est active et
+    // cohérente, sinon distance parcourue.
+    function courseDistance(info as Activity.Info) as Float {
+        var walked = info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
+        if (plan.hasRoute()) {
+            var since = walked - matchedAt;
+            var expected = matched >= 0 ? matched + since : walked;
+            var loc = info.currentLocation;
+            var q = info.currentLocationAccuracy;
+            // 3 = Position.QUALITY_USABLE (module Position non importé : pas de permission nécessaire).
+            if (loc == null || (q != null && q < 3)) {
+                return expected;
+            }
+            // Pas encore calé et hors du tracé (échauffement…) : recherche sur tout le parcours toutes les 5 s.
+            if (matched < 0 && offCount % 5 != 0) {
+                offCount++;
+                offRoute = offCount >= 5;
+                return 0.0;
+            }
+            var deg = loc.toDegrees();
+            var maxOff = plan.onRouteMax();
+            var r = matched < 0
+                ? plan.locate(deg[0], deg[1], 0.0, plan.total + 1000.0, expected, 0.1, maxOff)
+                : plan.locate(deg[0], deg[1], matched - 300.0, matched + since * 1.2 + 1000.0, expected, 1.0, maxOff);
+            if (r[0] != null) {
+                matched = r[0];
+                matchedAt = walked;
+                offCount = 0;
+                offRoute = false;
+                return matched;
+            }
+            offCount++;
+            offRoute = offCount >= 5;
+            offBy = r[1] != null && r[1] > 0 ? r[1].toNumber() : 0;
+            return matched >= 0 ? matched : 0.0;
+        }
+        var d = walked;
+        var toDest = info.distanceToDestination;
+        if (toDest != null && toDest > 0) {
+            var along = plan.total - toDest.toFloat();
+            var gap = along - d;
+            if (gap < 0) {
+                gap = -gap;
+            }
+            if (along >= 0 && gap < plan.total * 0.2) {
+                d = along;
+            }
+        }
+        return d;
     }
 
     function fuelInterval() as Number {
@@ -95,28 +195,19 @@ class TrailPlannerField extends WatchUi.DataField {
         if (!running) {
             return;
         }
-        // Position le long du parcours : navigation du parcours si elle est active et cohérente,
-        // sinon distance parcourue.
-        var d = info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
-        var toDest = info.distanceToDestination;
-        if (toDest != null && toDest > 0) {
-            var along = plan.total - toDest.toFloat();
-            var gap = along - d;
-            if (gap < 0) {
-                gap = -gap;
-            }
-            if (along >= 0 && gap < plan.total * 0.2) {
-                d = along;
-            }
-        }
-        dist = d;
         // Nouvelle activité (temps écoulé revenu en arrière) : on repart de zéro.
         if (elapsed < lastElapsed - 5) {
             passes = {};
             alerted = {};
             nextFuel = 0.0;
+            matched = -1.0;
+            matchedAt = 0.0;
+            offCount = 0;
+            offRoute = false;
         }
         lastElapsed = elapsed;
+        var d = courseDistance(info);
+        dist = d;
 
         var planned = plan.plannedAt(d);
         delta = d > 200 ? elapsed - planned : 0.0;
@@ -323,12 +414,17 @@ class TrailPlannerField extends WatchUi.DataField {
         var nextName = next >= 0 ? plan.cpName[next] : "Arrivée";
         var toNext = next >= 0 ? (plan.cpDist[next] - dist) / 1000.0 : 0.0;
         var nextLine = toNext.format("%.1f") + " km · " + nextName;
+        var nextColor = fg;
+        if (offRoute) {
+            nextLine = "Hors parcours · " + offBy + " m";
+            nextColor = red;
+        }
         // Polices texte (et non chiffres) : « ' », « + » et « h » y sont toujours disponibles.
         var deltaText = signedMinutes(delta);
 
         if (h < 90) {
             // Petit champ (quart d'écran) : écart et prochain point.
-            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_MEDIUM, deltaColor], [[nextLine, Graphics.FONT_XTINY, fg]]));
+            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_MEDIUM, deltaColor], [[nextLine, Graphics.FONT_XTINY, nextColor]]));
             return;
         }
 
@@ -347,12 +443,12 @@ class TrailPlannerField extends WatchUi.DataField {
                 third = cutText;
                 thirdColor = cutColor;
             }
-            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_LARGE, deltaColor], [[nextLine, Graphics.FONT_XTINY, fg], [third, Graphics.FONT_XTINY, thirdColor]]));
+            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_LARGE, deltaColor], [[nextLine, Graphics.FONT_XTINY, nextColor], [third, Graphics.FONT_XTINY, thirdColor]]));
             return;
         }
 
         // Plein écran : quatre lignes.
-        var lines = [[nextLine, Graphics.FONT_XTINY, fg], [deltaText, Graphics.FONT_LARGE, deltaColor]];
+        var lines = [[nextLine, Graphics.FONT_XTINY, nextColor], [deltaText, Graphics.FONT_LARGE, deltaColor]];
         if (next >= 0) {
             lines.add(["Prévu " + clock(startUnix + plan.cpPlan[next]) + " · Est. " + clock(nextEta), Graphics.FONT_XTINY, fg]);
         }
