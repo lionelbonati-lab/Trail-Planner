@@ -31,7 +31,7 @@ import { indexAt, parseGpx } from '../lib/gpx'
 import { FINISH_ID } from '../lib/assist'
 import { planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
+import { commonRavitoStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setRavitoStops, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistCard } from './AssistCard'
@@ -150,6 +150,8 @@ export function RacePlan({
   // Le tableau complet demande ≈ 1 230 px ; en dessous, vue en cartes.
   const narrow = useMediaQuery('(max-width: 1229px)')
   const [editing, setEditing] = useState<string | null>(null)
+  // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
+  const [bulkStop, setBulkStop] = useState<number | null>(null)
   const [showMap, setShowMap] = useState(true)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
@@ -310,6 +312,8 @@ export function RacePlan({
     [sim.splits, race.finishAccess, track],
   )
   const ravitos = sim.splits.filter((s) => s.cp.kind === 'ravito')
+  const ravitoCount = race.checkpoints.filter((c) => c.kind === 'ravito').length
+  const stopAll = bulkStop ?? commonRavitoStop(race.checkpoints)
   const totalStops = race.checkpoints.reduce((a, c) => a + c.stopMin * 60, 0)
   const nightShare = sim.points.filter((p) => p.night).length / sim.points.length
 
@@ -874,6 +878,17 @@ export function RacePlan({
           title="Temps de passage"
           actions={<button onClick={() => addPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>}
         >
+          {!isRoute && ravitoCount > 0 && (
+            <div className="row bulk-stop">
+              <Num label="Arrêt à chaque ravito" value={stopAll} unit="min" min={0} width={56} onChange={(v) => setBulkStop(Math.max(0, v))} />
+              <button
+                onClick={() => { set({ checkpoints: setRavitoStops(race.checkpoints, stopAll) }); setBulkStop(null) }}
+                disabled={race.checkpoints.every((c) => c.kind !== 'ravito' || c.stopMin === stopAll)}
+              >
+                <Check /> Appliquer {ravitoCount > 1 ? `aux ${ravitoCount} ravitos` : 'au ravito'}
+              </button>
+            </div>
+          )}
           {narrow ? (
             <div className="split-cards">
               {sim.splits.map((s) => {
