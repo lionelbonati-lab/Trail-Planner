@@ -52,15 +52,18 @@ describe('départ libre (entraînement)', () => {
 })
 
 describe('cadres pliables sur téléphone', () => {
-  it('cadre secondaire plié d’office, titre en bouton ; cadre à titre libre toujours ouvert', () => {
-    const closed = renderToStaticMarkup(<Card title="Plan nutrition" fold="closed"><p>contenu</p></Card>)
+  it('page ouverte cadres pliés, titre en bouton ; contenu principal ouvert ; titre libre toujours ouvert', () => {
+    const closed = renderToStaticMarkup(<Card title="Temps de passage"><p>contenu</p></Card>)
     expect(closed).toContain('foldable')
     expect(closed).toContain('folded')
     expect(closed).toContain('aria-expanded="false"')
-    const open = renderToStaticMarkup(<Card title="Temps de passage"><p>contenu</p></Card>)
+    const open = renderToStaticMarkup(<Card title="Mes courses" fold="open"><p>contenu</p></Card>)
     expect(open).toContain('aria-expanded="true"')
     expect(open).not.toContain(' folded')
-    const fixed = renderToStaticMarkup(<Card title={<input />}><p>contenu</p></Card>)
-    expect(fixed).not.toContain('card-fold')
+    for (const fixed of [<Card key="a" title={<input />}><p>contenu</p></Card>, <Card key="b" title="Mode course" fold={false}><p>contenu</p></Card>]) {
+      const html = renderToStaticMarkup(fixed)
+      expect(html).not.toContain('card-fold')
+      expect(html).not.toContain('folded')
+    }
   })
 })

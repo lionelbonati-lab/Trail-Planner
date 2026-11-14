@@ -29,6 +29,7 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
   return (
     <div className="grid">
       <Card
+        fold="open"
         title="Bibliothèque de parcours"
         actions={
           <>

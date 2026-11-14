@@ -207,7 +207,7 @@ export function RacePlan({
   }, [compare, track, opts, athlete])
 
   if (!track || !sim || !opts) {
-    return <Card title={race.name}><p className="warn">Impossible de lire le GPX de cette course.</p></Card>
+    return <Card title={race.name} fold={false}><p className="warn">Impossible de lire le GPX de cette course.</p></Card>
   }
 
   const addPoint = (dist: number, kind: CheckpointKind = race.kind === 'route' ? 'info' : 'ravito', name?: string) => {
@@ -676,7 +676,7 @@ export function RacePlan({
         {isRoute && race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
         <div className="grid three">
-          <Card title="Départ et calcul" fold="closed">
+          <Card title="Départ et calcul">
             <div className="fields">
               {race.freeStart ? (
                 <div className="field">
@@ -732,7 +732,7 @@ export function RacePlan({
             </div>
           </Card>
 
-          <Card title="Environnement" fold="closed">
+          <Card title="Environnement">
             <Toggle label="Nuit (auto selon soleil)" checked={race.env.night.enabled} onChange={(v) => setEnv('night', { ...race.env.night, enabled: v })} />
             {race.env.night.enabled && (
               <div className="fields sub">
@@ -821,7 +821,7 @@ export function RacePlan({
             </Hint>
           </Card>
 
-          <Card title="Points automatiques" fold="closed">
+          <Card title="Points automatiques">
             <div className="fields">
               <label className="field">
                 <span className="field-label">Méthode</span>
@@ -852,7 +852,7 @@ export function RacePlan({
         </div>
 
         {compareResults && (
-          <Card title="Comparaison des modes de calcul" fold="closed">
+          <Card title="Comparaison des modes de calcul">
             <div className="scroll">
               <table className="table">
                 <thead>
@@ -1053,7 +1053,7 @@ export function RacePlan({
           {!isRoute && <Hint>Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant.</Hint>}
         </Card>
 
-        <Card title="Plan nutrition" fold="closed">
+        <Card title="Plan nutrition">
           <div className="scroll">
             <table className="table">
               <thead>

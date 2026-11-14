@@ -527,7 +527,7 @@ export default function App() {
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : route.tab === 'live' && current ? (
-          <LiveMode race={current} athlete={athlete} onChange={updateRace} onExit={() => go(current.kind === 'route' ? 'parcours' : 'races', current.id)} />
+          <LiveMode key={current.id} race={current} athlete={athlete} onChange={updateRace} onExit={() => go(current.kind === 'route' ? 'parcours' : 'races', current.id)} />
         ) : current ? (
           <>
             <div className="crumbs no-print">
@@ -539,6 +539,7 @@ export default function App() {
               {current.kind === 'route' && <span className="badge">Parcours</span>}
             </div>
             <RacePlan
+              key={current.id}
               race={current}
               athlete={athlete}
               watchStart={watchStart}
@@ -625,6 +626,7 @@ function RaceList(props: {
         </div>
       )}
       <Card
+        fold="open"
         title="Mes courses"
         actions={
           <>
