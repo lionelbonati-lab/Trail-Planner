@@ -27,7 +27,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   **graphiques d'évolution** (VC recalculée à chaque test).
 
 **Plan de course**
-- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic ; même temps d'arrêt à tous les ravitos en une fois.
+- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
