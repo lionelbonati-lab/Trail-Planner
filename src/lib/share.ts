@@ -54,6 +54,8 @@ export interface ShareSnapshot {
   liveRefShort?: string | null
   /** Réglages du datafield EndurancePro (document du code montre seulement, voir endurancepro.ts). */
   ep?: string
+  /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */
+  freeStart?: boolean
 }
 
 export function buildSnapshot(
@@ -86,6 +88,7 @@ export function buildSnapshot(
     route: simplifyRoute(track.points),
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
+    ...(race.freeStart ? { freeStart: true } : {}),
     liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
     liveRefShort: athlete.epCode && athlete.watchRaceId === race.id ? athlete.epCode : null,
     rows: sim.splits.map((s, i) => {

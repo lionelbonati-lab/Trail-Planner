@@ -112,6 +112,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Notifications de passage** pour l'assistance (page ouverte, même en arrière-plan) : nom du point, heure,
   écart au plan compté depuis le vrai départ ; un toucher ramène sur la page.
 
+- **Départ libre** (entraînements) : heures du plan calculées pour un départ maintenant (mises à jour chaque
+  minute), puis calées sur le vrai départ (mode course) ; la page assistance les recale sur le départ donné par
+  la montre ; le champ Trail Planner affiche « Départ libre ».
+- **Sur téléphone**, les cadres se plient et se déplient d'un toucher sur leur titre (état gardé) ; dans le plan,
+  les cadres secondaires sont pliés d'office.
+
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,
   rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;

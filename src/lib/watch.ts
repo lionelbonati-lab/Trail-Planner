@@ -55,7 +55,8 @@ export function fuelInterval(race: Race, athlete: Athlete): number {
 }
 
 export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimResult): string {
-  const start = Math.round(zonedToUtc(race.env.start, race.env.timeZone).getTime() / 1000)
+  // Départ libre : 0 (la montre affiche « Départ libre » ; l'écart au plan part du vrai départ).
+  const start = race.freeStart ? 0 : Math.round(zonedToUtc(race.env.start, race.env.timeZone).getTime() / 1000)
   // Arrêts cumulés avant une distance (un point situé exactement à d n'est pas compté).
   const stops = sim.splits.map((s) => ({ dist: s.to, stop: s.cp.stopMin * 60 }))
   const stopsBefore = (d: number) => stops.reduce((a, s) => a + (s.dist < d ? s.stop : 0), 0)

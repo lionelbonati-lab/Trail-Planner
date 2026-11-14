@@ -32,7 +32,7 @@ import { FINISH_ID } from '../lib/assist'
 import { planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { computeAutoPoints, mergeAutoPoints, METHOD_LABELS, type AutoSplitMethod } from '../lib/splits'
-import { formatClock, formatDuration, formatPace, parseDuration, zonedToUtc } from '../lib/time'
+import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistCard } from './AssistCard'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
@@ -71,7 +71,25 @@ const KIND_LABELS: Record<CheckpointKind, string> = {
 
 const TIME_ZONES = ['Europe/Paris', 'Europe/Zurich', 'Europe/Rome', 'Europe/Madrid', 'Europe/London', 'Atlantic/Canary', 'Indian/Reunion', 'America/Martinique', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 'Asia/Kathmandu', 'Asia/Hong_Kong']
 
+/** Instant présent arrondi à la minute supérieure, mis à jour tant que `on` est vrai. */
+function useMinuteClock(on: boolean): number {
+  const next = () => Math.ceil(Date.now() / 60000) * 60000
+  const [t, setT] = useState(next)
+  useEffect(() => {
+    if (!on) return
+    setT(next())
+    const id = setInterval(() => setT(next()), 15000)
+    return () => clearInterval(id)
+  }, [on])
+  return t
+}
+
 export function useRaceComputation(race: Race, athlete: Athlete) {
+  // Départ libre : départ maintenant (mis à jour chaque minute) tant que la course n'a pas démarré,
+  // puis le vrai départ du mode course ; sinon l'heure de départ saisie.
+  const now = useMinuteClock(!!race.freeStart && !race.live)
+  const start = race.freeStart ? utcToZonedInput(race.live ? Date.parse(race.live.startedAt) : now, race.env.timeZone) : race.env.start
+  const effective = useMemo(() => (start === race.env.start ? race : { ...race, env: { ...race.env, start } }), [race, start])
   const track = useMemo<Track | null>(() => {
     try {
       return parseGpx(race.gpxText, race.smoothing)
@@ -80,10 +98,10 @@ export function useRaceComputation(race: Race, athlete: Athlete) {
     }
   }, [race.gpxText, race.smoothing])
 
-  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(race, track) : null), [track, race])
+  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(effective, track) : null), [track, effective])
 
   const sim = useMemo<SimResult | null>(() => (track && opts ? simulate(track, athlete, opts) : null), [track, opts, athlete])
-  return { track, opts, sim }
+  return { track, opts, sim, start }
 }
 
 export function RacePlan({
@@ -138,7 +156,7 @@ export function RacePlan({
     return () => window.removeEventListener('keydown', onKey)
   }, [pickAccess])
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
-  const { track, opts, sim } = useRaceComputation(race, athlete)
+  const { track, opts, sim, start } = useRaceComputation(race, athlete)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
   const [printFormat, setPrintFormat] = useState<PrintFormat | null>(null)
@@ -150,7 +168,8 @@ export function RacePlan({
   const setCp = (id: string, patch: Partial<Checkpoint>) =>
     set({ checkpoints: race.checkpoints.map((c) => (c.id === id ? { ...c, ...patch, auto: patch.dist !== undefined || patch.name !== undefined || patch.kind !== undefined ? false : c.auto } : c)) })
 
-  const startMs = zonedToUtc(race.env.start, race.env.timeZone).getTime()
+  // Départ libre : départ maintenant ou vrai départ (voir useRaceComputation).
+  const startMs = zonedToUtc(start, race.env.timeZone).getTime()
 
   // Scénarios : fenêtre de passage entre une bonne journée et une journée difficile.
   const scenarios = useMemo(() => {
@@ -430,7 +449,7 @@ export function RacePlan({
                 sub={`${SCENARIOS.good.label.toLowerCase()} → ${SCENARIOS.hard.label.toLowerCase()}`}
               />
             )}
-            <Kpi label="Arrivée" value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
+            <Kpi label={race.freeStart && !race.live ? 'Arrivée (départ maintenant)' : 'Arrivée'} value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
             <Kpi label="Allure moy." value={`${formatPace(sim.totalTime / (track.totalDist / 1000))}/km`} sub={`${formatPace(sim.totalTime / sim.totalKme)}/km-e`} />
             {race.push.enabled && (
               <Kpi
@@ -568,12 +587,21 @@ export function RacePlan({
         {race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
         <div className="grid three">
-          <Card title="Départ et calcul">
+          <Card title="Départ et calcul" fold="closed">
             <div className="fields">
-              <label className="field">
-                <span className="field-label">Départ</span>
-                <input type="datetime-local" value={race.env.start} onChange={(e) => setEnv('start', e.target.value)} />
-              </label>
+              {race.freeStart ? (
+                <div className="field">
+                  <span className="field-label">Départ</span>
+                  <span>
+                    <strong>libre</strong> · {race.live ? 'parti à' : 'maintenant :'} {formatClock(new Date(startMs), race.env.timeZone)}
+                  </span>
+                </div>
+              ) : (
+                <label className="field">
+                  <span className="field-label">Départ</span>
+                  <input type="datetime-local" value={race.env.start} onChange={(e) => setEnv('start', e.target.value)} />
+                </label>
+              )}
               <label className="field">
                 <span className="field-label">Fuseau</span>
                 <select value={race.env.timeZone} onChange={(e) => setEnv('timeZone', e.target.value)}>
@@ -591,6 +619,13 @@ export function RacePlan({
               <Num label="D− (0 = ignoré)" value={race.kme.downPer1km} onChange={(v) => set({ kme: { ...race.kme, downPer1km: v } })} unit="m = 1 km" min={0} />
               <Num label="Lissage altitude" value={race.smoothing} onChange={(v) => set({ smoothing: Math.round(v) })} min={0} max={10} title="0 = brut ; plus haut = D+ plus faible" />
             </div>
+            <Toggle label="Départ libre (entraînement)" checked={!!race.freeStart} onChange={(v) => set({ freeStart: v })} />
+            {race.freeStart && (
+              <Hint>
+                Heures calculées pour un départ maintenant, mises à jour chaque minute. Dès que tu pars (mode course), elles se calent sur ton
+                vrai départ ; ton assistance les voit aussi calées sur le départ donné par la montre.
+              </Hint>
+            )}
             <Toggle label="Relancer les montées (D′)" checked={race.push.enabled} onChange={(v) => set({ push: { ...race.push, enabled: v } })} />
             {race.push.enabled && (
               <div className="fields sub">
@@ -608,7 +643,7 @@ export function RacePlan({
             </div>
           </Card>
 
-          <Card title="Environnement">
+          <Card title="Environnement" fold="closed">
             <Toggle label="Nuit (auto selon soleil)" checked={race.env.night.enabled} onChange={(v) => setEnv('night', { ...race.env.night, enabled: v })} />
             {race.env.night.enabled && (
               <div className="fields sub">
@@ -697,7 +732,7 @@ export function RacePlan({
             </Hint>
           </Card>
 
-          <Card title="Points automatiques">
+          <Card title="Points automatiques" fold="closed">
             <div className="fields">
               <label className="field">
                 <span className="field-label">Méthode</span>
@@ -728,7 +763,7 @@ export function RacePlan({
         </div>
 
         {compareResults && (
-          <Card title="Comparaison des modes de calcul">
+          <Card title="Comparaison des modes de calcul" fold="closed">
             <div className="scroll">
               <table className="table">
                 <thead>
@@ -910,7 +945,7 @@ export function RacePlan({
           <Hint>Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant.</Hint>
         </Card>
 
-        <Card title="Plan nutrition">
+        <Card title="Plan nutrition" fold="closed">
           <div className="scroll">
             <table className="table">
               <thead>

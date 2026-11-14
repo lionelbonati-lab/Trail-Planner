@@ -549,3 +549,16 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .share-tabs button { flex: 1; justify-content: center; }
 .map-toggle { margin: 12px 0 0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .notify-box { margin: 12px 0; gap: 8px 12px; flex-wrap: wrap; align-items: center; }
+/* Cadres pliables : sur ordinateur, le titre reste un simple titre et le contenu toujours visible. */
+.card-body { display: contents; }
+.card-fold { all: unset; display: inline-flex; align-items: center; gap: 8px; cursor: default; }
+.card-fold .fold-chevron { display: none; }
+@media (max-width: 700px) {
+  .card.foldable .card-fold { cursor: pointer; flex: 1; justify-content: space-between; min-height: 32px; }
+  .card.foldable .card-head:has(.card-fold) { flex-wrap: wrap; }
+  .card-fold .fold-chevron { display: inline-block; width: 20px; height: 20px; color: var(--muted); transition: transform 0.15s; }
+  .card.folded .fold-chevron { transform: rotate(-90deg); }
+  .card.folded .card-body, .card.folded .card-actions { display: none; }
+  .card.folded .card-head { margin-bottom: 0; }
+  .card.folded { padding-top: 12px; padding-bottom: 12px; }
+}

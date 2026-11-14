@@ -426,6 +426,11 @@ export interface Race {
   drawn: DrawnRoute | null
   /** Accès assistance à l'arrivée (l'arrivée n'est pas un point de passage enregistré). */
   finishAccess?: GeoPoint
+  /**
+   * Départ libre (entraînement) : heures calculées pour un départ maintenant, puis calées sur le
+   * vrai départ (mode course, montre) ; l'heure de départ saisie est ignorée.
+   */
+  freeStart?: boolean
   updatedAt: string
 }
 
