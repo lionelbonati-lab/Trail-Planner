@@ -342,7 +342,7 @@ export function RacePlan({
                 </button>
               )}
               {onLive && <button className={library?.kind === 'route' ? '' : 'primary'} onClick={onLive}><Play /> Mode course</button>}
-              {share && !isRoute && (
+              {share && (
                 <button
                   onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
                   title="Lien en lecture seule pour ton assistance, mis à jour en direct"
@@ -374,7 +374,7 @@ export function RacePlan({
             </>
           }
         >
-          {share?.url && !isRoute && (
+          {share?.url && (
             <div className="banner info share-banner">
               <span>
                 Lien assistance : <a href={share.url} target="_blank" rel="noreferrer">{share.url}</a>
