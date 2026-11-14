@@ -389,8 +389,11 @@ export interface TechOverride {
   level: 1 | 2 | 3 | 4 | 5
 }
 
-/** race = compétition ; route = parcours modèle de la bibliothèque ; session = séance datée créée depuis un parcours. */
-export type RaceKind = 'race' | 'route' | 'session'
+/**
+ * race = course (ravitos, assistance, sans zones d'allure) ; route = parcours d'entraînement de la
+ * bibliothèque (zones d'allure, points de repère, sans ravitos ni assistance).
+ */
+export type RaceKind = 'race' | 'route'
 
 export interface Race {
   id: string

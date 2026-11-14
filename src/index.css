@@ -206,6 +206,8 @@ body.printing .print-root {
 }
 
 .banner.info { background: var(--accent-soft); color: var(--ink); padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.banner.info.send-race { flex-direction: column; align-items: flex-start; gap: 8px; }
+.banner.info.send-race input[type=text] { min-width: 220px; }
 .account { position: relative; }
 .account summary { cursor: pointer; list-style: none; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account summary::-webkit-details-marker { display: none; }

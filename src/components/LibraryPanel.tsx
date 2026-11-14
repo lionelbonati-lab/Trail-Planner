@@ -17,19 +17,10 @@ interface Props {
   onDraw: () => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
-  onPlan: (route: Race, start: string) => void
 }
 
-/** Demain 8 h, au format des champs date-heure. */
-function tomorrow8(): string {
-  const d = new Date(Date.now() + 86400000)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T08:00`
-}
-
-export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete, onPlan }: Props) {
+export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete }: Props) {
   const routes = races.filter((r) => r.kind === 'route')
-  const sessions = races.filter((r) => r.kind === 'session').sort((a, b) => b.env.start.localeCompare(a.env.start))
   const [query, setQuery] = useState('')
   const [activeTags, setActiveTags] = useState<string[]>([])
   const allTags = [...new Set(routes.flatMap((r) => r.tags))].sort()
@@ -50,9 +41,9 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
         }
       >
         <Hint>
-          Tes parcours d'entraînement réutilisables (boucle du jeudi, côte de référence, piste…). Prépare leurs zones d'allure une fois,
-          puis « Planifier » crée une séance datée : le parcours reste intact comme modèle. Une course existante peut aussi être ajoutée
-          à la bibliothèque depuis sa page.
+          Tes parcours d'entraînement réutilisables (boucle du jeudi, côte de référence, piste…) : zones d'allure, points de repère,
+          envoi à la montre. Depuis un parcours, « Vers une course » crée une course (ou remplace le tracé d'une course) pour y préparer
+          ravitos et assistance. Une course peut aussi être ajoutée à la bibliothèque depuis sa page.
         </Hint>
         {routes.length > 0 && (
           <div className="row library-filters">
@@ -74,7 +65,7 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
           <div className="scroll">
             <table className="table">
               <thead>
-                <tr><th>Parcours</th><th>Distance</th><th>D+</th><th>Étiquettes</th><th>Zones</th><th>Séances</th><th /></tr>
+                <tr><th>Parcours</th><th>Distance</th><th>D+</th><th>Étiquettes</th><th>Zones</th><th /></tr>
               </thead>
               <tbody>
                 {shown.map((r) => (
@@ -82,11 +73,9 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
                     key={r.id}
                     route={r}
                     athlete={athlete}
-                    sessions={sessions.filter((s) => s.templateId === r.id)}
                     onOpen={onOpen}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
-                    onPlan={onPlan}
                   />
                 ))}
               </tbody>
@@ -96,30 +85,6 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
         )}
       </Card>
 
-      <Card title="Séances planifiées">
-        {sessions.length === 0 ? (
-          <p className="muted">Aucune séance. Utilise « Planifier » sur un parcours de la bibliothèque.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr><th>Date</th><th>Séance</th><th>Parcours</th><th>Zones</th><th /></tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => (
-                <tr key={s.id} className="clickable" onClick={() => onOpen(s.id)}>
-                  <td>{s.env.start.replace('T', ' ')}</td>
-                  <td><strong>{s.name}</strong></td>
-                  <td className="muted">{routes.find((r) => r.id === s.templateId)?.name ?? '—'}</td>
-                  <td>{s.zones.length || ''}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <button className="ghost" onClick={() => confirm('Supprimer cette séance ?') && onDelete(s.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
     </div>
   )
 }
@@ -127,21 +92,16 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
 function RouteRow({
   route,
   athlete,
-  sessions,
   onOpen,
   onUpdate,
   onDelete,
-  onPlan,
 }: {
   route: Race
   athlete: Athlete
-  sessions: Race[]
   onOpen: (id: string) => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
-  onPlan: (route: Race, start: string) => void
 }) {
-  const [planning, setPlanning] = useState<string | null>(null)
   const [tagText, setTagText] = useState<string | null>(null)
   const info = useMemo(() => {
     try {
@@ -156,7 +116,6 @@ function RouteRow({
     if (!plan) return
     download(`${route.name.replace(/[^\w-]+/g, '_')}_allures.fit`, buildWorkoutFit(route.name.slice(0, 32), zoneSteps(plan.track, plan.sim, route.zones, athlete), Date.now(), { target: athlete.workoutTarget, athlete }), 'application/vnd.ant.fit')
   }
-  const last = sessions[0]
   return (
     <>
       <tr className="clickable" onClick={() => onOpen(route.id)}>
@@ -184,26 +143,11 @@ function RouteRow({
           )}
         </td>
         <td>{route.zones.length || ''}</td>
-        <td className="muted small">{sessions.length ? `${sessions.length} · dernière ${last.env.start.slice(0, 10)}` : ''}</td>
         <td onClick={(e) => e.stopPropagation()} className="row-actions">
-          <button className="primary" onClick={() => setPlanning(planning === null ? tomorrow8() : null)}>Planifier</button>
           {route.zones.length > 0 && <button onClick={exportWorkout} title="Entraînement Garmin d'après les zones d'allure"><Watch /> .fit</button>}
-          <button className="ghost" onClick={() => confirm(`Supprimer « ${route.name} » de la bibliothèque ? Les séances déjà planifiées sont conservées.`) && onDelete(route.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
+          <button className="ghost" onClick={() => confirm(`Supprimer « ${route.name} » de la bibliothèque ? Les courses créées depuis ce parcours sont conservées.`) && onDelete(route.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
         </td>
       </tr>
-      {planning !== null && (
-        <tr className="plan-row">
-          <td colSpan={7}>
-            <div className="row">
-              <span>Nouvelle séance sur ce parcours le</span>
-              <input type="datetime-local" value={planning} onChange={(e) => setPlanning(e.target.value)} />
-              <button className="primary" onClick={() => { onPlan(route, planning); setPlanning(null) }}>Créer la séance</button>
-              <button className="ghost" onClick={() => setPlanning(null)}>Annuler</button>
-              {route.zones.length > 0 && <span className="muted small">Les {route.zones.length} zone(s) d'allure du parcours sont reprises.</span>}
-            </div>
-          </td>
-        </tr>
-      )}
     </>
   )
 }

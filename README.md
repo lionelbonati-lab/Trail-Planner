@@ -31,9 +31,14 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
+- **Courses et parcours séparés** : une course prépare ravitos, barrières, eau/glucides, assistance et lien de
+  partage (sans zones d'allure) ; un parcours d'entraînement garde ses zones d'allure, ses points de repère, le
+  plan nutrition, l'envoi à la montre et le mode course, sans ravitos ni assistance. Un parcours ouvert depuis
+  l'onglet Parcours reste dans Parcours.
 - **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
-  ou depuis une course), étiquettes et recherche, zones d'allure enregistrées ; « Planifier » crée une séance
-  datée sans toucher au modèle ; liste des séances planifiées.
+  ou depuis une course), étiquettes et recherche, zones d'allure enregistrées. **« Vers une course »** crée une
+  nouvelle course à partir du parcours (copie indépendante, sans les zones) ou remplace le tracé d'une course
+  existante (ses ravitos dans la nouvelle distance et ses réglages sont gardés).
 - **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
   avec distance, D+/D−, temps, profil et points de repère (km, altitude, temps prévu à chaque point) ; barre
   réglages / annuler / rétablir / supprimer / OK. Sur téléphone, la feuille se glisse entre trois hauteurs : chiffres
@@ -84,7 +89,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Poids du sac** dans les coefficients de calcul de chaque course : temps allongé de 1 % par kg, ou au prorata
   du poids corporel du profil.
 - **Zones d'allure en portions contiguës** (couleurs Garmin) : clic = fin de cycle, poignées à glisser pour
-  déplacer une limite, barre de zones cliquable ; mode « Ravito » sur les compétitions.
+  déplacer une limite, barre de zones cliquable ; mode « Repère » pour poser un point (parcours uniquement).
 - **Zones d'allure** : glisser sur le profil pour sélectionner une portion et lui donner une cible
   (zones d'entraînement en % de VC, % libre, allure plat équivalente ou allure imposée) ; export en
   entraînement Garmin découpé par distance — pour planifier aussi les allures d'entraînement.

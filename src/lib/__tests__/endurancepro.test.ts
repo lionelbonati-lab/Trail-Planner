@@ -51,7 +51,7 @@ describe('réglages EndurancePro', () => {
   })
 
   it('séance envoyée à la montre en Z2 sur tout le parcours : alarme au-dessus de Z2', () => {
-    const race = { ...newRace('EF', ''), zones: wholeRoute(zoneTarget(A, 1), 10000) }
+    const race = { ...newRace('EF', ''), kind: 'route' as const, zones: wholeRoute(zoneTarget(A, 1), 10000) }
     expect(epValue(epPayload(A, race), 'zt')).toBe('2')
     // Zones placées par portions : alarme inchangée.
     const mixed = { ...race, zones: [...race.zones, { ...race.zones[0], id: 'b', from: 5000 }] }
@@ -60,7 +60,7 @@ describe('réglages EndurancePro', () => {
 
   it('zones non triées dans le profil : bornes triées et zone d’alarme suivant le même ordre', () => {
     const shuffled = { ...A, zones: [A.zones[2], A.zones[0], A.zones[1], ...A.zones.slice(3)] }
-    const race = { ...newRace('Tempo', ''), zones: wholeRoute(zoneTarget(shuffled, 0), 10000) } // zone 3 du bilan
+    const race = { ...newRace('Tempo', ''), kind: 'route' as const, zones: wholeRoute(zoneTarget(shuffled, 0), 10000) } // zone 3 du bilan
     const ep = epPayload(shuffled, race)
     expect(epValue(ep, 'z')).toBe('60,70,80,88,96,105,115,150')
     expect(epValue(ep, 'zt')).toBe('3')

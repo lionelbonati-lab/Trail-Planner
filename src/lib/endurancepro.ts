@@ -63,7 +63,7 @@ export function epPayload(a: Athlete, onWatch: Race | null): string {
   const { order, pct } = zoneBounds(a)
   const up = climbEquivalence(a)
   const dn = descentEquivalence(a)
-  const k = onWatch ? wholeRouteZone(onWatch.zones, a) : null
+  const k = onWatch && onWatch.kind !== 'race' ? wholeRouteZone(onWatch.zones, a) : null
   const zt = k === null ? 0 : order.indexOf(k) + 1
   const vz = epVamThresholds(a)
   return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', dn ? `dn=${dn}` : '', vz ? `vz=${vz.join(',')}` : '', `zt=${zt}`]
