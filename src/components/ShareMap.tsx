@@ -15,12 +15,16 @@ export interface MapPoint {
   text: string
 }
 
-/** Coureur : distance le long du parcours, position GPS si la montre l'envoie. */
+/**
+ * Coureur : dernier relevé (distance le long du parcours, position GPS si la montre l'envoie) et,
+ * entre deux relevés, position estimée d'après son rythme.
+ */
 export interface Runner {
   dist: number
   lat?: number
   lon?: number
   label: string
+  estimate?: { dist: number; label: string } | null
 }
 
 const DONE_COLOR = '#7d8580'
@@ -37,7 +41,10 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
   const key = `${route.length}:${route[0]?.join()}:${route[route.length - 1]?.join()}`
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const stable = useMemo(() => route, [key])
-  const pos = runner ? (runner.lat !== undefined && runner.lon !== undefined ? { lat: runner.lat, lon: runner.lon } : routePointAt(stable, runner.dist)) : null
+  const last = runner ? (runner.lat !== undefined && runner.lon !== undefined ? { lat: runner.lat, lon: runner.lon } : routePointAt(stable, runner.dist)) : null
+  // Point suivi : la position estimée s'il y en a une, sinon le dernier relevé.
+  const est = runner?.estimate && runner.estimate.dist > runner.dist + 1 ? routePointAt(stable, runner.estimate.dist) : null
+  const pos = est ?? last
 
   useEffect(() => {
     if (!el.current || stable.length < 2) return
@@ -55,6 +62,7 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
       m.remove()
       map.current = null
       me.current = null
+      lastMark.current = null
     }
   }, [stable])
 
@@ -98,10 +106,31 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
     }
   }, [stable, points])
 
-  // Coureur : créé au premier relevé, déplacé ensuite ; la carte le suit tant qu'on ne l'a pas bougée.
+  // Dernier relevé, en petit, quand une position estimée est affichée plus loin.
+  const lastMark = useRef<L.CircleMarker | null>(null)
+  const lastLat = est && last ? last.lat : null
+  const lastLon = est && last ? last.lon : null
+  const lastLabel = runner?.label ?? ''
+  useEffect(() => {
+    const m = map.current
+    if (!m) return
+    if (lastLat === null || lastLon === null) {
+      lastMark.current?.remove()
+      lastMark.current = null
+      return
+    }
+    if (!lastMark.current) {
+      lastMark.current = L.circleMarker([lastLat, lastLon], { radius: 5, color: '#ffffff', weight: 2, fillColor: '#1d6fe0', fillOpacity: 0.6 })
+        .bindTooltip(lastLabel)
+        .addTo(m)
+    } else lastMark.current.setLatLng([lastLat, lastLon]).setTooltipContent(lastLabel)
+  }, [lastLat, lastLon, lastLabel, stable])
+
+  // Coureur (position estimée, sinon dernier relevé) : créé au premier relevé, déplacé ensuite ;
+  // la carte le suit tant qu'on ne l'a pas bougée.
   const lat = pos?.lat ?? null
   const lon = pos?.lon ?? null
-  const label = runner?.label ?? ''
+  const label = est && runner?.estimate ? runner.estimate.label : (runner?.label ?? '')
   useEffect(() => {
     const m = map.current
     if (!m) return

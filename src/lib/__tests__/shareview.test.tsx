@@ -4,7 +4,7 @@ import { ShareView } from '../../components/SharePage'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
 import { computePlan, scenarioWindows } from '../plan'
 import { buildSnapshot } from '../share'
-import { plannedAtWatch, parseWatchPlan } from '../watchLive'
+import { estimatedDist, ESTIMATE_MAX_S, plannedAtWatch, parseWatchPlan } from '../watchLive'
 
 function gpx(): string {
   const pts: string[] = []
@@ -63,6 +63,30 @@ describe('page assistance', () => {
     expect(html).toContain('Y aller (accès assistance)')
     // Ravito A (accès) puis arrivée : une étape et la destination, depuis la position du téléphone.
     expect(html).toContain(`https://www.google.com/maps/dir/?api=1&amp;destination=${finish.lat!.toFixed(5)},${finish.lon!.toFixed(5)}&amp;waypoints=45.05000,6.01200&amp;travelmode=driving`)
+  })
+
+  it('position estimée entre deux relevés : au rythme mesuré, arrêt au ravito compris, une heure au plus', () => {
+    const w = parseWatchPlan(snap.w)!
+    const s = Math.round(Date.parse(snap.start) / 1000)
+    // Au plan exact au km 3 : 10 min plus tard, on est là où le plan met 10 min de plus.
+    const t = s + Math.round(plannedAtWatch(w, 3000))
+    const r = { t, s, d: 3000 }
+    const at10 = estimatedDist(r, w, t + 600)!
+    expect(plannedAtWatch(w, at10) - plannedAtWatch(w, 3000)).toBeCloseTo(600, -1)
+    // Juste avant le ravito A (km 5, 3 min d'arrêt) : l'estimation y reste le temps de l'arrêt.
+    const tA = s + Math.round(plannedAtWatch(w, 4990))
+    const atStop = estimatedDist({ t: tA, s, d: 4990 }, w, tA + 120)!
+    expect(atStop).toBeGreaterThan(4990)
+    expect(atStop).toBeLessThanOrEqual(5001)
+    // 20 % plus lent que le plan : on avance moins vite (amorti).
+    const slow = { t: s + Math.round(plannedAtWatch(w, 3000) * 1.2), s, d: 3000 }
+    expect(estimatedDist(slow, w, slow.t + 600)!).toBeLessThan(at10)
+    // Plus d'une heure sans relevé : pas d'estimation.
+    expect(estimatedDist(r, w, t + ESTIMATE_MAX_S + 60)).toBeNull()
+    // Rendu : position estimée annoncée, encart LiveTrack.
+    const html = renderToStaticMarkup(<ShareView snap={snap} report={r} nowMs={(t + 600) * 1000} />)
+    expect(html).toMatch(/≈ km \d+,\d maintenant \(estimé/)
+    expect(html).toContain('Garmin LiveTrack')
   })
 
   it('relevé trop ancien : ignoré', () => {

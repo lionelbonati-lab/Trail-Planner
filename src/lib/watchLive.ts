@@ -73,11 +73,16 @@ export interface WatchStatus {
 
 const DAMPING = 0.7
 
+/** Rythme réel par rapport au plan (> 1 : plus lent), amorti et borné. */
+function paceRatio(report: WatchReport, planned: number): number {
+  const raw = planned > 600 ? Math.min(1.6, Math.max(0.7, (report.t - report.s) / planned)) : 1
+  return 1 + DAMPING * (raw - 1)
+}
+
 export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number): WatchStatus {
   const elapsed = report.t - report.s
   const planned = plannedAtWatch(plan, report.d)
-  const raw = planned > 600 ? Math.min(1.6, Math.max(0.7, elapsed / planned)) : 1
-  const ratio = 1 + DAMPING * (raw - 1)
+  const ratio = paceRatio(report, planned)
   const passed = parsePasses(report.p)
   const eta = (plannedTime: number) => report.t + Math.max(0, plannedTime - planned) * ratio
   const finish = plan.curve[plan.curve.length - 1][1] + plan.cps.reduce((a, cp) => a + (cp.dist < plan.total ? cp.stop : 0), 0)
@@ -91,3 +96,29 @@ export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number
     finishEta: eta(finish),
   }
 }
+
+/** Au-delà de ce délai sans relevé, on n'estime plus la position (s). */
+export const ESTIMATE_MAX_S = 3600
+
+/**
+ * Distance estimée maintenant, entre deux relevés (la montre n'en envoie qu'un toutes les 5 min
+ * au mieux) : on avance le long du plan au rythme mesuré, arrêts aux ravitos compris (le temps
+ * d'arrêt prévu s'écoule au point). Null si le dernier relevé date de plus d'une heure.
+ */
+export function estimatedDist(report: WatchReport, plan: WatchPlan, nowSec: number): number | null {
+  const since = nowSec - report.t
+  if (since > ESTIMATE_MAX_S) return null
+  if (since <= 0 || report.d >= plan.total) return Math.min(report.d, plan.total)
+  const planned = plannedAtWatch(plan, report.d)
+  const target = planned + since / paceRatio(report, planned)
+  let lo = report.d
+  let hi = plan.total
+  if (plannedAtWatch(plan, hi) <= target) return hi
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2
+    if (plannedAtWatch(plan, mid) < target) lo = mid
+    else hi = mid
+  }
+  return lo
+}
+

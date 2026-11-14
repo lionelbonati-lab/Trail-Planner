@@ -1,9 +1,9 @@
-import { Check, Mountain, Navigation, Route } from 'lucide-react'
+import { Check, Mountain, Navigation, Radio, Route } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
-import { parseWatchPlan, watchStatus, type WatchReport } from '../lib/watchLive'
+import { estimatedDist, parseWatchPlan, watchStatus, type WatchReport } from '../lib/watchLive'
 
 import type { MapPoint, Runner } from './ShareMap'
 
@@ -64,7 +64,8 @@ export function SharePage({ shareId }: { shareId: string }) {
     }
   }, [liveRef, liveRefShort])
   useEffect(() => {
-    const id = setInterval(() => tick((x) => x + 1), 30000)
+    // Toutes les 15 s : la position estimée avance entre deux relevés de la montre.
+    const id = setInterval(() => tick((x) => x + 1), 15000)
     return () => clearInterval(id)
   }, [])
 
@@ -73,6 +74,67 @@ export function SharePage({ shareId }: { shareId: string }) {
   if (snap === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
 
   return <ShareView snap={snap} report={report} shareId={shareId} />
+}
+
+/**
+ * Lien Garmin LiveTrack reçu par e-mail au départ (envoi automatique de Garmin) : collé une fois
+ * par l'assistance, gardé sur son téléphone. Le lien change à chaque activité.
+ */
+function LiveTrackBox({ shareId }: { shareId?: string }) {
+  const key = `tp-livetrack-${shareId ?? 'local'}`
+  const [link, setLink] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  })
+  const [draft, setDraft] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const store = (v: string | null) => {
+    setLink(v)
+    try {
+      if (v) localStorage.setItem(key, v)
+      else localStorage.removeItem(key)
+    } catch {
+      /* stockage indisponible : le lien reste le temps de la visite */
+    }
+  }
+  const save = (e: React.FormEvent) => {
+    e.preventDefault()
+    const v = draft.trim().match(/https:\/\/\S+/)?.[0] ?? ''
+    if (!/^https:\/\/([a-z0-9-]+\.)*garmin\.com\//i.test(v)) {
+      setError('Colle le lien de l’e-mail LiveTrack de Garmin (il commence par https://livetrack.garmin.com/…).')
+      return
+    }
+    setError(null)
+    setDraft('')
+    store(v)
+  }
+  return (
+    <section className="livetrack">
+      {link ? (
+        <div className="row">
+          <a className="button primary" href={link} target="_blank" rel="noreferrer"><Radio /> Ouvrir Garmin LiveTrack</a>
+          <span className="muted small">position toutes les minutes environ, sur le site de Garmin</span>
+          <button className="ghost" onClick={() => store(null)}>Changer de lien</button>
+        </div>
+      ) : (
+        <details>
+          <summary><Radio className="inline" /> Garmin LiveTrack : position toutes les minutes environ</summary>
+          <p className="small">
+            Si le coureur a activé l'envoi automatique de LiveTrack, Garmin t'envoie un e-mail à chaque départ. Colle ici le lien de
+            cet e-mail : il restera sur ce téléphone.
+          </p>
+          <form className="row" onSubmit={save}>
+            <input type="text" inputMode="url" autoComplete="off" placeholder="https://livetrack.garmin.com/…" value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Lien LiveTrack" />
+            <button className="primary" type="submit">Enregistrer</button>
+          </form>
+          {error && <p className="warn-text">{error}</p>}
+        </details>
+      )}
+    </section>
+  )
 }
 
 /** Points décochés par l'équipe sur ce téléphone, par lien assistance. */
@@ -134,13 +196,16 @@ export function ShareView({
   const next = snap.rows.find((r) => !r.actual)
   const elapsed = snap.live ? (nowMs - Date.parse(snap.live.startedAt)) / 1000 : null
   // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
+  const km = (d: number) => (d / 1000).toFixed(1).replace('.', ',')
+  const estimate = watch && report && plan ? estimatedDist(report, plan, nowSec) : null
   const runner: Runner | null =
     watch && report
       ? {
           dist: watch.dist,
           lat: report.lat,
           lon: report.lon,
-          label: `km ${(watch.dist / 1000).toFixed(1).replace('.', ',')} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
+          label: `Dernier relevé : km ${km(watch.dist)} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
+          estimate: estimate !== null ? { dist: estimate, label: `Estimé maintenant : km ${km(estimate)}` } : null,
         }
       : snap.live && lastDone
         ? { dist: lastDone.dist, label: `Dernier passage : ${lastDone.name} à ${clock(lastDone.actual)}` }
@@ -168,6 +233,9 @@ export function ShareView({
             <div className={`live-delta ${watch.delta > 60 ? 'late' : 'early'}`}>
               km {(watch.dist / 1000).toFixed(1)} · {signedMin(watch.delta)} sur le plan
             </div>
+            {estimate !== null && estimate > watch.dist + 50 && (
+              <div className="live-sub">≈ km {km(estimate)} maintenant (estimé d'après son rythme, entre deux relevés)</div>
+            )}
             {lastDone && <div className="live-sub">Dernier passage : {lastDone.name} à {clock(lastDone.actual)}</div>}
             {next && <div className="live-sub">Prochain : <strong>{next.name}</strong> vers {clock(next.eta, long)}</div>}
             <div className="live-sub">Arrivée estimée {formatClock(new Date(watch.finishEta * 1000), tz, long)}</div>
@@ -189,6 +257,7 @@ export function ShareView({
         ) : (
           <p className="hint">Le suivi en direct apparaîtra ici dès le départ.</p>
         )}
+        <LiveTrackBox shareId={shareId} />
         <AssistTrip rows={snap.rows} unchecked={unchecked} onCheck={setChecked} clock={(iso) => clock(iso, long)} live={!!snap.live || !!watch} />
         {snap.route && snap.route.length >= 2 && (
           <Suspense fallback={<div className="share-map share-map-loading" />}>
