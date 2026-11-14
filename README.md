@@ -119,8 +119,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   écart au plan compté depuis le vrai départ ; un toucher ramène sur la page.
 
 - **Départ libre** (entraînements) : heures du plan calculées pour un départ maintenant (mises à jour chaque
-  minute), puis calées sur le vrai départ (mode course) ; la page assistance les recale sur le départ donné par
-  la montre ; le champ Trail Planner affiche « Départ libre ». En mode course : « Départ maintenant » ou « Déjà
+  minute), puis calées sur le vrai départ — mode course, sinon départ donné par la montre (page du plan et
+  page assistance) — et fixes pendant toute l'activité ; le champ Trail Planner affiche « Départ libre ». En mode course : « Départ maintenant » ou « Déjà
   parti à… » (heure saisie), et « Corriger l'heure de départ » une fois lancé (passages gardés).
 - **Sur téléphone**, les cadres se plient et se déplient d'un toucher sur leur titre (état gardé) ; dans le plan,
   les cadres secondaires sont pliés d'office.
@@ -130,7 +130,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
   passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone). Position le long du
   parcours par le **GPS calé sur le tracé** envoyé avec le plan (pas d'erreur cumulée de distance, raccourci
-  ou détour recalé, « Hors parcours » affiché). Voir `garmin/README.md`.
+  ou détour recalé, « Hors parcours » affiché). Bouton Lap = passage au point le plus proche ; heures
+  estimées recalculées à chaque passage d'après ce qui a été fait, heures prévues fixes. Voir `garmin/README.md`.
 
 **Compte et appareils**
 - Multi-utilisateurs Firebase (Google ou lien e-mail), synchronisation temps réel, hors ligne,

@@ -44,6 +44,10 @@ describe('départ libre (entraînement)', () => {
     const after = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 300, s, d: 1000 }} nowMs={now} />)
     expect(after).toContain('parti à 08:50')
     expect(after).toContain(at(s * 1000))
+    // Relevé vieux de 4 h (téléphone sans réseau) : heures prévues toujours calées sur ce départ.
+    const later = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 300, s, d: 1000 }} nowMs={now + 4 * 3600000} />)
+    expect(later).toContain('parti à 08:50')
+    expect(later).toContain(at(s * 1000))
   })
 })
 

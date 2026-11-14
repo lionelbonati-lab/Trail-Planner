@@ -178,16 +178,6 @@ class Plan {
         }
         return t;
     }
-
-    // Indice du premier point situé au-delà de d (m), ou -1.
-    function nextIndex(d as Float) as Number {
-        for (var i = 0; i < cpDist.size(); i++) {
-            if (cpDist[i] > d + 50) {
-                return i;
-            }
-        }
-        return -1;
-    }
 }
 
 // Découpe une chaîne selon un séparateur.

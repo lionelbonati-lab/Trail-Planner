@@ -4,4 +4,5 @@
     <string id="CodePrompt">Code affiché par l'app web (bouton « Mettre sur la montre ») : le code long ici, ou le code à 8 chiffres sur la montre</string>
     <string id="FuelTitle">Rappel nutrition (min) : -1 = selon le plan, 0 = désactivé</string>
     <string id="VibrateTitle">Vibrations</string>
+    <string id="LapTitle">Tour = passage au point</string>
 </strings>
