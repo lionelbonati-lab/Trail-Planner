@@ -362,7 +362,8 @@ export interface KmeSettings {
   downPer1km: number
 }
 
-export type CheckpointKind = 'ravito' | 'split' | 'cutoff' | 'info'
+/** Base de vie : grand ravito d'une course (arrêt long), traité comme un ravito partout. */
+export type CheckpointKind = 'ravito' | 'base' | 'split' | 'cutoff' | 'info'
 
 export interface Checkpoint {
   id: string
@@ -385,6 +386,8 @@ export interface Checkpoint {
   assist?: boolean
   /** Accès pour l'assistance (parking, salle du ravito) : destination du lien GPS de la page assistance. */
   access?: GeoPoint
+  /** Dropbag prévu par l'organisation à ce point (sac personnel déposé à l'avance). */
+  dropbag?: boolean
 }
 
 export interface GeoPoint {

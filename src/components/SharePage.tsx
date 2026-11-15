@@ -1,3 +1,4 @@
+import { isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Map as MapIcon, Mountain, Navigation, Radio, Route } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
@@ -453,7 +454,7 @@ export function ShareView({
           </thead>
           <tbody>
             {snap.rows.map((r) => (
-              <tr key={r.id} className={`${r.kind === 'ravito' ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
+              <tr key={r.id} className={`${isRavitoKind(r.kind) ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
                 <td>
                   {r.name}
                   {r.notes && <div className="muted small">{r.notes}</div>}
@@ -573,7 +574,7 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
       <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
       <path d={line} className="line" />
       {rows.map((r) => (
-        <circle key={r.id} cx={x(r.dist)} cy={y(eleAt(r.dist))} r={r.kind === 'ravito' ? 4 : 2.5} className={r.actual ? 'done-dot' : r.kind === 'ravito' ? 'ravito-dot' : 'cp-dot'} />
+        <circle key={r.id} cx={x(r.dist)} cy={y(eleAt(r.dist))} r={isRavitoKind(r.kind) ? 4 : 2.5} className={r.actual ? 'done-dot' : isRavitoKind(r.kind) ? 'ravito-dot' : 'cp-dot'} />
       ))}
       {position !== null && (
         <g className="me">

@@ -7,7 +7,7 @@ export const FINISH_ID = '__finish'
 
 /** Assistance autorisée : réglage du point, sinon les ravitos et l'arrivée. */
 export function assistAllowed(cp: Checkpoint): boolean {
-  return cp.assist ?? (cp.kind === 'ravito' || cp.id === FINISH_ID)
+  return cp.assist ?? (cp.kind === 'ravito' || cp.kind === 'base' || cp.id === FINISH_ID)
 }
 
 const coord = (p: GeoPoint) => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`

@@ -221,6 +221,7 @@ export function setStops(cps: Checkpoint[], stopMin: number, kind: CheckpointKin
 /** Libellé de chaque type de point de passage. */
 export const CHECKPOINT_LABELS: Record<CheckpointKind, string> = {
   ravito: 'Ravito',
+  base: 'Base de vie',
   split: 'Point inter',
   cutoff: 'Barrière',
   info: 'Repère',
@@ -253,6 +254,7 @@ export function waypointKind(w: { name: string; tags?: string }, race: 'race' | 
   if (race === 'route') return 'info'
   const text = `${w.name} ${w.tags ?? ''}`
   if (/barri[eè]re|\bBH\b|cut[ -]?off|limite horaire|time limit/i.test(text)) return 'cutoff'
+  if (/base de vie|\bBV\b|life ?base/i.test(text)) return 'base'
   if (/ravit|\bravi\b|aid ?station|food|drink|water|\beau\b|buvette|restaur|refresh/i.test(text)) return 'ravito'
   return 'split'
 }
@@ -267,7 +269,17 @@ export function waypointCheckpoints(track: Pick<Track, 'waypoints' | 'totalDist'
     if (w.off > WAYPOINT_MAX_OFF || w.dist < 100 || w.dist > track.totalDist - 100) continue
     if ([...existing, ...out].some((c) => Math.abs(c.dist - w.dist) < 100)) continue
     const kind = waypointKind(w, race)
-    out.push({ id: crypto.randomUUID(), dist: Math.round(w.dist), name: w.name.trim() || checkpointName(kind, w.dist), kind, stopMin: kind === 'ravito' ? 3 : 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false })
+    out.push({ id: crypto.randomUUID(), dist: Math.round(w.dist), name: w.name.trim() || checkpointName(kind, w.dist), kind, stopMin: defaultStop(kind), cutoff: '', water: 0, carbs: 0, notes: '', auto: false, ...(kind === 'base' ? { dropbag: true } : {}) })
   }
   return out
+}
+
+/** Ravito ou base de vie : arrêt, plan nutrition, assistance, marque des cartes et du profil. */
+export function isRavitoKind(kind: CheckpointKind | string): boolean {
+  return kind === 'ravito' || kind === 'base'
+}
+
+/** Arrêt prévu par défaut (min) : 3 à un ravito, 20 à une base de vie, 0 ailleurs. */
+export function defaultStop(kind: CheckpointKind): number {
+  return kind === 'base' ? 20 : kind === 'ravito' ? 3 : 0
 }

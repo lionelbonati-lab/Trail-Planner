@@ -35,11 +35,15 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 **Plan de course**
 - Import GPX avec ses **waypoints** : ils deviennent des points de passage (course : ravito, barrière ou point
-  intermédiaire d'après leur nom ou leur symbole ; parcours : repères ; traceur : points de repère du tracé),
+  intermédiaire, base de vie d'après leur nom ou leur symbole ; parcours : repères ; traceur : points de repère du tracé),
   sauf ceux du départ, de l'arrivée ou à plus de 200 m de la trace ; bouton pour réimporter ceux supprimés.
 - Profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
-  quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, point
+  quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, base de vie, point
   intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
+- **Bases de vie** (courses) : grand ravito, 20 min d'arrêt par défaut, traité comme un ravito partout
+  (nutrition, assistance, montre, FIT/GPX). Case **Dropbag** sur les ravitos et bases de vie où
+  l'organisation prévoit un sac (cochée d'office sur une base de vie) : le plan nutrition et la feuille A4
+  indiquent quoi mettre dans chaque sac, de ce point au dropbag suivant ou à l'arrivée.
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
   Équivalences du km-effort (m de D+ et de D− pour 1 km) dans le profil athlète, pour toutes les courses et
   tous les parcours : **automatiques** par défaut (D+ d'après la VAM à VC, D− d'après les coefficients de
@@ -124,7 +128,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Fourchette** bonne journée / prévu / journée difficile pour chaque point.
 - Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires,
   **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits).
-- Impression : A4 (profil, temps, sacs de ravito) et fiche assistance pour les courses ; bande pour les courses et les parcours.
+- Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 
 **Le jour J**

@@ -1,8 +1,9 @@
+import { isRavitoKind } from '../lib/splits'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { formatClock, formatDuration, formatPace, zonedToUtc } from '../lib/time'
 import type { Athlete, Race, SimResult, Track } from '../lib/types'
-import { bagText, type Leg } from '../lib/nutrition'
+import { bagText, dropbagPlan, dropbagText, type Leg } from '../lib/nutrition'
 import { ProfileChart } from './ProfileChart'
 
 export type PrintFormat = 'a4' | 'strip' | 'crew'
@@ -46,6 +47,8 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs,
   }, [format])
 
   const startMs = zonedToUtc(race.env.start, race.env.timeZone).getTime()
+  // Dropbags prévus par l'organisation : contenu jusqu'au suivant (ou l'arrivée).
+  const dropbags = race.kind === 'route' ? [] : dropbagPlan(legs, sim.splits.map((x) => x.cp))
   const tz = race.env.timeZone
   const longRace = sim.totalTime > 20 * 3600
   const startLabel = new Intl.DateTimeFormat('fr-FR', { timeZone: tz, dateStyle: 'full', timeStyle: 'short' }).format(new Date(startMs))
@@ -79,7 +82,7 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs,
             </thead>
             <tbody>
               {sim.splits.map((s) => (
-                <tr key={s.cp.id} className={`${s.cp.kind === 'ravito' ? 'ravito' : ''} ${s.night ? 'night' : ''}`}>
+                <tr key={s.cp.id} className={`${isRavitoKind(s.cp.kind) ? 'ravito' : ''} ${s.night ? 'night' : ''}`}>
                   <td className="name">{s.cp.name}</td>
                   <td>{(s.to / 1000).toFixed(1)}</td>
                   <td>{(s.dist / 1000).toFixed(1)}</td>
@@ -117,6 +120,24 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs,
               </tbody>
             </table>
           )}
+          {dropbags.length > 0 && (
+            <table className="ptable bags">
+              <thead>
+                <tr><th>Dropbag</th><th>Jusqu'à</th><th>Durée</th><th>Glucides</th><th>À mettre dans le sac</th></tr>
+              </thead>
+              <tbody>
+                {dropbags.map((b) => (
+                  <tr key={b.id}>
+                    <td className="name">{b.name}</td>
+                    <td>{b.until}</td>
+                    <td>{formatDuration(b.duration)}</td>
+                    <td>{b.carbs} g</td>
+                    <td className="notes">{dropbagText(b)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -134,7 +155,7 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs,
                 </thead>
                 <tbody>
                   {sim.splits.map((s) => (
-                    <tr key={s.cp.id} className={s.cp.kind === 'ravito' ? 'ravito' : ''}>
+                    <tr key={s.cp.id} className={isRavitoKind(s.cp.kind) ? 'ravito' : ''}>
                       <td>{(s.to / 1000).toFixed(1)}</td>
                       <td>{s.cp.name.slice(0, 16)}</td>
                       <td>{Math.round(s.dPlus)}</td>
@@ -165,7 +186,7 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs,
             </thead>
             <tbody>
               {sim.splits
-                .filter((s) => s.cp.kind === 'ravito' || s.cp.id === '__finish' || s.cp.kind === 'cutoff')
+                .filter((s) => isRavitoKind(s.cp.kind) || s.cp.id === '__finish' || s.cp.kind === 'cutoff')
                 .map((s) => (
                   <tr key={s.cp.id}>
                     <td className="name">{s.cp.name}</td>

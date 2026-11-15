@@ -131,7 +131,7 @@ const altFit = (m: number) => Math.max(0, Math.min(0xfffe, Math.round((m + 500) 
 
 /** Type de point de parcours Garmin (énumération course_point du profil FIT). */
 export function coursePointType(kind: CheckpointKind, name: string): number {
-  if (kind === 'ravito') return 28 // aid_station
+  if (kind === 'ravito' || kind === 'base') return 28 // aid_station
   if (kind === 'cutoff') return 35 // checkpoint
   if (/^sommet/i.test(name)) return 1 // summit
   if (/^point bas/i.test(name)) return 2 // valley

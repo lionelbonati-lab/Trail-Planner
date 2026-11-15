@@ -1,3 +1,4 @@
+import { isRavitoKind } from '../lib/splits'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatClock, formatDuration } from '../lib/time'
 import type { SimPoint, SplitRow } from '../lib/types'
@@ -148,7 +149,7 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
   const shown = new Set<string>()
   {
     const xs = splits.map((s) => geo.x(s.to))
-    const prio = splits.map((s, i) => ({ s, i })).sort((a, b) => Number(b.s.cp.kind === 'ravito') - Number(a.s.cp.kind === 'ravito'))
+    const prio = splits.map((s, i) => ({ s, i })).sort((a, b) => Number(isRavitoKind(b.s.cp.kind)) - Number(isRavitoKind(a.s.cp.kind)))
     const taken: number[] = []
     for (const { s, i } of prio) {
       if (taken.every((x) => Math.abs(x - xs[i]) >= labelGap)) {
@@ -287,7 +288,7 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
         return (
           <g key={s.cp.id} className={`cp cp-${s.cp.kind}`}>
             <line x1={xx} x2={xx} y1={m.t - 4} y2={geo.y(ele)} />
-            <circle cx={xx} cy={geo.y(ele)} r={s.cp.kind === 'ravito' ? 4 : 2.5} />
+            <circle cx={xx} cy={geo.y(ele)} r={isRavitoKind(s.cp.kind) ? 4 : 2.5} />
             {showLabel && (
               <text x={xx} y={m.t - 8} transform={`rotate(-40 ${xx} ${m.t - 8})`} className="cp-label">
                 {s.cp.name.slice(0, 18)} {formatClock(s.arrivalClock, timeZone)}
