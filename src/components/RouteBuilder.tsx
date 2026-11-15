@@ -36,12 +36,11 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { newRace } from '../lib/defaults'
 import { download } from '../lib/exportGpx'
 import { elevationGain, gpxRawPoints, haversine, indexAt, trackFromRaw, type RawPoint } from '../lib/gpx'
 import { averageIntensity, simulate } from '../lib/model'
 import { distanceForDuration, loopPoints, loopScore, rankBearings, TERRAINS, type Terrain } from '../lib/autoroute'
-import { planOptions } from '../lib/plan'
+import { draftRoute, planOptions } from '../lib/plan'
 import {
   closeLoop,
   drawnFromRaw,
@@ -242,7 +241,9 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
   const [tick, setTick] = useState(0)
   const [name, setName] = useState(init.name)
   const [kind, setKind] = useState<RaceKind>(init.kind)
-  const [pace, setPace] = useState<Pace>(init.pace)
+  const [paceChoice, setPace] = useState<Pace>(init.pace)
+  // Course : intensité de course (ses zones d'allure sont ignorées) ; parcours : allure choisie.
+  const pace: Pace = kind === 'race' ? 'model' : paceChoice
   const [hover, setHover] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
@@ -307,12 +308,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
   const replacesZones = !!race?.zones.length && wholeRouteZone(race.zones, athlete) === null && pace !== 'route'
   const estimate = useMemo<{ time: number; range: [number, number] | null; sim: SimResult } | null>(() => {
     if (!track) return null
-    const run = (zones: PaceZone[]) => {
-      // Sans nuit, chaleur ni pluie : altitude et technicité (déduite de la pente) seulement.
-      const r = { ...newRace(name, ''), zones }
-      r.env = { ...r.env, night: { ...r.env.night, enabled: false }, heat: { ...r.env.heat, enabled: false }, rain: { ...r.env.rain, enabled: false } }
-      return simulate(track, athlete, planOptions(r, track))
-    }
+    const run = (zones: PaceZone[]) => simulate(track, athlete, planOptions(draftRoute(name, zones), track))
     try {
       if (typeof pace !== 'number' || !athlete.zones[pace]) {
         const sim = run(typeof pace === 'number' ? [] : paceZones(null))
@@ -367,8 +363,8 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
 
   // Brouillon d'un nouveau tracé, retrouvé si la page est rechargée.
   useEffect(() => {
-    if (!race) writeJson(DRAFT_KEY, { wps, name, kind, pace })
-  }, [wps, name, kind, pace, race])
+    if (!race) writeJson(DRAFT_KEY, { wps, name, kind, pace: paceChoice })
+  }, [wps, name, kind, paceChoice, race])
 
   // Plein écran : la page derrière ne défile plus.
   useEffect(() => {
@@ -805,14 +801,15 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
       },
       marks: rows ? [...letters].map(([k, letter]) => ({ name: wps[k].name || `Repère ${letter}`, dist: Math.round(rows[k].d) })) : [],
       total: track.totalDist,
-      // Zone du profil : tout le parcours dans cette zone ; allure de course : aucune zone.
-      zones: typeof pace === 'number' ? paceZones(zoneTarget(athlete, pace)) : pace === 'model' ? [] : null,
+      // Zone du profil : tout le parcours dans cette zone ; allure de course : aucune zone. Course : zones
+      // inchangées (elle les ignore).
+      zones: kind === 'race' ? null : typeof pace === 'number' ? paceZones(zoneTarget(athlete, pace)) : pace === 'model' ? [] : null,
     }
   }
   const save = () => {
     const r = result()
     if (!r) return
-    if (!race) writeJson(DRAFT_KEY, { wps: [], name: '', kind, pace })
+    if (!race) writeJson(DRAFT_KEY, { wps: [], name: '', kind, pace: paceChoice })
     onSave(r)
   }
   const exportGpx = () => {
@@ -840,9 +837,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
   /** Durée simulée d'une trace à l'allure choisie (sans nuit, chaleur ni pluie). */
   const simTime = (tr: Track): number => {
     const zone = typeof pace === 'number' && athlete.zones[pace] ? wholeRoute(zoneTarget(athlete, pace), tr.totalDist) : []
-    const r = { ...newRace(name, ''), zones: zone }
-    r.env = { ...r.env, night: { ...r.env.night, enabled: false }, heat: { ...r.env.heat, enabled: false }, rain: { ...r.env.rain, enabled: false } }
-    return simulate(tr, athlete, planOptions(r, tr)).totalTime
+    return simulate(tr, athlete, planOptions(draftRoute(name, zone), tr)).totalTime
   }
   /** Boucle départ → points → départ, sur les chemins, points accrochés au chemin le plus proche. */
   const routeLoop = async (start: { lat: number; lon: number }, points: { lat: number; lon: number }[], target: number): Promise<Cand> => {
@@ -1204,18 +1199,20 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
             <span className="draw-time" title="Selon ton profil (VC, VAM, durabilité ou zone choisie), sans arrêt, nuit ni chaleur">
               {estimate ? shortTime(estimate.time) : '—'}
             </span>
-            <button
-              className="pace-chip"
-              onClick={(e) => {
-                e.stopPropagation()
-                setPaceOpen(!paceOpen)
-                setSheet('full')
-              }}
-              title="Allure simulée"
-            >
-              <i className="zone-swatch" style={{ background: paceColor }} />
-              {paceLabel} <ChevronDown className="inline" />
-            </button>
+            {kind !== 'race' && (
+              <button
+                className="pace-chip"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setPaceOpen(!paceOpen)
+                  setSheet('full')
+                }}
+                title="Allure simulée"
+              >
+                <i className="zone-swatch" style={{ background: paceColor }} />
+                {paceLabel} <ChevronDown className="inline" />
+              </button>
+            )}
           </div>
           </div>
           {(pending > 0 || errorAt >= 0 || offroadCount > 0) && (
@@ -1246,7 +1243,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
           )}
 
           <div className="draw-more">
-            {paceOpen && (
+            {paceOpen && kind !== 'race' && (
               <div className="pace-pick">
                 <div className="pace-chips" role="group" aria-label="Allure simulée">
                   <button className={pace === 'model' ? 'on' : ''} onClick={() => setPace('model')} title="Allure de course : intensité selon la durée (durabilité)">

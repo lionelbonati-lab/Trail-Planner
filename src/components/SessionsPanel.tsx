@@ -49,7 +49,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
 
   return (
     <div className="grid">
-      <Card title="Test de vitesse critique">
+      <Card title="Test de vitesse critique" fold="open">
         <p>
           De temps à autre, un test mesure ta VC et ton D′. Télécharge l'entraînement pour ta montre, fais la séance, puis
           importe son enregistrement (GPX ou FIT) : l'app en tire la distance, calcule VC et D′ et propose de mettre ton profil
@@ -59,7 +59,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
       </Card>
 
       {result && (
-        <Card title={`Résultat · ${SESSIONS_BY_KEY[result.key].title}`} className="result-card">
+        <Card title={`Résultat · ${SESSIONS_BY_KEY[result.key].title}`} className="result-card" fold="open">
           <ul className="changes">{result.r.lines.map((l) => <li key={l}>{l}</li>)}</ul>
           <h3>Mise à jour proposée du profil</h3>
           <ul className="changes">{result.r.changes.map((c) => <li key={c}>{c}</li>)}</ul>

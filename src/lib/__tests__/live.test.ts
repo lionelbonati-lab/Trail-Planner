@@ -68,3 +68,18 @@ describe('nutrition', () => {
     expect(bagText(legs[0])).toMatch(/L d'eau, \d+ × Gel/)
   })
 })
+
+import { pastClockToMs } from '../time'
+describe('heure saisie en mode course', () => {
+  // 14 nov. 2026, 10:12 à Paris (UTC+1).
+  const now = Date.parse('2026-11-14T09:12:00Z')
+  it('heure du jour, fuseau de la course', () => {
+    expect(new Date(pastClockToMs('9:30', 'Europe/Paris', now)!).toISOString()).toBe('2026-11-14T08:30:00.000Z')
+    expect(new Date(pastClockToMs('10h05', 'Europe/Paris', now)!).toISOString()).toBe('2026-11-14T09:05:00.000Z')
+  })
+  it('plus d’une heure dans le futur : la veille ; format invalide : null', () => {
+    expect(new Date(pastClockToMs('23:50', 'Europe/Paris', now)!).toISOString()).toBe('2026-11-13T22:50:00.000Z')
+    expect(pastClockToMs('25:00', 'Europe/Paris', now)).toBeNull()
+    expect(pastClockToMs('dix heures', 'Europe/Paris', now)).toBeNull()
+  })
+})

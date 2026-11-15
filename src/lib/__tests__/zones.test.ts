@@ -1,10 +1,10 @@
 import FitParser from 'fit-file-parser'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace } from '../defaults'
-import { TRAINING_ZONES } from '../model'
-import { computePlan } from '../plan'
+import { simulate, TRAINING_ZONES } from '../model'
+import { computePlan, draftRoute, planOptions } from '../plan'
 import { buildWorkoutFit } from '../workoutFit'
-import { zoneRuns, zoneSteps, zoneText } from '../zones'
+import { wholeRoute, zoneRuns, zoneSteps, zoneTarget, zoneText } from '../zones'
 import type { PaceZone } from '../types'
 
 // 4 km de plat, 2 km à 10 %, 4 km de plat.
@@ -21,7 +21,8 @@ const A = { ...DEFAULT_ATHLETE, cs: 4 }
 const flatOnly = (r: ReturnType<typeof newRace>) => ({ ...r, env: { ...r.env, night: { ...r.env.night, enabled: false }, heat: { ...r.env.heat, enabled: false } } })
 
 describe('zones d’allure', () => {
-  const base = flatOnly(newRace('Z', gpx()))
+  // Zones d'allure : propres aux parcours (une course les ignore, voir le dernier test).
+  const base = flatOnly({ ...newRace('Z', gpx()), kind: 'route' as const })
   const t = (zones: PaceZone[]) => {
     const p = computePlan({ ...base, zones }, A)!
     const at = (d: number) => p.sim.points[Math.round(d / 20)].t
@@ -62,5 +63,26 @@ describe('zones d’allure', () => {
     expect(d.workout.num_valid_steps).toBe(3)
     expect(d.workout_step).toMatchObject({ wkt_step_name: 'Libre', duration_type: 'distance', target_type: 'open' })
     expect(d.workout_step.duration_value / 100000).toBeCloseTo(7, 1) // centimètres
+  })
+
+  it('course : zones d’allure ignorées (intensité de course)', () => {
+    const zones: PaceZone[] = [{ id: 'z', from: 0, to: 10000, kind: 'intensity', value: 0.6, label: 'Z1' }]
+    const route = computePlan({ ...base, zones }, A)!
+    const race = computePlan({ ...base, kind: 'race', zones }, A)!
+    const none = computePlan({ ...base, kind: 'race', zones: [] }, A)!
+    expect(race.sim.totalTime).toBeCloseTo(none.sim.totalTime, 6)
+    expect(route.sim.totalTime).toBeGreaterThan(race.sim.totalTime)
+  })
+})
+
+describe('traceur : parcours en cours de tracé', () => {
+  it('la zone choisie change le temps prévu (parcours, pas course)', () => {
+    const plan = computePlan(newRace('T', gpx()), A)!
+    const time = (k: number | null) =>
+      simulate(plan.track, A, planOptions(draftRoute('T', k === null ? [] : wholeRoute(zoneTarget(A, k), plan.track.totalDist)), plan.track)).totalTime
+    expect(draftRoute('T', []).kind).toBe('route')
+    expect(time(0)).toBeGreaterThan(time(2))
+    expect(time(2)).toBeGreaterThan(time(4))
+    expect(time(null)).not.toBe(time(0))
   })
 })

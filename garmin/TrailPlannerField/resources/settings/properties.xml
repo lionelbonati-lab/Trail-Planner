@@ -3,4 +3,6 @@
     <property id="code" type="string"></property>
     <property id="fuelMin" type="number">-1</property>
     <property id="vibrate" type="boolean">true</property>
+    <!-- Bouton Lap = passage au point le plus proche (désactiver si le tour auto est utilisé). -->
+    <property id="lapPass" type="boolean">true</property>
 </properties>

@@ -2,6 +2,7 @@
 // Trail Planner) : saisie du code montre court à 8 chiffres affiché par l'app web, sans passer
 // par Garmin Connect (dont les réglages manquent quand le champ est installé hors Store).
 // Le code long reste saisissable dans Garmin Connect. 00000000 efface le code.
+// « Tour = passage au point » : le bouton Lap valide le passage au point le plus proche.
 import Toybox.Application;
 import Toybox.Graphics;
 import Toybox.Lang;
@@ -14,6 +15,8 @@ class TrailPlannerSettingsMenu extends WatchUi.Menu2 {
         Menu2.initialize({ :title => "Trail Planner" });
         _codeItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.CodeTitle) as String, null, :code, {});
         addItem(_codeItem);
+        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.LapTitle) as String, null, :lap,
+            Application.Properties.getValue("lapPass") != false, {}));
         onShow();
     }
 
@@ -36,6 +39,8 @@ class TrailPlannerSettingsDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         if (item.getId() == :code) {
             pushCodePicker();
+        } else if (item.getId() == :lap) {
+            Application.Properties.setValue("lapPass", (item as WatchUi.ToggleMenuItem).isEnabled());
         }
     }
 }

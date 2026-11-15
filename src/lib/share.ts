@@ -1,6 +1,9 @@
 // Lien public pour l'assistance : un instantané du plan (et du suivi en direct),
 // lisible sans compte, mis à jour par le propriétaire.
+import { assistAllowed, FINISH_ID } from './assist'
+import { indexAt } from './gpx'
 import { liveStatus } from './live'
+import { simplifyRoute, type RoutePoint } from './routeGeo'
 import { watchPlan } from './watch'
 import { zonedToUtc } from './time'
 import type { Athlete, Race, SimResult, Track } from './types'
@@ -19,6 +22,13 @@ export interface ShareRow {
   cutoff: string | null
   actual: string | null
   eta: string
+  /** Destination du lien GPS : accès assistance s'il est placé, sinon point du parcours. */
+  lat?: number
+  lon?: number
+  /** La destination est un accès assistance placé par le coureur. */
+  access?: boolean
+  /** Assistance autorisée à ce point. */
+  assist?: boolean
 }
 
 export interface ShareSnapshot {
@@ -32,6 +42,8 @@ export interface ShareSnapshot {
   dPlus: number
   /** Profil simplifié : [distance (m), altitude (m)]. */
   profile: [number, number][]
+  /** Tracé simplifié pour la carte : [distance (m), lat, lon] (absent des anciens partages). */
+  route?: RoutePoint[]
   live: { startedAt: string; lastUpdate: string | null } | null
   rows: ShareRow[]
   /** Plan compact pour le champ de données Garmin (voir watch.ts). */
@@ -42,6 +54,8 @@ export interface ShareSnapshot {
   liveRefShort?: string | null
   /** Réglages du datafield EndurancePro (document du code montre seulement, voir endurancepro.ts). */
   ep?: string
+  /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */
+  freeStart?: boolean
 }
 
 export function buildSnapshot(
@@ -71,8 +85,10 @@ export function buildSnapshot(
     totalDist: track.totalDist,
     dPlus: track.dPlus,
     profile: track.points.filter((_, i) => i % stride === 0).map((p) => [Math.round(p.dist), Math.round(p.ele)]),
+    route: simplifyRoute(track.points),
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
+    ...(race.freeStart ? { freeStart: true } : {}),
     liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
     liveRefShort: athlete.epCode && athlete.watchRaceId === race.id ? athlete.epCode : null,
     rows: sim.splits.map((s, i) => {
@@ -91,9 +107,19 @@ export function buildSnapshot(
         cutoff: cutoff(s.cp.cutoff),
         actual: race.live?.passages[s.cp.id] ?? null,
         eta: iso(row?.eta ?? s.arrival),
+        ...navTarget(s.cp.access ?? (s.cp.id === FINISH_ID ? race.finishAccess : undefined), track, s.to),
+        assist: assistAllowed(s.cp),
       }
     }),
   }
+}
+
+/** Destination du lien GPS d'un point : son accès assistance, sinon le point du parcours. */
+function navTarget(access: { lat: number; lon: number } | undefined, track: Track, dist: number) {
+  const r5 = (x: number) => Math.round(x * 1e5) / 1e5
+  if (access) return { lat: r5(access.lat), lon: r5(access.lon), access: true }
+  const p = track.points[indexAt(track.points, dist)]
+  return { lat: r5(p.lat), lon: r5(p.lon), access: false }
 }
 
 export function shareUrl(shareId: string): string {

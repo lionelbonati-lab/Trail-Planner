@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { formatPace, parseDuration } from '../lib/time'
 
@@ -96,16 +97,46 @@ export function Toggle({ label, checked, onChange }: { label: ReactNode; checked
   )
 }
 
-export function Card({ title, children, actions, className }: { title?: ReactNode; children: ReactNode; actions?: ReactNode; className?: string }) {
+/**
+ * Cadre. Sur téléphone, un cadre à titre se plie et se déplie d'un toucher sur son titre, et chaque
+ * page s'ouvre cadres pliés (pas de page à rallonge) : `fold` = « closed » (par défaut), « open » pour
+ * le contenu principal d'une page, ou false pour un cadre toujours ouvert. L'état n'est gardé que le
+ * temps de la page. Sur ordinateur, les cadres restent ouverts.
+ */
+export function Card({
+  title,
+  children,
+  actions,
+  className,
+  fold = 'closed',
+}: {
+  title?: ReactNode
+  children: ReactNode
+  actions?: ReactNode
+  className?: string
+  fold?: 'open' | 'closed' | false
+}) {
+  // Seul un cadre à titre texte se plie (titre éditable, cadre sans titre : toujours ouvert).
+  const foldable = typeof title === 'string' && fold !== false
+  const [folded, setFolded] = useState(foldable && fold === 'closed')
+  const toggle = () => setFolded(!folded)
   return (
-    <section className={`card ${className ?? ''}`}>
+    <section className={`card ${foldable ? 'foldable' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
       {(title || actions) && (
         <header className="card-head">
-          {title && <h2>{title}</h2>}
+          {title &&
+            (foldable ? (
+              <button type="button" className="card-fold" onClick={toggle} aria-expanded={!folded}>
+                <h2>{title}</h2>
+                <ChevronDown className="fold-chevron" aria-hidden />
+              </button>
+            ) : (
+              <h2>{title}</h2>
+            ))}
           {actions && <div className="card-actions">{actions}</div>}
         </header>
       )}
-      {children}
+      <div className="card-body">{children}</div>
     </section>
   )
 }

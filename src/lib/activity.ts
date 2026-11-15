@@ -136,7 +136,7 @@ export function timesAt(a: Activity, d: number): { elapsed: number; moving: numb
 }
 
 /** Environnement pour l'analyse : chaleur et pluie inconnues, donc neutralisées. */
-function analysisEnv(start: number, base: EnvSettings): EnvSettings {
+export function analysisEnv(start: number, base: EnvSettings): EnvSettings {
   return {
     ...base,
     start: new Date(start).toISOString().slice(0, 16),

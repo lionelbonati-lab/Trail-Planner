@@ -3,7 +3,7 @@ import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
 import { indexAt } from '../lib/gpx'
 import { formatClock } from '../lib/time'
-import type { SplitRow, Track } from '../lib/types'
+import type { GeoPoint, SplitRow, Track } from '../lib/types'
 import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 
 interface Props {
@@ -14,16 +14,25 @@ interface Props {
   hoverDist: number | null
   /** Clic sur la carte : distance du point de trace le plus proche (m). */
   onPick?: (dist: number) => void
+  /** Pose d'un accès assistance : le prochain clic sur la carte donne sa position. */
+  accessPick?: ((at: GeoPoint) => void) | null
+  /** Accès assistance placés, reliés à leur point du parcours. */
+  accesses?: { name: string; at: GeoPoint; trail: GeoPoint }[]
 }
 
 /** Carte Leaflet du parcours, synchronisée avec le profil. */
-export default function MapView({ track, splits, timeZone, hoverDist, onPick }: Props) {
+export default function MapView({ track, splits, timeZone, hoverDist, onPick, accessPick = null, accesses = [] }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const marks = useRef<L.LayerGroup | null>(null)
   const cursor = useRef<L.CircleMarker | null>(null)
   const pickRef = useRef(onPick)
   pickRef.current = onPick
+  const accessRef = useRef(accessPick)
+  useEffect(() => {
+    accessRef.current = accessPick
+  }, [accessPick])
+  const accessLayer = useRef<L.LayerGroup | null>(null)
 
   // Carte et trace (recréées si la trace change).
   useEffect(() => {
@@ -35,7 +44,10 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick }: 
     const line = L.polyline(latlngs, { color: ROUTE_COLOR, weight: 4, opacity: 0.95 }).addTo(m)
     L.circleMarker(latlngs[0], { radius: 6, color: '#ffffff', fillColor: '#2f6b4f', fillOpacity: 1, weight: 3 }).bindTooltip('Départ').addTo(m)
     m.fitBounds(line.getBounds(), { padding: [20, 20] })
+    // Pose d'un accès : n'importe où sur la carte (le clic sur le tracé remonte aussi ici).
+    m.on('click', (e: L.LeafletMouseEvent) => accessRef.current?.({ lat: e.latlng.lat, lon: e.latlng.lng }))
     line.on('click', (e: L.LeafletMouseEvent) => {
+      if (accessRef.current) return
       let best = 0
       let bestD = Infinity
       track.points.forEach((p, i) => {
@@ -48,6 +60,7 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick }: 
       pickRef.current?.(track.points[best].dist)
     })
     marks.current = L.layerGroup().addTo(m)
+    accessLayer.current = L.layerGroup().addTo(m)
     cursor.current = L.circleMarker(latlngs[0], { radius: 7, color: '#1f2420', fillColor: '#f5c542', fillOpacity: 1, weight: 2 })
     map.current = m
     return () => {
@@ -75,6 +88,24 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick }: 
         .addTo(g)
     }
   }, [splits, track, timeZone])
+
+  // Accès assistance : « P » relié en pointillés au point du parcours.
+  useEffect(() => {
+    const g = accessLayer.current
+    if (!g) return
+    g.clearLayers()
+    for (const a of accesses) {
+      L.polyline([[a.trail.lat, a.trail.lon], [a.at.lat, a.at.lon]], { color: '#1d6fe0', weight: 2, dashArray: '4 5', interactive: false }).addTo(g)
+      L.marker([a.at.lat, a.at.lon], { icon: L.divIcon({ className: 'access-icon', html: 'P', iconSize: [20, 20], iconAnchor: [10, 10] }) })
+        .bindTooltip(`Accès assistance · ${a.name}`)
+        .addTo(g)
+    }
+  }, [accesses])
+
+  // Curseur en croix pendant la pose d'un accès.
+  useEffect(() => {
+    el.current?.classList.toggle('picking', !!accessPick)
+  }, [accessPick])
 
   // Curseur synchronisé avec le survol du profil.
   useEffect(() => {

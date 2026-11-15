@@ -8,6 +8,13 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 **Profil et calibration**
 - Profil athlète : VC (min/km), D′, seuil de marche, VAM selon la pente, coefficients de descente,
   durabilité (courbe log %VC₁ₕ − k·ln T, ou perte linéaire), produits de nutrition.
+- **Estimer mon niveau sans test VC** (profil athlète ; bandeau sur le plan tant que le profil est celui par
+  défaut) : à partir d'une course ou d'un entraînement déjà fait, l'app cherche le niveau (VC et VAM) qui
+  redonne le temps réalisé. Avec l'enregistrement (GPX / FIT, temps en mouvement) : pour un effort de course,
+  VAM par pente, descente et durabilité mesurées en plus, puis VC réajustée. Avec le temps seulement : temps
+  d'arrivée sur une course ou un parcours de l'app (arrêts prévus comptés). Effort au choix : course à fond, ou
+  entraînement dans une zone du profil (le niveau de course en est déduit). Aperçu (temps retrouvé, VC, VAM)
+  avant d'appliquer.
 - **Analyse de n'importe quelle séance** (GPX ou FIT de montre) : temps par zone (allure ramenée au plat),
   tours de la montre, meilleurs efforts comparés à VC + D′ (VC relevée si dépassée), détection d'un test VC ;
   prévu vs réalisé, intensité au fil des heures,
@@ -27,13 +34,19 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   **graphiques d'évolution** (VC recalculée à chaque test).
 
 **Plan de course**
-- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic.
+- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
+- **Courses et parcours séparés** : une course prépare ravitos, barrières, eau/glucides, assistance et lien de
+  partage (sans zones d'allure) ; un parcours d'entraînement garde ses zones d'allure, ses points de repère, le
+  plan nutrition, l'envoi à la montre, le mode course et le lien assistance (suivi en direct), sans ravitos, barrières
+  ni cadre Assistance. Un parcours ouvert depuis
+  l'onglet Parcours reste dans Parcours.
 - **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
-  ou depuis une course), étiquettes et recherche, zones d'allure enregistrées ; « Planifier » crée une séance
-  datée sans toucher au modèle ; liste des séances planifiées.
+  ou depuis une course), étiquettes et recherche, zones d'allure enregistrées. **« Vers une course »** crée une
+  nouvelle course à partir du parcours (copie indépendante, sans les zones) ou remplace le tracé d'une course
+  existante (ses ravitos dans la nouvelle distance et ses réglages sont gardés).
 - **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
   avec distance, D+/D−, temps, profil et points de repère (km, altitude, temps prévu à chaque point) ; barre
   réglages / annuler / rétablir / supprimer / OK. Sur téléphone, la feuille se glisse entre trois hauteurs : chiffres
@@ -84,7 +97,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Poids du sac** dans les coefficients de calcul de chaque course : temps allongé de 1 % par kg, ou au prorata
   du poids corporel du profil.
 - **Zones d'allure en portions contiguës** (couleurs Garmin) : clic = fin de cycle, poignées à glisser pour
-  déplacer une limite, barre de zones cliquable ; mode « Ravito » sur les compétitions.
+  déplacer une limite, barre de zones cliquable ; mode « Repère » pour poser un point (parcours uniquement).
 - **Zones d'allure** : glisser sur le profil pour sélectionner une portion et lui donner une cible
   (zones d'entraînement en % de VC, % libre, allure plat équivalente ou allure imposée) ; export en
   entraînement Garmin découpé par distance — pour planifier aussi les allures d'entraînement.
@@ -92,19 +105,41 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Fourchette** bonne journée / prévu / journée difficile pour chaque point.
 - Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires,
   **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits).
-- Impression : A4 (profil, temps, sacs de ravito), bande, fiche assistance.
+- Impression : A4 (profil, temps, sacs de ravito) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 
 **Le jour J**
 - **Mode course** sur téléphone : chrono, prochain point, passages d'un appui, avance/retard,
   recalcul de la suite, position GPS, écran maintenu allumé, hors ligne.
-- **Lien assistance** public en lecture seule, mis à jour en direct.
+- **Lien assistance** public en lecture seule, mis à jour en direct. **Carte en direct** pour l'assistance : partie courue en gris,
+  reste du parcours en magenta, points de passage cochés une fois passés, position du coureur (GPS de la montre,
+  sinon distance parcourue) suivie automatiquement ; entre deux relevés de la montre (5 min au mieux, limite
+  Garmin), position estimée d'après le rythme mesuré, arrêts aux ravitos compris (une heure au plus). Encart
+  Garmin LiveTrack : l'assistance colle le lien reçu par e-mail au départ (envoi automatique de Garmin), gardé
+  sur son téléphone.
+- **Navigation de l'assistance** : dans le plan, case « Assistance autorisée » par point (ravitos et arrivée
+  d'office) et accès assistance (parking, salle) placé sur la carte. Page assistance en deux onglets : **Suivi**
+  (direct, carte affichée par une case à cocher, lien « Y aller » Google Maps vers chaque point, son accès s'il
+  est placé) et **Trajets** (tous les points à cocher, ceux d'assistance cochés d'office, gardés sur le
+  téléphone ; itinéraire Google Maps entre les points cochés pas encore passés, découpé par 3 étapes).
+- **Notifications de passage** pour l'assistance (page ouverte, même en arrière-plan) : nom du point, heure,
+  écart au plan compté depuis le vrai départ ; un toucher ramène sur la page.
+
+- **Départ libre** (entraînements) : heures du plan calculées pour un départ maintenant (mises à jour chaque
+  minute), puis calées sur le vrai départ — mode course, sinon départ donné par la montre (page du plan et
+  page assistance) — et fixes pendant toute l'activité ; le champ Trail Planner affiche « Départ libre ». En mode course : « Départ maintenant » ou « Déjà
+  parti à… » (heure saisie), et « Corriger l'heure de départ » une fois lancé (passages gardés).
+- **Sur téléphone**, chaque page s'ouvre cadres pliés (pas de page à rallonge) : un toucher sur le titre les
+  déplie. Restent ouverts le contenu principal (listes des courses et des parcours, import et résultat
+  d'analyse, présentation du test VC, en-tête du plan) et l'écran de départ du mode course.
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,
   rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
-  passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone).
-  Voir `garmin/README.md`.
+  passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone). Position le long du
+  parcours par le **GPS calé sur le tracé** envoyé avec le plan (pas d'erreur cumulée de distance, raccourci
+  ou détour recalé, « Hors parcours » affiché). Bouton Lap = passage au point le plus proche ; heures
+  estimées recalculées à chaque passage d'après ce qui a été fait, heures prévues fixes. Voir `garmin/README.md`.
 
 **Compte et appareils**
 - Multi-utilisateurs Firebase (Google ou lien e-mail), synchronisation temps réel, hors ligne,

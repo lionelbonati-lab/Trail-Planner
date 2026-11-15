@@ -167,7 +167,8 @@ export function normalizeRace(r: Race): Race {
     push: { ...DEFAULT_PUSH, ...r.push },
     osmTech: r.osmTech ?? [],
     zones: r.zones ?? [],
-    kind: r.kind ?? 'race',
+    // Les séances datées (retirées) deviennent des parcours de la bibliothèque.
+    kind: (r.kind as string) === 'session' ? 'route' : (r.kind ?? 'race'),
     tags: r.tags ?? [],
     templateId: r.templateId ?? null,
     weather: r.weather ?? null,

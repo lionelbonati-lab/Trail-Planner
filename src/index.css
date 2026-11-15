@@ -106,6 +106,7 @@ main { padding: 20px 24px 60px; }
 .toggle { display: flex; gap: 8px; align-items: center; margin: 6px 0; cursor: pointer; font-weight: 500; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
 .row.tight { margin-top: 4px; }
+.row.bulk-stop { align-items: flex-end; margin: 0 0 10px; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
 .seg button { border: 0; border-radius: 0; }
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
@@ -206,6 +207,8 @@ body.printing .print-root {
 }
 
 .banner.info { background: var(--accent-soft); color: var(--ink); padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.banner.info.send-race { flex-direction: column; align-items: flex-start; gap: 8px; }
+.banner.info.send-race input[type=text] { min-width: 220px; }
 .account { position: relative; }
 .account summary { cursor: pointer; list-style: none; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account summary::-webkit-details-marker { display: none; }
@@ -516,3 +519,49 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .lap-chip input { margin: 0; }
 .ep-code { align-items: baseline; gap: 10px; }
 .ep-short { font-size: 26px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.share-map-wrap { margin: 12px 0; }
+.share-map-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.share-map-head h3 { margin: 0; }
+.share-map-head button.on { color: var(--accent); }
+.share-map { height: 380px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-top: 8px; isolation: isolate; background: #e8ebe6; }
+@media (max-width: 600px) { .share-map { height: 320px; } }
+.runner-icon { width: 18px; height: 18px; border-radius: 50%; background: #1d6fe0; border: 3px solid #fff; box-sizing: border-box; animation: runner-pulse 1.8s ease-out infinite; }
+@keyframes runner-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(29, 111, 224, 0.55); }
+  70% { box-shadow: 0 0 0 16px rgba(29, 111, 224, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(29, 111, 224, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .runner-icon { animation: none; box-shadow: 0 0 0 4px rgba(29, 111, 224, 0.35); } }
+.map.picking.leaflet-container, .map.picking .leaflet-interactive { cursor: crosshair; }
+.access-icon { width: 20px; height: 20px; border-radius: 4px; background: #1d6fe0; border: 2px solid #fff; color: #fff; font: 700 12px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.35); box-sizing: border-box; }
+.nav-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; white-space: nowrap; }
+.assist-trip { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 12px 0; }
+.assist-trip h3 { margin-top: 0; }
+.assist-trip ul { list-style: none; padding: 0; margin: 0 0 10px; }
+.assist-trip li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.assist-trip li:last-child { border-bottom: none; }
+.assist-trip li label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.assist-trip .trip-links { display: flex; flex-direction: column; gap: 6px; }
+.assist-trip .trip-links a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; justify-content: center; }
+.livetrack { margin: 12px 0; }
+.livetrack details { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+.livetrack summary { cursor: pointer; font-weight: 600; }
+.livetrack form input { flex: 1; min-width: 200px; }
+.livetrack .button { text-decoration: none; }
+.share-tabs { margin: 8px 0 12px; display: flex; }
+.share-tabs button { flex: 1; justify-content: center; }
+.map-toggle { margin: 12px 0 0; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.notify-box { margin: 12px 0; gap: 8px 12px; flex-wrap: wrap; align-items: center; }
+/* Cadres pliables : sur ordinateur, le titre reste un simple titre et le contenu toujours visible. */
+.card-body { display: contents; }
+.card-fold { all: unset; display: inline-flex; align-items: center; gap: 8px; cursor: default; }
+.card-fold .fold-chevron { display: none; }
+@media (max-width: 700px) {
+  .card.foldable .card-fold { cursor: pointer; flex: 1; justify-content: space-between; min-height: 32px; }
+  .card.foldable .card-head:has(.card-fold) { flex-wrap: wrap; }
+  .card-fold .fold-chevron { display: inline-block; width: 20px; height: 20px; color: var(--muted); transition: transform 0.15s; }
+  .card.folded .fold-chevron { transform: rotate(-90deg); }
+  .card.folded .card-body, .card.folded .card-actions { display: none; }
+  .card.folded .card-head { margin-bottom: 0; }
+  .card.folded { padding-top: 12px; padding-bottom: 12px; }
+}

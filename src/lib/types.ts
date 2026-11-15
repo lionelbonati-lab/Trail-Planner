@@ -370,6 +370,15 @@ export interface Checkpoint {
   notes: string
   /** Point créé par le découpage automatique (remplacé à chaque régénération). */
   auto: boolean
+  /** Assistance autorisée à ce point (par défaut : les ravitos). */
+  assist?: boolean
+  /** Accès pour l'assistance (parking, salle du ravito) : destination du lien GPS de la page assistance. */
+  access?: GeoPoint
+}
+
+export interface GeoPoint {
+  lat: number
+  lon: number
 }
 
 /** Technicité manuelle sur un intervalle [from, to] (m). */
@@ -380,8 +389,11 @@ export interface TechOverride {
   level: 1 | 2 | 3 | 4 | 5
 }
 
-/** race = compétition ; route = parcours modèle de la bibliothèque ; session = séance datée créée depuis un parcours. */
-export type RaceKind = 'race' | 'route' | 'session'
+/**
+ * race = course (ravitos, assistance, sans zones d'allure) ; route = parcours d'entraînement de la
+ * bibliothèque (zones d'allure, points de repère, sans ravitos ni assistance).
+ */
+export type RaceKind = 'race' | 'route'
 
 export interface Race {
   id: string
@@ -415,6 +427,13 @@ export interface Race {
   shareId: string | null
   /** Tracé dessiné sur la carte (points cliqués), pour pouvoir le modifier. */
   drawn: DrawnRoute | null
+  /** Accès assistance à l'arrivée (l'arrivée n'est pas un point de passage enregistré). */
+  finishAccess?: GeoPoint
+  /**
+   * Départ libre (entraînement) : heures calculées pour un départ maintenant, puis calées sur le
+   * vrai départ (mode course, montre) ; l'heure de départ saisie est ignorée.
+   */
+  freeStart?: boolean
   updatedAt: string
 }
 

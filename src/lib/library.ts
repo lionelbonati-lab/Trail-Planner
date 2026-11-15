@@ -1,7 +1,8 @@
-// Bibliothèque de parcours d'entraînement : parcours modèles et séances datées.
+// Bibliothèque de parcours d'entraînement, et passage d'un parcours à une course.
+import { parseGpx } from './gpx'
 import type { Race } from './types'
 
-/** Copie d'une course ou d'une séance en parcours modèle (sans suivi ni partage). */
+/** Copie d'une course en parcours modèle (sans suivi ni partage). */
 export function toRoute(r: Race): Race {
   return {
     ...structuredClone(r),
@@ -14,22 +15,42 @@ export function toRoute(r: Race): Race {
   }
 }
 
-/** Séance datée créée depuis un parcours modèle : le modèle reste intact. */
-export function planSession(route: Race, start: string): Race {
-  const date = new Date(`${start}:00`)
-  const label = Number.isNaN(date.getTime())
-    ? start
-    : date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
+/**
+ * Nouvelle course à partir d'un parcours : copie indépendante (tracé, points de repère, réglages),
+ * sans zones d'allure (une course se calcule à l'intensité de course) ni départ libre.
+ */
+export function raceFromRoute(route: Race, name: string): Race {
   return {
     ...structuredClone(route),
     id: crypto.randomUUID(),
-    kind: 'session',
+    kind: 'race',
+    name: name.trim() || route.name,
     templateId: route.id,
-    name: `${route.name} · ${label}`,
-    env: { ...structuredClone(route.env), start },
+    zones: [],
+    freeStart: false,
     weather: null,
     live: null,
     shareId: null,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+/**
+ * Tracé d'une course remplacé par celui d'un parcours : ses points de passage (ravitos…) et
+ * réglages sont gardés, sauf les points au-delà de la nouvelle distance ; technicité et météo,
+ * liées à l'ancien tracé, sont recalculées.
+ */
+export function replaceRaceTrack(race: Race, route: Race): Race {
+  const total = parseGpx(route.gpxText, route.smoothing).totalDist
+  return {
+    ...race,
+    gpxText: route.gpxText,
+    drawn: route.drawn ? structuredClone(route.drawn) : null,
+    smoothing: route.smoothing,
+    checkpoints: race.checkpoints.filter((c) => c.dist < total - 1),
+    techOverrides: [],
+    osmTech: [],
+    weather: null,
     updatedAt: new Date().toISOString(),
   }
 }
