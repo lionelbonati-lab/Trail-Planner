@@ -32,6 +32,8 @@ Ton plan de course au poignet :
 - **bouton Lap** = passage à un point, estimations recalculées ;
 - passages et position envoyés à ton **assistance**.
 
+Montres : fēnix 5 Plus, 6 Pro, 7, 7 Pro, 8, 9 et E, epix 2, Enduro 2 et 3, Forerunner 255, 265, 955 et 965.
+
 ## EndurancePro
 Type : Champ de données
 Store :

@@ -719,6 +719,13 @@ class TrailPlannerField extends WatchUi.DataField {
         drawLines(dc, lines);
     }
 
+    // Taille du champ rapportée à la hauteur de l'écran (de 240 px sur fēnix 5S Plus à 454 px sur fēnix 8
+    // AMOLED) : 0 petit champ (quart ou tiers d'écran), 1 demi-écran, 2 plein écran.
+    function fieldSize(h as Number) as Number {
+        var r = h.toFloat() / System.getDeviceSettings().screenHeight;
+        return r < 0.32 ? 0 : (r < 0.61 ? 1 : 2);
+    }
+
     function onUpdate(dc as Graphics.Dc) as Void {
         var bg = getBackgroundColor();
         var dark = bg == Graphics.COLOR_BLACK;
@@ -727,7 +734,7 @@ class TrailPlannerField extends WatchUi.DataField {
         var green = dark ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
         dc.setColor(fg, bg);
         dc.clear();
-        var h = dc.getHeight();
+        var size = fieldSize(dc.getHeight());
 
         if (plan == null) {
             drawLines(dc, [[status, Graphics.FONT_XTINY, fg]]);
@@ -752,7 +759,7 @@ class TrailPlannerField extends WatchUi.DataField {
             // Rappel nutrition : produit prévu et eau à boire d'ici le rappel suivant.
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_ORANGE);
             dc.clear();
-            var big = h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL;
+            var big = size > 0 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL;
             if (foodMsg < 0 || foodMsg >= plan.foodP.size()) {
                 drawLines(dc, [["Manger / boire", big, Graphics.COLOR_WHITE]]);
                 return;
@@ -767,7 +774,7 @@ class TrailPlannerField extends WatchUi.DataField {
         }
         if (now < lapMsgUntil) {
             // Tour validé : point de passage noté, estimations recalculées.
-            drawLines(dc, [["Passage", Graphics.FONT_XTINY, fg], [lapMsg, h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, green]]);
+            drawLines(dc, [["Passage", Graphics.FONT_XTINY, fg], [lapMsg, size > 0 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, green]]);
             return;
         }
         if (bagLeg >= 0 && now < bagUntil && dist < bagFrom + 300) {
@@ -806,7 +813,7 @@ class TrailPlannerField extends WatchUi.DataField {
             cutColor = cutWarn ? red : fg;
         }
 
-        if (h < 90) {
+        if (size == 0) {
             // Petit champ (quart d'écran) : écart et ce qui reste jusqu'au prochain point (son nom à la
             // place du dénivelé avec le plan d'une ancienne version).
             var small = [[offRoute || plan.hasClimb() ? toNext : toNext[0] + " · " + nextName, Graphics.FONT_XTINY, toNextColor, 0]];
@@ -817,7 +824,7 @@ class TrailPlannerField extends WatchUi.DataField {
             return;
         }
 
-        if (h < 170) {
+        if (size == 1) {
             // Demi-écran (ex. Enduro 3 : 280 × 140) : écart, prochain point et heure estimée, ce qui reste
             // jusqu'à ce point, [jusqu'à l'arrivée], [barrière horaire proche].
             var est = next >= 0 ? clock(nextEta) : clock(finishEta);

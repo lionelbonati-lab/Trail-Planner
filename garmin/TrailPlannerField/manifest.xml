@@ -7,9 +7,35 @@
             <iq:product id="enduro2"/>
             <iq:product id="enduro3"/>
             <iq:product id="epix2"/>
+            <!-- Famille fēnix : 5 Plus, 6 Pro, 7, 7 Pro, 8, 9 et E. Pas les fēnix 3, 5, 5S, 5X et Chronos
+                 (Connect IQ 3.1 au plus), ni les fēnix 6 et 6S non Pro (32 Ko pour un champ de données). -->
+            <iq:product id="fenix5plus"/>
+            <iq:product id="fenix5splus"/>
+            <iq:product id="fenix5xplus"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
             <iq:product id="fenix7"/>
             <iq:product id="fenix7s"/>
             <iq:product id="fenix7x"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7pronowifi"/>
+            <iq:product id="fenix7spro"/>
+            <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix7xpronowifi"/>
+            <iq:product id="fenix843mm"/>
+            <iq:product id="fenix847mm"/>
+            <iq:product id="fenix8pro47mm"/>
+            <iq:product id="fenix8solar47mm"/>
+            <iq:product id="fenix8solar51mm"/>
+            <iq:product id="fenix943mm"/>
+            <iq:product id="fenix947mm"/>
+            <iq:product id="fenix9pro43mm"/>
+            <iq:product id="fenix9pro47mm"/>
+            <iq:product id="fenix9pro51mm"/>
+            <iq:product id="fenix9prosolar47mm"/>
+            <iq:product id="fenix9prosolar51mm"/>
+            <iq:product id="fenixe"/>
             <iq:product id="fr255"/>
             <iq:product id="fr265"/>
             <iq:product id="fr955"/>

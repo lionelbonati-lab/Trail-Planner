@@ -89,11 +89,24 @@ touche ⌚ sur une autre : la montre la récupère d'elle-même.
    + le profil de ta montre).
 2. Installe **VS Code** et l'extension **Monkey C** (Garmin), puis « Monkey C: Generate a Developer Key ».
 3. Ouvre le dossier `garmin/TrailPlannerField`.
-4. Ta montre doit figurer dans `manifest.xml` (`<iq:products>`, l'Enduro 3 y est : `enduro3`).
-   Sinon : « Monkey C: Edit Products ».
+4. Ta montre doit figurer dans `manifest.xml` (`<iq:products>`). Montres prévues : **Enduro 2 et 3**,
+   **epix 2**, **Forerunner 255, 265, 955 et 965**, et la famille **fēnix** :
+   - fēnix 5 Plus, 5S Plus, 5X Plus (`fenix5plus`, `fenix5splus`, `fenix5xplus`) ;
+   - fēnix 6 Pro, 6S Pro, 6X Pro, Solar et Sapphire compris (`fenix6pro`, `fenix6spro`, `fenix6xpro`) ;
+   - fēnix 7, 7S, 7X et 7 Pro, 7S Pro, 7X Pro (`fenix7`, `fenix7s`, `fenix7x`, `fenix7pro`, `fenix7spro`,
+     `fenix7xpro`, et `fenix7pronowifi`, `fenix7xpronowifi` pour les Pro sans Wi-Fi) ;
+   - fēnix 8 AMOLED 43 et 47/51 mm, 8 Solar 47 et 51 mm, 8 Pro (`fenix843mm`, `fenix847mm`,
+     `fenix8solar47mm`, `fenix8solar51mm`, `fenix8pro47mm`) ;
+   - fēnix 9, 9 Pro, 9 Pro Solar (`fenix943mm`, `fenix947mm`, `fenix9pro43mm`, `fenix9pro47mm`,
+     `fenix9pro51mm`, `fenix9prosolar47mm`, `fenix9prosolar51mm`) et fēnix E (`fenixe`).
+
+   Pas de fēnix 3, 5, 5S, 5X ni Chronos (Connect IQ 3.1 au plus, il faut la 3.2), ni de fēnix 6 et 6S
+   sans « Pro » (32 Ko de mémoire pour un champ de données : trop peu pour le plan et le tracé). Pour une
+   autre montre : « Monkey C: Edit Products ».
 5. « Monkey C: Build for Device » → choisis ta montre → un fichier `.prg` est créé dans `bin/`.
 
-Pour essayer sans montre : « Monkey C: Run » lance le simulateur. Charge un parcours (*Simulation →
+Pour essayer sans montre : « Monkey C: Run » lance le simulateur (fēnix 5 Plus et 6 Pro : vérifie-y aussi
+la mémoire de la tâche de fond, 32 Ko sur ces montres, avec le plan d'un ultra). Charge un parcours (*Simulation →
 Activity Data → FIT/GPX*) et règle le code via *File → Edit Persistent Storage / Application Properties*.
 
 ## 3. Installer et régler
