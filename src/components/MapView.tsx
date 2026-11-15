@@ -1,3 +1,4 @@
+import { isRavitoKind } from '../lib/splits'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEffect, useRef } from 'react'
@@ -76,7 +77,7 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     g.clearLayers()
     for (const s of splits) {
       const p = track.points[indexAt(track.points, s.to)]
-      const ravito = s.cp.kind === 'ravito'
+      const ravito = isRavitoKind(s.cp.kind)
       L.circleMarker([p.lat, p.lon], {
         radius: ravito ? 7 : 4,
         color: ravito ? '#ffffff' : '#1f2420',

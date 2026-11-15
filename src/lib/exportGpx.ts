@@ -9,6 +9,7 @@ function esc(s: string): string {
 function garminSymbol(kind: string): string {
   switch (kind) {
     case 'ravito':
+    case 'base':
       return 'Food'
     case 'cutoff':
       return 'Danger Area'

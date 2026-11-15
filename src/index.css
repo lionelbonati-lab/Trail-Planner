@@ -588,3 +588,7 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .assist-ctl { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
 .assist-check { display: inline-flex; align-items: center; gap: 6px; padding: 4px; }
 .assist-ctl button.ghost { padding: 4px 6px; }
+
+/* Base de vie : comme un ravito, teinte plus marquée. */
+.splits tr.kind-base { background: #fbe6d6; }
+.split-card.kind-base { background: #fbe6d6; border-color: #eec3a3; }

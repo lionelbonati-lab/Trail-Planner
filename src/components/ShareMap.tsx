@@ -1,6 +1,7 @@
 // Carte en direct de la page d'assistance : partie déjà courue en gris, reste du parcours en
 // magenta, points de passage (cochés une fois passés) et position du coureur, qui clignote.
 // Chargée à la demande (Leaflet) pour garder la page légère.
+import { isRavitoKind } from '../lib/splits'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { LocateFixed, Maximize2 } from 'lucide-react'
@@ -93,7 +94,7 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
     g.clearLayers()
     for (const p of points) {
       const at = routePointAt(stable, p.dist)
-      const ravito = p.kind === 'ravito'
+      const ravito = isRavitoKind(p.kind)
       L.circleMarker([at.lat, at.lon], {
         radius: ravito ? 7 : 5,
         color: '#ffffff',

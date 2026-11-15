@@ -60,11 +60,17 @@ export function simplify(pts: [number, number][], tol: number): [number, number]
   return pts.filter((_, i) => keep[i])
 }
 
-const KIND: Record<string, string> = { ravito: 'r', split: 's', cutoff: 'c', info: 'i' }
+// Base de vie : « r » comme un ravito (la montre la traite comme un ravito).
+const KIND: Record<string, string> = { ravito: 'r', base: 'r', split: 's', cutoff: 'c', info: 'i' }
 
 /** Nom sans séparateurs, tronqué pour l'écran de la montre. */
 function clean(name: string, max: number): string {
   return name.replace(/[|\n\r]/g, ' ').trim().slice(0, max)
+}
+
+/** Libellés longs abrégés pour la montre (16 caractères) : « Base de vie km 20.0 » → « BV km 20.0 ». */
+function pointName(name: string): string {
+  return clean(name.trim().replace(/^Base de vie\b/i, 'BV').replace(/^Point inter\b/i, 'Pt inter'), 16)
 }
 
 /** Intervalle des rappels nutrition (min) : un gel de ~25 g au rythme de glucides visé. */
@@ -92,7 +98,7 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
     `K|${K}`,
     ...sim.splits.map((s) => {
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
-      return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${clean(s.cp.name, 16)}|${Math.round(s.cp.stopMin * 60)}`
+      return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}`
     }),
     ...foodLines(nutritionPlan(race, sim, athlete.products), sim.splits),
   ]

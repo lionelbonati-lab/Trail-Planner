@@ -24,7 +24,7 @@ import {
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { bagText, nutritionPlan } from '../lib/nutrition'
+import { bagText, dropbagPlan, dropbagText, nutritionPlan } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
@@ -34,7 +34,7 @@ import { isDefaultLevel } from '../lib/level'
 import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, waypointCheckpoints, withKind, type AutoSplitMethod } from '../lib/splits'
+import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, setStops, waypointCheckpoints, withKind, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
@@ -150,17 +150,37 @@ export function RacePlan({
   // Clic sur le profil : fin de cycle (zones, parcours) ou ajout d'un point (repère / ravito).
   const [clickMode, setClickMode] = useState<'cycle' | 'point'>(race.kind === 'route' ? 'cycle' : 'point')
   // Course : type du point ajouté d'un clic sur le profil ou sur la carte.
-  const [clickKind, setClickKind] = useState<'ravito' | 'split' | 'cutoff'>('ravito')
+  const [clickKind, setClickKind] = useState<'ravito' | 'base' | 'split' | 'cutoff'>('ravito')
+  /**
+   * Changement de type : renommage (voir withKind) ; passage en base de vie : arrêt de 20 min et
+   * dropbag prévus d'office s'ils n'étaient pas réglés ; retour d'une base de vie : arrêt par défaut
+   * du nouveau type si celui de la base n'avait pas été changé.
+   */
+  const kindPatch = (cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoint> => ({
+    ...withKind(cp, kind),
+    ...(kind === 'base' && cp.kind !== 'base'
+      ? { ...(cp.stopMin <= defaultStop(cp.kind) ? { stopMin: defaultStop('base') } : {}), ...(cp.dropbag === undefined ? { dropbag: true } : {}) }
+      : {}),
+    ...(cp.kind === 'base' && kind !== 'base' && cp.stopMin === defaultStop('base') ? { stopMin: defaultStop(kind) } : {}),
+  })
   /** Clic sur le profil ou la carte : repère (parcours) ou point du type choisi (course). */
   const pickPoint = (d: number) => addPoint(d, isRoute ? 'info' : clickKind)
   // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
-  const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1329px)')
+  const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1399px)')
   const [editing, setEditing] = useState<string | null>(null)
   // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
   const [bulkStop, setBulkStop] = useState<number | null>(null)
   const [showMap, setShowMap] = useState(true)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
+  /** Case « dropbag » d'un ravito ou d'une base de vie (dropbag prévu par l'organisation). */
+  const dropbagOf = (cp: Checkpoint, labels = false) =>
+    isRavitoKind(cp.kind) ? (
+      <label className="assist-check" title="Dropbag prévu par l'organisation à ce point">
+        <input type="checkbox" checked={!!cp.dropbag} onChange={(e) => setCp(cp.id, { dropbag: e.target.checked })} aria-label={`Dropbag à ${cp.name}`} />
+        {labels && <span>Dropbag</span>}
+      </label>
+    ) : null
   /** Assistance d'un point (coche et accès), dans les temps de passage d'une course. */
   const assistOf = (cp: Checkpoint, labels = false) => {
     const finish = cp.id === FINISH_ID
@@ -235,12 +255,14 @@ export function RacePlan({
       dist: Math.round(dist),
       name: name ?? checkpointName(kind, dist),
       kind,
-      stopMin: kind === 'ravito' ? 3 : 0,
+      stopMin: defaultStop(kind),
       cutoff: '',
       water: 0,
       carbs: 0,
       notes: '',
       auto: false,
+      // Base de vie : dropbag prévu d'office (à décocher si l'organisation n'en prévoit pas).
+      ...(kind === 'base' ? { dropbag: true } : {}),
     }
     // Un point manuel remplace un point auto trop proche (moins de 300 m).
     const kept = race.checkpoints.filter((c) => !(c.auto && Math.abs(c.dist - cp.dist) < 300))
@@ -257,6 +279,8 @@ export function RacePlan({
   const importWaypoints = () => set({ checkpoints: [...race.checkpoints, ...newWaypoints].sort((a, b) => a.dist - b.dist) })
 
   const legs = nutritionPlan(race, sim, athlete.products)
+  // Dropbags prévus par l'organisation (course) : contenu jusqu'au suivant.
+  const dropbags = isRoute ? [] : dropbagPlan(legs, sim.splits.map((s) => s.cp))
   const parts = partition(race.zones, track.totalDist)
   // Reporte eau et glucides de chaque tronçon sur le point de départ correspondant.
   const fillNutrition = () => {
@@ -328,7 +352,7 @@ export function RacePlan({
       }),
     [sim.splits, race.finishAccess, track],
   )
-  const ravitos = sim.splits.filter((s) => s.cp.kind === 'ravito')
+  const ravitos = sim.splits.filter((s) => isRavitoKind(s.cp.kind))
   // Arrêt commun : à chaque ravito d'une course, à chaque point d'un parcours.
   const stopKind = isRoute ? null : 'ravito'
   const stopCount = race.checkpoints.filter((c) => isRoute || c.kind === 'ravito').length
@@ -523,7 +547,7 @@ export function RacePlan({
             <div className="row profile-tools">
               <span className="muted small">Clic sur le profil ou la carte :</span>
               <span className="click-mode" role="group" aria-label="Type du point ajouté d'un clic">
-                {(['ravito', 'split', 'cutoff'] as const).map((k) => (
+                {(['ravito', 'base', 'split', 'cutoff'] as const).map((k) => (
                   <button key={k} className={clickKind === k ? 'on' : ''} onClick={() => setClickKind(k)} aria-pressed={clickKind === k}>
                     <Plus /> {KIND_LABELS[k]}
                   </button>
@@ -934,7 +958,12 @@ export function RacePlan({
                       </div>
                     )}
                     {cp.notes && !open && <div className="small">{cp.notes}</div>}
-                    {!isRoute && <div>{assistOf(cp, true)}</div>}
+                    {!isRoute && (
+                      <div className="row tight">
+                        {assistOf(cp, true)}
+                        {dropbagOf(cp, true)}
+                      </div>
+                    )}
                     {!isFinish && (
                       <button className="ghost" onClick={() => setEditing(open ? null : cp.id)}>{open ? 'Fermer' : 'Modifier'}</button>
                     )}
@@ -942,7 +971,7 @@ export function RacePlan({
                       <div className="fields">
                         <label className="field">
                           <span className="field-label">Type</span>
-                          <select value={cp.kind} onChange={(e) => setCp(cp.id, withKind(cp, e.target.value as CheckpointKind))}>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, kindPatch(cp, e.target.value as CheckpointKind))}>
                             {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                           </select>
                         </label>
@@ -991,6 +1020,7 @@ export function RacePlan({
                   {!isRoute && <th>Barrière</th>}
                   {!isRoute && <th>Eau / Glu.</th>}
                   {!isRoute && <th title="Assistance autorisée à ce point, et son accès placé sur la carte">Assist.</th>}
+                  {!isRoute && <th title="Dropbag prévu par l'organisation à ce point (ravito ou base de vie)">Dropbag</th>}
                   <th>Notes</th>
                   <th />
                 </tr>
@@ -1003,7 +1033,7 @@ export function RacePlan({
                     <tr key={cp.id} className={`${s.night ? 'is-night' : ''} kind-${cp.kind} ${cp.auto ? 'is-auto' : ''}`}>
                       <td>
                         {isFinish ? 'Arrivée' : (
-                          <select value={cp.kind} onChange={(e) => setCp(cp.id, withKind(cp, e.target.value as CheckpointKind))}>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, kindPatch(cp, e.target.value as CheckpointKind))}>
                             {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                           </select>
                         )}
@@ -1050,6 +1080,7 @@ export function RacePlan({
                         </td>
                       )}
                       {!isRoute && <td>{assistOf(cp)}</td>}
+                      {!isRoute && <td>{dropbagOf(cp)}</td>}
                       <td>{!isFinish && <input type="text" className="wide" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
                       <td>{!isFinish && <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })} aria-label="Supprimer"><Trash2 /></button>}</td>
                     </tr>
@@ -1061,7 +1092,8 @@ export function RacePlan({
           )}
           {!isRoute && (
             <Hint>
-              Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant. Assistance : coche les points où elle a le droit de
+              Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant. Dropbag : coche les ravitos et bases de vie où l'organisation
+              transporte ton sac (son contenu est dans le plan nutrition et sur la feuille A4). Assistance : coche les points où elle a le droit de
               venir (ils forment son trajet sur la page assistance) ; <MapPin className="inline" /> place son accès (parking, salle du ravito) sur
               la carte, destination de son lien GPS.
             </Hint>
@@ -1090,6 +1122,30 @@ export function RacePlan({
             </table>
           </div>
           <Hint>Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant).</Hint>
+          {dropbags.length > 0 && (
+            <>
+              <h3>Dropbags</h3>
+              <div className="scroll">
+                <table className="table">
+                  <thead>
+                    <tr><th>Dropbag</th><th>Jusqu'à</th><th>Durée</th><th>Glucides</th><th>À mettre dans le sac</th></tr>
+                  </thead>
+                  <tbody>
+                    {dropbags.map((b) => (
+                      <tr key={b.id}>
+                        <td>{b.name}</td>
+                        <td>{b.until}</td>
+                        <td>{formatDuration(b.duration)}</td>
+                        <td>{b.carbs} g</td>
+                        <td>{dropbagText(b)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Hint>Produits de ton plan nutrition de chaque dropbag jusqu'au suivant (ou l'arrivée), en plus de ce que donnent les ravitos.</Hint>
+            </>
+          )}
         </Card>
       </div>
 
