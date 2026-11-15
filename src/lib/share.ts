@@ -30,6 +30,8 @@ export interface ShareRow {
   access?: boolean
   /** Assistance autorisée à ce point. */
   assist?: boolean
+  /** Dropbag prévu par l'organisation à ce point. */
+  dropbag?: boolean
 }
 
 export interface ShareSnapshot {
@@ -110,6 +112,7 @@ export function buildSnapshot(
         eta: iso(row?.eta ?? s.arrival),
         ...navTarget(s.cp.access ?? (s.cp.id === FINISH_ID ? race.finishAccess : undefined), track, s.to),
         assist: assistAllowed(s.cp),
+        ...(s.cp.dropbag ? { dropbag: true } : {}),
       }
     }),
   }

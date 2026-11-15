@@ -1,7 +1,7 @@
 import { isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Map as MapIcon, Mountain, Navigation, Radio, Route } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
@@ -557,31 +557,100 @@ function AssistTrip({
   )
 }
 
+/**
+ * Profil de la page assistance : nom des points (inclinés, sans chevauchement : assistance
+ * autorisée et dropbags prioritaires), marqueurs assistance / dropbag et position du coureur.
+ */
 function MiniProfile({ profile, rows, position }: { profile: [number, number][]; rows: ShareSnapshot['rows']; position: number | null }) {
+  // Rendu à l'échelle 1 (largeur mesurée) : texte lisible aussi sur téléphone.
+  const wrap = useRef<HTMLDivElement>(null)
+  const [W, setW] = useState(900)
+  useEffect(() => {
+    const el = wrap.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([e]) => setW(Math.max(300, Math.round(e.contentRect.width))))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   if (profile.length < 2) return null
-  const W = 900
-  const H = 120
+  const T = 92
+  const H = T + 120
   const total = profile[profile.length - 1][0] || 1
   const eles = profile.map((p) => p[1])
   const lo = Math.min(...eles)
   const hi = Math.max(...eles)
   const x = (d: number) => 8 + (d / total) * (W - 16)
-  const y = (e: number) => H - 8 - ((e - lo) / (hi - lo || 1)) * (H - 24)
+  const y = (e: number) => H - 8 - ((e - lo) / (hi - lo || 1)) * (H - T - 16)
   const line = profile.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('')
   const eleAt = (d: number) => profile.reduce((best, p) => (Math.abs(p[0] - d) < Math.abs(best[0] - d) ? p : best))[1]
+  // Étiquettes inclinées à 40° : vers la droite, ou vers la gauche si elles déborderaient du bord.
+  // On saute celles qui chevaucheraient une autre (assistance, dropbag, ravitos d'abord).
+  const short = (n: string) => (n.length > 20 ? `${n.slice(0, 19)}…` : n)
+  const reach = (n: string) => short(n).length * 7 * Math.cos((40 * Math.PI) / 180)
+  const rank = (r: (typeof rows)[number]) => (r.assist ? 4 : 0) + (r.dropbag ? 2 : 0) + (isRavitoKind(r.kind) ? 1 : 0)
+  const shown = new Map<string, boolean>()
+  const taken: { x: number; flip: boolean; reach: number }[] = []
+  for (const r of [...rows].sort((a, b) => rank(b) - rank(a))) {
+    const xx = x(r.dist)
+    const ext = reach(r.name)
+    const flip = xx + ext > W - 4
+    const clash = taken.some((t) => {
+      if (Math.abs(t.x - xx) < 15) return true
+      // Deux étiquettes qui convergent (droite à gauche, gauche à droite) se croisent à mi-chemin.
+      const [left, right] = t.x < xx ? [t, { flip, reach: ext, x: xx }] : [{ flip, reach: ext, x: xx }, t]
+      return !left.flip && right.flip && right.x - left.x < 2 * Math.min(left.reach, right.reach)
+    })
+    if (!clash) {
+      taken.push({ x: xx, flip, reach: ext })
+      shown.set(r.id, flip)
+    }
+  }
+  const hasAssist = rows.some((r) => r.assist)
+  const hasBag = rows.some((r) => r.dropbag)
   return (
-    <svg className="profile" viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img" aria-label="Profil du parcours">
-      <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
-      <path d={line} className="line" />
-      {rows.map((r) => (
-        <circle key={r.id} cx={x(r.dist)} cy={y(eleAt(r.dist))} r={isRavitoKind(r.kind) ? 4 : 2.5} className={r.actual ? 'done-dot' : isRavitoKind(r.kind) ? 'ravito-dot' : 'cp-dot'} />
-      ))}
-      {position !== null && (
-        <g className="me">
-          <line x1={x(position)} x2={x(position)} y1={8} y2={H - 8} />
-          <circle cx={x(position)} cy={y(eleAt(position))} r={6} />
-        </g>
+    <div className="assist-profile" ref={wrap}>
+      <svg className="profile" viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img" aria-label="Profil du parcours">
+        <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
+        <path d={line} className="line" />
+        {rows.map((r) => {
+          const xx = x(r.dist)
+          const yy = y(eleAt(r.dist))
+          const label = shown.has(r.id)
+          const flip = !!shown.get(r.id)
+          return (
+            <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''}`}>
+              <title>{`${r.name} · km ${(r.dist / 1000).toFixed(1)}${r.assist ? ' · assistance autorisée' : ''}${r.dropbag ? ' · dropbag' : ''}`}</title>
+              {label && <line className="mp-stem" x1={xx} x2={xx} y1={T - 4} y2={yy} />}
+              {r.assist && <circle className="assist-ring" cx={xx} cy={yy} r={7} />}
+              <circle cx={xx} cy={yy} r={isRavitoKind(r.kind) ? 4 : 2.5} className={r.actual ? 'done-dot' : isRavitoKind(r.kind) ? 'ravito-dot' : 'cp-dot'} />
+              {r.dropbag && <rect className="bag-mark" x={xx - 4} y={T - 12} width={8} height={8} rx={1.5} />}
+              {label && (
+                <text
+                  x={xx + (flip ? -2 : 2)}
+                  y={T - 16}
+                  textAnchor={flip ? 'end' : 'start'}
+                  transform={`rotate(${flip ? 40 : -40} ${xx + (flip ? -2 : 2)} ${T - 16})`}
+                  className={`cp-label ${r.assist ? 'strong' : ''}`}
+                >
+                  {short(r.name)}
+                </text>
+              )}
+            </g>
+          )
+        })}
+        {position !== null && (
+          <g className="me">
+            <line x1={x(position)} x2={x(position)} y1={T - 4} y2={H - 8} />
+            <circle cx={x(position)} cy={y(eleAt(position))} r={6} />
+          </g>
+        )}
+      </svg>
+      {(hasAssist || hasBag) && (
+        <div className="mp-legend muted small">
+          {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
+          {hasBag && <span><i className="lg-bag" /> Dropbag</span>}
+        </div>
       )}
-    </svg>
+    </div>
   )
 }

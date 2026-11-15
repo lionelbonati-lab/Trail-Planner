@@ -49,6 +49,21 @@ describe('page assistance', () => {
     expect(html).toContain('class="me"')
   })
 
+  it('profil : nom des points, assistance autorisée et dropbags', () => {
+    const r2 = { ...race, checkpoints: race.checkpoints.map((c) => (c.id === 'a' ? { ...c, dropbag: true } : c)) }
+    const p2 = computePlan(r2, athlete)!
+    const s2 = buildSnapshot('uid', r2, athlete, p2.track, p2.sim, scenarioWindows(p2.track, athlete, p2.opts))
+    expect(s2.rows[0].dropbag).toBe(true)
+    expect(s2.rows[1].dropbag).toBeUndefined()
+    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} />)
+    const svg = html.slice(html.indexOf('assist-profile'), html.indexOf('mp-legend'))
+    for (const r of s2.rows) expect(svg).toContain(`>${r.name}</text>`)
+    expect(svg.match(/class="assist-ring"/g)).toHaveLength(s2.rows.filter((r) => r.assist).length)
+    expect(svg.match(/class="bag-mark"/g)).toHaveLength(1)
+    expect(html).toContain('Assistance autorisée')
+    expect(html).toContain('Dropbag')
+  })
+
   it('navigation : lien par point (accès assistance s’il est placé) et trajet entre les points cochés', () => {
     const r2 = { ...race, checkpoints: race.checkpoints.map((c) => (c.id === 'a' ? { ...c, access: { lat: 45.05, lon: 6.012 } } : c)) }
     const p2 = computePlan(r2, athlete)!
