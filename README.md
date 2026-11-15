@@ -127,7 +127,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **D′** : relances en montée tant que le D′ le permet (bilan W′bal).
 - **Fourchette** bonne journée / prévu / journée difficile pour chaque point.
 - Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires (arrivée comprise),
-  **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits).
+  **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits). Eau en
+  **flasques de 500 ml** : toujours une d'eau et une d'isotonique (produit coché « Flasque » dans le profil),
+  puis une de plus par 500 ml commencés en alternant eau et isotonique (1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2),
+  quantité réelle toujours affichée ; glucides et sodium de l'isotonique déduits, gels et barres complètent ;
+  alerte au-delà de 4 flasques (remplir en route).
 - Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 

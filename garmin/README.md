@@ -14,7 +14,8 @@ ClimbPro et PacePro continuent de fonctionner) :
 - **rappels nutrition** : le **produit prévu** (« Gel », « Barre »…) et l'eau à boire (vibration + écran
   30 s) ; les produits du plan nutrition sont répartis équitablement sur chaque tronçon entre deux ravitos ;
 - **à l'arrivée à un ravito** : écran « À emporter » (eau, produits, sel jusqu'au ravito suivant), comme la
-  colonne « À emporter » du plan nutrition ;
+  colonne « À emporter » du plan nutrition ; l'eau en quantité réelle et en flasques de 500 ml
+  (« 1.1 L : 2 eau + 1 iso », l'isotonique n'étant alors plus répété dans les produits) ;
 - avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une **course** seulement
   (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ;
 - **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton

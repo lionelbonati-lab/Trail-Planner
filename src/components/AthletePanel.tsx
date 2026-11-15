@@ -1,5 +1,6 @@
 import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { averageIntensity } from '../lib/model'
+import { isFlask } from '../lib/nutrition'
 import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES } from '../lib/defaults'
 import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
@@ -292,11 +293,14 @@ export function AthletePanel({
       <Card title="Produits de nutrition" className="span2">
         <Hint>
           Tes produits habituels et la part des glucides que chacun apporte : le plan nutrition de chaque course en déduit
-          le nombre de gels, flasques ou barres à emporter entre deux ravitos.
+          le nombre de gels ou barres à emporter entre deux ravitos. Coche « Flasque » pour ta boisson isotonique (poudre
+          pour 500 ml d'eau) : toujours une flasque d'eau et une d'isotonique par tronçon, une de plus par 500 ml d'eau
+          commencés (en alternant eau et isotonique), ses glucides et son sodium déduits du plan. Au-delà de 4 flasques,
+          le plan signale qu'il faut remplir en route.
         </Hint>
         <table className="table compact">
           <thead>
-            <tr><th>Produit</th><th>Glucides (g)</th><th>Sodium (mg)</th><th>Part des glucides (%)</th><th /></tr>
+            <tr><th>Produit</th><th>Glucides (g)</th><th>Sodium (mg)</th><th>Flasque</th><th>Part des glucides (%)</th><th /></tr>
           </thead>
           <tbody>
             {athlete.products.map((p, i) => {
@@ -306,19 +310,29 @@ export function AthletePanel({
                   <td><input type="text" value={p.name} onChange={(e) => setP({ name: e.target.value })} /></td>
                   <td><Num value={p.carbs} width={70} min={0} onChange={(v) => setP({ carbs: v })} /></td>
                   <td><Num value={p.sodium} width={70} min={0} onChange={(v) => setP({ sodium: v })} /></td>
-                  <td><Num value={p.share} scale={100} width={70} min={0} max={100} onChange={(v) => setP({ share: v })} /></td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={isFlask(p)}
+                      aria-label={`${p.name} en flasque`}
+                      title="Boisson isotonique en flasque de 500 ml"
+                      onChange={(e) => set('products', athlete.products.map((x, j) => ({ ...x, flask: j === i ? e.target.checked : e.target.checked ? false : isFlask(x) })))}
+                    />
+                  </td>
+                  <td>{isFlask(p) ? <span className="muted">selon l’eau</span> : <Num value={p.share} scale={100} width={70} min={0} max={100} onChange={(v) => setP({ share: v })} />}</td>
                   <td><button className="ghost" onClick={() => set('products', athlete.products.filter((_, j) => j !== i))} aria-label="Supprimer"><Trash2 /></button></td>
                 </tr>
               )
             })}
             <tr>
-              <td colSpan={5}>
+              <td colSpan={6}>
                 <button className="ghost" onClick={() => set('products', [...athlete.products, { id: crypto.randomUUID(), name: 'Nouveau produit', carbs: 25, sodium: 0, share: 0 }])}>
                   <Plus /> Ajouter un produit
                 </button>
-                {Math.abs(athlete.products.reduce((a, p) => a + p.share, 0) - 1) > 0.01 && (
-                  <span className="warn-text"> La somme des parts fait {Math.round(athlete.products.reduce((a, p) => a + p.share, 0) * 100)} % (elle est ramenée à 100 %).</span>
-                )}
+                {(() => {
+                  const sum = athlete.products.filter((p) => !isFlask(p)).reduce((a, p) => a + p.share, 0)
+                  return Math.abs(sum - 1) > 0.01 ? <span className="warn-text"> La somme des parts fait {Math.round(sum * 100)} % (elle est ramenée à 100 %).</span> : null
+                })()}
               </td>
             </tr>
           </tbody>

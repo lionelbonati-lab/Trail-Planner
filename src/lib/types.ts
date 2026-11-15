@@ -192,8 +192,14 @@ export interface Product {
   carbs: number
   /** Sodium par unité (mg). */
   sodium: number
-  /** Part des glucides apportée par ce produit (0–1). */
+  /** Part des glucides apportée par ce produit (0–1) ; ignorée pour la boisson en flasque. */
   share: number
+  /**
+   * Boisson isotonique en flasque de 500 ml (poudre mélangée à 5 dl d'eau) : son nombre suit l'eau du
+   * tronçon (voir flaskSplit), ses glucides et son sodium sont déduits du plan. Par défaut : le produit
+   * « boisson » des profils.
+   */
+  flask?: boolean
 }
 
 export interface TrainingZone {
