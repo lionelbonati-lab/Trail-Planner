@@ -1,4 +1,5 @@
 import { newRace } from './defaults'
+import { athleteKme } from './endurancepro'
 import { parseGpx } from './gpx'
 import { scenarioInputs, simulate, withFinish, type SimOptions } from './model'
 import type { Athlete, PaceZone, Race, SimResult, Track } from './types'
@@ -12,10 +13,10 @@ export function isFreeStart(race: Pick<Race, 'kind' | 'freeStart'>): boolean {
 }
 
 /** Options de simulation d'une course planifiée (équivalences km-effort : celles du profil). */
-export function planOptions(race: Race, track: Track, athlete: Pick<Athlete, 'kme'>): SimOptions {
+export function planOptions(race: Race, track: Track, athlete: Pick<Athlete, 'vam' | 'cs' | 'descent' | 'kme' | 'kmeAuto'>): SimOptions {
   return {
     mode: race.mode,
-    kme: athlete.kme,
+    kme: athleteKme(athlete),
     env: race.env,
     checkpoints: withFinish(race, track),
     techOverrides: race.techOverrides,

@@ -6,8 +6,9 @@ import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
 import { VAM_ZONE_COUNT, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
 import { colorForIndex } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
+import { athleteKme, autoKme } from '../lib/endurancepro'
 import { LevelCard } from './LevelCard'
-import { Card, Hint, Num, PaceField } from './ui'
+import { Card, Hint, Num, PaceField, Toggle } from './ui'
 
 export function AthletePanel({
   athlete,
@@ -20,6 +21,9 @@ export function AthletePanel({
   races?: Race[]
 }) {
   const set = <K extends keyof Athlete>(k: K, v: Athlete[K]) => onChange({ ...athlete, [k]: v })
+  // Équivalences du km-effort : automatiques (VAM et descente) sauf si décochées.
+  const kmeAuto = athlete.kmeAuto !== false
+  const kme = athleteKme(athlete)
   const setDur = (patch: Partial<Durability>) => set('durability', { ...athlete.durability, ...patch })
   const d = athlete.durability
   // Zones cardiaques : les bpm sont recalculés à chaque changement de méthode, de FC ou de %.
@@ -46,30 +50,53 @@ export function AthletePanel({
             min={0}
             max={60}
           />
-          <Num
-            label="1 km-effort = D+ de"
-            value={athlete.kme.upPer1km}
-            onChange={(v) => set('kme', { ...athlete.kme, upPer1km: Math.max(1, v) })}
-            unit="m"
-            min={1}
-            title="Mètres de D+ comptés comme 1 km à plat (100 m par défaut)"
-          />
-          <Num
-            label="1 km-effort = D− de"
-            value={athlete.kme.downPer1km}
-            onChange={(v) => set('kme', { ...athlete.kme, downPer1km: Math.max(0, v) })}
-            unit="m"
-            min={0}
-            title="Mètres de D− comptés comme 1 km à plat ; 0 = D− ignoré"
-          />
+          {kmeAuto ? (
+            <>
+              <div className="field">
+                <span className="field-label">1 km-effort = D+ de</span>
+                <span><strong>{kme.upPer1km} m</strong> <span className="muted small">auto</span></span>
+              </div>
+              <div className="field">
+                <span className="field-label">1 km-effort = D− de</span>
+                <span>{kme.downPer1km > 0 ? <strong>{kme.downPer1km} m</strong> : <strong>ignoré</strong>} <span className="muted small">auto</span></span>
+              </div>
+            </>
+          ) : (
+            <>
+              <Num
+                label="1 km-effort = D+ de"
+                value={athlete.kme.upPer1km}
+                onChange={(v) => set('kme', { ...athlete.kme, upPer1km: Math.max(1, v) })}
+                unit="m"
+                min={1}
+                title="Mètres de D+ comptés comme 1 km à plat"
+              />
+              <Num
+                label="1 km-effort = D− de"
+                value={athlete.kme.downPer1km}
+                onChange={(v) => set('kme', { ...athlete.kme, downPer1km: Math.max(0, v) })}
+                unit="m"
+                min={0}
+                title="Mètres de D− comptés comme 1 km à plat ; 0 = D− ignoré"
+              />
+            </>
+          )}
         </div>
+        <Toggle
+          label="Équivalences km-effort automatiques"
+          checked={kmeAuto}
+          onChange={(v) => onChange({ ...athlete, kmeAuto: v, kme: v ? athlete.kme : autoKme(athlete) })}
+        />
         <Hint>
           VC = {(athlete.cs * 3.6).toFixed(2)} km/h. Au-delà du seuil de marche, le calcul utilise ta vitesse
           ascensionnelle ; en dessous, la course en côte suit le coût énergétique de Minetti.
         </Hint>
         <Hint>
-          Équivalences du km-effort (D− : 0 = ignoré) : elles servent, pour toutes tes courses et tous tes parcours, aux km-e affichés, au
-          mode de calcul « Km-effort » et aux points automatiques « tous les X km-effort ».
+          Équivalences du km-effort : elles servent, pour toutes tes courses et tous tes parcours, aux km-e affichés, au mode de calcul
+          « Km-effort » et aux points automatiques « tous les X km-effort ».{' '}
+          {kmeAuto
+            ? 'Automatiques : D+ d’après ta vitesse ascensionnelle à VC, D− d’après tes coefficients de descente (même calcul que pour EndurancePro, qui plafonne la descente à 800 m ; ici, pas de plafond). Elles suivent tes mesures.'
+            : 'Valeurs saisies (D− : 0 = ignoré). Recoche « automatiques » pour les calculer d’après ta VAM et ta descente.'}
         </Hint>
       </Card>
 

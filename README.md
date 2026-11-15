@@ -38,8 +38,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, point
   intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom choisi est gardé) ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
-  Équivalences du km-effort (m de D+ et de D− pour 1 km) réglées une fois dans le profil athlète, pour toutes
-  les courses et tous les parcours.
+  Équivalences du km-effort (m de D+ et de D− pour 1 km) dans le profil athlète, pour toutes les courses et
+  tous les parcours : **automatiques** par défaut (D+ d'après la VAM à VC, D− d'après les coefficients de
+  descente, même calcul que pour EndurancePro mais sans son plafond de 800 m pour le D−), ou saisies.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
 - **Courses et parcours séparés** : une course prépare ravitos, barrières, eau/glucides, assistance et lien de

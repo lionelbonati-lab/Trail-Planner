@@ -71,7 +71,8 @@ describe('équivalences du km-effort : celles du profil', () => {
     const pts: string[] = []
     for (let d = 0; d <= 10000; d += 20) pts.push(`<trkpt lat="${45 + d / 111195}" lon="6"><ele>${500 + (d <= 5000 ? d / 10 : (10000 - d) / 10)}</ele></trkpt>`)
     const race = { ...newRace('Bosse', `<gpx><trk><trkseg>${pts.join('')}</trkseg></trk></gpx>`), kme: { upPer1km: 50, downPer1km: 50 } }
-    const base = normalizeAthlete(DEFAULT_ATHLETE)
+    // Valeurs saisies (équivalences automatiques décochées).
+    const base = { ...normalizeAthlete(DEFAULT_ATHLETE), kmeAuto: false }
     expect(base.kme).toEqual({ upPer1km: 100, downPer1km: 0 })
     const kmeOf = (a: typeof base) => computePlan(race, a)!.sim.splits.reduce((t, s) => t + s.kme, 0)
     // 10 km et 500 m de D+ / D− (lissage de l'altitude : un peu moins).
