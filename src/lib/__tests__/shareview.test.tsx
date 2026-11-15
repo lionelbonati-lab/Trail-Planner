@@ -69,6 +69,14 @@ describe('page assistance', () => {
     expect(hb).toContain('Base de vie')
   })
 
+  it('profil : défile sur une course longue, pas sur une courte', () => {
+    const short = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
+    expect(short).not.toContain('assist-profile-scroll')
+    const long = { ...snap, profile: snap.profile.map(([d, e]) => [d * 20, e] as [number, number]), rows: snap.rows.map((r) => ({ ...r, dist: r.dist * 20 })) }
+    const html = renderToStaticMarkup(<ShareView snap={long} report={null} />)
+    expect(html).toContain('assist-profile-scroll')
+  })
+
   it('navigation : lien par point (accès assistance s’il est placé) et trajet entre les points cochés', () => {
     const r2 = { ...race, checkpoints: race.checkpoints.map((c) => (c.id === 'a' ? { ...c, access: { lat: 45.05, lon: 6.012 } } : c)) }
     const p2 = computePlan(r2, athlete)!

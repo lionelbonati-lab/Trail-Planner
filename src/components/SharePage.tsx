@@ -561,28 +561,65 @@ function AssistTrip({
  * Profil de la page assistance : nom des points (inclinés, sans chevauchement : assistance
  * autorisée et dropbags prioritaires), marqueurs assistance / dropbag et position du coureur.
  */
+/** Échelle minimale du profil (px par km) : au-delà de la largeur de l'écran, il défile. */
+const PX_PER_KM = 12
+/** Après un glissement à la main, le profil reprend le suivi du coureur au bout de ce délai. */
+const FOLLOW_RESUME_MS = 30000
+
 function MiniProfile({ profile, rows, position }: { profile: [number, number][]; rows: ShareSnapshot['rows']; position: number | null }) {
   // Rendu à l'échelle 1 (largeur mesurée) : texte lisible aussi sur téléphone.
   const wrap = useRef<HTMLDivElement>(null)
-  const [W, setW] = useState(900)
+  const scroller = useRef<HTMLDivElement>(null)
+  const [Wc, setWc] = useState(900)
   useEffect(() => {
     const el = wrap.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(([e]) => setW(Math.max(300, Math.round(e.contentRect.width))))
+    const ro = new ResizeObserver(([e]) => setWc(Math.max(300, Math.round(e.contentRect.width))))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const total = profile[profile.length - 1]?.[0] || 1
+  // Course longue (UTMB…) : profil plus large que l'écran, à faire défiler.
+  const W = Math.max(Wc, Math.round((total / 1000) * PX_PER_KM) + 16)
+  const scrolls = W > Wc + 1
+  const x = (d: number) => 8 + (d / total) * (W - 16)
+  // Point suivi : position de la montre, sinon dernier point passé.
+  const lastDone = [...rows].reverse().find((r) => r.actual)
+  const follow = position ?? (lastDone ? lastDone.dist : null)
+  // Glissement à la main : on arrête de suivre le coureur, puis on reprend après un moment.
+  const [free, setFree] = useState(false)
+  const resume = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const grab = () => {
+    if (!scrolls) return
+    setFree(true)
+    if (resume.current) clearTimeout(resume.current)
+    resume.current = setTimeout(() => setFree(false), FOLLOW_RESUME_MS)
+  }
+  useEffect(() => () => {
+    if (resume.current) clearTimeout(resume.current)
+  }, [])
+  const followX = follow === null ? null : x(follow)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el || !scrolls || free || followX === null) return
+    // Le coureur au tiers gauche : on voit surtout ce qui l'attend.
+    const left = Math.max(0, followX - Wc / 3)
+    if (typeof el.scrollTo === 'function') el.scrollTo({ left, behavior: 'smooth' })
+    else el.scrollLeft = left
+  }, [followX, scrolls, free, Wc])
   if (profile.length < 2) return null
   const T = 92
   const H = T + 120
-  const total = profile[profile.length - 1][0] || 1
   const eles = profile.map((p) => p[1])
   const lo = Math.min(...eles)
   const hi = Math.max(...eles)
-  const x = (d: number) => 8 + (d / total) * (W - 16)
   const y = (e: number) => H - 8 - ((e - lo) / (hi - lo || 1)) * (H - T - 16)
   const line = profile.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('')
   const eleAt = (d: number) => profile.reduce((best, p) => (Math.abs(p[0] - d) < Math.abs(best[0] - d) ? p : best))[1]
+  // Repères kilométriques espacés d'au moins 50 px.
+  const kmStep = [1, 2, 5, 10, 20, 50, 100].find((k) => (k * (W - 16) * 1000) / total >= 50) ?? 100
+  const kmTicks: number[] = []
+  for (let k = kmStep; k * 1000 < total - (kmStep * 1000) / 3; k += kmStep) kmTicks.push(k)
   // Étiquettes inclinées à 40° : vers la droite, ou vers la gauche si elles déborderaient du bord.
   // On saute celles qui chevaucheraient une autre (assistance, dropbag, ravitos d'abord).
   const short = (n: string) => (n.length > 20 ? `${n.slice(0, 19)}…` : n)
@@ -610,9 +647,25 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   const hasBase = rows.some((r) => r.kind === 'base')
   return (
     <div className="assist-profile" ref={wrap}>
-      <svg className="profile" viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img" aria-label="Profil du parcours">
+      <div
+        ref={scroller}
+        className={scrolls ? 'assist-profile-scroll' : undefined}
+        onTouchStart={grab}
+        onPointerDown={grab}
+        onWheel={grab}
+      >
+      <svg
+        className="profile"
+        viewBox={`0 0 ${W} ${H}`}
+        style={scrolls ? { width: W, height: H, display: 'block' } : { width: '100%', height: 'auto', display: 'block' }}
+        role="img"
+        aria-label="Profil du parcours"
+      >
         <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
         <path d={line} className="line" />
+        {kmTicks.map((k) => (
+          <text key={k} x={x(k * 1000)} y={H - 12} textAnchor="middle" className="tick km-tick">{k}</text>
+        ))}
         {rows.map((r) => {
           const xx = x(r.dist)
           const yy = y(eleAt(r.dist))
@@ -650,6 +703,12 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           </g>
         )}
       </svg>
+      </div>
+      {scrolls && free && follow !== null && (
+        <button className="ghost small follow-btn" onClick={() => setFree(false)}>
+          <Navigation className="inline" /> Suivre le coureur
+        </button>
+      )}
       {(hasAssist || hasBag || hasBase) && (
         <div className="mp-legend muted small">
           {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
