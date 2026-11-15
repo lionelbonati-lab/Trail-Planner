@@ -81,17 +81,29 @@ export function parseGpx(xml: string, smoothing = 2): Track {
   const name = decodeXml(tag(xml.replace(/<wpt\b[\s\S]*?<\/wpt>/g, ''), 'name') ?? 'Course')
   const track = trackFromRaw(raw, name, smoothing)
 
+  for (const w of gpxWaypoints(xml)) {
+    const near = nearestOnTrack(track.points, w.lat, w.lon)
+    track.waypoints.push({ ...w, dist: near.dist, off: near.off })
+  }
+  track.waypoints.sort((a, b) => a.dist - b.dist)
+  return track
+}
+
+/** Waypoints d'un GPX (balises wpt) : nom, position, et type / symbole / description réunis. */
+export function gpxWaypoints(xml: string): { name: string; lat: number; lon: number; tags: string }[] {
+  const out: { name: string; lat: number; lon: number; tags: string }[] = []
   const wptRe = /<wpt\b([^>]*?)(?:\/>|>([\s\S]*?)<\/wpt>)/g
   let m: RegExpExecArray | null
   while ((m = wptRe.exec(xml))) {
     const lat = attr(m[1], 'lat')
     const lon = attr(m[1], 'lon')
     if (lat === null || lon === null) continue
-    const wname = decodeXml((m[2] && tag(m[2], 'name')) || 'Point')
-    track.waypoints.push({ name: wname, lat, lon, dist: projectOnTrack(track.points, lat, lon) })
+    const body = m[2] ?? ''
+    const name = decodeXml(tag(body, 'name') || 'Point')
+    const tags = ['type', 'sym', 'desc', 'cmt'].map((t) => decodeXml(tag(body, t) ?? '')).filter(Boolean).join(' ')
+    out.push({ name, lat, lon, tags })
   }
-  track.waypoints.sort((a, b) => a.dist - b.dist)
-  return track
+  return out
 }
 
 /** Nom d'un GPX (métadonnées ou trace), sans les noms des waypoints. */
@@ -166,6 +178,11 @@ export function smoothElevation(points: TrackPoint[], half: number): TrackPoint[
 
 /** Distance (m) du point de la trace le plus proche de (lat, lon). */
 export function projectOnTrack(points: TrackPoint[], lat: number, lon: number): number {
+  return nearestOnTrack(points, lat, lon).dist
+}
+
+/** Point de trace le plus proche : sa distance le long de la trace et l'écart à la position (m). */
+export function nearestOnTrack(points: TrackPoint[], lat: number, lon: number): { dist: number; off: number } {
   let best = Infinity
   let bestDist = 0
   for (const p of points) {
@@ -175,7 +192,7 @@ export function projectOnTrack(points: TrackPoint[], lat: number, lon: number): 
       bestDist = p.dist
     }
   }
-  return bestDist
+  return { dist: bestDist, off: best }
 }
 
 /** Indice du point de trace le plus proche d'une distance donnée. */

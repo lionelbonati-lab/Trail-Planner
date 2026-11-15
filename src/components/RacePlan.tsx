@@ -34,7 +34,7 @@ import { isDefaultLevel } from '../lib/level'
 import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, withKind, type AutoSplitMethod } from '../lib/splits'
+import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, waypointCheckpoints, withKind, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
@@ -252,15 +252,9 @@ export function RacePlan({
     set({ checkpoints: mergeAutoPoints(race.checkpoints, pts) })
   }
 
-  const importWaypoints = () => {
-    let cps = race.checkpoints
-    for (const w of track.waypoints) {
-      if (cps.some((c) => Math.abs(c.dist - w.dist) < 100)) continue
-      // Waypoints GPX : ravitos d'une course, simples repères d'un parcours.
-      cps = [...cps, { id: crypto.randomUUID(), dist: w.dist, name: w.name, kind: isRoute ? 'info' : 'ravito', stopMin: isRoute ? 0 : 3, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }]
-    }
-    set({ checkpoints: cps.sort((a, b) => a.dist - b.dist) })
-  }
+  // Waypoints du GPX pas encore repris en points de passage (importés d'office à l'import du GPX).
+  const newWaypoints = waypointCheckpoints(track, race.kind, race.checkpoints)
+  const importWaypoints = () => set({ checkpoints: [...race.checkpoints, ...newWaypoints].sort((a, b) => a.dist - b.dist) })
 
   const legs = nutritionPlan(race, sim, athlete.products)
   const parts = partition(race.zones, track.totalDist)
@@ -844,8 +838,10 @@ export function RacePlan({
             <div className="row">
               <button className="primary" onClick={generate}><Sparkles /> Générer</button>
               <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => !c.auto) })}>Effacer les auto</button>
-              {track.waypoints.length > 0 && (
-                <button className="ghost" onClick={importWaypoints}>Importer {track.waypoints.length} waypoints GPX</button>
+              {newWaypoints.length > 0 && (
+                <button className="ghost" onClick={importWaypoints} title="Waypoints du GPX pas encore repris en points de passage">
+                  Importer {newWaypoints.length} waypoint{newWaypoints.length > 1 ? 's' : ''} GPX
+                </button>
               )}
             </div>
             <Hint>Générer remplace les points auto précédents ; tes ravitos et points modifiés à la main sont conservés.</Hint>

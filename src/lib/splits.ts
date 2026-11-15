@@ -240,3 +240,34 @@ const DEFAULT_NAME = new RegExp(`^(${Object.values(CHECKPOINT_LABELS).join('|')}
 export function withKind(cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoint> {
   return DEFAULT_NAME.test(cp.name.trim()) || !cp.name.trim() ? { kind, name: checkpointName(kind, cp.dist) } : { kind }
 }
+
+/** Waypoint plus loin que cela de la trace (parking, gîte…) : pas un point de passage (m). */
+export const WAYPOINT_MAX_OFF = 200
+
+/**
+ * Genre d'un waypoint GPX importé : repère sur un parcours ; sur une course, ravito ou barrière
+ * d'après son nom, son type ou son symbole (« Ravito », « Food », « Drinking Water », « Barrière »,
+ * « BH »…), point intermédiaire sinon.
+ */
+export function waypointKind(w: { name: string; tags?: string }, race: 'race' | 'route'): CheckpointKind {
+  if (race === 'route') return 'info'
+  const text = `${w.name} ${w.tags ?? ''}`
+  if (/barri[eè]re|\bBH\b|cut[ -]?off|limite horaire|time limit/i.test(text)) return 'cutoff'
+  if (/ravit|\bravi\b|aid ?station|food|drink|water|\beau\b|buvette|restaur|refresh/i.test(text)) return 'ravito'
+  return 'split'
+}
+
+/**
+ * Points de passage tirés des waypoints d'un GPX : les waypoints loin de la trace, ceux du départ ou
+ * de l'arrivée, et ceux à moins de 100 m d'un point existant (ou d'un autre waypoint) sont écartés.
+ */
+export function waypointCheckpoints(track: Pick<Track, 'waypoints' | 'totalDist'>, race: 'race' | 'route', existing: Checkpoint[] = []): Checkpoint[] {
+  const out: Checkpoint[] = []
+  for (const w of track.waypoints) {
+    if (w.off > WAYPOINT_MAX_OFF || w.dist < 100 || w.dist > track.totalDist - 100) continue
+    if ([...existing, ...out].some((c) => Math.abs(c.dist - w.dist) < 100)) continue
+    const kind = waypointKind(w, race)
+    out.push({ id: crypto.randomUUID(), dist: Math.round(w.dist), name: w.name.trim() || checkpointName(kind, w.dist), kind, stopMin: kind === 'ravito' ? 3 : 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false })
+  }
+  return out
+}

@@ -50,6 +50,7 @@ import {
   joinSegments,
   nearestIndex,
   outAndBack,
+  drawnWithMarks,
   readTrackFile,
   reverseRoute,
   routeLeg,
@@ -61,6 +62,7 @@ import {
   type DrawnRoute,
   type Place,
   type SegMode,
+  type TrackMark,
   type Waypoint,
 } from '../lib/routing'
 import { formatDuration, formatPace } from '../lib/time'
@@ -251,7 +253,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [pendingImport, setPendingImport] = useState<{ name: string; raw: RawPoint[] } | null>(null)
+  const [pendingImport, setPendingImport] = useState<{ name: string; raw: RawPoint[]; marks?: TrackMark[] } | null>(null)
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<Sel>(null)
   const [menu, setMenu] = useState(false)
@@ -772,11 +774,17 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
       setNotice(`${f.name} : ${(e as Error).message}`)
     }
   }
-  const applyImport = (imp: { name: string; raw: RawPoint[] }, how: 'replace' | 'append') => {
+  const applyImport = (imp: { name: string; raw: RawPoint[]; marks?: TrackMark[] }, how: 'replace' | 'append') => {
     setPendingImport(null)
-    const d = drawnFromRaw(imp.raw)
-    const iw: Waypoint[] = d.waypoints.map(({ lat, lon, mode }) => ({ lat, lon, mode }))
-    splitByWaypoints(imp.raw, d.waypoints.map((w) => w.i)).forEach((points, k) => {
+    // Waypoints du fichier (GPX) : points de repère du tracé, à leur nom.
+    const { idx, names } = drawnWithMarks(imp.raw, imp.marks ?? [])
+    const iw: Waypoint[] = idx.map((i) => ({
+      lat: imp.raw[i].lat,
+      lon: imp.raw[i].lon,
+      mode: 'trail' as SegMode,
+      ...(names.has(i) ? { mark: true, name: names.get(i) } : {}),
+    }))
+    splitByWaypoints(imp.raw, idx).forEach((points, k) => {
       cache.current.set(segmentKey(iw[k], iw[k + 1], iw[k + 1].mode), { status: 'ok', points })
     })
     if (how === 'append') change([...wps, { ...iw[0], mode }, ...iw.slice(1)])
