@@ -231,7 +231,7 @@ class TrailPlannerField extends WatchUi.DataField {
     }
 
     // Bouton Lap : passage au point le plus proche pas encore validé par un tour, à moins de 300 m de
-    // la position calée sur le tracé (8 % de la distance sans tracé GPS). Heure de passage = maintenant,
+    // la position calée sur le tracé (500 m sans tracé GPS calé). Heure de passage = maintenant,
     // position recalée sur le point, heures estimées des points suivants recalculées. Un tour loin de
     // tout point (tour auto au km…) est ignoré.
     function onTimerLap() as Void {
@@ -239,10 +239,9 @@ class TrailPlannerField extends WatchUi.DataField {
             return;
         }
         var gps = plan.hasRoute() && matched >= 0;
-        var win = gps ? 300.0 : dist * 0.08;
-        if (win < 300.0) {
-            win = 300.0;
-        }
+        // Sans tracé calé, la distance peut dériver, mais une fenêtre trop large (8 % de la distance,
+        // 2,4 km au km 30) faisait valider par un tour, manuel ou automatique, un point loin devant.
+        var win = gps ? 300.0 : 500.0;
         var best = -1;
         var bestGap = 0.0;
         for (var i = 0; i < plan.cpDist.size(); i++) {
@@ -365,6 +364,19 @@ class TrailPlannerField extends WatchUi.DataField {
 
         // Passages aux points détectés par la position (un tour Lap les valide aussi, voir onTimerLap).
         var changed = false;
+        // Passage validé par un tour mais contredit par le GPS calé sur le tracé (coureur à plus de
+        // 300 m avant le point) : annulé, le point sera de nouveau détecté en y arrivant.
+        if (plan.hasRoute() && matched >= 0) {
+            var lk = lapped.keys();
+            for (var k = 0; k < lk.size(); k++) {
+                var li = lk[k] as Number;
+                if (li < plan.cpDist.size() && passes.hasKey(li) && d < plan.cpDist[li] - 300) {
+                    passes.remove(li);
+                    lapped.remove(li);
+                    changed = true;
+                }
+            }
+        }
         var last = -1;
         for (var i = 0; i < plan.cpDist.size(); i++) {
             if (!passes.hasKey(i) && d >= plan.cpDist[i] - 30) {

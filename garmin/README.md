@@ -61,10 +61,13 @@ heures estimées des points sont recalculées **à chaque passage** (bouton Lap,
 position) d'après ce qui a déjà été fait : rythme réel au dernier point passé par rapport au plan, prolongé
 sur la suite (amorti de 30 %, borné), arrêts prévus non étirés ; entre deux passages elles ne bougent pas.
 Avant le premier passage, estimé = prévu. L'écart au plan (`+6'`), lui, suit ta position en continu. Même
-règle sur le lien assistance et dans le mode course de l'app.
+règle dans le mode course de l'app ; le lien assistance, lui, recalcule les estimations à chaque relevé de
+la montre (position et rythme réel) et ignore un passage noté à plus de 300 m devant ta position.
 
 **Bouton Lap.** Un tour valide le passage au point le plus proche pas encore validé, à moins de 300 m de ta
-position (8 % de la distance si le plan n'a pas de tracé) ; un tour loin de tout point est ignoré.
+position (500 m si le tracé GPS n'est pas calé ou si le plan n'a pas de tracé) ; un tour loin de tout point
+est ignoré. Un passage validé par un tour est annulé si le GPS, une fois calé sur le tracé, te place à plus de
+300 m avant le point : il sera détecté de nouveau en y arrivant.
 **Désactive le tour automatique (Auto Lap)** de ton activité Trail, sinon un tour auto tombant près d'un
 point le validerait. Réglage « Tour = passage au point » sur la montre (appui long › Champs Connect IQ ›
 Trail Planner) pour couper cette fonction.
