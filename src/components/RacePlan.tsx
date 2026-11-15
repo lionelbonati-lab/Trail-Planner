@@ -33,7 +33,7 @@ import { assistAllowed, FINISH_ID } from '../lib/assist'
 import { isDefaultLevel } from '../lib/level'
 import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, type AutoSplitMethod } from '../lib/splits'
+import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, withKind, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
@@ -64,12 +64,7 @@ const MODE_LABELS: Record<CalcMode, string> = {
   kme: 'Km-effort',
 }
 
-const KIND_LABELS: Record<CheckpointKind, string> = {
-  ravito: 'Ravito',
-  split: 'Point inter',
-  cutoff: 'Barrière',
-  info: 'Repère',
-}
+const KIND_LABELS = CHECKPOINT_LABELS
 
 const TIME_ZONES = ['Europe/Paris', 'Europe/Zurich', 'Europe/Rome', 'Europe/Madrid', 'Europe/London', 'Atlantic/Canary', 'Indian/Reunion', 'America/Martinique', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 'Asia/Kathmandu', 'Asia/Hong_Kong']
 
@@ -154,6 +149,10 @@ export function RacePlan({
   // Clic sur le profil : fin de cycle (entraînement) ou ravito (compétition).
   // Clic sur le profil : fin de cycle (zones, parcours) ou ajout d'un point (repère / ravito).
   const [clickMode, setClickMode] = useState<'cycle' | 'point'>(race.kind === 'route' ? 'cycle' : 'point')
+  // Course : type du point ajouté d'un clic sur le profil ou sur la carte.
+  const [clickKind, setClickKind] = useState<'ravito' | 'split' | 'cutoff'>('ravito')
+  /** Clic sur le profil ou la carte : repère (parcours) ou point du type choisi (course). */
+  const pickPoint = (d: number) => addPoint(d, isRoute ? 'info' : clickKind)
   // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
   const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1329px)')
   const [editing, setEditing] = useState<string | null>(null)
@@ -234,7 +233,7 @@ export function RacePlan({
     const cp: Checkpoint = {
       id: crypto.randomUUID(),
       dist: Math.round(dist),
-      name: name ?? `${KIND_LABELS[kind]} km ${(dist / 1000).toFixed(1)}`,
+      name: name ?? checkpointName(kind, dist),
       kind,
       stopMin: kind === 'ravito' ? 3 : 0,
       cutoff: '',
@@ -526,6 +525,18 @@ export function RacePlan({
               />
             )}
           </div>
+          {!isRoute && (
+            <div className="row profile-tools">
+              <span className="muted small">Clic sur le profil ou la carte :</span>
+              <span className="click-mode" role="group" aria-label="Type du point ajouté d'un clic">
+                {(['ravito', 'split', 'cutoff'] as const).map((k) => (
+                  <button key={k} className={clickKind === k ? 'on' : ''} onClick={() => setClickKind(k)} aria-pressed={clickKind === k}>
+                    <Plus /> {KIND_LABELS[k]}
+                  </button>
+                ))}
+              </span>
+            </div>
+          )}
           {isRoute && (
             <div className="row profile-tools">
               <span className="muted small">Clic sur le profil :</span>
@@ -541,7 +552,7 @@ export function RacePlan({
             splits={sim.splits}
             timeZone={race.env.timeZone}
             startMs={startMs}
-            onPick={(d) => (isRoute && clickMode === 'cycle' ? set({ zones: splitAt(race.zones, track.totalDist, d) }) : addPoint(d))}
+            onPick={(d) => (isRoute && clickMode === 'cycle' ? set({ zones: splitAt(race.zones, track.totalDist, d) }) : pickPoint(d))}
             onSelect={
               isRoute
                 ? (from, to) => {
@@ -617,7 +628,8 @@ export function RacePlan({
             </Hint>
           ) : (
             <Hint>
-              Un clic sur le profil (ou sur la carte) ajoute un ravito. Bandes grises : nuit. Barre jaune → violet : technicité. Une course se
+              Un clic sur le profil (ou sur la carte) ajoute un point du type choisi : ravito, point intermédiaire ou barrière. Changer le
+              type d'un point le renomme (« Barrière km 20.1 ») s'il porte encore son nom par défaut. Bandes grises : nuit. Barre jaune → violet : technicité. Une course se
               calcule à ton intensité de course (durabilité), sans zones d'allure.
             </Hint>
           )}
@@ -641,7 +653,7 @@ export function RacePlan({
                   splits={sim.splits}
                   timeZone={race.env.timeZone}
                   hoverDist={hoverDist}
-                  onPick={(d) => addPoint(d)}
+                  onPick={pickPoint}
                   accessPick={
                     pickAccess
                       ? (at) => {
@@ -880,7 +892,7 @@ export function RacePlan({
 
         <Card
           title="Temps de passage"
-          actions={<button onClick={() => addPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>}
+          actions={<button onClick={() => pickPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>}
         >
           {stopCount > 0 && (
             <div className="row bulk-stop">
@@ -933,7 +945,7 @@ export function RacePlan({
                       <div className="fields">
                         <label className="field">
                           <span className="field-label">Type</span>
-                          <select value={cp.kind} onChange={(e) => setCp(cp.id, { kind: e.target.value as CheckpointKind })}>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, withKind(cp, e.target.value as CheckpointKind))}>
                             {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                           </select>
                         </label>
@@ -994,7 +1006,7 @@ export function RacePlan({
                     <tr key={cp.id} className={`${s.night ? 'is-night' : ''} kind-${cp.kind} ${cp.auto ? 'is-auto' : ''}`}>
                       <td>
                         {isFinish ? 'Arrivée' : (
-                          <select value={cp.kind} onChange={(e) => setCp(cp.id, { kind: e.target.value as CheckpointKind })}>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, withKind(cp, e.target.value as CheckpointKind))}>
                             {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                           </select>
                         )}
