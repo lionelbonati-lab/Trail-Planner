@@ -692,7 +692,7 @@ class TrailPlannerField extends WatchUi.DataField {
     }
 
     // Arrivée au ravito : distance, D+ et D- jusqu'au ravito suivant (ou l'arrivée), puis « À emporter »
-    // et le contenu du sac, un élément par ligne si la hauteur le permet, sinon plusieurs par ligne.
+    // et le contenu du sac, un élément par ligne si la hauteur le permet, sinon deux voisins réunis.
     function drawBag(dc as Graphics.Dc, fg) as Void {
         var entries = plan.bag(bagLeg);
         var from = plan.legFrom[bagLeg];
@@ -710,25 +710,63 @@ class TrailPlannerField extends WatchUi.DataField {
         if (rows < 1) {
             rows = 1;
         }
-        var per = (entries.size() + rows - 1) / rows;
+        // Trop d'éléments pour la hauteur : on réunit chaque fois les deux voisins dont la ligne commune est
+        // la plus courte (« 1.2 L d'eau · 3 Gel »), pour qu'aucune ligne ne soit tronquée si possible.
+        var items = entries;
+        while (items.size() > rows) {
+            var best = 0;
+            var bestW = -1;
+            for (var i = 0; i + 1 < items.size(); i++) {
+                var w = dc.getTextWidthInPixels(items[i] + " · " + items[i + 1], font);
+                if (bestW < 0 || w < bestW) {
+                    best = i;
+                    bestW = w;
+                }
+            }
+            var merged = [] as Array<String>;
+            for (var i = 0; i < items.size(); i++) {
+                if (i == best) {
+                    merged.add(items[i] + " · " + items[i + 1]);
+                } else if (i != best + 1) {
+                    merged.add(items[i]);
+                }
+            }
+            items = merged;
+        }
         var title = "À emporter";
         // Ravito suivant : son nom (ligne courte) au-dessus des chiffres.
         var leg = [
             [toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, Graphics.FONT_XTINY, fg, 1],
             [remaining(d0, d1), Graphics.FONT_XTINY, fg, 0]
         ];
-        var lines = [[from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, fg, 2]];
-        for (var i = 0; i < entries.size(); i += per) {
-            var t = entries[i];
-            for (var j = i + 1; j < i + per && j < entries.size(); j++) {
-                t += " · " + entries[j];
+        // Champ collé à un seul bord arrondi (demi-écran) : lignes du sac de la plus courte, côté bord où
+        // l'écran est étroit, à la plus longue, côté centre (tri par insertion selon la largeur).
+        var flags = getObscurityFlags();
+        var topEdge = (flags & OBSCURE_TOP) != 0 && (flags & OBSCURE_BOTTOM) == 0;
+        var bottomEdge = (flags & OBSCURE_BOTTOM) != 0 && (flags & OBSCURE_TOP) == 0;
+        if (topEdge || bottomEdge) {
+            for (var i = 1; i < items.size(); i++) {
+                var t = items[i];
+                var tw = dc.getTextWidthInPixels(t, font);
+                var j = i - 1;
+                while (j >= 0) {
+                    var jw = dc.getTextWidthInPixels(items[j], font);
+                    if (topEdge ? jw <= tw : jw >= tw) {
+                        break;
+                    }
+                    items[j + 1] = items[j];
+                    j--;
+                }
+                items[j + 1] = t;
             }
-            lines.add([t, font, fg, 0]);
+        }
+        var lines = [[from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, fg, 2]];
+        for (var i = 0; i < items.size(); i++) {
+            lines.add([items[i], font, fg, 0]);
         }
         // Ligne la plus longue (les chiffres) loin du bord arrondi : champ collé au bord du haut, ravito
         // suivant en bas du champ ; sinon en haut.
-        var flags = getObscurityFlags();
-        if ((flags & OBSCURE_TOP) != 0 && (flags & OBSCURE_BOTTOM) == 0) {
+        if (topEdge) {
             drawLines(dc, lines.addAll(leg));
         } else {
             drawLines(dc, leg.addAll(lines));
