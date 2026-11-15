@@ -380,16 +380,6 @@ export function ShareView({
   const planStartMs = Date.parse(snap.start)
   const startMs = watch && report ? report.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : planStartMs
   const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs)
-  // Distance et D+ de chaque tronçon (depuis le point précédent) et depuis le ravito précédent.
-  const upAt = (r: ShareSnapshot['rows'][number]) => r.up ?? profileGain(snap.profile, r.dist)
-  const legs = snap.rows.map((r, i) => {
-    const prev = snap.rows[i - 1]
-    const lastRavito = [...snap.rows.slice(0, i)].reverse().find((p) => isRavitoKind(p.kind))
-    const from = (p: ShareSnapshot['rows'][number] | undefined) => ({ km: (r.dist - (p?.dist ?? 0)) / 1000, up: upAt(r) - (p ? upAt(p) : 0) })
-    const isStop = isRavitoKind(r.kind) || i === snap.rows.length - 1
-    return { seg: from(prev), ravito: isStop ? from(lastRavito) : null }
-  })
-  const legText = (l: { km: number; up: number }) => `${l.km.toFixed(1)} km · D+ ${Math.max(0, Math.round(l.up))} m`
   const mapPoints: MapPoint[] = snap.rows.map((r) => ({
     dist: r.dist,
     kind: r.kind,
@@ -475,10 +465,10 @@ export function ShareView({
         <div className="scroll share-points">
         <table className="table">
           <thead>
-            <tr><th>Point</th><th>Km</th><th>Tronçon</th><th>Depuis ravito</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
+            <tr><th>Point</th><th>Km</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
           </thead>
           <tbody>
-            {snap.rows.map((r, i) => (
+            {snap.rows.map((r) => (
               <tr key={r.id} className={`${isRavitoKind(r.kind) ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
                 <td>
                   {r.name}
@@ -492,8 +482,6 @@ export function ShareView({
                   )}
                 </td>
                 <td>{(r.dist / 1000).toFixed(1)}</td>
-                <td className="leg">{legText(legs[i].seg)}</td>
-                <td className="leg">{legs[i].ravito ? legText(legs[i].ravito!) : ''}</td>
                 <td>{clock(r.early, long)}</td>
                 <td><strong>{clock(r.planned, long)}</strong></td>
                 <td>{clock(r.late, long)}</td>
@@ -651,12 +639,31 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   const y = (e: number) => H - 8 - ((e - lo) / (hi - lo || 1)) * (H - T - 16)
   const line = profile.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('')
   const eleAt = (d: number) => profile.reduce((best, p) => (Math.abs(p[0] - d) < Math.abs(best[0] - d) ? p : best))[1]
+  // Sous le profil : distance et D+ de chaque tronçon (entre deux points), puis entre deux ravitos
+  // (départ et arrivée compris). Texte sur deux lignes, abrégé ou omis si le tronçon est trop court.
+  const BAND = 30
+  const SH = H + 8 + 2 * BAND
+  const upAt = (r: (typeof rows)[number]) => r.up ?? profileGain(profile, r.dist)
+  type Leg = { from: number; to: number; km: number; up: number }
+  const legsOf = (pts: (typeof rows)[number][]): Leg[] =>
+    pts.map((r, i) => {
+      const p = pts[i - 1]
+      return { from: p?.dist ?? 0, to: r.dist, km: (r.dist - (p?.dist ?? 0)) / 1000, up: Math.max(0, Math.round(upAt(r) - (p ? upAt(p) : 0))) }
+    })
+  const pointLegs = legsOf(rows)
+  const ravitoLegs = legsOf(rows.filter((r, i) => isRavitoKind(r.kind) || i === rows.length - 1))
+  const legLines = (l: Leg, w: number): [string, string] | null => {
+    const fits = (a: string, b: string) => Math.max(a.length, b.length) * 6 + 6 <= w
+    const kmTxt = l.km.toFixed(1).replace('.', ',')
+    for (const [a, b] of [[`${kmTxt} km`, `D+ ${l.up} m`], [`${Math.round(l.km)} km`, `+${l.up}`]] as [string, string][]) if (fits(a, b)) return [a, b]
+    return null
+  }
   // Lignes d'altitude : 3 ou 4 paliers ronds ; sur un profil qui défile, la cote est répétée.
-  const eleStep = [10, 20, 50, 100, 200, 250, 500, 1000].find((st) => (hi - lo) / st <= 5) ?? 1000
+  const eleStep = [10, 20, 50, 100, 200, 250, 500, 1000].find((st) => (hi - lo) / st <= 4) ?? 1000
   const eleLines: number[] = []
   for (let e = Math.ceil(lo / eleStep) * eleStep; e <= hi; e += eleStep) eleLines.push(e)
   const eleLabelXs: number[] = []
-  for (let lx = 4; lx < W - 40; lx += scrolls ? Math.max(160, Wc / 2) : W) eleLabelXs.push(lx)
+  for (let lx = 4; lx < W - 40; lx += scrolls ? Math.max(200, Wc * 0.8) : W) eleLabelXs.push(lx)
   // Repères kilométriques espacés d'au moins 50 px.
   const kmStep = [1, 2, 5, 10, 20, 50, 100].find((k) => (k * (W - 16) * 1000) / total >= 50) ?? 100
   const kmTicks: number[] = []
@@ -697,8 +704,8 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
       >
       <svg
         className="profile"
-        viewBox={`0 0 ${W} ${H}`}
-        style={scrolls ? { width: W, height: H, display: 'block' } : { width: '100%', height: 'auto', display: 'block' }}
+        viewBox={`0 0 ${W} ${SH}`}
+        style={scrolls ? { width: W, height: SH, display: 'block' } : { width: '100%', height: 'auto', display: 'block' }}
         role="img"
         aria-label="Profil du parcours"
       >
@@ -745,6 +752,31 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
             </g>
           )
         })}
+        {[pointLegs, ravitoLegs].map((legs, band) => {
+          const top = H + 8 + band * BAND
+          return (
+            <g key={`band${band}`} className={`leg-band ${band ? 'leg-ravito' : ''}`}>
+              <rect x={0} y={top} width={W} height={BAND - 2} className="leg-bg" />
+              {legs.map((l, i) => {
+                const x0 = x(l.from)
+                const x1 = x(l.to)
+                const txt = legLines(l, x1 - x0)
+                return (
+                  <g key={i}>
+                    <title>{`${l.km.toFixed(1).replace('.', ',')} km · D+ ${l.up} m`}</title>
+                    {i > 0 && <line x1={x0} x2={x0} y1={top} y2={top + BAND - 2} className="leg-sep" />}
+                    {txt && (
+                      <text x={(x0 + x1) / 2} y={top + 12} textAnchor="middle" className="leg-text">
+                        <tspan x={(x0 + x1) / 2}>{txt[0]}</tspan>
+                        <tspan x={(x0 + x1) / 2} dy={12}>{txt[1]}</tspan>
+                      </text>
+                    )}
+                  </g>
+                )
+              })}
+            </g>
+          )
+        })}
         {position !== null && (
           <g className="me">
             <line x1={x(position)} x2={x(position)} y1={T - 4} y2={H - 8} />
@@ -758,13 +790,13 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           <Navigation className="inline" /> Suivre le coureur
         </button>
       )}
-      {(hasAssist || hasBag || hasBase) && (
-        <div className="mp-legend muted small">
-          {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
-          {hasBase && <span><i className="lg-base" /> Base de vie</span>}
-          {hasBag && <span><i className="lg-bag" /> Dropbag</span>}
-        </div>
-      )}
+      <div className="mp-legend muted small">
+        <span><i className="lg-leg" /> Entre deux points</span>
+        <span><i className="lg-leg-ravito" /> Entre deux ravitos</span>
+        {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
+        {hasBase && <span><i className="lg-base" /> Base de vie</span>}
+        {hasBag && <span><i className="lg-bag" /> Dropbag</span>}
+      </div>
     </div>
   )
 }

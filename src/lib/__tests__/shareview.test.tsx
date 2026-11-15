@@ -125,16 +125,20 @@ describe('page assistance', () => {
     expect(html).toContain('Garmin LiveTrack')
   })
 
-  it('tronçons : distance et D+ depuis le point précédent et depuis le ravito précédent', () => {
+  it('tronçons sous le profil : distance et D+ entre deux points et entre deux ravitos', () => {
     // Montée de 500 m jusqu'au km 10 : A (km 5) à +250 m, B (km 10) à +500 m.
     const [a, b] = snap.rows
     expect(a.up).toBeCloseTo(250, -1)
     expect(b.up).toBeCloseTo(500, -1)
     const html = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
-    expect(html).toContain('<th>Tronçon</th><th>Depuis ravito</th>')
-    expect(html).toMatch(/5\.0 km · D\+ 2[45]\d m/)
+    expect(html).not.toContain('<th>Tronçon</th>')
+    const svg = html.slice(html.indexOf('assist-profile'), html.indexOf('mp-legend'))
+    expect(svg.match(/<g class="leg-band ?"/g)).toHaveLength(1)
+    expect(svg).toContain('leg-band leg-ravito')
+    expect(svg).toMatch(/>5,0 km<\/tspan><tspan[^>]*>D\+ 2[45]\d m</)
     // Arrivée : 15 km depuis le ravito A, D+ 250 m (la descente ne compte pas).
-    expect(html).toMatch(/15\.0 km · D\+ 2[45]\d m/)
+    expect(svg).toMatch(/>15,0 km<\/tspan><tspan[^>]*>D\+ 2[45]\d m</)
+    expect(html).toContain('Entre deux ravitos')
   })
 
   it('départ réel décalé : heures prévues et barrières recalées, estimations de la montre affichées', () => {
