@@ -28,7 +28,7 @@ Ton plan de course au poignet :
 
 - **écart au plan** à l’endroit où tu es (position GPS calée sur le tracé) ;
 - **prochain point** : distance, D+ et D- restants, heure prévue et heure estimée ; en option, jusqu'à l'arrivée ;
-- **barrières horaires**, **rappels nutrition** (produit prévu) et sac **« À emporter »** à chaque ravito ;
+- **barrières horaires**, **rappels nutrition** (produit prévu) et, à chaque ravito, sac **« À emporter »** avec distance, D+ et D- jusqu'au suivant ;
 - **bouton Lap** = passage à un point, estimations recalculées ;
 - passages et position envoyés à ton **assistance**.
 

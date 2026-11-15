@@ -691,12 +691,17 @@ class TrailPlannerField extends WatchUi.DataField {
         }
     }
 
-    // Arrivée au ravito : « À emporter » et le contenu du sac jusqu'au ravito suivant, un élément par
-    // ligne si la hauteur le permet, sinon plusieurs par ligne.
+    // Arrivée au ravito : distance, D+ et D- jusqu'au ravito suivant (ou l'arrivée), puis « À emporter »
+    // et le contenu du sac, un élément par ligne si la hauteur le permet, sinon plusieurs par ligne.
     function drawBag(dc as Graphics.Dc, fg) as Void {
         var entries = plan.bag(bagLeg);
+        var from = plan.legFrom[bagLeg];
+        var to = plan.legTo[bagLeg];
+        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
+        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
+        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
         var a = area(dc.getHeight());
-        var avail = a[1] - a[0];
+        var avail = a[1] - a[0] - dc.getFontHeight(Graphics.FONT_XTINY);
         var font = Graphics.FONT_SMALL;
         if (entries.size() * dc.getFontHeight(font) > avail) {
             font = Graphics.FONT_XTINY;
@@ -706,8 +711,12 @@ class TrailPlannerField extends WatchUi.DataField {
             rows = 1;
         }
         var per = (entries.size() + rows - 1) / rows;
-        var from = plan.legFrom[bagLeg];
         var title = "À emporter";
+        // Ravito suivant : son nom (ligne courte) au-dessus des chiffres.
+        var leg = [
+            [toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, Graphics.FONT_XTINY, fg, 1],
+            [remaining(d0, d1), Graphics.FONT_XTINY, fg, 0]
+        ];
         var lines = [[from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, fg, 2]];
         for (var i = 0; i < entries.size(); i += per) {
             var t = entries[i];
@@ -716,7 +725,14 @@ class TrailPlannerField extends WatchUi.DataField {
             }
             lines.add([t, font, fg, 0]);
         }
-        drawLines(dc, lines);
+        // Ligne la plus longue (les chiffres) loin du bord arrondi : champ collé au bord du haut, ravito
+        // suivant en bas du champ ; sinon en haut.
+        var flags = getObscurityFlags();
+        if ((flags & OBSCURE_TOP) != 0 && (flags & OBSCURE_BOTTOM) == 0) {
+            drawLines(dc, lines.addAll(leg));
+        } else {
+            drawLines(dc, leg.addAll(lines));
+        }
     }
 
     // Taille du champ rapportée à la hauteur de l'écran (de 240 px sur fēnix 5S Plus à 454 px sur fēnix 8
