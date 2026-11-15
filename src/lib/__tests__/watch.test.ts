@@ -55,7 +55,9 @@ describe('plan montre', () => {
     expect(new TextEncoder().encode(w).length).toBeLessThanOrEqual(WATCH_PLAN_MAX)
     const g = w.split('\n').find((l) => l.startsWith('G|'))!
     const r = decodeRoute(g)
+    // Le tracé passe en premier ; le dénivelé garde au moins ses cumuls aux points de passage.
     expect(Number(g.split('|')[1])).toBeLessThanOrEqual(150)
+    expect(w.split('\n').some((l) => l.startsWith('E|'))).toBe(true)
     expect(r.length).toBeGreaterThan(150)
     expect(r[r.length - 1].d).toBe(Math.round(plan.track.totalDist))
   })

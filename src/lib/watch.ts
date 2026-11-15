@@ -104,15 +104,14 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
   ]
   const base = lines.join('\n')
   // Taille en octets (accents des noms sur 2 octets) ; les lignes E et G n'ont que des caractères ASCII.
-  // Dénivelé : au plus un tiers de la place restante (le tracé, qui cale la position, prend le reste).
   const free = WATCH_PLAN_MAX - new TextEncoder().encode(base).length - 1
-  // Le tracé passe avant : s'il ne tient qu'en l'absence de la ligne E, elle est retirée.
-  let climb = climbLine(track.points, sim.splits.map((s) => s.to), Math.min(CLIMB_MAX, Math.floor(free / 3)))
-  let route = routeLine(track.points, free - (climb ? climb.length + 1 : 0))
-  if (!route && climb) {
-    route = routeLine(track.points, free)
-    if (route) climb = null
-  }
+  // Le tracé, qui cale la position GPS, passe en premier : le plus fin qui tient en laissant au dénivelé
+  // sa version minimale (cumuls aux seuls points de passage) ; le dénivelé prend ce qui reste. Si même
+  // ainsi le tracé ne tient pas, il prend toute la place et la ligne E n'est envoyée que si elle tient encore.
+  const marks = sim.splits.map((s) => s.to)
+  const minClimb = climbLine(track.points, marks, CLIMB_MAX, [Infinity])
+  const route = (minClimb && routeLine(track.points, free - minClimb.length - 1)) || routeLine(track.points, free)
+  const climb = climbLine(track.points, marks, Math.min(CLIMB_MAX, free - (route ? route.length + 1 : 0)))
   return [base, climb, route].filter(Boolean).join('\n')
 }
 
@@ -154,9 +153,9 @@ const CLIMB_TOLS = [5, 8, 12, 20, 30, 50, 80, 120, Infinity]
  * Ligne E : D+ et D− cumulés depuis le départ (m), sommets gardés là où la pente change (cumuls à
  * ± tol m près entre deux sommets) et à chaque point de passage (`marks`, distances en m), avec le
  * cumul du tableau du plan : la montre retrouve exactement le D+ / D− d'un point au suivant.
- * null si elle ne tient pas dans `budget` caractères.
+ * null si elle ne tient pas dans `budget` caractères (tolérances `tols` essayées dans l'ordre).
  */
-export function climbLine(points: TrackPoint[], marks: number[], budget: number): string | null {
+export function climbLine(points: TrackPoint[], marks: number[], budget: number, tols: number[] = CLIMB_TOLS): string | null {
   if (points.length < 2 || budget < 20) return null
   const up = [0]
   const dn = [0]
@@ -187,7 +186,7 @@ export function climbLine(points: TrackPoint[], marks: number[], budget: number)
   while (k < ms.length) add({ d: ms[k++], u: up[up.length - 1], n: dn[dn.length - 1], fixed: true })
   samples[samples.length - 1].fixed = true
 
-  for (const tol of CLIMB_TOLS) {
+  for (const tol of tols) {
     // Douglas-Peucker entre deux sommets imposés, sur les deux cumuls à la fois.
     const keep = samples.map((s) => s.fixed)
     const fixed = keep.flatMap((f, i) => (f ? [i] : []))
@@ -238,7 +237,7 @@ export const WATCH_PLAN_MAX = 7000
  * Grosse tolérance (ultra avec beaucoup de points) : la montre borne alors la distance au segment
  * où elle se trouve et compte la distance montre à l'intérieur (lacets simplifiés).
  */
-const ROUTE_TOLS = [8, 12, 18, 25, 35, 50, 70, 100, 150, 200]
+const ROUTE_TOLS = [8, 12, 18, 25, 35, 50, 70, 85, 100, 115, 130, 150, 200]
 
 /** Ligne G : tracé simplifié, écarts d'un point au suivant ; null s'il ne tient pas dans `budget` caractères. */
 export function routeLine(points: { dist: number; lat: number; lon: number }[], budget: number): string | null {
