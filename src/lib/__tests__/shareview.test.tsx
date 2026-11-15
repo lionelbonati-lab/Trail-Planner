@@ -96,7 +96,7 @@ describe('page assistance', () => {
     const html = renderToStaticMarkup(<ShareView snap={s2} report={null} initialTab="trajets" />)
     expect(html).toContain('Trajet de l&#x27;assistance')
     expect(html).toContain('Sommet B')
-    expect(html).toContain('assistance non prévue')
+    expect(html).toContain('assistance non autorisée')
     // Ravito A (accès) puis arrivée : une étape et la destination, depuis la position du téléphone.
     expect(html).toContain(`https://www.google.com/maps/dir/?api=1&amp;destination=${finish.lat!.toFixed(5)},${finish.lon!.toFixed(5)}&amp;waypoints=45.05000,6.01200&amp;travelmode=driving`)
   })
@@ -123,6 +123,37 @@ describe('page assistance', () => {
     const html = renderToStaticMarkup(<ShareView snap={snap} report={r} nowMs={(t + 600) * 1000} />)
     expect(html).toMatch(/≈ km \d+,\d maintenant \(estimé/)
     expect(html).toContain('Garmin LiveTrack')
+  })
+
+  it('tronçons : distance et D+ depuis le point précédent et depuis le ravito précédent', () => {
+    // Montée de 500 m jusqu'au km 10 : A (km 5) à +250 m, B (km 10) à +500 m.
+    const [a, b] = snap.rows
+    expect(a.up).toBeCloseTo(250, -1)
+    expect(b.up).toBeCloseTo(500, -1)
+    const html = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
+    expect(html).toContain('<th>Tronçon</th><th>Depuis ravito</th>')
+    expect(html).toMatch(/5\.0 km · D\+ 2[45]\d m/)
+    // Arrivée : 15 km depuis le ravito A, D+ 250 m (la descente ne compte pas).
+    expect(html).toMatch(/15\.0 km · D\+ 2[45]\d m/)
+  })
+
+  it('départ réel décalé : heures prévues et barrières recalées, estimations de la montre affichées', () => {
+    const r2 = { ...race, checkpoints: race.checkpoints.map((c) => (c.id === 'a' ? { ...c, cutoff: race.env.start.slice(0, 11) + '23:00' } : c)) }
+    const p2 = computePlan(r2, athlete)!
+    const s2 = buildSnapshot('uid', r2, athlete, p2.track, p2.sim, scenarioWindows(p2.track, athlete, p2.opts))
+    const official = Date.parse(s2.start)
+    expect(s2.plannedStart).toBe(s2.start)
+    // La montre est partie 30 min après le départ officiel.
+    const s = Math.round(official / 1000) + 1800
+    const t = s + 600
+    const html = renderToStaticMarkup(<ShareView snap={s2} report={{ t, s, d: 1500 }} nowMs={t * 1000} />)
+    const clk = (iso: string, add: number) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: s2.timeZone }).format(new Date(Date.parse(iso) + add))
+    expect(html).toContain('heures et barrières recalées')
+    expect(html).toContain(clk(s2.rows[0].planned, 1800000))
+    expect(html).toContain(clk(s2.rows[0].cutoff!, 1800000))
+    expect(html).not.toContain(`<td>${clk(s2.rows[0].cutoff!, 0)}</td>`)
+    // Colonne Réel / estimé : heures estimées d'après la montre, sans saisie du mode course.
+    expect(html).toMatch(/~\d{2}:\d{2}/)
   })
 
   it('relevé trop ancien : ignoré', () => {

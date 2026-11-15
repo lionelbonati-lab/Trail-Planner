@@ -314,20 +314,25 @@ export function ShareView({
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
   const nowSec0 = nowMs / 1000
-  // Départ libre : heures recalées sur le départ réel (montre, sinon mode course), puis fixes pendant
-  // toute l'activité (même si le dernier relevé de la montre date) ; sur maintenant tant que le coureur
-  // n'est pas parti.
+  // Heures recalées sur le départ réel (montre, sinon mode course) s'il diffère du départ officiel ;
+  // les barrières horaires suivent le même décalage. Départ libre pas encore parti : heures pour un
+  // départ maintenant. Une fois parti, fixes pendant toute l'activité (même si le relevé date).
   const watchStart = watchStartMs(report, nowSec0)
   const freeStarted = watchStart !== null || !!snap.live
-  if (snap.freeStart) {
-    const real = watchStart ?? (snap.live ? Date.parse(snap.live.startedAt) : Math.ceil(nowMs / 60000) * 60000)
-    const off = real - Date.parse(snap.start)
-    if (Math.abs(off) >= 30000) {
-      const shift = (iso: string | null) => (iso ? new Date(Date.parse(iso) + off).toISOString() : iso)
+  const officialMs = Date.parse(snap.plannedStart ?? snap.start)
+  const realStart = watchStart ?? (snap.live ? Date.parse(snap.live.startedAt) : snap.freeStart ? Math.ceil(nowMs / 60000) * 60000 : null)
+  const startShift = realStart !== null ? realStart - officialMs : 0
+  if (realStart !== null) {
+    const off = realStart - Date.parse(snap.start)
+    const cutOff = startShift
+    if (Math.abs(off) >= 30000 || Math.abs(cutOff) >= 30000) {
+      const by = (ms: number) => (iso: string | null) => (iso && Math.abs(ms) >= 30000 ? new Date(Date.parse(iso) + ms).toISOString() : iso)
+      const shift = by(off)
+      const shiftCut = by(cutOff)
       snap = {
         ...snap,
-        start: new Date(real).toISOString(),
-        rows: snap.rows.map((r) => ({ ...r, planned: shift(r.planned)!, early: shift(r.early), late: shift(r.late), eta: shift(r.eta)! })),
+        start: new Date(realStart).toISOString(),
+        rows: snap.rows.map((r) => ({ ...r, planned: shift(r.planned)!, early: shift(r.early), late: shift(r.late), eta: shift(r.eta)!, cutoff: shiftCut(r.cutoff) })),
       }
     }
   }
@@ -346,6 +351,12 @@ export function ShareView({
         eta: new Date(watch.etas[i] * 1000).toISOString(),
       })),
     }
+  }
+  // Suivi saisi à la main (sans montre) : le prochain point n'est jamais estimé avant maintenant.
+  if (!watch && snap.live) {
+    const nextRow = snap.rows.find((r) => !r.actual)
+    const lag = nextRow ? nowMs - Date.parse(nextRow.eta) : 0
+    if (lag > 60000) snap = { ...snap, rows: snap.rows.map((r) => (r.actual ? r : { ...r, eta: new Date(Date.parse(r.eta) + lag).toISOString() })) }
   }
   const long = Date.parse(snap.rows[snap.rows.length - 1]?.planned ?? snap.start) - Date.parse(snap.start) > 20 * 3600000
   const lastDone = [...snap.rows].reverse().find((r) => r.actual)
@@ -369,6 +380,16 @@ export function ShareView({
   const planStartMs = Date.parse(snap.start)
   const startMs = watch && report ? report.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : planStartMs
   const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs)
+  // Distance et D+ de chaque tronçon (depuis le point précédent) et depuis le ravito précédent.
+  const upAt = (r: ShareSnapshot['rows'][number]) => r.up ?? profileGain(snap.profile, r.dist)
+  const legs = snap.rows.map((r, i) => {
+    const prev = snap.rows[i - 1]
+    const lastRavito = [...snap.rows.slice(0, i)].reverse().find((p) => isRavitoKind(p.kind))
+    const from = (p: ShareSnapshot['rows'][number] | undefined) => ({ km: (r.dist - (p?.dist ?? 0)) / 1000, up: upAt(r) - (p ? upAt(p) : 0) })
+    const isStop = isRavitoKind(r.kind) || i === snap.rows.length - 1
+    return { seg: from(prev), ravito: isStop ? from(lastRavito) : null }
+  })
+  const legText = (l: { km: number; up: number }) => `${l.km.toFixed(1)} km · D+ ${Math.max(0, Math.round(l.up))} m`
   const mapPoints: MapPoint[] = snap.rows.map((r) => ({
     dist: r.dist,
     kind: r.kind,
@@ -387,7 +408,9 @@ export function ShareView({
             ? freeStarted
               ? `parti à ${formatClock(new Date(snap.start), tz)}`
               : 'départ libre (heures pour un départ maintenant)'
-            : `départ ${formatClock(new Date(snap.start), tz, true)}`}{' '}
+            : Math.abs(startShift) >= 30000
+              ? `parti à ${formatClock(new Date(snap.start), tz, true)} (départ officiel ${formatClock(new Date(officialMs), tz)}, heures et barrières recalées)`
+              : `départ ${formatClock(new Date(snap.start), tz, true)}`}{' '}
           · {(snap.totalDist / 1000).toFixed(1)} km, +{Math.round(snap.dPlus)} m
         </p>
         <div className="seg share-tabs" role="tablist" aria-label="Affichage">
@@ -452,10 +475,10 @@ export function ShareView({
         <div className="scroll share-points">
         <table className="table">
           <thead>
-            <tr><th>Point</th><th>Km</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
+            <tr><th>Point</th><th>Km</th><th>Tronçon</th><th>Depuis ravito</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
           </thead>
           <tbody>
-            {snap.rows.map((r) => (
+            {snap.rows.map((r, i) => (
               <tr key={r.id} className={`${isRavitoKind(r.kind) ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
                 <td>
                   {r.name}
@@ -469,10 +492,12 @@ export function ShareView({
                   )}
                 </td>
                 <td>{(r.dist / 1000).toFixed(1)}</td>
+                <td className="leg">{legText(legs[i].seg)}</td>
+                <td className="leg">{legs[i].ravito ? legText(legs[i].ravito!) : ''}</td>
                 <td>{clock(r.early, long)}</td>
                 <td><strong>{clock(r.planned, long)}</strong></td>
                 <td>{clock(r.late, long)}</td>
-                <td>{r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
+                <td>{r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live || watch ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
                 <td>{clock(r.cutoff, long)}</td>
               </tr>
             ))}
@@ -527,7 +552,7 @@ function AssistTrip({
                   <span className="small">
                     {done ? `passé à ${clock(r.actual)}` : `${live ? 'estimé' : 'prévu'} ${clock(live ? r.eta : r.planned)}`}
                     {r.access ? ' · accès assistance' : ''}
-                    {!r.assist && <span className="muted"> · assistance non prévue</span>}
+                    {!r.assist && <span className="muted"> · assistance non autorisée</span>}
                   </span>
                 </span>
               </label>
@@ -564,6 +589,13 @@ function AssistTrip({
  * Profil de la page assistance : nom des points (inclinés, sans chevauchement : assistance
  * autorisée et dropbags prioritaires), marqueurs assistance / dropbag et position du coureur.
  */
+/** D+ cumulé jusqu'à d (m) d'après le profil simplifié (anciens partages sans D+ par point). */
+function profileGain(profile: [number, number][], d: number): number {
+  let up = 0
+  for (let i = 1; i < profile.length && profile[i - 1][0] < d; i++) up += Math.max(0, profile[i][1] - profile[i - 1][1])
+  return up
+}
+
 /** Échelle minimale du profil (px par km) : au-delà de la largeur de l'écran, il défile. */
 const PX_PER_KM = 12
 /** Après un glissement à la main, le profil reprend le suivi du coureur au bout de ce délai. */
@@ -619,6 +651,12 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   const y = (e: number) => H - 8 - ((e - lo) / (hi - lo || 1)) * (H - T - 16)
   const line = profile.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('')
   const eleAt = (d: number) => profile.reduce((best, p) => (Math.abs(p[0] - d) < Math.abs(best[0] - d) ? p : best))[1]
+  // Lignes d'altitude : 3 ou 4 paliers ronds ; sur un profil qui défile, la cote est répétée.
+  const eleStep = [10, 20, 50, 100, 200, 250, 500, 1000].find((st) => (hi - lo) / st <= 5) ?? 1000
+  const eleLines: number[] = []
+  for (let e = Math.ceil(lo / eleStep) * eleStep; e <= hi; e += eleStep) eleLines.push(e)
+  const eleLabelXs: number[] = []
+  for (let lx = 4; lx < W - 40; lx += scrolls ? Math.max(160, Wc / 2) : W) eleLabelXs.push(lx)
   // Repères kilométriques espacés d'au moins 50 px.
   const kmStep = [1, 2, 5, 10, 20, 50, 100].find((k) => (k * (W - 16) * 1000) / total >= 50) ?? 100
   const kmTicks: number[] = []
@@ -664,8 +702,16 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
         role="img"
         aria-label="Profil du parcours"
       >
+        {eleLines.map((e) => (
+          <line key={`g${e}`} x1={0} x2={W} y1={y(e)} y2={y(e)} className="grid" />
+        ))}
         <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
         <path d={line} className="line" />
+        {eleLines.map((e) =>
+          eleLabelXs.map((lx) => (
+            <text key={`e${e}-${lx}`} x={lx} y={y(e) - 3} className="tick ele-tick">{e} m</text>
+          )),
+        )}
         {kmTicks.map((k) => (
           <text key={k} x={x(k * 1000)} y={H - 12} textAnchor="middle" className="tick km-tick">{k}</text>
         ))}
