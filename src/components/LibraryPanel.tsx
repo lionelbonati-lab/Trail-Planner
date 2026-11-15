@@ -1,4 +1,4 @@
-import { Spline, Trash2, Upload, Watch } from 'lucide-react'
+import { FileDown, Spline, Trash2, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { download } from '../lib/exportGpx'
 import { parseGpx } from '../lib/gpx'
@@ -7,6 +7,7 @@ import { computePlan } from '../lib/plan'
 import type { Athlete, Race } from '../lib/types'
 import { buildWorkoutFit } from '../lib/workoutFit'
 import { zoneSteps } from '../lib/zones'
+import { ListLinkButtons } from './ListLinkButtons'
 import { Card, Hint } from './ui'
 
 interface Props {
@@ -17,9 +18,13 @@ interface Props {
   onDraw: () => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
+  /** Parcours sur la montre (id), mise sur la montre et lien assistance copié. */
+  onWatchId?: string | null
+  onWatch?: (r: Race) => void
+  onShare?: (r: Race) => void
 }
 
-export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete }: Props) {
+export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete, onWatchId = null, onWatch, onShare }: Props) {
   const routes = races.filter((r) => r.kind === 'route')
   const [query, setQuery] = useState('')
   const [activeTags, setActiveTags] = useState<string[]>([])
@@ -64,9 +69,9 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
           <p className="muted">Aucun parcours. Trace-en un sur la carte, importe un GPX ou ajoute une course à la bibliothèque.</p>
         ) : (
           <div className="scroll">
-            <table className="table">
+            <table className="table list-table">
               <thead>
-                <tr><th>Parcours</th><th>Distance</th><th>D+</th><th>Étiquettes</th><th>Zones</th><th /></tr>
+                <tr><th>Parcours</th><th className="hide-sm">Distance</th><th className="hide-sm">D+</th><th className="hide-sm">Étiquettes</th><th /></tr>
               </thead>
               <tbody>
                 {shown.map((r) => (
@@ -77,6 +82,7 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
                     onOpen={onOpen}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
+                    links={onWatch && onShare ? { onWatchId, onWatch, onShare } : null}
                   />
                 ))}
               </tbody>
@@ -96,12 +102,14 @@ function RouteRow({
   onOpen,
   onUpdate,
   onDelete,
+  links,
 }: {
   route: Race
   athlete: Athlete
   onOpen: (id: string) => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
+  links: { onWatchId: string | null; onWatch: (r: Race) => void; onShare: (r: Race) => void } | null
 }) {
   const [tagText, setTagText] = useState<string | null>(null)
   const info = useMemo(() => {
@@ -120,10 +128,16 @@ function RouteRow({
   return (
     <>
       <tr className="clickable" onClick={() => onOpen(route.id)}>
-        <td><strong>{route.name}</strong></td>
-        <td>{info ? `${(info.dist / 1000).toFixed(1)} km` : '—'}</td>
-        <td>{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
-        <td onClick={(e) => e.stopPropagation()}>
+        <td>
+          <strong>{route.name}</strong>
+          <div className="only-sm muted small">
+            {info ? `${(info.dist / 1000).toFixed(1)} km · ${Math.round(info.dPlus)} m D+` : ''}
+            {route.tags.length > 0 && ` · ${route.tags.join(', ')}`}
+          </div>
+        </td>
+        <td className="hide-sm">{info ? `${(info.dist / 1000).toFixed(1)} km` : '—'}</td>
+        <td className="hide-sm">{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
+        <td className="hide-sm" onClick={(e) => e.stopPropagation()}>
           {tagText === null ? (
             <span className="tags" onClick={() => setTagText(route.tags.join(', '))} title="Modifier les étiquettes">
               {route.tags.length ? route.tags.map((t) => <span key={t} className="tag">{t}</span>) : <span className="muted small">+ étiquettes</span>}
@@ -143,10 +157,12 @@ function RouteRow({
             />
           )}
         </td>
-        <td>{route.zones.length || ''}</td>
-        <td onClick={(e) => e.stopPropagation()} className="row-actions">
-          {route.zones.length > 0 && <button onClick={exportWorkout} title="Entraînement Garmin d'après les zones d'allure"><Watch /> .fit</button>}
-          <button className="ghost" onClick={() => confirm(`Supprimer « ${route.name} » de la bibliothèque ? Les courses créées depuis ce parcours sont conservées.`) && onDelete(route.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
+        <td onClick={(e) => e.stopPropagation()}>
+          <span className="list-actions">
+            {links && <ListLinkButtons race={route} {...links} />}
+            {route.zones.length > 0 && <button className="ghost" onClick={exportWorkout} title="Entraînement Garmin (.fit) d'après les zones d'allure" aria-label="Entraînement Garmin (.fit)"><FileDown /></button>}
+            <button className="ghost" onClick={() => confirm(`Supprimer « ${route.name} » de la bibliothèque ? Les courses créées depuis ce parcours sont conservées.`) && onDelete(route.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
+          </span>
         </td>
       </tr>
     </>

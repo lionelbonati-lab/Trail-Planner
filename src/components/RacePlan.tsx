@@ -128,7 +128,7 @@ export function RacePlan({
   /** Ouvre le traceur pour modifier le parcours sur la carte. */
   onRedraw?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
-  watch?: { available: boolean; code: string | null; shortCode?: string | null; active: boolean; activate: () => void }
+  watch?: { available: boolean; active: boolean; activate: () => void }
   library?: { kind: RaceKind; addToLibrary: () => void }
   /** Parcours : envoi vers une course (nouvelle course si `target` est null, sinon tracé remplacé). */
   toRace?: { races: { id: string; name: string }[]; send: (target: string | null, name: string) => string; open: (id: string) => void }
@@ -145,8 +145,6 @@ export function RacePlan({
     Object.entries(KIND_LABELS).filter(([k]) => !isRoute || k === 'info' || k === 'split' || k === current) as [CheckpointKind, string][]
   const [copied, setCopied] = useState(false)
   const [showWatch, setShowWatch] = useState(false)
-  const [copiedCode, setCopiedCode] = useState(false)
-  const watchCode = watch?.code ?? null
   const [hoverDist, setHoverDist] = useState<number | null>(null)
   const [selection, setSelection] = useState<{ from: number; to: number } | null>(null)
   const [segment, setSegment] = useState<number | null>(null)
@@ -477,44 +475,12 @@ export function RacePlan({
           )}
           {showWatch && (
             <div className="banner info watch-banner">
-              <div>
-                <strong>Montre Garmin</strong> — {watch?.active ? 'cette course est sur ta montre' : 'envoi en cours…'}. Code à saisir sur la
-                montre (une seule fois) :{' '}
-                {watch?.shortCode ? (
-                  <strong className="ep-short">{`${watch.shortCode.slice(0, 4)} ${watch.shortCode.slice(4)}`}</strong>
-                ) : (
-                  <span className="muted">création…</span>
-                )}
-                {watchCode && (
-                  <span className="muted small">
-                    {' '}· code long pour Garmin Connect : <code className="watch-code">{watchCode}</code>
-                  </span>
-                )}
-                <ol className="watch-steps">
-                  <li>Installe le champ de données « Trail Planner » sur ta montre.</li>
-                  <li>
-                    Sur la montre, pendant une activité : appui long sur Haut (menu) › Champs Connect IQ › Trail Planner › Code montre,
-                    saisis les 8 chiffres. Si le champ vient du Store, tu peux aussi coller le code long dans Garmin Connect.
-                  </li>
-                  <li>Ajoute le champ à un écran de ton activité Trail.</li>
-                  <li>Avant le départ, ouvre l'activité quelques minutes, téléphone à proximité : la montre télécharge la course (contrôle toutes les 5 min). Ensuite, tout fonctionne sans réseau.</li>
-                  <li>Pour changer de course, clique « Mettre sur la montre » sur une autre course. Les modifications du plan sont envoyées automatiquement.</li>
-                  <li>Pendant la course, si ton téléphone est avec toi, la montre envoie tes passages et ta position toutes les 5 min : ton assistance les voit sur le lien assistance.</li>
-                </ol>
-              </div>
+              <span>
+                <Watch className="inline" /> <strong>{race.name}</strong> {watch?.active ? 'est sur ta montre' : ': envoi en cours…'} (le champ Trail
+                Planner la récupère tout seul). Code de synchronisation et applications : onglet Montre.
+              </span>
               <span className="row tight">
-                {watchCode && (
-                  <button
-                    onClick={() =>
-                      navigator.clipboard?.writeText(watchCode).then(() => {
-                        setCopiedCode(true)
-                        setTimeout(() => setCopiedCode(false), 2000)
-                      })
-                    }
-                  >
-                    {copiedCode ? <><Check /> Copié</> : <><Copy /> Copier le code</>}
-                  </button>
-                )}
+                <a className="button" href="#/montre"><Watch /> Onglet Montre</a>
                 <button className="ghost" onClick={() => setShowWatch(false)}>Fermer</button>
               </span>
             </div>

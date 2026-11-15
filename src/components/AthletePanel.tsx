@@ -1,12 +1,10 @@
-import { Check, Copy, Plus, RotateCcw, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { averageIntensity } from '../lib/model'
 import { formatPace } from '../lib/time'
 import { DEFAULT_ZONES } from '../lib/defaults'
 import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
-import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, epPayload } from '../lib/endurancepro'
-import { VAM_ZONE_COUNT, epVamThresholds, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
-import { colorForIndex, wholeRouteZone } from '../lib/zones'
+import { VAM_ZONE_COUNT, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
+import { colorForIndex } from '../lib/zones'
 import type { Athlete, DescentPoint, Durability, HrZone, Product, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
 import { LevelCard } from './LevelCard'
 import { Card, Hint, Num, PaceField } from './ui'
@@ -14,15 +12,12 @@ import { Card, Hint, Num, PaceField } from './ui'
 export function AthletePanel({
   athlete,
   onChange,
-  garmin,
   races = [],
 }: {
   athlete: Athlete
   onChange: (a: Athlete) => void
   /** Courses et parcours : temps réalisé sur l'un d'eux pour estimer le niveau sans test VC. */
   races?: Race[]
-  /** Connexion (la synchro passe par le compte) et course/séance envoyée à la montre. */
-  garmin?: { signedIn: boolean; onWatch: Race | null }
 }) {
   const set = <K extends keyof Athlete>(k: K, v: Athlete[K]) => onChange({ ...athlete, [k]: v })
   const setDur = (patch: Partial<Durability>) => set('durability', { ...athlete.durability, ...patch })
@@ -246,8 +241,6 @@ export function AthletePanel({
             : 'Chaque étape est guidée par une plage d\'allure (± 5 % autour de la vitesse cible).'}
         </Hint>
       </Card>
-
-      <EndurancePro athlete={athlete} onChange={onChange} signedIn={!!garmin?.signedIn} onWatch={garmin?.onWatch ?? null} />
 
       <Card title="Produits de nutrition" className="span2">
         <Hint>
@@ -511,138 +504,3 @@ function VamZonesCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: A
 
 /** Pente douce citée en exemple dans l'aide des zones VAM (%). */
 const VAM_GENTLE_GRADE = 10
-
-/** Synchronisation du datafield Garmin EndurancePro : VC, zones, équivalence montée, zone d'alarme. */
-function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athlete; onChange: (a: Athlete) => void; signedIn: boolean; onWatch: Race | null }) {
-  const [copied, setCopied] = useState(false)
-  const on = !!athlete.epSync
-  const up = climbEquivalence(athlete)
-  const dn = descentEquivalence(athlete)
-  const k = onWatch && onWatch.kind !== 'race' ? wholeRouteZone(onWatch.zones, athlete) : null
-  const sorted = [...athlete.zones].sort((a, b) => a.low - b.low).slice(0, 7)
-  const vz = epVamThresholds(athlete)
-  const toggle = (v: boolean) =>
-    onChange({ ...athlete, epSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
-  const copy = () => {
-    if (!athlete.watchId) return
-    navigator.clipboard?.writeText(athlete.watchId).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
-  return (
-    <Card title="Montre Garmin : EndurancePro" className="span2">
-      <Hint>
-        EndurancePro garde la colorisation et l'alarme de son allure cible (vert dans la cible, orange et alarme quand tu vas trop
-        vite) ; la cible peut être une allure, une zone de VC ou un % de VC (réglage « Référence » du dossier Allure). Avec la
-        synchronisation, il reprend tout seul ta VC, tes zones, les équivalences montée et descente (déduites de ta VAM et de tes coefficients de descente), tes zones VAM et la zone de la séance
-        envoyée à la montre : à chaque mise à jour ici, la montre suit (au lancement d'une activité, puis toutes les 30 min, téléphone
-        connecté).
-      </Hint>
-      <label className="check">
-        <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser EndurancePro avec ce profil
-      </label>
-      {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
-      {on && signedIn && (
-        <>
-          <div className="row ep-code">
-            <span>Code à saisir sur la montre :</span>
-            {athlete.epCode ? (
-              <strong className="ep-short" aria-label={`Code ${athlete.epCode.split('').join(' ')}`}>
-                {`${athlete.epCode.slice(0, 4)} ${athlete.epCode.slice(4)}`}
-              </strong>
-            ) : (
-              <span className="muted">création du code…</span>
-            )}
-          </div>
-          <Hint>
-            Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis les 8 chiffres puis valide (00000000
-            efface le code). La ligne affiche ensuite « Synchro hh:mm » à chaque mise à jour. C'est le même code que pour le champ
-            Trail Planner. Une séance envoyée à la montre avec une zone sur tout le parcours devient la cible (référence « Zone VC »).
-          </Hint>
-          {athlete.watchId && (
-            <details className="small">
-              <summary>Code long, pour les paramètres téléphone (EndurancePro installé depuis le Store)</summary>
-              <div className="row">
-                <code className="watch-code">{athlete.watchId}</code>
-                <button className="ghost" onClick={copy}>{copied ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
-              </div>
-              <Hint>
-                Garmin Connect › ta montre › Activités et applications › EndurancePro › Paramètres › Code Trail Planner. C'est le même
-                code que pour le champ Trail Planner.
-              </Hint>
-            </details>
-          )}
-        </>
-      )}
-      <table className="table compact">
-        <tbody>
-          <tr><td>Vitesse critique</td><td><strong>{formatPace(1000 / athlete.cs)}/km</strong> <span className="muted">({(athlete.cs * 3.6).toFixed(2)} km/h)</span></td></tr>
-          <tr>
-            <td>Zones</td>
-            <td>
-              {sorted.map((z, i) => (
-                <span key={i} className="ep-zone">
-                  <i className="zone-swatch" style={{ background: colorForIndex(athlete.zones.indexOf(z), athlete) }} />
-                  {z.name.replace(/^Zone\s*/i, 'Z')} {Math.round(z.low * 100)}–{Math.round(z.high * 100)} %
-                </span>
-              ))}
-            </td>
-          </tr>
-          <tr>
-            <td>Équivalence montée</td>
-            <td>{up ? <><strong>{up} m</strong> de D+ = 1 km à plat <span className="muted">(d'après ta VAM à VC ; défaut EndurancePro : 100 m)</span></> : '—'}</td>
-          </tr>
-          <tr>
-            <td>Équivalence descente</td>
-            <td>
-              {dn ? (
-                <>
-                  <strong>{dn} m</strong> de D- = 1 km à plat{' '}
-                  <span className="muted">
-                    (d'après tes coefficients de descente{dn >= EP_DESCENT_RANGE[1] ? ' : en moyenne, la descente te ralentit peu, valeur au plafond du réglage' : dn <= EP_DESCENT_RANGE[0] ? ' : valeur au plancher du réglage' : ''} ; défaut EndurancePro : 330 m)
-                  </span>
-                </>
-              ) : (
-                '—'
-              )}
-            </td>
-          </tr>
-          <tr>
-            <td>Couleurs VAM</td>
-            <td>
-              {vz ? (
-                <>
-                  {['Z1', 'Z2', 'Z3', 'Z4'].map((name, i) => (
-                    <span key={name} className="ep-zone">
-                      <i className="zone-swatch" style={{ background: colorForIndex(i) }} />
-                      {name} {vz[i]}–{vz[i + 1]}
-                    </span>
-                  ))}
-                  <span className="ep-zone">
-                    <i className="zone-swatch" style={{ background: colorForIndex(4) }} />
-                    Z5 dès {vz[4]} m/h
-                  </span>
-                  <span className="muted"> (pas de couleur sous {vz[0]} m/h)</span>
-                </>
-              ) : (
-                '—'
-              )}
-            </td>
-          </tr>
-          <tr>
-            <td>Zone cible</td>
-            <td>
-              {k !== null && onWatch ? (
-                <><strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} », envoyée à la montre)</span></>
-              ) : (
-                <span className="muted">inchangée (réglée sur la montre) : envoie à la montre une séance avec une zone sur tout le parcours pour la régler d'ici</span>
-              )}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      {on && <p className="muted small">Données publiées : <code>{epPayload(athlete, onWatch)}</code></p>}
-    </Card>
-  )
-}

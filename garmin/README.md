@@ -45,10 +45,10 @@ tracé) : navigation du parcours FIT si elle est active, sinon distance parcouru
 
 ## 1. Envoyer une course à la montre (app web)
 
-Connecté, sur la page d'une course : **⌚ Mettre sur la montre**. L'app affiche ton **code montre à
-8 chiffres** (le même pour toutes tes courses, et le même que pour EndurancePro), plus un code long pour
-Garmin Connect. Pour changer de course, clique « Mettre sur la montre » sur une autre :
-la montre la récupère d'elle-même.
+Connecté : touche **⌚** sur la ligne d'une course ou d'un parcours (ou « Mettre sur la montre » dans son
+plan). Ton **code de synchronisation à 8 chiffres** (le même pour toutes tes courses, et le même que pour
+EndurancePro) et le code long pour Garmin Connect sont dans l'**onglet Montre**. Pour changer de course,
+touche ⌚ sur une autre : la montre la récupère d'elle-même.
 
 ## 2. Compiler le champ
 

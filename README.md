@@ -44,7 +44,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   ni cadre Assistance. Un parcours ouvert depuis
   l'onglet Parcours reste dans Parcours.
 - **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
-  ou depuis une course), étiquettes et recherche, zones d'allure enregistrées. **« Vers une course »** crée une
+  ou depuis une course), étiquettes et recherche. **« Vers une course »** crée une
   nouvelle course à partir du parcours (copie indépendante, sans les zones) ou remplace le tracé d'une course
   existante (ses ravitos dans la nouvelle distance et ses réglages sont gardés).
 - **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
@@ -74,7 +74,13 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   course, export GPX ; « Modifier le tracé » rouvre un tracé (ou découpe une trace importée en points à déplacer).
   Import d'un GPX ou d'un FIT dans le traceur (bouton ou glisser-déposer), en remplacement ou à la suite du
   tracé en cours ; altitude complétée si le fichier n'en a pas.
-- **Synchronisation EndurancePro** (datafield Garmin) : depuis le profil, VC, zones, équivalence montée
+- **Onglet Montre** : liens vers les applications Garmin (Connect IQ Store, ou installation par câble tant
+  qu'elles n'y sont pas), **code de synchronisation** (seul endroit où il s'affiche : 8 chiffres, et code long
+  pour Garmin Connect), course ou parcours sur la montre, synchronisation EndurancePro.
+- **Listes des courses et des parcours** : sur chaque ligne, ⌚ met la course ou le parcours sur la montre et 👥
+  copie le lien assistance (créé au besoin). Sur téléphone, résumé sous le nom (date, distance, D+) pour
+  tenir dans l'écran.
+- **Synchronisation EndurancePro** (datafield Garmin) : depuis l'onglet Montre, VC, zones, équivalence montée
   (déduite de la VAM à VC), équivalence descente (déduite des coefficients de descente), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
   montre (champ `ep`) ; EndurancePro les lit en arrière-plan. Sa cible d'allure peut être une zone ou un % de VC
   (colorisation et alarme de l'allure cible inchangées) ; la zone d'une séance envoyée à la montre devient la cible.

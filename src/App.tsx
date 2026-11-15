@@ -20,11 +20,14 @@ import {
   Trash2,
   Upload,
   User as UserIcon,
+  Watch,
   X,
 } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
+import { ListLinkButtons } from './components/ListLinkButtons'
+import { WatchPanel } from './components/WatchPanel'
 import { LiveMode } from './components/LiveMode'
 import { computePlan, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
@@ -45,6 +48,16 @@ type Cloud = typeof import('./lib/cloud')
 const RouteBuilder = lazy(() => import('./components/RouteBuilder'))
 
 /** Marqueur local : une session était ouverte, on attend Firebase avant d'afficher les données. */
+/** Copie dans le presse-papiers ; false si le navigateur la refuse. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    return false
+  }
+}
+
 const SIGNED_IN_KEY = 'tp.signedIn'
 const wasSignedIn = () => {
   try {
@@ -64,14 +77,14 @@ const rememberSignedIn = (on: boolean) => {
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { watchStartMs, type WatchReport } from './lib/watchLive'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer'
+type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre'
 
 function readHash(): { tab: Tab; raceId: string | null } {
   const [hashTab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   // Calculateur VC et Séances ne font plus qu'un onglet (Test VC) : les anciens liens y mènent.
   const tab = hashTab === 'seances' ? 'cs' : hashTab
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' ? tab : 'races',
+    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' || tab === 'montre' ? tab : 'races',
     raceId: (tab === 'races' || tab === 'live' || tab === 'tracer' || tab === 'parcours') && raceId ? raceId : null,
   }
 }
@@ -392,11 +405,12 @@ export default function App() {
     },
     [user, cloud],
   )
-  const shareRace = async (race: Race) => {
+  const shareRace = async (race: Race): Promise<string | null> => {
     const shareId = race.shareId ?? crypto.randomUUID()
     try {
       await publish(race, athlete, shareId)
       if (!race.shareId) updateRace({ ...race, shareId })
+      return shareId
     } catch (e) {
       const msg = (e as Error).message
       setError(
@@ -404,6 +418,7 @@ export default function App() {
           ? "Partage refusé par Firebase : mets à jour les règles Firestore (contenu du fichier firestore.rules)."
           : `Partage impossible : ${msg}`,
       )
+      return null
     }
   }
   // Montre : un document partagé fixe par compte (code saisi une fois sur la montre),
@@ -414,6 +429,30 @@ export default function App() {
     const next = { ...athlete, watchId, watchRaceId: race.id }
     updateAthlete(next)
     publish(race, next, watchId).catch((e) => setError(`Envoi à la montre impossible : ${(e as Error).message}`))
+  }
+  // Message bref (confirmation d'une action), effacé au bout de quelques secondes.
+  const [notice, setNotice] = useState<{ text: string; link?: string; tab?: Tab } | null>(null)
+  const flash = (text: string, extra: { link?: string; tab?: Tab } = {}) => setNotice({ text, ...extra })
+  useEffect(() => {
+    if (!notice) return
+    const id = setTimeout(() => setNotice(null), notice.link ? 15000 : 6000)
+    return () => clearTimeout(id)
+  }, [notice])
+  /** Liste des courses et des parcours : ⌚ met la course ou le parcours sur la montre. */
+  const putOnWatch = (race: Race) => {
+    if (!user) return alert('Connecte-toi pour envoyer ton plan à la montre.')
+    sendToWatch(race)
+    flash(`« ${race.name} » est sur ta montre (le champ Trail Planner la récupère tout seul).`, { tab: 'montre' })
+  }
+  /** Liste des courses et des parcours : lien assistance copié (créé au besoin). */
+  const copyShareLink = async (race: Race) => {
+    if (!user) return alert('Connecte-toi pour partager ton plan avec ton assistance.')
+    // Lien existant : copié tout de suite (dans le geste de l'utilisateur, exigé par certains navigateurs).
+    const id = race.shareId ?? (await shareRace(race))
+    if (!id) return
+    const url = shareUrl(id)
+    if (await copyText(url)) flash(`Lien assistance de « ${race.name} » copié.`)
+    else flash(`Lien assistance de « ${race.name} » :`, { link: url })
   }
   const unshareRace = async (race: Race) => {
     if (!race.shareId) return
@@ -483,6 +522,7 @@ export default function App() {
           <button className={route.tab === 'tracer' ? 'on' : ''} onClick={() => go('tracer')}><Spline /> Tracer</button>
           <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}><Gauge /> Test VC</button>
           <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}><ChartLine /> Analyse</button>
+          <button className={route.tab === 'montre' ? 'on' : ''} onClick={() => go('montre')}><Watch /> Montre</button>
         </nav>
         <InstallButton />
         {sync && <SyncBadge status={sync} />}
@@ -493,6 +533,19 @@ export default function App() {
         {error && (
           <div className="banner error no-print">
             {error} <button className="ghost" onClick={() => setError(null)} aria-label="Fermer"><X /></button>
+          </div>
+        )}
+        {notice && (
+          <div className="banner info notice no-print" role="status">
+            <span>
+              {notice.text}
+              {notice.link && <> <a href={notice.link} target="_blank" rel="noreferrer">{notice.link}</a></>}
+            </span>
+            <span className="row tight">
+              {notice.link && <button onClick={() => copyText(notice.link!).then((ok) => ok && flash('Lien copié.'))}><Copy /> Copier</button>}
+              {notice.tab && <button onClick={() => { go(notice.tab!); setNotice(null) }}><Watch /> Onglet Montre</button>}
+              <button className="ghost" onClick={() => setNotice(null)} aria-label="Fermer"><X /></button>
+            </span>
           </div>
         )}
         {!loaded ? (
@@ -507,11 +560,14 @@ export default function App() {
             />
           </Suspense>
         ) : route.tab === 'athlete' ? (
-          <AthletePanel
+          <AthletePanel athlete={athlete} races={races} onChange={updateAthlete} />
+        ) : route.tab === 'montre' ? (
+          <WatchPanel
             athlete={athlete}
-            races={races}
             onChange={updateAthlete}
-            garmin={{ signedIn: !!user, onWatch: races.find((r) => r.id === athlete.watchRaceId) ?? null }}
+            signedIn={!!user}
+            onWatch={races.find((r) => r.id === athlete.watchRaceId) ?? null}
+            onOpen={(r) => go(r.kind === 'route' ? 'parcours' : 'races', r.id)}
           />
         ) : route.tab === 'cs' ? (
           <SessionsPanel athlete={athlete} onChange={updateAthlete} />
@@ -524,6 +580,9 @@ export default function App() {
             onDraw={() => go('tracer')}
             onUpdate={updateRace}
             onDelete={removeRace}
+            onWatchId={athlete.watchId ? athlete.watchRaceId ?? null : null}
+            onWatch={putOnWatch}
+            onShare={copyShareLink}
           />
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
@@ -564,13 +623,13 @@ export default function App() {
               share={{
                 available: !!user,
                 url: current.shareId ? shareUrl(current.shareId) : null,
-                create: () => shareRace(current),
+                create: async () => {
+                  await shareRace(current)
+                },
                 remove: () => unshareRace(current),
               }}
               watch={{
                 available: !!user,
-                code: athlete.watchId ?? null,
-                shortCode: athlete.epCode ?? null,
                 active: athlete.watchRaceId === current.id && !!athlete.watchId,
                 activate: () => sendToWatch(current),
               }}
@@ -579,6 +638,9 @@ export default function App() {
         ) : (
           <RaceList
             races={races.filter((r) => r.kind === 'race')}
+            onWatchId={athlete.watchId ? athlete.watchRaceId ?? null : null}
+            onWatch={putOnWatch}
+            onShare={copyShareLink}
             onOpen={(id) => go('races', id)}
             onAdd={addGpx}
             onDraw={() => go('tracer')}
@@ -599,6 +661,10 @@ export default function App() {
 
 function RaceList(props: {
   races: Race[]
+  /** Course sur la montre (id), pour le bouton ⌚ actif. */
+  onWatchId: string | null
+  onWatch: (r: Race) => void
+  onShare: (r: Race) => void
   onOpen: (id: string) => void
   onAdd: (f: FileList | null) => void
   onDraw: () => void
@@ -645,14 +711,16 @@ function RaceList(props: {
             <Hint>Renseigne d'abord ton profil (VC, VAM, durabilité) : tous les temps en découlent.</Hint>
           </div>
         ) : (
-          <table className="table">
-            <thead>
-              <tr><th>Course</th><th>Départ</th><th>Distance</th><th>D+</th><th>Points</th><th /></tr>
-            </thead>
-            <tbody>
-              {sorted.map((r) => <RaceRow key={r.id} race={r} {...props} />)}
-            </tbody>
-          </table>
+          <div className="scroll">
+            <table className="table list-table">
+              <thead>
+                <tr><th>Course</th><th className="hide-sm">Départ</th><th className="hide-sm">Distance</th><th className="hide-sm">D+</th><th className="hide-sm">Points</th><th /></tr>
+              </thead>
+              <tbody>
+                {sorted.map((r) => <RaceRow key={r.id} race={r} {...props} />)}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
       <Card title="Sauvegarde">
@@ -671,7 +739,23 @@ function RaceList(props: {
   )
 }
 
-function RaceRow({ race, onOpen, onDelete, onDuplicate }: { race: Race; onOpen: (id: string) => void; onDelete: (id: string) => void; onDuplicate: (r: Race) => void }) {
+function RaceRow({
+  race,
+  onWatchId,
+  onWatch,
+  onShare,
+  onOpen,
+  onDelete,
+  onDuplicate,
+}: {
+  race: Race
+  onWatchId: string | null
+  onWatch: (r: Race) => void
+  onShare: (r: Race) => void
+  onOpen: (id: string) => void
+  onDelete: (id: string) => void
+  onDuplicate: (r: Race) => void
+}) {
   const info = useMemo(() => {
     try {
       const t = parseGpx(race.gpxText, race.smoothing)
@@ -682,14 +766,24 @@ function RaceRow({ race, onOpen, onDelete, onDuplicate }: { race: Race; onOpen: 
   }, [race.gpxText, race.smoothing])
   return (
     <tr className="clickable" onClick={() => onOpen(race.id)}>
-      <td><strong>{race.name}</strong></td>
-      <td>{race.env.start.replace('T', ' ')}</td>
-      <td>{info ? `${(info.dist / 1000).toFixed(1)} km` : '—'}</td>
-      <td>{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
-      <td>{race.checkpoints.length}</td>
+      <td>
+        <strong>{race.name}</strong>
+        <div className="only-sm muted small">
+          {race.env.start.replace('T', ' ')}
+          {info && ` · ${(info.dist / 1000).toFixed(1)} km · ${Math.round(info.dPlus)} m D+`}
+          {race.checkpoints.length > 0 && ` · ${race.checkpoints.length} point${race.checkpoints.length > 1 ? 's' : ''}`}
+        </div>
+      </td>
+      <td className="hide-sm">{race.env.start.replace('T', ' ')}</td>
+      <td className="hide-sm">{info ? `${(info.dist / 1000).toFixed(1)} km` : '—'}</td>
+      <td className="hide-sm">{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
+      <td className="hide-sm">{race.checkpoints.length}</td>
       <td onClick={(e) => e.stopPropagation()}>
-        <button className="ghost" onClick={() => onDuplicate(race)} title="Dupliquer (ex. tester une autre stratégie)" aria-label="Dupliquer"><Copy /></button>
-        <button className="ghost" onClick={() => onDelete(race.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
+        <span className="list-actions">
+          <ListLinkButtons race={race} onWatchId={onWatchId} onWatch={onWatch} onShare={onShare} />
+          <button className="ghost" onClick={() => onDuplicate(race)} title="Dupliquer (ex. tester une autre stratégie)" aria-label="Dupliquer"><Copy /></button>
+          <button className="ghost" onClick={() => onDelete(race.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
+        </span>
       </td>
     </tr>
   )
