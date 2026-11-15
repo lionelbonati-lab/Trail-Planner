@@ -67,6 +67,20 @@ describe('suivi depuis la montre', () => {
     expect(st3.finishEta).toBeCloseTo(st3.etas[2], 0)
   })
 
+  it('passage noté loin devant la position du coureur : ignoré', () => {
+    const s = 1_800_000_000
+    const cp = w.cps[1]
+    const t = s + Math.round(plannedAtWatch(w, cp.dist - 1600))
+    // Tour Lap à 1,6 km du point B, pris pour son passage par la montre.
+    const st = watchStatus({ t, s, d: cp.dist - 1600, p: `0:${s + w.cps[0].planned},1:${t - 60}` }, w, t)
+    expect(st.passed.has(0)).toBe(true)
+    expect(st.passed.has(1)).toBe(false)
+    expect(st.etas[1]).toBeGreaterThan(t)
+    // À moins de 300 m devant : gardé (distance de la montre un peu en retard sur le point).
+    const near = watchStatus({ t, s, d: cp.dist - 200, p: `1:${t - 60}` }, w, t)
+    expect(near.passed.has(1)).toBe(true)
+  })
+
   it('point pas encore passé : jamais estimé avant maintenant, la suite est décalée', () => {
     const s = 1_800_000_000
     const passA = s + w.cps[0].planned

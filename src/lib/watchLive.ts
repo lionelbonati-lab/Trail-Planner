@@ -84,6 +84,9 @@ function paceRatio(report: WatchReport, planned: number): number {
   return ratioOf(report.t - report.s, planned)
 }
 
+/** Au-delà, un passage noté devant la position du coureur est ignoré (m). */
+export const PASS_AHEAD_M = 300
+
 /** Temps d'arrêt prévus aux points situés strictement entre `from` et `to` (m). */
 function stopsBetween(plan: WatchPlan, from: number, to: number): number {
   return plan.cps.reduce((a, cp) => a + (cp.dist > from && cp.dist < to ? cp.stop : 0), 0)
@@ -104,8 +107,10 @@ function movingAt(plan: WatchPlan, d: number): number {
 export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number): WatchStatus {
   const elapsed = report.t - report.s
   const planned = plannedAtWatch(plan, report.d)
-  const passed = parsePasses(report.p)
-  const ref = [...passed.keys()].filter((i) => i < plan.cps.length).reduce((a, i) => Math.max(a, i), -1)
+  // Passage noté pour un point encore loin devant la position du relevé (tour Lap pris pour un
+  // passage, distance sans tracé GPS qui dérive…) : pas crédible, ignoré.
+  const passed = new Map([...parsePasses(report.p)].filter(([i]) => i < plan.cps.length && plan.cps[i].dist <= report.d + PASS_AHEAD_M))
+  const ref = [...passed.keys()].reduce((a, i) => Math.max(a, i), -1)
   // Point d'ancrage des estimations : départ, dernier passage (arrêt compris) ou relevé plus récent.
   let ratio = 1
   let t0 = report.s
