@@ -10,7 +10,8 @@ import Toybox.Time.Gregorian;
 import Toybox.WatchUi;
 
 // Champ de données : avance/retard sur le plan, prochain point, heure estimée,
-// marge sur la prochaine barrière horaire et rappels de nutrition.
+// marge sur la prochaine barrière horaire et rappels de nutrition (produit prévu, sac « À emporter »
+// à l'arrivée à un ravito).
 // Heures prévues : fixes pendant toute l'activité. Heures estimées des points : recalculées à chaque
 // passage (bouton Lap ou détection GPS) d'après ce qui a déjà été fait, fixes entre deux passages.
 class TrailPlannerField extends WatchUi.DataField {
@@ -30,8 +31,15 @@ class TrailPlannerField extends WatchUi.DataField {
     var finishEta = 0;        // s Unix
     var startUnix = 0;        // départ réel (s Unix) = maintenant − temps écoulé
     var alerted = {};         // barrières déjà signalées
-    var nextFuel = 0.0;       // temps écoulé (s) du prochain rappel
+    var nextFuel = 0.0;       // temps écoulé (s) du prochain rappel (rappels toutes les N minutes)
     var fuelUntil = 0;        // s Unix : affichage du rappel jusqu'à cet instant
+    var food = 0;             // prochain produit à rappeler (indice dans plan.foodP)
+    var foodAt = -1.0;        // distance de son rappel (m), -1 : à calculer
+    var foodSync = true;      // rappels déjà dépassés sautés sans prévenir (nouvelle activité, plan changé)
+    var foodMsg = -1;         // produit du rappel affiché, -1 : « Manger / boire » sans produit
+    var bagLeg = -1;          // tronçon dont le sac « À emporter » est affiché (arrivée au ravito)
+    var bagUntil = 0;         // s Unix : affichage du sac jusqu'à cet instant...
+    var bagFrom = 0.0;        // ... et jusqu'à 300 m après ce ravito (m)
     var passes = {};          // indice du point -> instant de passage (s Unix)
     var lastElapsed = 0.0;    // pour détecter une nouvelle activité
     var lastSaved = 0;        // dernier enregistrement du suivi (s Unix)
@@ -69,6 +77,11 @@ class TrailPlannerField extends WatchUi.DataField {
             offCount = 0;
             offRoute = false;
             etas = [] as Array<Number>;
+            food = 0;
+            foodAt = -1.0;
+            foodSync = true;
+            bagLeg = -1;
+            bagUntil = 0;
             if (running && old != null && plan != null) {
                 passes = remap(passes, old, plan);
                 alerted = remap(alerted, old, plan);
@@ -262,9 +275,30 @@ class TrailPlannerField extends WatchUi.DataField {
         }
         dist = at;
         updateEstimates();
+        showBag(best, now);
         lapMsg = plan.cpName[best];
         lapMsgUntil = now + 5;
         lastSaved = 0; // suivi envoyé au prochain calcul
+    }
+
+    // Arrivée à un ravito : sac « À emporter » du tronçon qui en part (eau, produits, sel), affiché pendant
+    // l'arrêt prévu (1 à 10 min) et tant qu'on n'est pas 300 m plus loin.
+    function showBag(i as Number, now as Number) as Void {
+        var l = plan.legFromCp(i);
+        if (l < 0 || l == bagLeg) {
+            return;
+        }
+        var stop = plan.cpStop[i];
+        bagLeg = l;
+        bagUntil = now + (stop < 60 ? 60 : (stop > 600 ? 600 : stop));
+        bagFrom = plan.cpDist[i].toFloat();
+    }
+
+    // Rappels des produits du plan (réglage « selon le plan », -1) si le plan en a ; sinon toutes les
+    // N minutes (réglage en minutes, ou intervalle du plan), « Manger / boire » sans produit.
+    function planReminders() as Boolean {
+        var v = Application.Properties.getValue("fuelMin");
+        return !(v instanceof Number && v >= 0) && plan.hasFood();
     }
 
     function fuelInterval() as Number {
@@ -312,6 +346,11 @@ class TrailPlannerField extends WatchUi.DataField {
             lapped = {};
             lapOffset = 0.0;
             etas = [] as Array<Number>;
+            food = 0;
+            foodAt = -1.0;
+            foodSync = true;
+            bagLeg = -1;
+            bagUntil = 0;
         }
         lastElapsed = elapsed;
         lastWalked = info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
@@ -326,11 +365,17 @@ class TrailPlannerField extends WatchUi.DataField {
 
         // Passages aux points détectés par la position (un tour Lap les valide aussi, voir onTimerLap).
         var changed = false;
+        var last = -1;
         for (var i = 0; i < plan.cpDist.size(); i++) {
             if (!passes.hasKey(i) && d >= plan.cpDist[i] - 30) {
                 passes.put(i, now);
                 changed = true;
+                last = i;
             }
+        }
+        // Ravito atteint (pas un point dépassé de loin, au démarrage en cours de parcours) : sac à emporter.
+        if (last >= 0 && d < plan.cpDist[last] + 300) {
+            showBag(last, now);
         }
         // Heures estimées : recalculées seulement à un passage (et au début de l'activité).
         if (changed || etas.size() != plan.cpDist.size()) {
@@ -368,15 +413,48 @@ class TrailPlannerField extends WatchUi.DataField {
             saveProgress(info, now, d);
         }
 
-        // Rappel nutrition.
-        var interval = fuelInterval();
-        if (interval > 0) {
-            if (nextFuel <= 0.0) {
-                nextFuel = elapsed + interval * 60;
-            } else if (elapsed >= nextFuel) {
-                nextFuel = elapsed + interval * 60;
+        // Rappels nutrition : produits du plan, répartis sur chaque tronçon entre deux ravitos et
+        // rappelés d'après la position (voir Plan.foodDist) ; sinon toutes les N minutes. Trois positions
+        // de rappel calculées au plus par seconde (temps de calcul limité par la montre) : après un plan
+        // rechargé en course, les rappels dépassés sont sautés en quelques secondes, sans prévenir.
+        if (planReminders()) {
+            var n = plan.foodP.size();
+            var hit = -1;
+            var budget = 3;
+            while (food < n) {
+                if (foodAt < 0) {
+                    if (budget == 0) {
+                        break;
+                    }
+                    foodAt = plan.foodDist(food);
+                    budget--;
+                }
+                if (d < foodAt) {
+                    break;
+                }
+                hit = food;
+                food++;
+                foodAt = -1.0;
+            }
+            if (hit >= 0 && !foodSync) {
+                foodMsg = hit;
                 fuelUntil = now + 30;
                 vibrate(false);
+            }
+            if (food >= n || foodAt >= 0) {
+                foodSync = false;
+            }
+        } else {
+            var interval = fuelInterval();
+            if (interval > 0) {
+                if (nextFuel <= 0.0) {
+                    nextFuel = elapsed + interval * 60;
+                } else if (elapsed >= nextFuel) {
+                    nextFuel = elapsed + interval * 60;
+                    foodMsg = -1;
+                    fuelUntil = now + 30;
+                    vibrate(false);
+                }
             }
         }
     }
@@ -546,17 +624,25 @@ class TrailPlannerField extends WatchUi.DataField {
         return total;
     }
 
+    // Hauteur utilisable du champ [haut, bas] : marge du côté des bords arrondis.
+    function area(h as Number) as Array<Number> {
+        var flags = getObscurityFlags();
+        var top = (flags & OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
+        var bottom = (flags & OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
+        return [top, bottom] as Array<Number>;
+    }
+
     // Dessine des lignes [texte, police, couleur, rang] centrées dans le champ, en évitant les bords
     // arrondis. Texte : chaîne ou variantes (voir pick). Si tout ne tient pas en hauteur : grand chiffre
     // ramené à la police moyenne, puis lignes facultatives retirées, la moins utile (rang le plus élevé)
-    // d'abord (rang 0 ou absent : toujours affichée), puis polices réduites, la plus grande d'abord.
+    // d'abord (rang 0 ou absent : toujours affichée), puis polices réduites, les plus grandes d'abord.
     function drawLines(dc as Graphics.Dc, all as Array) as Void {
         var lines = all;
         var w = dc.getWidth();
         var h = dc.getHeight();
-        var flags = getObscurityFlags();
-        var top = (flags & OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
-        var bottom = (flags & OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
+        var a = area(h);
+        var top = a[0];
+        var bottom = a[1];
         var fonts = [Graphics.FONT_XTINY, Graphics.FONT_TINY, Graphics.FONT_SMALL, Graphics.FONT_MEDIUM];
         var total = linesHeight(dc, lines);
         while (total > bottom - top) {
@@ -577,7 +663,11 @@ class TrailPlannerField extends WatchUi.DataField {
                 }
             }
             if (bigRank == 4 || (drop < 0 && big >= 0)) {
-                lines[big][1] = fonts[bigRank - 1];
+                for (var i = 0; i < lines.size(); i++) {
+                    if (fontRank(lines[i][1]) == bigRank) {
+                        lines[i][1] = fonts[bigRank - 1];
+                    }
+                }
             } else if (drop >= 0) {
                 var kept = [];
                 for (var i = 0; i < lines.size(); i++) {
@@ -599,6 +689,34 @@ class TrailPlannerField extends WatchUi.DataField {
             dc.drawText(w / 2, y, font, pick(dc, lines[i][0], font, usableWidth(y + fh / 2, h, w)), Graphics.TEXT_JUSTIFY_CENTER);
             y += fh;
         }
+    }
+
+    // Arrivée au ravito : « À emporter » et le contenu du sac jusqu'au ravito suivant, un élément par
+    // ligne si la hauteur le permet, sinon plusieurs par ligne.
+    function drawBag(dc as Graphics.Dc, fg) as Void {
+        var entries = plan.bag(bagLeg);
+        var a = area(dc.getHeight());
+        var avail = a[1] - a[0];
+        var font = Graphics.FONT_SMALL;
+        if (entries.size() * dc.getFontHeight(font) > avail) {
+            font = Graphics.FONT_XTINY;
+        }
+        var rows = avail / dc.getFontHeight(font);
+        if (rows < 1) {
+            rows = 1;
+        }
+        var per = (entries.size() + rows - 1) / rows;
+        var from = plan.legFrom[bagLeg];
+        var title = "À emporter";
+        var lines = [[from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, fg, 2]];
+        for (var i = 0; i < entries.size(); i += per) {
+            var t = entries[i];
+            for (var j = i + 1; j < i + per && j < entries.size(); j++) {
+                t += " · " + entries[j];
+            }
+            lines.add([t, font, fg, 0]);
+        }
+        drawLines(dc, lines);
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -631,14 +749,29 @@ class TrailPlannerField extends WatchUi.DataField {
         }
         var now = Time.now().value();
         if (now < fuelUntil) {
+            // Rappel nutrition : produit prévu et eau à boire d'ici le rappel suivant.
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_ORANGE);
             dc.clear();
-            drawLines(dc, [["Manger / boire", h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, Graphics.COLOR_WHITE]]);
+            var big = h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL;
+            if (foodMsg < 0 || foodMsg >= plan.foodP.size()) {
+                drawLines(dc, [["Manger / boire", big, Graphics.COLOR_WHITE]]);
+                return;
+            }
+            var meal = [["Manger / boire", Graphics.FONT_XTINY, Graphics.COLOR_WHITE, 2], [plan.foodLabel(foodMsg), big, Graphics.COLOR_WHITE, 0]];
+            var water = plan.foodWater(foodMsg);
+            if (water >= 0.05) {
+                meal.add(["Boire " + water.format("%.1f") + " L", Graphics.FONT_XTINY, Graphics.COLOR_WHITE, 1]);
+            }
+            drawLines(dc, meal);
             return;
         }
         if (now < lapMsgUntil) {
             // Tour validé : point de passage noté, estimations recalculées.
             drawLines(dc, [["Passage", Graphics.FONT_XTINY, fg], [lapMsg, h > 90 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, green]]);
+            return;
+        }
+        if (bagLeg >= 0 && now < bagUntil && dist < bagFrom + 300) {
+            drawBag(dc, fg);
             return;
         }
 

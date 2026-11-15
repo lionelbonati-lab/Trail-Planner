@@ -8,6 +8,8 @@ export interface Leg {
   /** Id du point de départ (null = départ). */
   fromId: string | null
   to: string
+  /** Id du point d'arrivée du tronçon (ravito suivant ou arrivée). */
+  toId: string
   /** Durée du tronçon (s), du départ du point à l'arrivée au suivant. */
   duration: number
   /** Température moyenne prévue (°C). */
@@ -60,6 +62,7 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
       from: fromName,
       fromId,
       to: s.cp.name,
+      toId: s.cp.id,
       duration,
       temp,
       water,
@@ -76,10 +79,27 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   return legs
 }
 
+/** Sodium à ajouter en sel (mg) : manque laissé par les produits, s'il dépasse 150 mg, sinon 0. */
+export function extraSodium(leg: Leg): number {
+  const missing = leg.sodium - leg.sodiumFromProducts
+  return missing > 150 ? Math.round(missing) : 0
+}
+
 /** Contenu du sac à prendre au départ d'un tronçon, en une ligne. */
 export function bagText(leg: Leg): string {
   const items = leg.products.map((x) => `${x.count} × ${x.product.name}`)
-  const missing = leg.sodium - leg.sodiumFromProducts
-  if (missing > 150) items.push(`+${Math.round(missing)} mg de sodium (sel)`)
+  const salt = extraSodium(leg)
+  if (salt) items.push(`+${salt} mg de sodium (sel)`)
   return [`${leg.water} L d'eau`, ...items].join(', ')
+}
+
+/**
+ * Ordre de prise des produits d'un tronçon : chaque produit réparti sur tout le tronçon
+ * (3 gels et 2 barres → gel, barre, gel, barre, gel).
+ */
+export function intakeOrder<T>(items: { product: T; count: number }[]): T[] {
+  return items
+    .flatMap((x, i) => Array.from({ length: x.count }, (_, j) => ({ product: x.product, at: (j + 0.5) / x.count, i })))
+    .sort((a, b) => a.at - b.at || a.i - b.i)
+    .map((x) => x.product)
 }

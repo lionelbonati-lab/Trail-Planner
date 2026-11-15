@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_ATHLETE, newRace } from '../defaults'
+import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace } from '../defaults'
 import { computePlan } from '../plan'
+import { extraSodium, intakeOrder, nutritionPlan } from '../nutrition'
 import { climbLine, fuelInterval, routeLine, WATCH_PLAN_MAX, watchPlan, watchUrl } from '../watch'
+import { parseWatchPlan, plannedAtWatch } from '../watchLive'
 
 function gpx(): string {
   const pts: string[] = []
@@ -152,6 +154,92 @@ describe('dénivelé sur la montre (ligne E)', () => {
     expect(watchPlan(route, DEFAULT_ATHLETE, p2.track, p2.sim).split('\n')[2].split('|')[4]).toBe('p')
   })
 })
+
+describe('nutrition sur la montre (lignes P et F)', () => {
+  const athlete = { ...DEFAULT_ATHLETE, products: DEFAULT_PRODUCTS.map((p) => ({ ...p })) }
+  const cp = (id: string, dist: number, kind: 'ravito' | 'info') =>
+    ({ id, dist, name: `Point ${id}`, kind, stopMin: kind === 'ravito' ? 5 : 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false })
+  const race = newRace('Nutrition', gpx())
+  race.checkpoints = [cp('a', 5000, 'info'), cp('b', 8000, 'ravito'), cp('c', 15000, 'ravito')]
+  const plan = computePlan(race, athlete)!
+  const w = watchPlan(race, athlete, plan.track, plan.sim)
+  const lines = w.split('\n')
+  const P = lines.find((l) => l.startsWith('P|'))!.split('|').slice(1)
+  const F = lines.filter((l) => l.startsWith('F|')).map((l) => l.split('|'))
+  const legs = nutritionPlan(race, plan.sim, athlete.products)
+
+  it('chaque produit réparti sur tout le tronçon', () => {
+    expect(intakeOrder([{ product: 'gel', count: 3 }, { product: 'barre', count: 2 }])).toEqual(['gel', 'barre', 'gel', 'barre', 'gel'])
+    expect(intakeOrder([{ product: 'gel', count: 2 }])).toEqual(['gel', 'gel'])
+    expect(intakeOrder([])).toEqual([])
+  })
+
+  it('un tronçon par ravito : sac « À emporter » et produits du plan nutrition, avant les lignes E et G', () => {
+    // Produits pris au moins une fois, dans l'ordre où ils apparaissent.
+    expect(P).toEqual([...new Set(legs.flatMap((l) => intakeOrder(l.products).map((p) => p.name)))])
+    expect(P.length).toBeGreaterThan(1)
+    expect(lines.findIndex((l) => l.startsWith('P|'))).toBeLessThan(lines.findIndex((l) => l.startsWith('E|')))
+    // Départ → b, b → c, c → arrivée (indices des lignes C).
+    expect(F.map((f) => [f[1], f[2]])).toEqual([['-1', '1'], ['1', '2'], ['2', '3']])
+    F.forEach((f, i) => {
+      const leg = legs[i]
+      expect(Number(f[3])).toBe(Math.round(leg.water * 10))
+      expect(Number(f[4])).toBe(extraSodium(leg))
+      const items = f[5] ? f[5].split(',').map(Number) : []
+      for (const x of leg.products) expect(items.filter((p) => P[p] === x.product.name).length).toBe(x.count)
+      expect(items.length).toBe(leg.products.reduce((a, x) => a + x.count, 0))
+    })
+    expect(F[0][5].split(',').length).toBeGreaterThan(1)
+  })
+
+  it('rappels (calcul de la montre) : dans leur tronçon, au milieu de la part de chacun en temps prévu', () => {
+    const wp = parseWatchPlan(w)!
+    const cps = lines.filter((l) => l.startsWith('C|')).map((l) => l.split('|').map(Number))
+    for (const f of F) {
+      const [a, b] = [Number(f[1]), Number(f[2])]
+      const n = f[5] ? f[5].split(',').length : 0
+      const d0 = a >= 0 ? cps[a][1] : 0
+      const d1 = cps[b][1]
+      const dep = a >= 0 ? cps[a][2] + cps[a][6] : 0
+      const arr = cps[b][2]
+      let prev = d0
+      for (let j = 0; j < n; j++) {
+        const d = foodDist(wp, d0, d1, dep + ((j + 0.5) * (arr - dep)) / n)
+        expect(d).toBeGreaterThan(prev)
+        expect(d).toBeLessThan(d1)
+        // Temps prévu à cette position : celui du rappel, à la simplification de la courbe près.
+        expect(Math.abs(plannedAtWatch(wp, d) - (dep + ((j + 0.5) * (arr - dep)) / n))).toBeLessThan(60)
+        prev = d
+      }
+    }
+  })
+
+  it("parcours d'entraînement : un seul tronçon du départ à l'arrivée ; sans produits ni besoins : rien", () => {
+    const route = { ...race, kind: 'route' as const, checkpoints: [cp('a', 5000, 'info')] }
+    const p2 = computePlan(route, athlete)!
+    const F2 = watchPlan(route, athlete, p2.track, p2.sim).split('\n').filter((l) => l.startsWith('F|'))
+    expect(F2.length).toBe(1)
+    expect(F2[0]).toMatch(/^F\|-1\|1\|\d+\|\d+\|\d/)
+    const none = { ...race, carbsPerH: 0, waterPerH: 0, sodiumPerH: 0 }
+    const p3 = computePlan(none, athlete)!
+    expect(watchPlan(none, athlete, p3.track, p3.sim)).not.toMatch(/^[PF]\|/m)
+    // Sans produits : eau seule, pas de ligne P.
+    const p4 = watchPlan(race, DEFAULT_ATHLETE, plan.track, plan.sim).split('\n')
+    expect(p4.some((l) => l.startsWith('P|'))).toBe(false)
+    expect(p4.filter((l) => l.startsWith('F|')).every((l) => l.endsWith('|'))).toBe(true)
+  })
+})
+
+/** Position du rappel comme Plan.foodDist : distance où le plan prévoit le temps t, entre a et b. */
+function foodDist(wp: NonNullable<ReturnType<typeof parseWatchPlan>>, a: number, b: number, t: number): number {
+  let [lo, hi] = [a, b]
+  for (let i = 0; i < 16; i++) {
+    const mid = (lo + hi) / 2
+    if (plannedAtWatch(wp, mid) < t) lo = mid
+    else hi = mid
+  }
+  return hi
+}
 
 /** Ligne E décodée comme sur la montre : distance, D+ et D− cumulés (m) à chaque sommet. */
 function decodeClimb(line: string): { d: number; u: number; n: number }[] {

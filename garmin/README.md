@@ -11,7 +11,10 @@ ClimbPro et PacePro continuent de fonctionner) :
 - **bouton Lap = passage** au point le plus proche : heure de passage notée, position recalée, heures
   estimées des points suivants recalculées (écran « Passage · nom » 5 s) ;
 - **marge sur la prochaine barrière horaire**, avec vibration si elle passe sous 30 min ;
-- **rappels nutrition** (vibration + écran « Manger / boire » 30 s) selon ton plan ;
+- **rappels nutrition** : le **produit prévu** (« Gel », « Barre »…) et l'eau à boire (vibration + écran
+  30 s) ; les produits du plan nutrition sont répartis équitablement sur chaque tronçon entre deux ravitos ;
+- **à l'arrivée à un ravito** : écran « À emporter » (eau, produits, sel jusqu'au ravito suivant), comme la
+  colonne « À emporter » du plan nutrition ;
 - avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une **course** seulement
   (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ;
 - **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton
@@ -31,6 +34,23 @@ sont exactement ceux du tableau du plan, et ceux qui restent suivent ta position
 Réglage « Jusqu'à l'arrivée » sur la montre (appui long › Champs Connect IQ › Trail Planner) ou dans
 Garmin Connect : ajoute la ligne « Arr. 38.5 km D+2150 D-2380 » (absente quand le prochain point est
 l'arrivée).
+
+**Rappels nutrition.** Le plan contient les produits du plan nutrition de l'app web, tronçon par tronçon
+(départ ou ravito → ravito suivant ou arrivée ; tout le parcours pour un parcours d'entraînement). Sur
+chaque tronçon, les n produits sont pris dans un ordre alterné (3 gels et 2 barres : gel, barre, gel,
+barre, gel) et répartis équitablement : le j-ième au milieu de sa part du tronçon en temps prévu
+(départ du ravito + (j − ½) / n × durée prévue). Le rappel tombe à l'endroit correspondant du parcours :
+si le tronçon prend plus de temps que prévu, les rappels s'espacent et les produits emportés durent
+jusqu'au ravito suivant. L'écran indique le produit et l'eau à boire d'ici le rappel suivant (eau du
+tronçon / nombre de produits). Réglage « Rappel nutrition » dans Garmin Connect : -1 (par défaut) = ces
+rappels, N = « Manger / boire » toutes les N minutes, 0 = aucun rappel. Sans produits dans le profil
+athlète, rappel « Manger / boire » au rythme des glucides du plan.
+
+**Arrivée à un ravito.** Dès le passage (position ou bouton Lap), l'écran « À emporter · nom du ravito »
+liste l'eau, les produits et le sel à prendre pour le tronçon suivant. Il reste affiché pendant l'arrêt
+prévu (1 à 10 min) et disparaît 300 m après le ravito.
+
+![Aperçu approximatif des écrans nutrition](apercu-nutrition.png)
 
 **Heures prévues et estimées.** Les heures prévues restent celles du plan pendant toute l'activité. Les
 heures estimées des points sont recalculées **à chaque passage** (bouton Lap, ou point atteint d'après la

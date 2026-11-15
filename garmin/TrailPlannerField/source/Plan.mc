@@ -12,6 +12,9 @@ const ROUTE_KY = 110540.0d;
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>
 //   E|<dd>,<du>,<dn>,...  D+ et D- cumulés depuis le départ (m), écarts d'un sommet au suivant à partir
 //     de 0,0,0 ; un sommet à chaque point de passage (D+ / D- d'un point au suivant exacts)
+//   P|<produit>|<produit>|...  noms des produits du plan nutrition
+//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,...  un par tronçon entre ravitos
+//     (indices des lignes C, -1 = départ) : sac « À emporter » et produits dans l'ordre de prise
 //   G|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,...   tracé simplifié (lat / lon en
 //     1e-5 degré, puis écarts d'un sommet au suivant) pour caler la position GPS sur le parcours
 // Temps prévu à une distance d = K interpolé + arrêts des points situés avant d.
@@ -44,8 +47,113 @@ class Plan {
     var climbD as Array<Number> = [] as Array<Number>;
     var climbUp as Array<Number> = [] as Array<Number>;
     var climbDn as Array<Number> = [] as Array<Number>;
+    // Plan nutrition (lignes P et F) : noms des produits ; pour chaque tronçon, points de départ et
+    // d'arrivée (indices des points, -1 = départ), eau (dL), sel (mg) et premier de ses produits dans
+    // foodP (produits à prendre, tronçon après tronçon).
+    var foodName as Array<String> = [] as Array<String>;
+    var legFrom as Array<Number> = [] as Array<Number>;
+    var legTo as Array<Number> = [] as Array<Number>;
+    var legWater as Array<Number> = [] as Array<Number>;
+    var legSalt as Array<Number> = [] as Array<Number>;
+    var legFirst as Array<Number> = [] as Array<Number>;
+    var foodP as Array<Number> = [] as Array<Number>;
 
     function initialize() {
+    }
+
+    function hasFood() as Boolean {
+        return foodP.size() > 0;
+    }
+
+    // Nombre de produits du tronçon l.
+    function legCount(l as Number) as Number {
+        var end = l + 1 < legFirst.size() ? legFirst[l + 1] : foodP.size();
+        return end - legFirst[l];
+    }
+
+    // Tronçon du k-ième produit à prendre.
+    function legOf(k as Number) as Number {
+        var l = 0;
+        while (l + 1 < legFirst.size() && legFirst[l + 1] <= k) {
+            l++;
+        }
+        return l;
+    }
+
+    // Tronçon qui part du point i (ravito), ou -1.
+    function legFromCp(i as Number) as Number {
+        for (var l = 0; l < legFrom.size(); l++) {
+            if (legFrom[l] == i) {
+                return l;
+            }
+        }
+        return -1;
+    }
+
+    // Distance (m) du rappel du k-ième produit : le j-ième des n produits d'un tronçon est prévu au milieu
+    // de sa part du tronçon en temps prévu (départ du point + (j + 0.5) / n x durée prévue), position
+    // retrouvée sur la courbe du plan. Les rappels suivant la position, les produits durent jusqu'au
+    // ravito suivant même si le tronçon prend plus de temps que prévu.
+    function foodDist(k as Number) as Float {
+        var l = legOf(k);
+        var n = legCount(l);
+        var j = k - legFirst[l];
+        var a = legFrom[l];
+        var b = legTo[l];
+        var lo = (a >= 0 && a < cpDist.size()) ? cpDist[a].toFloat() : 0.0;
+        var hi = (b >= 0 && b < cpDist.size()) ? cpDist[b].toFloat() : total.toFloat();
+        var dep = (a >= 0 && a < cpDist.size()) ? cpPlan[a] + cpStop[a] : 0;
+        var arr = (b >= 0 && b < cpDist.size()) ? cpPlan[b] : finishTime();
+        var t = dep + (j + 0.5) * (arr - dep) / (n > 0 ? n : 1);
+        for (var it = 0; it < 16; it++) {
+            var mid = (lo + hi) / 2.0;
+            if (plannedAt(mid) < t) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        return hi;
+    }
+
+    // Eau à boire à chaque rappel du tronçon du k-ième produit (L) : eau du tronçon / nombre de produits.
+    function foodWater(k as Number) as Float {
+        var l = legOf(k);
+        var n = legCount(l);
+        return n > 0 ? legWater[l] / 10.0 / n : 0.0;
+    }
+
+    function foodLabel(k as Number) as String {
+        var p = foodP[k];
+        return (p >= 0 && p < foodName.size()) ? foodName[p] : "Manger";
+    }
+
+    // Sac « À emporter » du tronçon l : eau, produits (nombre et nom, dans l'ordre de prise) et sel.
+    function bag(l as Number) as Array<String> {
+        var out = [] as Array<String>;
+        if (legWater[l] > 0) {
+            out.add((legWater[l] / 10.0).format("%.1f") + " L d'eau");
+        }
+        var seen = [] as Array<Number>;
+        var count = [] as Array<Number>;
+        var end = legFirst[l] + legCount(l);
+        for (var k = legFirst[l]; k < end; k++) {
+            var i = seen.indexOf(foodP[k]);
+            if (i < 0) {
+                seen.add(foodP[k]);
+                count.add(1);
+            } else {
+                count[i] = count[i] + 1;
+            }
+        }
+        for (var i = 0; i < seen.size(); i++) {
+            var p = seen[i];
+            out.add(count[i] + " " + ((p >= 0 && p < foodName.size()) ? foodName[p] : "?"));
+        }
+        if (legSalt[l] > 0) {
+            out.add("Sel +" + legSalt[l] + " mg");
+        }
+        return out;
     }
 
     function hasRoute() as Boolean {
@@ -363,6 +471,22 @@ function parsePlan(text as String) as Plan or Null {
             p.cpStop.add(parts.size() >= 7 ? toNum(parts[6]) : 0);
         } else if (tag.equals("E") && parts.size() >= 2) {
             parseClimb(p, parts[1]);
+        } else if (tag.equals("P")) {
+            for (var k = 1; k < parts.size(); k++) {
+                p.foodName.add(parts[k]);
+            }
+        } else if (tag.equals("F") && parts.size() >= 6) {
+            p.legFrom.add(toNum(parts[1]));
+            p.legTo.add(toNum(parts[2]));
+            p.legWater.add(toNum(parts[3]));
+            p.legSalt.add(toNum(parts[4]));
+            p.legFirst.add(p.foodP.size());
+            if (parts[5].length() > 0) {
+                var items = splitText(parts[5], ",");
+                for (var k = 0; k < items.size(); k++) {
+                    p.foodP.add(toNum(items[k]));
+                }
+            }
         } else if (tag.equals("G") && parts.size() >= 4) {
             parseRoute(p, toNum(parts[1]), parts[2], parts[3]);
         }

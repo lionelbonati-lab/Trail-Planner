@@ -7,6 +7,12 @@
 //   K|<d>:<t>,<d>:<t>,…    courbe distance (m) → temps de déplacement prévu (s, arrêts exclus),
 //                          simplifiée à ±45 s près (points là où l'allure change)
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>   (un par point)
+//   P|<produit>|<produit>|…   noms des produits du plan nutrition (gels, barres…)
+//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,…
+//                          un par tronçon entre ravitos (indices des lignes C, −1 = départ) : sac
+//                          « À emporter » au départ du tronçon (eau, sodium à ajouter en sel, produits) et
+//                          produits dans l'ordre où les prendre (indices dans P). La montre répartit ces
+//                          rappels sur le tronçon (au milieu de la part de chacun, en temps prévu).
 //   E|<dd>,<du>,<dn>,<dd>,<du>,<dn>,…
 //                          D+ et D− cumulés depuis le départ (m) le long du parcours, en écarts d'un
 //                          sommet au suivant à partir de 0,0,0 : la montre en tire le D+ / D− restant
@@ -16,11 +22,13 @@
 //                          (lat / lon en 1e-5 degré), puis écarts de distance (m) et de position
 //                          d'un point au suivant. Absent si le plan dépasserait WATCH_PLAN_MAX.
 // Temps prévu à une distance d = K interpolé + somme des arrêts des points situés avant d.
-// Les champs ajoutés en fin de ligne S et la ligne E sont ignorés par les versions plus anciennes du champ.
+// Les champs ajoutés en fin de ligne S et les lignes E, P et F sont ignorés par les versions plus anciennes
+// du champ.
 import { indexAt } from './gpx'
+import { extraSodium, intakeOrder, nutritionPlan, type Leg } from './nutrition'
 import { simplifyRoute } from './routeGeo'
 import { zonedToUtc } from './time'
-import type { Athlete, Race, SimResult, Track, TrackPoint } from './types'
+import type { Athlete, Race, SimResult, SplitRow, Track, TrackPoint } from './types'
 
 /** Tolérance de simplification de la courbe des temps (s). */
 const TOL = 45
@@ -85,6 +93,7 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
       return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${clean(s.cp.name, 16)}|${Math.round(s.cp.stopMin * 60)}`
     }),
+    ...foodLines(nutritionPlan(race, sim, athlete.products), sim.splits),
   ]
   const base = lines.join('\n')
   // Taille en octets (accents des noms sur 2 octets) ; les lignes E et G n'ont que des caractères ASCII.
@@ -98,6 +107,31 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
     if (route) climb = null
   }
   return [base, climb, route].filter(Boolean).join('\n')
+}
+
+/**
+ * Lignes P et F : produits du plan nutrition, tronçon par tronçon (départ ou ravito → ravito suivant ou
+ * arrivée), avec le sac « À emporter » de chaque tronçon. Tronçon sans eau, sel ni produit : pas de ligne.
+ */
+export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
+  const ids: string[] = []
+  const names: string[] = []
+  const index = (cpId: string | null) => (cpId === null ? -1 : splits.findIndex((s) => s.cp.id === cpId))
+  const out: string[] = []
+  for (const leg of legs) {
+    const order = intakeOrder(leg.products.map((x) => ({ product: x.product, count: x.count }))).map((p) => {
+      if (!ids.includes(p.id)) {
+        ids.push(p.id)
+        names.push(clean(p.name.replace(/,/g, ' '), 16))
+      }
+      return ids.indexOf(p.id)
+    })
+    const water = Math.round(leg.water * 10)
+    const salt = extraSodium(leg)
+    if (!order.length && !water && !salt) continue
+    out.push(`F|${index(leg.fromId)}|${index(leg.toId)}|${water}|${salt}|${order.join(',')}`)
+  }
+  return names.length ? [`P|${names.join('|')}`, ...out] : out
 }
 
 /** Place maximale de la ligne E (caractères). */
