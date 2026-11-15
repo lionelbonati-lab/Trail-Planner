@@ -39,7 +39,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   sauf ceux du départ, de l'arrivée ou à plus de 200 m de la trace ; bouton pour réimporter ceux supprimés.
 - Profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
   quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, base de vie, point
-  intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
+  intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos ou à toutes les bases de vie (course), ou à tous les points (parcours).
 - **Bases de vie** (courses) : grand ravito, 20 min d'arrêt par défaut, traité comme un ravito partout
   (nutrition, assistance, montre, FIT/GPX). Case **Dropbag** sur les ravitos et bases de vie où
   l'organisation prévoit un sac (cochée d'office sur une base de vie) : le plan nutrition et la feuille A4
@@ -126,7 +126,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   entraînement Garmin découpé par distance — pour planifier aussi les allures d'entraînement.
 - **D′** : relances en montée tant que le D′ le permet (bilan W′bal).
 - **Fourchette** bonne journée / prévu / journée difficile pour chaque point.
-- Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires,
+- Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires (arrivée comprise),
   **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits).
 - Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
