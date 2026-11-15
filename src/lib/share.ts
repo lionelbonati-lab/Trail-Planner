@@ -1,7 +1,7 @@
 // Lien public pour l'assistance : un instantané du plan (et du suivi en direct),
 // lisible sans compte, mis à jour par le propriétaire.
 import { assistAllowed, FINISH_ID } from './assist'
-import { indexAt } from './gpx'
+import { elevationGain, indexAt } from './gpx'
 import { liveStatus } from './live'
 import { isFreeStart } from './plan'
 import { simplifyRoute, type RoutePoint } from './routeGeo'
@@ -32,6 +32,8 @@ export interface ShareRow {
   assist?: boolean
   /** Dropbag prévu par l'organisation à ce point. */
   dropbag?: boolean
+  /** D+ cumulé depuis le départ jusqu'à ce point (m), absent des anciens partages. */
+  up?: number
 }
 
 export interface ShareSnapshot {
@@ -41,6 +43,8 @@ export interface ShareSnapshot {
   athleteName: string
   timeZone: string
   start: string
+  /** Départ officiel (ISO), base des barrières horaires (absent des anciens partages). */
+  plannedStart?: string
   totalDist: number
   dPlus: number
   /** Profil simplifié : [distance (m), altitude (m)]. */
@@ -85,6 +89,7 @@ export function buildSnapshot(
     athleteName: athlete.name,
     timeZone: race.env.timeZone,
     start: new Date(start).toISOString(),
+    plannedStart: new Date(plannedStart).toISOString(),
     totalDist: track.totalDist,
     dPlus: track.dPlus,
     profile: track.points.filter((_, i) => i % stride === 0).map((p) => [Math.round(p.dist), Math.round(p.ele)]),
@@ -113,6 +118,7 @@ export function buildSnapshot(
         ...navTarget(s.cp.access ?? (s.cp.id === FINISH_ID ? race.finishAccess : undefined), track, s.to),
         assist: assistAllowed(s.cp),
         ...(s.cp.dropbag ? { dropbag: true } : {}),
+        up: Math.round(elevationGain(track.points, 0, s.to).dPlus),
       }
     }),
   }

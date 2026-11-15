@@ -1,7 +1,7 @@
 import { isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Map as MapIcon, Mountain, Navigation, Radio, Route } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
@@ -314,20 +314,25 @@ export function ShareView({
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
   const nowSec0 = nowMs / 1000
-  // Départ libre : heures recalées sur le départ réel (montre, sinon mode course), puis fixes pendant
-  // toute l'activité (même si le dernier relevé de la montre date) ; sur maintenant tant que le coureur
-  // n'est pas parti.
+  // Heures recalées sur le départ réel (montre, sinon mode course) s'il diffère du départ officiel ;
+  // les barrières horaires suivent le même décalage. Départ libre pas encore parti : heures pour un
+  // départ maintenant. Une fois parti, fixes pendant toute l'activité (même si le relevé date).
   const watchStart = watchStartMs(report, nowSec0)
   const freeStarted = watchStart !== null || !!snap.live
-  if (snap.freeStart) {
-    const real = watchStart ?? (snap.live ? Date.parse(snap.live.startedAt) : Math.ceil(nowMs / 60000) * 60000)
-    const off = real - Date.parse(snap.start)
-    if (Math.abs(off) >= 30000) {
-      const shift = (iso: string | null) => (iso ? new Date(Date.parse(iso) + off).toISOString() : iso)
+  const officialMs = Date.parse(snap.plannedStart ?? snap.start)
+  const realStart = watchStart ?? (snap.live ? Date.parse(snap.live.startedAt) : snap.freeStart ? Math.ceil(nowMs / 60000) * 60000 : null)
+  const startShift = realStart !== null ? realStart - officialMs : 0
+  if (realStart !== null) {
+    const off = realStart - Date.parse(snap.start)
+    const cutOff = startShift
+    if (Math.abs(off) >= 30000 || Math.abs(cutOff) >= 30000) {
+      const by = (ms: number) => (iso: string | null) => (iso && Math.abs(ms) >= 30000 ? new Date(Date.parse(iso) + ms).toISOString() : iso)
+      const shift = by(off)
+      const shiftCut = by(cutOff)
       snap = {
         ...snap,
-        start: new Date(real).toISOString(),
-        rows: snap.rows.map((r) => ({ ...r, planned: shift(r.planned)!, early: shift(r.early), late: shift(r.late), eta: shift(r.eta)! })),
+        start: new Date(realStart).toISOString(),
+        rows: snap.rows.map((r) => ({ ...r, planned: shift(r.planned)!, early: shift(r.early), late: shift(r.late), eta: shift(r.eta)!, cutoff: shiftCut(r.cutoff) })),
       }
     }
   }
@@ -346,6 +351,12 @@ export function ShareView({
         eta: new Date(watch.etas[i] * 1000).toISOString(),
       })),
     }
+  }
+  // Suivi saisi à la main (sans montre) : le prochain point n'est jamais estimé avant maintenant.
+  if (!watch && snap.live) {
+    const nextRow = snap.rows.find((r) => !r.actual)
+    const lag = nextRow ? nowMs - Date.parse(nextRow.eta) : 0
+    if (lag > 60000) snap = { ...snap, rows: snap.rows.map((r) => (r.actual ? r : { ...r, eta: new Date(Date.parse(r.eta) + lag).toISOString() })) }
   }
   const long = Date.parse(snap.rows[snap.rows.length - 1]?.planned ?? snap.start) - Date.parse(snap.start) > 20 * 3600000
   const lastDone = [...snap.rows].reverse().find((r) => r.actual)
@@ -387,7 +398,9 @@ export function ShareView({
             ? freeStarted
               ? `parti à ${formatClock(new Date(snap.start), tz)}`
               : 'départ libre (heures pour un départ maintenant)'
-            : `départ ${formatClock(new Date(snap.start), tz, true)}`}{' '}
+            : Math.abs(startShift) >= 30000
+              ? `parti à ${formatClock(new Date(snap.start), tz, true)} (départ officiel ${formatClock(new Date(officialMs), tz)}, heures et barrières recalées)`
+              : `départ ${formatClock(new Date(snap.start), tz, true)}`}{' '}
           · {(snap.totalDist / 1000).toFixed(1)} km, +{Math.round(snap.dPlus)} m
         </p>
         <div className="seg share-tabs" role="tablist" aria-label="Affichage">
@@ -448,6 +461,8 @@ export function ShareView({
             )}
           </>
         )}
+        {/* Tableau plus large qu'un téléphone : il défile seul, la colonne des points reste visible. */}
+        <div className="scroll share-points">
         <table className="table">
           <thead>
             <tr><th>Point</th><th>Km</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
@@ -470,12 +485,13 @@ export function ShareView({
                 <td>{clock(r.early, long)}</td>
                 <td><strong>{clock(r.planned, long)}</strong></td>
                 <td>{clock(r.late, long)}</td>
-                <td>{r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
+                <td>{r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live || watch ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
                 <td>{clock(r.cutoff, long)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
         </>
         )}
         <p className="hint">Mis à jour {formatClock(new Date(snap.updatedAt), tz, true)}. Cette page se met à jour toute seule.</p>
@@ -524,7 +540,7 @@ function AssistTrip({
                   <span className="small">
                     {done ? `passé à ${clock(r.actual)}` : `${live ? 'estimé' : 'prévu'} ${clock(live ? r.eta : r.planned)}`}
                     {r.access ? ' · accès assistance' : ''}
-                    {!r.assist && <span className="muted"> · assistance non prévue</span>}
+                    {!r.assist && <span className="muted"> · assistance non autorisée</span>}
                   </span>
                 </span>
               </label>
@@ -561,28 +577,98 @@ function AssistTrip({
  * Profil de la page assistance : nom des points (inclinés, sans chevauchement : assistance
  * autorisée et dropbags prioritaires), marqueurs assistance / dropbag et position du coureur.
  */
+/** D+ cumulé jusqu'à d (m) d'après le profil simplifié (anciens partages sans D+ par point). */
+function profileGain(profile: [number, number][], d: number): number {
+  let up = 0
+  for (let i = 1; i < profile.length && profile[i - 1][0] < d; i++) up += Math.max(0, profile[i][1] - profile[i - 1][1])
+  return up
+}
+
+/** Échelle minimale du profil (px par km) : au-delà de la largeur de l'écran, il défile. */
+const PX_PER_KM = 12
+/** Après un glissement à la main, le profil reprend le suivi du coureur au bout de ce délai. */
+const FOLLOW_RESUME_MS = 30000
+
 function MiniProfile({ profile, rows, position }: { profile: [number, number][]; rows: ShareSnapshot['rows']; position: number | null }) {
   // Rendu à l'échelle 1 (largeur mesurée) : texte lisible aussi sur téléphone.
   const wrap = useRef<HTMLDivElement>(null)
-  const [W, setW] = useState(900)
+  const scroller = useRef<HTMLDivElement>(null)
+  const clipId = `done-${useId().replace(/:/g, '')}`
+  const [Wc, setWc] = useState(900)
   useEffect(() => {
     const el = wrap.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(([e]) => setW(Math.max(300, Math.round(e.contentRect.width))))
+    const ro = new ResizeObserver(([e]) => setWc(Math.max(300, Math.round(e.contentRect.width))))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const total = profile[profile.length - 1]?.[0] || 1
+  // Course longue (UTMB…) : profil plus large que l'écran, à faire défiler.
+  // Marge gauche : colonne fixe des altitudes, posée par-dessus le profil.
+  const ML = 46
+  const W = Math.max(Wc, Math.round((total / 1000) * PX_PER_KM) + ML + 8)
+  const scrolls = W > Wc + 1
+  const x = (d: number) => ML + (d / total) * (W - ML - 8)
+  // Point suivi : position de la montre, sinon dernier point passé.
+  const lastDone = [...rows].reverse().find((r) => r.actual)
+  const follow = position ?? (lastDone ? lastDone.dist : null)
+  // Glissement à la main : on arrête de suivre le coureur, puis on reprend après un moment.
+  const [free, setFree] = useState(false)
+  const resume = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const grab = () => {
+    if (!scrolls) return
+    setFree(true)
+    if (resume.current) clearTimeout(resume.current)
+    resume.current = setTimeout(() => setFree(false), FOLLOW_RESUME_MS)
+  }
+  useEffect(() => () => {
+    if (resume.current) clearTimeout(resume.current)
+  }, [])
+  const followX = follow === null ? null : x(follow)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el || !scrolls || free || followX === null) return
+    // Le coureur au tiers gauche : on voit surtout ce qui l'attend.
+    const left = Math.max(0, followX - Wc / 3)
+    if (typeof el.scrollTo === 'function') el.scrollTo({ left, behavior: 'smooth' })
+    else el.scrollLeft = left
+  }, [followX, scrolls, free, Wc])
   if (profile.length < 2) return null
   const T = 92
   const H = T + 120
-  const total = profile[profile.length - 1][0] || 1
   const eles = profile.map((p) => p[1])
   const lo = Math.min(...eles)
   const hi = Math.max(...eles)
-  const x = (d: number) => 8 + (d / total) * (W - 16)
   const y = (e: number) => H - 8 - ((e - lo) / (hi - lo || 1)) * (H - T - 16)
   const line = profile.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join('')
   const eleAt = (d: number) => profile.reduce((best, p) => (Math.abs(p[0] - d) < Math.abs(best[0] - d) ? p : best))[1]
+  // Sous le profil : distance et D+ de chaque tronçon (entre deux points), puis entre deux ravitos
+  // (départ et arrivée compris). Texte sur deux lignes, abrégé ou omis si le tronçon est trop court.
+  const BAND = 30
+  const SH = H + 8 + 2 * BAND
+  const upAt = (r: (typeof rows)[number]) => r.up ?? profileGain(profile, r.dist)
+  type Leg = { from: number; to: number; km: number; up: number }
+  const legsOf = (pts: (typeof rows)[number][]): Leg[] =>
+    pts.map((r, i) => {
+      const p = pts[i - 1]
+      return { from: p?.dist ?? 0, to: r.dist, km: (r.dist - (p?.dist ?? 0)) / 1000, up: Math.max(0, Math.round(upAt(r) - (p ? upAt(p) : 0))) }
+    })
+  const pointLegs = legsOf(rows)
+  const ravitoLegs = legsOf(rows.filter((r, i) => isRavitoKind(r.kind) || i === rows.length - 1))
+  const legLines = (l: Leg, w: number): [string, string] | null => {
+    const fits = (a: string, b: string) => Math.max(a.length, b.length) * 6 + 6 <= w
+    const kmTxt = l.km.toFixed(1).replace('.', ',')
+    for (const [a, b] of [[`${kmTxt} km`, `D+ ${l.up} m`], [`${Math.round(l.km)} km`, `+${l.up}`]] as [string, string][]) if (fits(a, b)) return [a, b]
+    return null
+  }
+  // Lignes d'altitude : 3 ou 4 paliers ronds ; sur un profil qui défile, la cote est répétée.
+  const eleStep = [10, 20, 50, 100, 200, 250, 500, 1000].find((st) => (hi - lo) / st <= 4) ?? 1000
+  const eleLines: number[] = []
+  for (let e = Math.ceil(lo / eleStep) * eleStep; e <= hi; e += eleStep) eleLines.push(e)
+  // Repères kilométriques espacés d'au moins 50 px.
+  const kmStep = [1, 2, 5, 10, 20, 50, 100].find((k) => (k * (W - 16) * 1000) / total >= 50) ?? 100
+  const kmTicks: number[] = []
+  for (let k = kmStep; k * 1000 < total - (kmStep * 1000) / 3; k += kmStep) kmTicks.push(k)
   // Étiquettes inclinées à 40° : vers la droite, ou vers la gauche si elles déborderaient du bord.
   // On saute celles qui chevaucheraient une autre (assistance, dropbag, ravitos d'abord).
   const short = (n: string) => (n.length > 20 ? `${n.slice(0, 19)}…` : n)
@@ -610,16 +696,47 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   const hasBase = rows.some((r) => r.kind === 'base')
   return (
     <div className="assist-profile" ref={wrap}>
-      <svg className="profile" viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img" aria-label="Profil du parcours">
+      <div
+        ref={scroller}
+        className={scrolls ? 'assist-profile-scroll' : undefined}
+        onTouchStart={grab}
+        onPointerDown={grab}
+        onWheel={grab}
+      >
+      <svg
+        className="profile"
+        viewBox={`0 0 ${W} ${SH}`}
+        style={scrolls ? { width: W, height: SH, display: 'block' } : { width: '100%', height: 'auto', display: 'block' }}
+        role="img"
+        aria-label="Profil du parcours"
+      >
+        {eleLines.map((e) => (
+          <line key={`g${e}`} x1={0} x2={W} y1={y(e)} y2={y(e)} className="grid" />
+        ))}
         <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
         <path d={line} className="line" />
+        {/* Partie déjà parcourue : profil grisé jusqu'au coureur. */}
+        {follow !== null && follow > 0 && (
+          <g className="done-part">
+            <clipPath id={clipId}>
+              <rect x={0} y={0} width={x(Math.min(follow, total))} height={H} />
+            </clipPath>
+            <g clipPath={`url(#${clipId})`}>
+              <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="done-area" />
+              <path d={line} className="done-line" />
+            </g>
+          </g>
+        )}
+        {kmTicks.map((k) => (
+          <text key={k} x={x(k * 1000)} y={H - 12} textAnchor="middle" className="tick km-tick">{k}</text>
+        ))}
         {rows.map((r) => {
           const xx = x(r.dist)
           const yy = y(eleAt(r.dist))
           const label = shown.has(r.id)
           const flip = !!shown.get(r.id)
           return (
-            <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''}`}>
+            <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''} ${r.actual || (follow !== null && r.dist <= follow) ? 'mp-passed' : ''}`}>
               <title>{`${r.name} · km ${(r.dist / 1000).toFixed(1)}${r.assist ? ' · assistance autorisée' : ''}${r.kind === 'base' ? ' · base de vie' : ''}${r.dropbag ? ' · dropbag' : ''}`}</title>
               {label && <line className="mp-stem" x1={xx} x2={xx} y1={T - 4} y2={yy} />}
               {r.assist && <circle className="assist-ring" cx={xx} cy={yy} r={7} />}
@@ -643,6 +760,31 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
             </g>
           )
         })}
+        {[pointLegs, ravitoLegs].map((legs, band) => {
+          const top = H + 8 + band * BAND
+          return (
+            <g key={`band${band}`} className={`leg-band ${band ? 'leg-ravito' : ''}`}>
+              <rect x={0} y={top} width={W} height={BAND - 2} className="leg-bg" />
+              {legs.map((l, i) => {
+                const x0 = x(l.from)
+                const x1 = x(l.to)
+                const txt = legLines(l, x1 - x0)
+                return (
+                  <g key={i}>
+                    <title>{`${l.km.toFixed(1).replace('.', ',')} km · D+ ${l.up} m`}</title>
+                    {i > 0 && <line x1={x0} x2={x0} y1={top} y2={top + BAND - 2} className="leg-sep" />}
+                    {txt && (
+                      <text x={(x0 + x1) / 2} y={top + 12} textAnchor="middle" className="leg-text">
+                        <tspan x={(x0 + x1) / 2}>{txt[0]}</tspan>
+                        <tspan x={(x0 + x1) / 2} dy={12}>{txt[1]}</tspan>
+                      </text>
+                    )}
+                  </g>
+                )
+              })}
+            </g>
+          )
+        })}
         {position !== null && (
           <g className="me">
             <line x1={x(position)} x2={x(position)} y1={T - 4} y2={H - 8} />
@@ -650,13 +792,26 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           </g>
         )}
       </svg>
-      {(hasAssist || hasBag || hasBase) && (
-        <div className="mp-legend muted small">
-          {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
-          {hasBase && <span><i className="lg-base" /> Base de vie</span>}
-          {hasBag && <span><i className="lg-bag" /> Dropbag</span>}
-        </div>
+      </div>
+      {/* Altitudes : colonne fixe à gauche, le profil défile dessous. */}
+      <svg className="profile ele-axis" width={ML} height={H} viewBox={`0 0 ${ML} ${H}`} aria-hidden>
+        <rect x={0} y={0} width={ML} height={H} className="ele-axis-bg" />
+        {eleLines.map((e) => (
+          <text key={e} x={ML - 5} y={y(e) + 3.5} textAnchor="end" className="tick ele-tick">{e} m</text>
+        ))}
+      </svg>
+      {scrolls && free && follow !== null && (
+        <button className="ghost small follow-btn" onClick={() => setFree(false)}>
+          <Navigation className="inline" /> Suivre le coureur
+        </button>
       )}
+      <div className="mp-legend muted small">
+        <span><i className="lg-leg" /> Entre deux points</span>
+        <span><i className="lg-leg-ravito" /> Entre deux ravitos</span>
+        {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
+        {hasBase && <span><i className="lg-base" /> Base de vie</span>}
+        {hasBag && <span><i className="lg-bag" /> Dropbag</span>}
+      </div>
     </div>
   )
 }

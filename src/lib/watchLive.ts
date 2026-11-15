@@ -84,36 +84,64 @@ function paceRatio(report: WatchReport, planned: number): number {
   return ratioOf(report.t - report.s, planned)
 }
 
+/** Au-delà, un passage noté devant la position du coureur est ignoré (m). */
+export const PASS_AHEAD_M = 300
+
+/** Temps d'arrêt prévus aux points situés strictement entre `from` et `to` (m). */
+function stopsBetween(plan: WatchPlan, from: number, to: number): number {
+  return plan.cps.reduce((a, cp) => a + (cp.dist > from && cp.dist < to ? cp.stop : 0), 0)
+}
+
+/** Temps de déplacement prévu jusqu'à d (s), sans les arrêts. */
+function movingAt(plan: WatchPlan, d: number): number {
+  return plannedAtWatch(plan, d) - plan.cps.reduce((a, cp) => a + (cp.dist < d ? cp.stop : 0), 0)
+}
+
 /**
  * État du coureur d'après le relevé de la montre. Écart au plan : à la position du relevé. Heures
- * estimées (comme sur la montre) : recalculées à chaque passage d'après ce qui a déjà été fait — rythme
- * réel au dernier point passé (amorti et borné) appliqué à la suite, arrêts prévus non étirés — et fixes
- * entre deux passages ; avant le premier passage, heures prévues.
+ * estimées recalculées à chaque relevé : à partir de la position et de l'heure du relevé (ou du
+ * dernier passage s'il est plus récent), rythme réel jusque-là (amorti et borné) appliqué à la
+ * suite, arrêts prévus non étirés. Un point pas encore passé n'est jamais estimé avant maintenant :
+ * si le prochain est « en retard » sur son estimation, toute la suite est décalée d'autant.
  */
 export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number): WatchStatus {
   const elapsed = report.t - report.s
   const planned = plannedAtWatch(plan, report.d)
-  const passed = parsePasses(report.p)
-  const ref = [...passed.keys()].filter((i) => i < plan.cps.length).reduce((a, i) => Math.max(a, i), -1)
+  // Passage noté pour un point encore loin devant la position du relevé (tour Lap pris pour un
+  // passage, distance sans tracé GPS qui dérive…) : pas crédible, ignoré.
+  const passed = new Map([...parsePasses(report.p)].filter(([i]) => i < plan.cps.length && plan.cps[i].dist <= report.d + PASS_AHEAD_M))
+  const ref = [...passed.keys()].reduce((a, i) => Math.max(a, i), -1)
+  // Point d'ancrage des estimations : départ, dernier passage (arrêt compris) ou relevé plus récent.
   let ratio = 1
   let t0 = report.s
-  let base = 0
+  let d0 = 0
   if (ref >= 0) {
     const cp = plan.cps[ref]
     ratio = ratioOf(passed.get(ref)! - report.s, cp.planned)
     t0 = passed.get(ref)! + cp.stop
-    base = cp.planned + cp.stop
+    d0 = cp.dist
   }
-  const eta = (plannedTime: number) => t0 + Math.max(0, plannedTime - base) * ratio
-  const finish = plan.curve[plan.curve.length - 1][1] + plan.cps.reduce((a, cp) => a + (cp.dist < plan.total ? cp.stop : 0), 0)
+  if (report.d > 200 && report.d > d0 + 100 && report.t >= t0 && report.d < plan.total) {
+    ratio = ratioOf(elapsed, planned)
+    t0 = report.t
+    d0 = report.d
+  }
+  const eta = (d: number) => t0 + Math.max(0, movingAt(plan, d) - movingAt(plan, d0)) * ratio + stopsBetween(plan, d0, d)
+  const raw = plan.cps.map((cp, i) => passed.get(i) ?? (i > ref ? eta(cp.dist) : report.s + cp.planned))
+  let finishEta = eta(plan.total)
+  // Pas encore passé au prochain point alors que son heure estimée est dépassée : on décale la suite.
+  const nextI = raw.findIndex((_, i) => i > ref && !passed.has(i))
+  const lag = nextI >= 0 ? Math.max(0, nowSec - raw[nextI]) : 0
+  const etas = raw.map((e, i) => (i > ref && !passed.has(i) ? e + lag : e))
+  if (report.d < plan.total) finishEta = Math.max(finishEta + lag, nowSec)
   return {
     age: nowSec - report.t,
     elapsed,
     dist: report.d,
     delta: report.d > 200 ? elapsed - planned : 0,
-    etas: plan.cps.map((cp, i) => passed.get(i) ?? (i > ref ? eta(cp.planned) : report.s + cp.planned)),
+    etas,
     passed,
-    finishEta: eta(finish),
+    finishEta,
   }
 }
 

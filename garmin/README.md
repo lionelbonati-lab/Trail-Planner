@@ -13,9 +13,10 @@ ClimbPro et PacePro continuent de fonctionner) :
 - **marge sur la prochaine barrière horaire**, avec vibration si elle passe sous 30 min ;
 - **rappels nutrition** : le **produit prévu** (« Gel », « Barre »…) et l'eau à boire (vibration + écran
   30 s) ; les produits du plan nutrition sont répartis équitablement sur chaque tronçon entre deux ravitos ;
-- **à l'arrivée à un ravito** : écran « À emporter » (eau, produits, sel jusqu'au ravito suivant), comme la
-  colonne « À emporter » du plan nutrition ; l'eau en quantité réelle et en flasques de 500 ml
-  (« 1.1 L : 2 eau + 1 iso », l'isotonique n'étant alors plus répété dans les produits) ;
+- **à l'arrivée à un ravito** : distance, D+ et D- jusqu'au ravito suivant, et écran « À emporter » (eau,
+  produits, sel jusqu'au ravito suivant), comme la colonne « À emporter » du plan nutrition ; l'eau en
+  quantité réelle et en flasques de 500 ml (« 1.1 L : 2 eau + 1 iso », l'isotonique n'étant alors plus
+  répété dans les produits) ;
 - avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une **course** seulement
   (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ;
 - **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton
@@ -47,9 +48,11 @@ tronçon / nombre de produits). Réglage « Rappel nutrition » dans Garmin Conn
 rappels, N = « Manger / boire » toutes les N minutes, 0 = aucun rappel. Sans produits dans le profil
 athlète, rappel « Manger / boire » au rythme des glucides du plan.
 
-**Arrivée à un ravito.** Dès le passage (position ou bouton Lap), l'écran « À emporter · nom du ravito »
-liste l'eau, les produits et le sel à prendre pour le tronçon suivant. Il reste affiché pendant l'arrêt
-prévu (1 à 10 min) et disparaît 300 m après le ravito.
+**Arrivée à un ravito.** Dès le passage (position ou bouton Lap), l'écran du ravito affiche le tronçon
+suivant (« Vers Arnouvaz », « 12.4 km · D+850 · D-420 » jusqu'au ravito suivant ou à l'arrivée, comme le
+tableau du plan), puis « À emporter · nom du ravito » : l'eau, les produits et le sel à prendre pour ce
+tronçon. Il reste affiché pendant l'arrêt prévu (1 à 10 min) et disparaît 300 m après le ravito. Si la
+place manque (demi-écran), le titre puis le nom du ravito suivant sont retirés ; les chiffres restent.
 
 ![Aperçu approximatif des écrans nutrition](apercu-nutrition.png)
 

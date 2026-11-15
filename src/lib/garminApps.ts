@@ -24,7 +24,7 @@ export const WATCH_APPS: WatchApp[] = [
     name: 'Trail Planner',
     kind: 'Champ de données',
     what:
-      'Écart au plan à l’endroit où tu es, prochain point (distance, D+ et D- restants, heure prévue et estimée), jusqu’à l’arrivée en option, barrières horaires, rappels nutrition (produit prévu), sac « À emporter » à chaque ravito ; bouton Lap = passage ; passages et position envoyés à ton assistance.',
+      'Écart au plan à l’endroit où tu es, prochain point (distance, D+ et D- restants, heure prévue et estimée), jusqu’à l’arrivée en option, barrières horaires, rappels nutrition (produit prévu), à chaque ravito sac « À emporter » et distance, D+ et D- jusqu’au suivant ; bouton Lap = passage ; passages et position envoyés à ton assistance.',
     storeUrl: null,
     guideUrl: `${REPO_URL}/blob/main/garmin/README.md`,
   },

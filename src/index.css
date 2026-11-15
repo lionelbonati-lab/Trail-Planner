@@ -262,6 +262,27 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .assist-profile .base-mark { fill: var(--danger); stroke: var(--surface); stroke-width: 1.5; }
 .assist-profile .cp-label { font-size: 12px; }
 .assist-profile .cp-label.strong { font-weight: 650; fill: var(--series-1); }
+.share-points { max-width: 100%; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.share-points td:first-child, .share-points th:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); min-width: 130px; max-width: 46vw; box-shadow: 1px 0 0 var(--line); }
+.share-points td:not(:first-child) { white-space: nowrap; }
+.assist-profile { position: relative; }
+.assist-profile-scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.assist-profile .leg-bg { fill: var(--surface); }
+.assist-profile .leg-ravito .leg-bg { fill: #fdf3ec; }
+.assist-profile .leg-sep { stroke: var(--line); stroke-width: 1; }
+.assist-profile .leg-ravito .leg-sep { stroke: var(--ravito); opacity: 0.5; }
+.assist-profile .leg-text { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.assist-profile .leg-ravito .leg-text { fill: var(--ravito); font-weight: 600; }
+.mp-legend .lg-leg { background: var(--surface); border: 1px solid var(--line); border-radius: 2px; }
+.mp-legend .lg-leg-ravito { background: #fdf3ec; border: 1px solid var(--ravito); border-radius: 2px; }
+.assist-profile .km-tick { font-size: 10px; opacity: 0.8; }
+.assist-profile .mp-passed { filter: grayscale(1); opacity: 0.45; }
+.assist-profile .done-area { fill: #dcdcd8; }
+.assist-profile .done-line { fill: none; stroke: #9a9d99; stroke-width: 1.6; }
+.assist-profile .ele-tick { font-size: 10px; }
+.assist-profile .ele-axis { position: absolute; left: 0; top: 0; pointer-events: none; }
+.assist-profile .ele-axis-bg { fill: var(--bg); opacity: 0.88; }
+.assist-profile .follow-btn { position: absolute; right: 6px; top: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; }
 .mp-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 2px 0 6px; }
 .mp-legend i { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin-right: 4px; }
 .mp-legend .lg-assist { border: 2px solid var(--series-1); border-radius: 50%; }

@@ -41,25 +41,56 @@ describe('suivi depuis la montre', () => {
     expect(parsePasses('0:10,x:3,2:30').size).toBe(2)
   })
 
-  it('heures estimées recalculées à chaque passage seulement, d’après ce qui a été fait', () => {
+  it('heures estimées recalculées à chaque relevé, d’après ce qui a été fait', () => {
     const s = 1_800_000_000
-    // Avant le premier passage : heures prévues, quelle que soit la position.
-    const before = watchStatus({ t: s + 1500, s, d: 3000, p: '' }, w, s + 1500)
-    expect(before.etas).toEqual(w.cps.map((cp) => s + cp.planned))
-    // Passage en A avec 20 % de retard : la suite est recalculée (retard amorti à 14 %, arrêt non étiré).
+    // Avant le premier passage, dans les temps : heures prévues (à la minute près).
+    const onTime = watchStatus({ t: s + Math.round(plannedAtWatch(w, 3000)), s, d: 3000, p: '' }, w, s + 1500)
+    onTime.etas.forEach((e, i) => expect(Math.abs(e - (s + w.cps[i].planned))).toBeLessThan(60))
+    // Même position avec 20 % de retard : toute la suite est décalée (sans attendre un passage).
+    const t1 = s + Math.round(plannedAtWatch(w, 3000) * 1.2)
+    const late = watchStatus({ t: t1, s, d: 3000, p: '' }, w, t1)
+    late.etas.forEach((e, i) => expect(e).toBeGreaterThan(s + w.cps[i].planned + 60))
+    // Passage en A avec 20 % de retard, relevé au point : retard amorti à 14 %, arrêt non étiré.
     const passA = s + Math.round(w.cps[0].planned * 1.2)
-    const st1 = watchStatus({ t: passA + 600, s, d: 6500, p: `0:${passA}` }, w, passA + 600)
+    const st1 = watchStatus({ t: passA, s, d: w.cps[0].dist, p: `0:${passA}` }, w, passA)
     const exp = passA + w.cps[0].stop + (w.cps[1].planned - w.cps[0].planned - w.cps[0].stop) * (1 + 0.7 * 0.2)
-    expect(st1.etas[1]).toBeCloseTo(exp, 0)
-    // Relevé suivant plus loin, sans nouveau passage : estimations inchangées (l'écart, lui, bouge).
-    const st2 = watchStatus({ t: passA + 1800, s, d: 8500, p: `0:${passA}` }, w, passA + 1800)
-    expect(st2.etas).toEqual(st1.etas)
-    expect(st2.delta).not.toBe(st1.delta)
+    expect(Math.abs(st1.etas[1] - exp)).toBeLessThan(10)
+    // Relevé suivant plus loin, encore plus lent : les estimations reculent.
+    const t2 = s + Math.round(plannedAtWatch(w, 8500) * 1.4)
+    const st2 = watchStatus({ t: t2, s, d: 8500, p: `0:${passA}` }, w, t2)
+    expect(st2.etas[0]).toBe(passA)
+    expect(st2.etas[1]).toBeGreaterThan(st1.etas[1])
     // Passage en B en avance : nouvelles estimations pour l'arrivée.
     const passB = s + Math.round(w.cps[1].planned * 0.95)
-    const st3 = watchStatus({ t: passB + 60, s, d: 10100, p: `0:${passA},1:${passB}` }, w, passB + 60)
+    const st3 = watchStatus({ t: passB, s, d: w.cps[1].dist, p: `0:${passA},1:${passB}` }, w, passB)
     expect(st3.etas[2]).toBeLessThan(st1.etas[2])
     expect(st3.finishEta).toBeCloseTo(st3.etas[2], 0)
+  })
+
+  it('passage noté loin devant la position du coureur : ignoré', () => {
+    const s = 1_800_000_000
+    const cp = w.cps[1]
+    const t = s + Math.round(plannedAtWatch(w, cp.dist - 1600))
+    // Tour Lap à 1,6 km du point B, pris pour son passage par la montre.
+    const st = watchStatus({ t, s, d: cp.dist - 1600, p: `0:${s + w.cps[0].planned},1:${t - 60}` }, w, t)
+    expect(st.passed.has(0)).toBe(true)
+    expect(st.passed.has(1)).toBe(false)
+    expect(st.etas[1]).toBeGreaterThan(t)
+    // À moins de 300 m devant : gardé (distance de la montre un peu en retard sur le point).
+    const near = watchStatus({ t, s, d: cp.dist - 200, p: `1:${t - 60}` }, w, t)
+    expect(near.passed.has(1)).toBe(true)
+  })
+
+  it('point pas encore passé : jamais estimé avant maintenant, la suite est décalée', () => {
+    const s = 1_800_000_000
+    const passA = s + w.cps[0].planned
+    const st = watchStatus({ t: passA, s, d: w.cps[0].dist, p: `0:${passA}` }, w, passA)
+    // Plus de relevé, et l'heure estimée de B est dépassée de 10 min.
+    const now = st.etas[1] + 600
+    const later = watchStatus({ t: passA, s, d: w.cps[0].dist, p: `0:${passA}` }, w, now)
+    expect(later.etas[1]).toBeCloseTo(now, 0)
+    expect(later.etas[2]).toBeCloseTo(st.etas[2] + 600, 0)
+    expect(later.finishEta).toBeCloseTo(st.finishEta + 600, 0)
   })
 
   it('départ libre : départ de la montre tant que l’activité dure (relevé de moins de 12 h)', () => {
