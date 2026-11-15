@@ -56,6 +56,11 @@ describe('réglages EndurancePro', () => {
     // Zones placées par portions : alarme inchangée.
     const mixed = { ...race, zones: [...race.zones, { ...race.zones[0], id: 'b', from: 5000 }] }
     expect(epValue(epPayload(A, mixed), 'zt')).toBe('0')
+    // Zone cible d'EndurancePro : Z1 à Z5 seulement (zones communes à l'allure, la FC et la VAM).
+    for (const [k, zt] of [[4, '5'], [5, '0'], [6, '0']] as const) {
+      const r = { ...race, zones: wholeRoute(zoneTarget(A, k), 10000) }
+      expect(epValue(epPayload(A, r), 'zt')).toBe(zt)
+    }
   })
 
   it('zones non triées dans le profil : bornes triées et zone d’alarme suivant le même ordre', () => {

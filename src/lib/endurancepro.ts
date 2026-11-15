@@ -7,7 +7,8 @@
 //   up : m de D+ équivalents à 1 km à plat (allure effort d'EndurancePro)
 //   dn : m de D- équivalents à 1 km à plat (allure effort montagne d'EndurancePro)
 //   vz : seuils VAM en m/h (début de Z1, fin de Z1 à Z4) pour les 5 couleurs VAM de la montre
-//   zt : zone cible (zone de la séance envoyée à la montre), 0 = inchangée
+//   zt : zone cible (zone de la séance envoyée à la montre), 0 = inchangée. Sur la montre, elle règle
+//        les trois alarmes (allure, FC et VAM) ; EndurancePro ne prend que Z1 à Z5.
 import type { Athlete, Race } from './types'
 import { epVamThresholds } from './vam'
 import { wholeRouteZone } from './zones'
@@ -58,13 +59,23 @@ function zoneBounds(a: Athlete): { order: number[]; pct: number[] } {
   return { order, pct }
 }
 
+/** Zones que la zone cible d'EndurancePro peut prendre (Z1 à Z5, les zones que la FC et la VAM ont aussi). */
+export const EP_TARGET_ZONES = 5
+
+/** Rang (1, 2…) de la zone de la séance sur la montre parmi les zones triées du profil, ou null. */
+export function epTargetRank(a: Athlete, onWatch: Race | null): number | null {
+  const k = onWatch && onWatch.kind !== 'race' ? wholeRouteZone(onWatch.zones, a) : null
+  return k === null ? null : zoneBounds(a).order.indexOf(k) + 1
+}
+
 /** Chaîne publiée pour EndurancePro. `onWatch` : course ou séance envoyée à la montre. */
 export function epPayload(a: Athlete, onWatch: Race | null): string {
   const { order, pct } = zoneBounds(a)
   const up = climbEquivalence(a)
   const dn = descentEquivalence(a)
   const k = onWatch && onWatch.kind !== 'race' ? wholeRouteZone(onWatch.zones, a) : null
-  const zt = k === null ? 0 : order.indexOf(k) + 1
+  const z = k === null ? 0 : order.indexOf(k) + 1
+  const zt = z >= 1 && z <= EP_TARGET_ZONES ? z : 0
   const vz = epVamThresholds(a)
   return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', dn ? `dn=${dn}` : '', vz ? `vz=${vz.join(',')}` : '', `zt=${zt}`]
     .filter(Boolean)

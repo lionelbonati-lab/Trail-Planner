@@ -90,7 +90,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Synchronisation EndurancePro** (datafield Garmin) : depuis l'onglet Montre, VC, zones, équivalence montée
   (déduite de la VAM à VC), équivalence descente (déduite des coefficients de descente), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
   montre (champ `ep`) ; EndurancePro les lit en arrière-plan. Sa cible d'allure peut être une zone ou un % de VC
-  (colorisation et alarme de l'allure cible inchangées) ; la zone d'une séance envoyée à la montre devient la cible.
+  (colorisation et alarme de l'allure cible inchangées) ; la zone d'une séance envoyée à la montre (Z1 à Z5) devient
+  la **zone cible commune** de toutes les alarmes : allure (référence Zone VC), FC et VAM.
   Code montre court à 8 chiffres, commun à EndurancePro (menu Allure › Trail Planner) et au champ Trail Planner
   (réglages du champ sur la montre) : pas besoin des paramètres téléphone, absents quand le datafield est
   installé hors Store ; le plan et le suivi en direct passent aussi par ce code.
