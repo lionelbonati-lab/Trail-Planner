@@ -629,7 +629,7 @@ export function RacePlan({
           ) : (
             <Hint>
               Un clic sur le profil (ou sur la carte) ajoute un point du type choisi : ravito, point intermédiaire ou barrière. Changer le
-              type d'un point le renomme (« Barrière km 20.1 ») s'il porte encore son nom par défaut. Bandes grises : nuit. Barre jaune → violet : technicité. Une course se
+              type d'un point le renomme « Type km N » (« Barrière km 20.1 »). Bandes grises : nuit. Barre jaune → violet : technicité. Une course se
               calcule à ton intensité de course (durabilité), sans zones d'allure.
             </Hint>
           )}

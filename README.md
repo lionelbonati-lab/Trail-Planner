@@ -36,7 +36,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 **Plan de course**
 - Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
   quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, point
-  intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom choisi est gardé) ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
+  intermédiaire ou barrière ; nom « Type km N », redonné à chaque changement de type dans les temps de passage) ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
   Équivalences du km-effort (m de D+ et de D− pour 1 km) dans le profil athlète, pour toutes les courses et
   tous les parcours : **automatiques** par défaut (D+ d'après la VAM à VC, D− d'après les coefficients de
