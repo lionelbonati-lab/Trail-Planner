@@ -60,6 +60,7 @@ export const DEFAULT_ATHLETE: Athlete = {
   zones: DEFAULT_ZONES,
   csTrials: [],
   weight: 70,
+  kme: { upPer1km: 100, downPer1km: 0 },
   hrZones: hrZonesOf({ hrMethod: 'grappe', hrPct: GRAPPE_PCT, hrBase: 'max', hrMax: 190, hrRest: 50 }),
   hrMax: 190,
   hrRest: 50,
@@ -135,6 +136,7 @@ export function normalizeAthlete(a: Partial<Athlete> | null | undefined): Athlet
     hrMax,
     hrRest: a?.hrRest ?? 50,
     weight: a?.weight ?? 70,
+    kme: { ...DEFAULT_KME, ...a?.kme },
     // Profil d'avant les zones en % : ses zones en bpm sont reprises en % de FC max (méthode perso).
     hrMethod: a?.hrMethod ?? (legacy ? 'custom' : 'grappe'),
     hrBase: a?.hrBase ?? 'max',

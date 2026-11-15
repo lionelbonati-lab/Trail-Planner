@@ -46,10 +46,30 @@ export function AthletePanel({
             min={0}
             max={60}
           />
+          <Num
+            label="1 km-effort = D+ de"
+            value={athlete.kme.upPer1km}
+            onChange={(v) => set('kme', { ...athlete.kme, upPer1km: Math.max(1, v) })}
+            unit="m"
+            min={1}
+            title="Mètres de D+ comptés comme 1 km à plat (100 m par défaut)"
+          />
+          <Num
+            label="1 km-effort = D− de"
+            value={athlete.kme.downPer1km}
+            onChange={(v) => set('kme', { ...athlete.kme, downPer1km: Math.max(0, v) })}
+            unit="m"
+            min={0}
+            title="Mètres de D− comptés comme 1 km à plat ; 0 = D− ignoré"
+          />
         </div>
         <Hint>
           VC = {(athlete.cs * 3.6).toFixed(2)} km/h. Au-delà du seuil de marche, le calcul utilise ta vitesse
           ascensionnelle ; en dessous, la course en côte suit le coût énergétique de Minetti.
+        </Hint>
+        <Hint>
+          Équivalences du km-effort (D− : 0 = ignoré) : elles servent, pour toutes tes courses et tous tes parcours, aux km-e affichés, au
+          mode de calcul « Km-effort » et aux points automatiques « tous les X km-effort ».
         </Hint>
       </Card>
 

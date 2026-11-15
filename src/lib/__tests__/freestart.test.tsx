@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ShareView } from '../../components/SharePage'
 import { Card } from '../../components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
-import { computePlan, scenarioWindows } from '../plan'
+import { computePlan, isFreeStart, scenarioWindows } from '../plan'
 import { buildSnapshot } from '../share'
 import { utcToZonedInput, zonedToUtc } from '../time'
 import { watchPlan } from '../watch'
@@ -48,6 +48,42 @@ describe('départ libre (entraînement)', () => {
     const later = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 300, s, d: 1000 }} nowMs={now + 4 * 3600000} />)
     expect(later).toContain('parti à 08:50')
     expect(later).toContain(at(s * 1000))
+  })
+})
+
+describe('parcours : pas d’heure de départ', () => {
+  const route = { ...newRace('Boucle', gpx()), kind: 'route' as const }
+  const athlete = normalizeAthlete(DEFAULT_ATHLETE)
+  const plan = computePlan(route, athlete)!
+
+  it('toujours en départ libre : montre sans heure, partage marqué ; une course ne l’est que si cochée', () => {
+    expect(isFreeStart(route)).toBe(true)
+    expect(isFreeStart(newRace('Trail', ''))).toBe(false)
+    expect(isFreeStart({ ...newRace('Trail', ''), freeStart: true })).toBe(true)
+    expect(watchPlan(route, athlete, plan.track, plan.sim).split('\n')[2]).toMatch(/^S\|0\|/)
+    const snap = buildSnapshot('uid', route, athlete, plan.track, plan.sim, scenarioWindows(plan.track, athlete, plan.opts))
+    expect(snap.freeStart).toBe(true)
+  })
+})
+
+describe('équivalences du km-effort : celles du profil', () => {
+  it('km-e des tronçons et mode « Km-effort » suivent le profil, pas la course', () => {
+    const pts: string[] = []
+    for (let d = 0; d <= 10000; d += 20) pts.push(`<trkpt lat="${45 + d / 111195}" lon="6"><ele>${500 + (d <= 5000 ? d / 10 : (10000 - d) / 10)}</ele></trkpt>`)
+    const race = { ...newRace('Bosse', `<gpx><trk><trkseg>${pts.join('')}</trkseg></trk></gpx>`), kme: { upPer1km: 50, downPer1km: 50 } }
+    const base = normalizeAthlete(DEFAULT_ATHLETE)
+    expect(base.kme).toEqual({ upPer1km: 100, downPer1km: 0 })
+    const kmeOf = (a: typeof base) => computePlan(race, a)!.sim.splits.reduce((t, s) => t + s.kme, 0)
+    // 10 km et 500 m de D+ / D− (lissage de l'altitude : un peu moins).
+    expect(kmeOf(base)).toBeGreaterThan(14.6)
+    expect(kmeOf(base)).toBeLessThan(15.01)
+    const steep = { ...base, kme: { upPer1km: 50, downPer1km: 0 } }
+    expect(kmeOf(steep) - kmeOf(base)).toBeGreaterThan(4.6)
+    const down = { ...base, kme: { upPer1km: 100, downPer1km: 250 } }
+    expect(kmeOf(down) - kmeOf(base)).toBeGreaterThan(1.8)
+    // Mode de calcul « Km-effort » : temps plus long quand le D+ compte davantage.
+    const t = (a: typeof base) => computePlan({ ...race, mode: 'kme' }, a)!.sim.totalTime
+    expect(t(steep)).toBeGreaterThan(t(base) * 1.2)
   })
 })
 

@@ -34,14 +34,17 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   **graphiques d'évolution** (VC recalculée à chaque test).
 
 **Plan de course**
-- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés, ravitos d'un clic ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
+- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
+  quand on survole le profil), ravitos d'un clic ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.
+  Équivalences du km-effort (m de D+ et de D− pour 1 km) réglées une fois dans le profil athlète, pour toutes
+  les courses et tous les parcours.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
 - **Courses et parcours séparés** : une course prépare ravitos, barrières, eau/glucides, assistance et lien de
   partage (sans zones d'allure) ; un parcours d'entraînement garde ses zones d'allure, ses points de repère, le
   plan nutrition, l'envoi à la montre, le mode course et le lien assistance (suivi en direct), sans ravitos, barrières
-  ni cadre Assistance. Un parcours ouvert depuis
+  ni assistance, et **sans heure de départ** (toujours en départ libre). Un parcours ouvert depuis
   l'onglet Parcours reste dans Parcours.
 - **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
   ou depuis une course), étiquettes et recherche. **« Vers une course »** crée une
@@ -127,15 +130,15 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   Garmin), position estimée d'après le rythme mesuré, arrêts aux ravitos compris (une heure au plus). Encart
   Garmin LiveTrack : l'assistance colle le lien reçu par e-mail au départ (envoi automatique de Garmin), gardé
   sur son téléphone.
-- **Navigation de l'assistance** : dans le plan, case « Assistance autorisée » par point (ravitos et arrivée
-  d'office) et accès assistance (parking, salle) placé sur la carte. Page assistance en deux onglets : **Suivi**
+- **Navigation de l'assistance** : dans les temps de passage d'une course, case « Assistance autorisée » par
+  point (ravitos et arrivée d'office) et épingle pour placer son accès (parking, salle) sur la carte. Page assistance en deux onglets : **Suivi**
   (direct, carte affichée par une case à cocher, lien « Y aller » Google Maps vers chaque point, son accès s'il
   est placé) et **Trajets** (tous les points à cocher, ceux d'assistance cochés d'office, gardés sur le
   téléphone ; itinéraire Google Maps entre les points cochés pas encore passés, découpé par 3 étapes).
 - **Notifications de passage** pour l'assistance (page ouverte, même en arrière-plan) : nom du point, heure,
   écart au plan compté depuis le vrai départ ; un toucher ramène sur la page.
 
-- **Départ libre** (entraînements) : heures du plan calculées pour un départ maintenant (mises à jour chaque
+- **Départ libre** (parcours : toujours ; course : option) : heures du plan calculées pour un départ maintenant (mises à jour chaque
   minute), puis calées sur le vrai départ — mode course, sinon départ donné par la montre (page du plan et
   page assistance) — et fixes pendant toute l'activité ; le champ Trail Planner affiche « Départ libre » pour
   une course (aucune heure pour un parcours). En mode course : « Départ maintenant » ou « Déjà

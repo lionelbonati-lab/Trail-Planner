@@ -311,7 +311,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const replacesZones = !!race?.zones.length && wholeRouteZone(race.zones, athlete) === null && pace !== 'route'
   const estimate = useMemo<{ time: number; range: [number, number] | null; sim: SimResult } | null>(() => {
     if (!track) return null
-    const run = (zones: PaceZone[]) => simulate(track, athlete, planOptions(draftRoute(name, zones), track))
+    const run = (zones: PaceZone[]) => simulate(track, athlete, planOptions(draftRoute(name, zones), track, athlete))
     try {
       if (typeof pace !== 'number' || !athlete.zones[pace]) {
         const sim = run(typeof pace === 'number' ? [] : paceZones(null))
@@ -846,7 +846,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   /** Durée simulée d'une trace à l'allure choisie (sans nuit, chaleur ni pluie). */
   const simTime = (tr: Track): number => {
     const zone = typeof pace === 'number' && athlete.zones[pace] ? wholeRoute(zoneTarget(athlete, pace), tr.totalDist) : []
-    return simulate(tr, athlete, planOptions(draftRoute(name, zone), tr)).totalTime
+    return simulate(tr, athlete, planOptions(draftRoute(name, zone), tr, athlete)).totalTime
   }
   /** Boucle départ → points → départ, sur les chemins, points accrochés au chemin le plus proche. */
   const routeLoop = async (start: { lat: number; lon: number }, points: { lat: number; lon: number }[], target: number): Promise<Cand> => {
