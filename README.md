@@ -168,7 +168,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   seulement) ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
   passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone). Position le long du
   parcours par le **GPS calé sur le tracé** envoyé avec le plan (pas d'erreur cumulée de distance, raccourci
-  ou détour recalé, « Hors parcours » affiché). Bouton Lap = passage au point le plus proche ; heures
+  ou détour recalé, « Hors parcours » affiché) ; sur les longs ultras, le tracé passe en priorité dans la
+  place limitée du plan (le D+ / D− restant garde au moins ses valeurs exactes à chaque point). Bouton Lap = passage au point le plus proche ; heures
   estimées recalculées à chaque passage d'après ce qui a été fait, heures prévues fixes. Voir `garmin/README.md`.
 
 **Compte et appareils**
