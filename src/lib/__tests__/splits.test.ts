@@ -30,11 +30,13 @@ describe('temps d’arrêt à tous les ravitos', () => {
 })
 
 describe('type d’un point : nom par défaut « Type km N »', () => {
-  it('changement de type : toujours renommé « Type km N » à la distance actuelle', () => {
+  it('nom par défaut, renommé au changement de type ; nom écrit à la main gardé', () => {
     expect(checkpointName('cutoff', 20140)).toBe('Barrière km 20.1')
     const auto = { ...cp('a', 'ravito', 3), dist: 13895, name: 'Ravito km 13.9' }
     expect(withKind(auto, 'cutoff')).toEqual({ kind: 'cutoff', name: 'Barrière km 13.9' })
     expect(withKind({ ...auto, name: 'Point inter km 5.0', dist: 6200 }, 'ravito')).toEqual({ kind: 'ravito', name: 'Ravito km 6.2' })
-    expect(withKind({ ...auto, name: 'Col du Bonhomme' }, 'split')).toEqual({ kind: 'split', name: 'Point inter km 13.9' })
+    expect(withKind({ ...auto, name: '' }, 'split')).toEqual({ kind: 'split', name: 'Point inter km 13.9' })
+    expect(withKind({ ...auto, name: 'Col du Bonhomme' }, 'cutoff')).toEqual({ kind: 'cutoff' })
+    expect(withKind({ ...auto, name: 'Ravito km 13.9 (eau)' }, 'split')).toEqual({ kind: 'split' })
   })
 })

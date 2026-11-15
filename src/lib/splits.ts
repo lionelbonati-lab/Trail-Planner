@@ -231,7 +231,12 @@ export function checkpointName(kind: CheckpointKind, dist: number): string {
   return `${CHECKPOINT_LABELS[kind]} km ${(dist / 1000).toFixed(1)}`
 }
 
-/** Changement de type d'un point : toujours renommé « Type km N », d'après sa distance actuelle. */
+const DEFAULT_NAME = new RegExp(`^(${Object.values(CHECKPOINT_LABELS).join('|')}) km \\d+(?:[.,]\\d+)?$`)
+
+/**
+ * Changement de type d'un point : un point qui porte encore un nom par défaut (« Ravito km 13.9 »)
+ * est renommé d'après le nouveau type et sa distance actuelle ; un nom écrit à la main est gardé.
+ */
 export function withKind(cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoint> {
-  return { kind, name: checkpointName(kind, cp.dist) }
+  return DEFAULT_NAME.test(cp.name.trim()) || !cp.name.trim() ? { kind, name: checkpointName(kind, cp.dist) } : { kind }
 }
