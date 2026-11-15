@@ -603,9 +603,11 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   }, [])
   const total = profile[profile.length - 1]?.[0] || 1
   // Course longue (UTMB…) : profil plus large que l'écran, à faire défiler.
-  const W = Math.max(Wc, Math.round((total / 1000) * PX_PER_KM) + 16)
+  // Marge gauche : colonne fixe des altitudes, posée par-dessus le profil.
+  const ML = 46
+  const W = Math.max(Wc, Math.round((total / 1000) * PX_PER_KM) + ML + 8)
   const scrolls = W > Wc + 1
-  const x = (d: number) => 8 + (d / total) * (W - 16)
+  const x = (d: number) => ML + (d / total) * (W - ML - 8)
   // Point suivi : position de la montre, sinon dernier point passé.
   const lastDone = [...rows].reverse().find((r) => r.actual)
   const follow = position ?? (lastDone ? lastDone.dist : null)
@@ -662,8 +664,6 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   const eleStep = [10, 20, 50, 100, 200, 250, 500, 1000].find((st) => (hi - lo) / st <= 4) ?? 1000
   const eleLines: number[] = []
   for (let e = Math.ceil(lo / eleStep) * eleStep; e <= hi; e += eleStep) eleLines.push(e)
-  const eleLabelXs: number[] = []
-  for (let lx = 4; lx < W - 40; lx += scrolls ? Math.max(200, Wc * 0.8) : W) eleLabelXs.push(lx)
   // Repères kilométriques espacés d'au moins 50 px.
   const kmStep = [1, 2, 5, 10, 20, 50, 100].find((k) => (k * (W - 16) * 1000) / total >= 50) ?? 100
   const kmTicks: number[] = []
@@ -714,11 +714,6 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
         ))}
         <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
         <path d={line} className="line" />
-        {eleLines.map((e) =>
-          eleLabelXs.map((lx) => (
-            <text key={`e${e}-${lx}`} x={lx} y={y(e) - 3} className="tick ele-tick">{e} m</text>
-          )),
-        )}
         {kmTicks.map((k) => (
           <text key={k} x={x(k * 1000)} y={H - 12} textAnchor="middle" className="tick km-tick">{k}</text>
         ))}
@@ -785,6 +780,13 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
         )}
       </svg>
       </div>
+      {/* Altitudes : colonne fixe à gauche, le profil défile dessous. */}
+      <svg className="profile ele-axis" width={ML} height={H} viewBox={`0 0 ${ML} ${H}`} aria-hidden>
+        <rect x={0} y={0} width={ML} height={H} className="ele-axis-bg" />
+        {eleLines.map((e) => (
+          <text key={e} x={ML - 5} y={y(e) + 3.5} textAnchor="end" className="tick ele-tick">{e} m</text>
+        ))}
+      </svg>
       {scrolls && free && follow !== null && (
         <button className="ghost small follow-btn" onClick={() => setFree(false)}>
           <Navigation className="inline" /> Suivre le coureur
