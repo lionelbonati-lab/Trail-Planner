@@ -565,3 +565,18 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
   .card.folded .card-head { margin-bottom: 0; }
   .card.folded { padding-top: 12px; padding-bottom: 12px; }
 }
+
+/* Listes des courses et des parcours : sur téléphone, résumé sous le nom et boutons en carré. */
+.only-sm { display: none; }
+.list-actions { display: inline-flex; gap: 2px; justify-content: flex-end; }
+.list-table td:last-child { width: 1%; white-space: nowrap; }
+@media (max-width: 720px) {
+  .hide-sm { display: none; }
+  .only-sm { display: block; }
+  .list-actions { display: grid; grid-template-columns: repeat(2, auto); }
+  .list-table td:last-child { white-space: normal; }
+}
+.watch-apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.watch-app { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.watch-app p { margin: 6px 0 8px; }
+.notice a { word-break: break-all; }
