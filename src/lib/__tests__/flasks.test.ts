@@ -14,13 +14,17 @@ function gpx(km = 30): string {
 /** Règle de la montre (Plan.mc, bag) à partir de l'eau en dL et de la ligne W. */
 function watchFlasks(dl: number, flaskDl: number, iso: boolean) {
   if (!(flaskDl > 0 && dl > 0)) return { water: 0, iso: 0 }
-  const n = Math.max(iso ? 2 : 1, Math.floor((dl + flaskDl - 1) / flaskDl))
-  return iso ? { water: Math.floor((n + 1) / 2), iso: Math.floor(n / 2) } : { water: n, iso: 0 }
+  const n = Math.max(1, Math.floor((dl + flaskDl - 1) / flaskDl))
+  if (!iso) return { water: n, iso: 0 }
+  return n === 1 ? { water: 0, iso: 1 } : { water: Math.floor((n + 1) / 2), iso: Math.floor(n / 2) }
 }
 
 describe('flasques de 500 ml : eau et isotonique', () => {
-  it('toujours 1 eau + 1 iso, puis une de plus par 500 ml commencés, en alternant', () => {
-    expect(flaskSplit(0.4, true)).toEqual({ water: 1, iso: 1 })
+  it('1 iso seule jusqu’à 500 ml, sinon 1 eau + 1 iso, puis une de plus par 500 ml commencés, en alternant', () => {
+    expect(flaskSplit(0.4, true)).toEqual({ water: 0, iso: 1 })
+    expect(flaskSplit(0.5, true)).toEqual({ water: 0, iso: 1 })
+    expect(flaskSplit(0.6, true)).toEqual({ water: 1, iso: 1 })
+    expect(flaskSplit(0.4, false)).toEqual({ water: 1, iso: 0 })
     expect(flaskSplit(1.0, true)).toEqual({ water: 1, iso: 1 })
     expect(flaskSplit(1.1, true)).toEqual({ water: 2, iso: 1 })
     expect(flaskSplit(1.5, true)).toEqual({ water: 2, iso: 1 })

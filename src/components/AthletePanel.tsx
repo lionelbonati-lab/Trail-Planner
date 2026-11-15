@@ -294,8 +294,9 @@ export function AthletePanel({
         <Hint>
           Tes produits habituels et la part des glucides que chacun apporte : le plan nutrition de chaque course en déduit
           le nombre de gels ou barres à emporter entre deux ravitos. Coche « Flasque » pour ta boisson isotonique (poudre
-          pour 500 ml d'eau) : toujours une flasque d'eau et une d'isotonique par tronçon, une de plus par 500 ml d'eau
-          commencés (en alternant eau et isotonique), ses glucides et son sodium déduits du plan. Au-delà de 4 flasques,
+          pour 500 ml d'eau) : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon, sinon une d'eau et une
+          d'isotonique, puis une de plus par 500 ml d'eau commencés (en alternant eau et isotonique), ses glucides et son
+          sodium déduits du plan. Au-delà de 4 flasques,
           le plan signale qu'il faut remplir en route.
         </Hint>
         <table className="table compact">

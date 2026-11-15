@@ -1149,7 +1149,8 @@ export function RacePlan({
           </div>
           <Hint>
             Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant). Flasques de 500 ml :
-            toujours une d'eau et une d'isotonique, puis une de plus par 500 ml commencés en alternant eau et isotonique ;
+            une seule d'isotonique si 500 ml suffisent, sinon une d'eau et une d'isotonique, puis une de plus par 500 ml commencés
+            en alternant eau et isotonique ;
             les glucides et le sodium de l'isotonique sont déduits, les autres produits complètent.
           </Hint>
           {dropbags.length > 0 && (

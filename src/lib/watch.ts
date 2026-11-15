@@ -15,7 +15,8 @@
 //                          rappels sur le tronçon (au milieu de la part de chacun, en temps prévu).
 //   W|<volume d'une flasque, dL>|<isotonique : indice dans P, −1 sans>
 //                          flasques de chaque tronçon tirées de son eau (voir flaskSplit) : autant que de
-//                          volumes commencés, au moins 2 avec isotonique, en alternant eau puis isotonique.
+//                          volumes commencés ; avec isotonique, une seule d'isotonique si une suffit,
+//                          sinon en alternant eau puis isotonique.
 //   E|<dd>,<du>,<dn>,<dd>,<du>,<dn>,…
 //                          D+ et D− cumulés depuis le départ (m) le long du parcours, en écarts d'un
 //                          sommet au suivant à partir de 0,0,0 : la montre en tire le D+ / D− restant

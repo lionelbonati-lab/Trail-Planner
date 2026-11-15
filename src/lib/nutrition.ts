@@ -34,14 +34,16 @@ export const MAX_FLASKS = 4
 export const isFlask = (p: Product): boolean => p.flask ?? p.id === 'boisson'
 
 /**
- * Flasques de 500 ml pour `water` litres : autant que de 500 ml commencés, au moins 2 (toujours une
- * d'eau et une d'isotonique), en alternant eau puis isotonique : 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2.
+ * Flasques de 500 ml pour `water` litres : autant que de 500 ml commencés. Avec isotonique : une seule
+ * flasque d'isotonique si 500 ml suffisent, sinon une d'eau et une d'isotonique, puis en alternant eau
+ * puis isotonique : 0,4 L → 1 iso ; 0,8 L → 1 eau + 1 iso ; 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2.
  * Sans isotonique : eau seule. Pas d'eau prévue : aucune flasque.
  */
 export function flaskSplit(water: number, iso: boolean): { water: number; iso: number } {
   if (!(water > 0)) return { water: 0, iso: 0 }
-  const n = Math.max(iso ? 2 : 1, Math.ceil(water / FLASK_L - 1e-6))
-  return iso ? { water: Math.ceil(n / 2), iso: Math.floor(n / 2) } : { water: n, iso: 0 }
+  const n = Math.max(1, Math.ceil(water / FLASK_L - 1e-6))
+  if (!iso) return { water: n, iso: 0 }
+  return n === 1 ? { water: 0, iso: 1 } : { water: Math.ceil(n / 2), iso: Math.floor(n / 2) }
 }
 
 /** L'eau augmente de 4 % par °C au-dessus de 15 °C (repère courant, à ajuster). */
