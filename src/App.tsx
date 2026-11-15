@@ -39,6 +39,7 @@ import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
+import { waypointCheckpoints } from './lib/splits'
 import { withNewTrace } from './lib/routing'
 import { epPayload } from './lib/endurancepro'
 import type { DrawResult } from './components/RouteBuilder'
@@ -252,7 +253,8 @@ export default function App() {
       try {
         const t = parseGpx(text)
         const name = t.name && t.name !== 'Course' ? t.name : f.name.replace(/\.gpx$/i, '')
-        const r = { ...newRace(name, text), kind }
+        // Waypoints du GPX : points de passage (ravito, barrière, point inter ou repère selon le cas).
+        const r = { ...newRace(name, text), kind, checkpoints: waypointCheckpoints(t, kind) }
         setRaces((all) => [r, ...all])
         await store.saveRace(r)
         go(kind === 'route' ? 'parcours' : 'races', r.id)

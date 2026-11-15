@@ -34,7 +34,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   **graphiques d'évolution** (VC recalculée à chaque test).
 
 **Plan de course**
-- Import GPX, profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
+- Import GPX avec ses **waypoints** : ils deviennent des points de passage (course : ravito, barrière ou point
+  intermédiaire d'après leur nom ou leur symbole ; parcours : repères ; traceur : points de repère du tracé),
+  sauf ceux du départ, de l'arrivée ou à plus de 200 m de la trace ; bouton pour réimporter ceux supprimés.
+- Profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
   quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, point
   intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos (course) ou à tous les points (parcours).
 - Modes : VC + vitesse ascensionnelle, vitesse plat équivalente (Minetti), km-effort, comparaison.

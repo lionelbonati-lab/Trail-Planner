@@ -16,6 +16,10 @@ export interface GpxWaypoint {
   lon: number
   /** Distance projetée sur la trace (m). */
   dist: number
+  /** Écart entre le waypoint et la trace (m). */
+  off: number
+  /** Type, symbole, description et commentaire du waypoint (pour en deviner le genre). */
+  tags: string
 }
 
 export interface Track {

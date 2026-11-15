@@ -2,7 +2,7 @@
 // soit en suivant les sentiers et chemins d'OpenStreetMap (routeur BRouter), soit en
 // ligne droite (hors sentier). L'altitude manquante vient du modèle de terrain d'Open-Meteo.
 import { decodeFitRecords, isFit } from './fitDecode'
-import { gpxName, gpxRawPoints, haversine, type RawPoint } from './gpx'
+import { gpxName, gpxRawPoints, gpxWaypoints, haversine, type RawPoint } from './gpx'
 import type { DrawnRoute, SegMode, Waypoint } from './types'
 
 export type { DrawnRoute, SegMode, Waypoint }
@@ -291,6 +291,33 @@ export function splitByWaypoints(raw: RawPoint[], starts: number[]): RawPoint[][
   return out
 }
 
+/** Waypoint d'un fichier importé dans le traceur (repère à placer sur le tracé). */
+export interface TrackMark {
+  name: string
+  lat: number
+  lon: number
+}
+
+/**
+ * Tracé modifiable tiré d'une trace importée : points du tracé répartis le long de la trace, plus un
+ * point de repère (nommé) au point de trace le plus proche de chaque waypoint du fichier, s'il en est
+ * à moins de `maxOff` m et n'est ni au départ ni à l'arrivée (moins de 100 m).
+ */
+export function drawnWithMarks(raw: RawPoint[], marks: TrackMark[], maxOff = 200): { idx: number[]; names: Map<number, string> } {
+  const names = new Map<number, string>()
+  const first = raw[0]
+  const last = raw[raw.length - 1]
+  for (const m of marks) {
+    const i = nearestIndex(raw, m.lat, m.lon)
+    if (i <= 0 || i >= raw.length - 1) continue
+    if (haversine(m.lat, m.lon, raw[i].lat, raw[i].lon) > maxOff) continue
+    if (haversine(raw[i].lat, raw[i].lon, first.lat, first.lon) < 100 || haversine(raw[i].lat, raw[i].lon, last.lat, last.lon) < 100) continue
+    if (!names.has(i)) names.set(i, m.name)
+  }
+  const idx = [...new Set([...drawnFromRaw(raw).waypoints.map((w) => w.i), ...names.keys()])].sort((a, b) => a - b)
+  return { idx, names }
+}
+
 /** Point de la polyligne le plus proche d'une position (indice). */
 export function nearestIndex(points: { lat: number; lon: number }[], lat: number, lon: number): number {
   const c = Math.cos((lat * Math.PI) / 180)
@@ -425,15 +452,17 @@ export async function fillElevationSparse(points: RawPoint[], fetcher: Fetcher =
  * Trace d'un fichier GPX ou FIT, pour le traceur : positions et altitude seulement, points
  * à moins de 2 m du précédent retirés (enregistrements à la seconde).
  */
-export function readTrackFile(fileName: string, bytes: Uint8Array): { name: string; raw: RawPoint[] } {
+export function readTrackFile(fileName: string, bytes: Uint8Array): { name: string; raw: RawPoint[]; marks: TrackMark[] } {
   let name = fileName.replace(/\.(gpx|fit)$/i, '')
   let src: RawPoint[]
+  let marks: TrackMark[] = []
   if (isFit(bytes)) src = decodeFitRecords(bytes)
   else {
     const xml = new TextDecoder().decode(bytes)
     src = gpxRawPoints(xml)
     const n = gpxName(xml)
     if (n && n !== 'Course') name = n
+    marks = gpxWaypoints(xml).map(({ name: mn, lat, lon }) => ({ name: mn, lat, lon }))
   }
   const raw: RawPoint[] = []
   for (const p of src) {
@@ -447,5 +476,5 @@ export function readTrackFile(fileName: string, bytes: Uint8Array): { name: stri
     raw.push({ lat: last.lat, lon: last.lon, ele: last.ele })
   }
   if (raw.length < 2) throw new Error('Trace trop courte.')
-  return { name, raw }
+  return { name, raw, marks }
 }
