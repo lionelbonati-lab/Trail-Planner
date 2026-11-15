@@ -332,7 +332,7 @@ describe('tracé sur carte : assemblage', () => {
     const a = normalizeAthlete({ ...DEFAULT_ATHLETE, cs: 4 })
     const track = parseGpx(drawnGpx('Plat', seg([45, 6], [45.09, 6], 400).map((p) => ({ ...p, ele: 400 })))) // 10 km plat
     // Zones d'allure : propres aux parcours (une course les ignore).
-    const time = (zones: PaceZone[]) => simulate(track, a, planOptions({ ...newRace('x', ''), kind: 'route', zones }, track)).totalTime
+    const time = (zones: PaceZone[]) => simulate(track, a, planOptions({ ...newRace('x', ''), kind: 'route', zones }, track, a)).totalTime
     const z2 = wholeRoute(zoneTarget(a, 1), track.totalDist)
     expect(z2).toHaveLength(1)
     expect(z2[0]).toMatchObject({ from: 0, to: track.totalDist, kind: 'intensity', value: 0.75, label: 'Zone 2' })

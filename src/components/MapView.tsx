@@ -20,7 +20,7 @@ interface Props {
   accesses?: { name: string; at: GeoPoint; trail: GeoPoint }[]
 }
 
-/** Carte Leaflet du parcours, synchronisée avec le profil. */
+/** Carte Leaflet du parcours (zoom à la molette), synchronisée avec le profil : elle suit le curseur survolé. */
 export default function MapView({ track, splits, timeZone, hoverDist, onPick, accessPick = null, accesses = [] }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
@@ -37,7 +37,7 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
   // Carte et trace (recréées si la trace change).
   useEffect(() => {
     if (!el.current) return
-    const m = L.map(el.current, { scrollWheelZoom: false })
+    const m = L.map(el.current, { scrollWheelZoom: true })
     const latlngs = track.points.map((p) => [p.lat, p.lon] as [number, number])
     addLayers(m, latlngs[0])
     routeCasing(latlngs, 4).addTo(m)
@@ -119,6 +119,8 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     const p = track.points[indexAt(track.points, hoverDist)]
     c.setLatLng([p.lat, p.lon])
     if (!m.hasLayer(c)) c.addTo(m)
+    // Carte zoomée : elle suit le curseur, qui reste à plus de 60 px du bord.
+    m.panInside([p.lat, p.lon], { padding: [60, 60], animate: false })
   }, [hoverDist, track])
 
   return <div ref={el} className="map" role="region" aria-label="Carte du parcours" />

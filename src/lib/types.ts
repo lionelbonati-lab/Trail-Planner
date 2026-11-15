@@ -80,6 +80,8 @@ export interface Athlete {
   csTrials: CsTrial[]
   /** Poids corporel (kg), pour le poids du sac au prorata. */
   weight: number
+  /** Équivalences D+ et D− du km-effort, communes à toutes les courses et tous les parcours. */
+  kme: KmeSettings
   /** Zones cardiaques (bpm, calculées d'après la méthode et les %), FC max et FC de repos. */
   hrZones: HrZone[]
   hrMax: number
@@ -408,6 +410,7 @@ export interface Race {
   smoothing: number
   env: EnvSettings
   mode: CalcMode
+  /** Ancien réglage par course, gardé pour les données existantes : le calcul lit `Athlete.kme`. */
   kme: KmeSettings
   checkpoints: Checkpoint[]
   techOverrides: TechOverride[]

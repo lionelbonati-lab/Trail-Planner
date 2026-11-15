@@ -3,6 +3,7 @@
 import { assistAllowed, FINISH_ID } from './assist'
 import { indexAt } from './gpx'
 import { liveStatus } from './live'
+import { isFreeStart } from './plan'
 import { simplifyRoute, type RoutePoint } from './routeGeo'
 import { watchPlan } from './watch'
 import { zonedToUtc } from './time'
@@ -88,7 +89,7 @@ export function buildSnapshot(
     route: simplifyRoute(track.points),
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
-    ...(race.freeStart ? { freeStart: true } : {}),
+    ...(isFreeStart(race) ? { freeStart: true } : {}),
     liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
     liveRefShort: athlete.epCode && athlete.watchRaceId === race.id ? athlete.epCode : null,
     rows: sim.splits.map((s, i) => {

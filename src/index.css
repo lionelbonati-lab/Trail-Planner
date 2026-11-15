@@ -583,3 +583,8 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .watch-app p { margin: 6px 0 8px; }
 .notice a { word-break: break-all; }
 .watch-shot { display: block; max-width: 100%; max-height: 320px; width: auto; height: auto; margin: 8px auto; border-radius: 10px; border: 1px solid var(--line); }
+
+/* Assistance dans les temps de passage : coche et accès (épingle). */
+.assist-ctl { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.assist-check { display: inline-flex; align-items: center; gap: 6px; padding: 4px; }
+.assist-ctl button.ghost { padding: 4px 6px; }

@@ -1,6 +1,7 @@
 import { ArrowLeft, Check, LocateFixed, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { liveStatus, locate, plannedAt } from '../lib/live'
+import { isFreeStart } from '../lib/plan'
 import { formatClock, formatDuration, pastClockToMs, zonedToUtc } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { useRaceComputation } from './RacePlan'
@@ -51,7 +52,7 @@ function useWakeLock(on: boolean) {
 
 export function LiveMode({ race, athlete, onChange, onExit }: Props) {
   const { track, sim } = useRaceComputation(race, athlete)
-  const free = !!race.freeStart
+  const free = isFreeStart(race)
   const now = useNow()
   const [awake, setAwake] = useState(true)
   const [gps, setGps] = useState<{ busy: boolean; text: string | null }>({ busy: false, text: null })

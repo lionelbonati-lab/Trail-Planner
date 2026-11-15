@@ -79,7 +79,7 @@ describe('traceur : parcours en cours de tracé', () => {
   it('la zone choisie change le temps prévu (parcours, pas course)', () => {
     const plan = computePlan(newRace('T', gpx()), A)!
     const time = (k: number | null) =>
-      simulate(plan.track, A, planOptions(draftRoute('T', k === null ? [] : wholeRoute(zoneTarget(A, k), plan.track.totalDist)), plan.track)).totalTime
+      simulate(plan.track, A, planOptions(draftRoute('T', k === null ? [] : wholeRoute(zoneTarget(A, k), plan.track.totalDist)), plan.track, A)).totalTime
     expect(draftRoute('T', []).kind).toBe('route')
     expect(time(0)).toBeGreaterThan(time(2))
     expect(time(2)).toBeGreaterThan(time(4))

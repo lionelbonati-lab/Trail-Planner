@@ -29,14 +29,14 @@ import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zon
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { indexAt, parseGpx } from '../lib/gpx'
-import { FINISH_ID } from '../lib/assist'
+import { assistAllowed, FINISH_ID } from '../lib/assist'
 import { isDefaultLevel } from '../lib/level'
-import { planOptions } from '../lib/plan'
+import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
-import { AssistCard } from './AssistCard'
+import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { ZonePicker, ZonesCard } from './Zones'
@@ -89,9 +89,11 @@ function useMinuteClock(on: boolean): number {
 export function useRaceComputation(race: Race, athlete: Athlete, watchStart: number | null = null) {
   // Départ libre : départ maintenant (mis à jour chaque minute) tant que l'activité n'a pas démarré,
   // puis le vrai départ (mode course, sinon montre), fixe jusqu'à la fin ; sinon l'heure saisie.
+  // Un parcours n'a pas d'heure de départ : toujours en départ libre.
+  const free = isFreeStart(race)
   const started = race.live ? Date.parse(race.live.startedAt) : watchStart
-  const now = useMinuteClock(!!race.freeStart && started === null)
-  const start = race.freeStart ? utcToZonedInput(started ?? now, race.env.timeZone) : race.env.start
+  const now = useMinuteClock(free && started === null)
+  const start = free ? utcToZonedInput(started ?? now, race.env.timeZone) : race.env.start
   const effective = useMemo(() => (start === race.env.start ? race : { ...race, env: { ...race.env, start } }), [race, start])
   const track = useMemo<Track | null>(() => {
     try {
@@ -101,10 +103,11 @@ export function useRaceComputation(race: Race, athlete: Athlete, watchStart: num
     }
   }, [race.gpxText, race.smoothing])
 
-  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(effective, track) : null), [track, effective])
+  const kme = athlete.kme
+  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(effective, track, { kme }) : null), [track, effective, kme])
 
   const sim = useMemo<SimResult | null>(() => (track && opts ? simulate(track, athlete, opts) : null), [track, opts, athlete])
-  return { track, opts, sim, start, started: race.freeStart ? started : null }
+  return { track, opts, sim, start, free, started: free ? started : null }
 }
 
 export function RacePlan({
@@ -151,14 +154,31 @@ export function RacePlan({
   // Clic sur le profil : fin de cycle (entraînement) ou ravito (compétition).
   // Clic sur le profil : fin de cycle (zones, parcours) ou ajout d'un point (repère / ravito).
   const [clickMode, setClickMode] = useState<'cycle' | 'point'>(race.kind === 'route' ? 'cycle' : 'point')
-  // Le tableau complet demande ≈ 1 230 px ; en dessous, vue en cartes.
-  const narrow = useMediaQuery('(max-width: 1229px)')
+  // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
+  const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1329px)')
   const [editing, setEditing] = useState<string | null>(null)
   // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
   const [bulkStop, setBulkStop] = useState<number | null>(null)
   const [showMap, setShowMap] = useState(true)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
+  /** Assistance d'un point (coche et accès), dans les temps de passage d'une course. */
+  const assistOf = (cp: Checkpoint, labels = false) => {
+    const finish = cp.id === FINISH_ID
+    return (
+      <AssistControls
+        name={cp.name}
+        allowed={assistAllowed(cp)}
+        finish={finish}
+        placed={!!(finish ? race.finishAccess : cp.access)}
+        picking={pickAccess === cp.id}
+        onAllow={(v) => setCp(cp.id, { assist: v })}
+        onPick={(start) => startPick(start ? cp.id : null)}
+        onClear={() => (finish ? set({ finishAccess: undefined }) : setCp(cp.id, { access: undefined }))}
+        labels={labels}
+      />
+    )
+  }
   const startPick = (id: string | null) => {
     setPickAccess(id)
     if (id) {
@@ -173,7 +193,7 @@ export function RacePlan({
     return () => window.removeEventListener('keydown', onKey)
   }, [pickAccess])
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
-  const { track, opts, sim, start, started } = useRaceComputation(race, athlete, watchStart)
+  const { track, opts, sim, start, started, free } = useRaceComputation(race, athlete, watchStart)
   const [method, setMethod] = useState<AutoSplitMethod>('peaks')
   const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
   const [printFormat, setPrintFormat] = useState<PrintFormat | null>(null)
@@ -229,7 +249,7 @@ export function RacePlan({
   }
 
   const generate = () => {
-    const pts = computeAutoPoints(track, { method, value: methodValue }, race.kme, sim.points)
+    const pts = computeAutoPoints(track, { method, value: methodValue }, athlete.kme, sim.points)
     set({ checkpoints: mergeAutoPoints(race.checkpoints, pts) })
   }
 
@@ -496,7 +516,7 @@ export function RacePlan({
                 sub={`${SCENARIOS.good.label.toLowerCase()} → ${SCENARIOS.hard.label.toLowerCase()}`}
               />
             )}
-            <Kpi label={race.freeStart && started === null ? 'Arrivée (départ maintenant)' : 'Arrivée'} value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
+            <Kpi label={free && started === null ? 'Arrivée (départ maintenant)' : 'Arrivée'} value={formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)} sub={`${Math.round(nightShare * 100)} % de nuit`} />
             <Kpi label="Allure moy." value={`${formatPace(sim.totalTime / (track.totalDist / 1000))}/km`} sub={`${formatPace(sim.totalTime / sim.totalKme)}/km-e`} />
             {race.push.enabled && (
               <Kpi
@@ -638,24 +658,12 @@ export function RacePlan({
           )}
         </Card>
 
-        {!isRoute && (
-        <AssistCard
-          race={race}
-          track={track}
-          splits={sim.splits}
-          picking={pickAccess}
-          onPick={startPick}
-          onCheckpoint={setCp}
-          onRace={(patch) => set(patch)}
-        />
-        )}
-
         {isRoute && race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
         <div className="grid three">
-          <Card title="Départ et calcul">
+          <Card title={isRoute ? 'Calcul' : 'Départ et calcul'}>
             <div className="fields">
-              {race.freeStart ? (
+              {isRoute ? null : free ? (
                 <div className="field">
                   <span className="field-label">Départ</span>
                   <span>
@@ -681,17 +689,29 @@ export function RacePlan({
                   {Object.entries(MODE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </label>
-              <Num label="1 km-e =" value={race.kme.upPer1km} onChange={(v) => set({ kme: { ...race.kme, upPer1km: v } })} unit="m D+" min={1} />
-              <Num label="D− (0 = ignoré)" value={race.kme.downPer1km} onChange={(v) => set({ kme: { ...race.kme, downPer1km: v } })} unit="m = 1 km" min={0} />
               <Num label="Lissage altitude" value={race.smoothing} onChange={(v) => set({ smoothing: Math.round(v) })} min={0} max={10} title="0 = brut ; plus haut = D+ plus faible" />
             </div>
-            <Toggle label="Départ libre (entraînement)" checked={!!race.freeStart} onChange={(v) => set({ freeStart: v })} />
-            {race.freeStart && (
+            {isRoute ? (
               <Hint>
-                Heures calculées pour un départ maintenant, mises à jour chaque minute. Dès que tu pars (mode course), elles se calent sur ton
-                vrai départ ; ton assistance les voit aussi calées sur le départ donné par la montre.
+                Un parcours n'a pas d'heure de départ : les heures sont calculées pour un départ maintenant
+                {started !== null && <> (parti à {formatClock(new Date(startMs), race.env.timeZone)})</>}, puis se calent sur ton vrai départ
+                (mode course ou montre).
               </Hint>
+            ) : (
+              <>
+                <Toggle label="Départ libre (entraînement)" checked={!!race.freeStart} onChange={(v) => set({ freeStart: v })} />
+                {free && (
+                  <Hint>
+                    Heures calculées pour un départ maintenant, mises à jour chaque minute. Dès que tu pars (mode course), elles se calent sur ton
+                    vrai départ ; ton assistance les voit aussi calées sur le départ donné par la montre.
+                  </Hint>
+                )}
+              </>
             )}
+            <Hint>
+              Mode « Km-effort » et colonnes km-e : équivalences du <a href="#/athlete">profil athlète</a> (1 km-e = {athlete.kme.upPer1km} m de D+
+              {athlete.kme.downPer1km > 0 ? ` ou ${athlete.kme.downPer1km} m de D−` : ', D− ignoré'}).
+            </Hint>
             <Toggle label="Relancer les montées (D′)" checked={race.push.enabled} onChange={(v) => set({ push: { ...race.push, enabled: v } })} />
             {race.push.enabled && (
               <div className="fields sub">
@@ -905,6 +925,7 @@ export function RacePlan({
                       </div>
                     )}
                     {cp.notes && !open && <div className="small">{cp.notes}</div>}
+                    {!isRoute && <div>{assistOf(cp, true)}</div>}
                     {!isFinish && (
                       <button className="ghost" onClick={() => setEditing(open ? null : cp.id)}>{open ? 'Fermer' : 'Modifier'}</button>
                     )}
@@ -960,6 +981,7 @@ export function RacePlan({
                   <th>Arrêt</th>
                   {!isRoute && <th>Barrière</th>}
                   {!isRoute && <th>Eau / Glu.</th>}
+                  {!isRoute && <th title="Assistance autorisée à ce point, et son accès placé sur la carte">Assist.</th>}
                   <th>Notes</th>
                   <th />
                 </tr>
@@ -1018,6 +1040,7 @@ export function RacePlan({
                           )}
                         </td>
                       )}
+                      {!isRoute && <td>{assistOf(cp)}</td>}
                       <td>{!isFinish && <input type="text" className="wide" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
                       <td>{!isFinish && <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })} aria-label="Supprimer"><Trash2 /></button>}</td>
                     </tr>
@@ -1027,7 +1050,13 @@ export function RacePlan({
             </table>
           </div>
           )}
-          {!isRoute && <Hint>Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant.</Hint>}
+          {!isRoute && (
+            <Hint>
+              Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant. Assistance : coche les points où elle a le droit de
+              venir (ils forment son trajet sur la page assistance) ; <MapPin className="inline" /> place son accès (parking, salle du ravito) sur
+              la carte, destination de son lien GPS.
+            </Hint>
+          )}
         </Card>
 
         <Card title="Plan nutrition">

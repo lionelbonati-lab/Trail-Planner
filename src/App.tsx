@@ -29,7 +29,7 @@ import { AthletePanel } from './components/AthletePanel'
 import { ListLinkButtons } from './components/ListLinkButtons'
 import { WatchPanel } from './components/WatchPanel'
 import { LiveMode } from './components/LiveMode'
-import { computePlan, scenarioWindows } from './lib/plan'
+import { computePlan, isFreeStart, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
 import { LibraryPanel } from './components/LibraryPanel'
 import { RacePlan } from './components/RacePlan'
@@ -376,7 +376,7 @@ export default function App() {
   // la montre, pour que les heures prévues du plan restent fixes pendant toute l'activité.
   const [watchReport, setWatchReport] = useState<WatchReport | null>(null)
   const watchRefs =
-    current?.freeStart && !current.live && user && athlete.watchRaceId === current.id
+    current && isFreeStart(current) && !current.live && user && athlete.watchRaceId === current.id
       ? [athlete.watchId, athlete.epCode].filter((r): r is string => !!r).join(',')
       : ''
   useEffect(() => {

@@ -3,11 +3,19 @@ import { parseGpx } from './gpx'
 import { scenarioInputs, simulate, withFinish, type SimOptions } from './model'
 import type { Athlete, PaceZone, Race, SimResult, Track } from './types'
 
-/** Options de simulation d'une course planifiée. */
-export function planOptions(race: Race, track: Track): SimOptions {
+/**
+ * Un parcours n'a pas d'heure de départ : il est toujours en départ libre (heures pour un départ
+ * maintenant, puis calées sur le vrai départ). Une course l'est si l'option est cochée.
+ */
+export function isFreeStart(race: Pick<Race, 'kind' | 'freeStart'>): boolean {
+  return race.kind === 'route' || !!race.freeStart
+}
+
+/** Options de simulation d'une course planifiée (équivalences km-effort : celles du profil). */
+export function planOptions(race: Race, track: Track, athlete: Pick<Athlete, 'kme'>): SimOptions {
   return {
     mode: race.mode,
-    kme: race.kme,
+    kme: athlete.kme,
     env: race.env,
     checkpoints: withFinish(race, track),
     techOverrides: race.techOverrides,
@@ -32,7 +40,7 @@ export function draftRoute(name: string, zones: PaceZone[]): Race {
 export function computePlan(race: Race, athlete: Athlete): { track: Track; opts: SimOptions; sim: SimResult } | null {
   try {
     const track = parseGpx(race.gpxText, race.smoothing)
-    const opts = planOptions(race, track)
+    const opts = planOptions(race, track, athlete)
     return { track, opts, sim: simulate(track, athlete, opts) }
   } catch {
     return null
