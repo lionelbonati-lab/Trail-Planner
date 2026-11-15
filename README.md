@@ -143,6 +143,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Sur téléphone**, chaque page s'ouvre cadres pliés (pas de page à rallonge) : un toucher sur le titre les
   déplie. Restent ouverts le contenu principal (listes des courses et des parcours, import et résultat
   d'analyse, présentation du test VC, en-tête du plan) et l'écran de départ du mode course.
+  Les onglets n'y affichent que leur icône (sept icônes sur la largeur de l'écran), et le traceur, qui couvre
+  tout l'écran, a une flèche de retour en haut à gauche (confirmation si un tracé existant a été modifié ; un
+  nouveau tracé reste en brouillon).
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point (distance, D+ et D- restants,

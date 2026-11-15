@@ -471,9 +471,11 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .night-icon { color: #5b6bb5; }
 .sync { display: inline-flex; align-items: center; gap: 4px; }
 @media (max-width: 720px) {
-  .topbar nav { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-  .topbar nav::-webkit-scrollbar { display: none; }
-  .topbar nav button { flex: none; }
+  /* Téléphone : onglets en icônes seules, répartis sur la largeur. */
+  .topbar nav { flex-wrap: nowrap; width: 100%; gap: 2px; }
+  .topbar nav button { flex: 1; justify-content: center; min-height: 44px; padding: 6px 0; }
+  .topbar nav button svg.lucide { width: 22px; height: 22px; }
+  .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 
 .draw-toolbar .tb.flagged { position: relative; }

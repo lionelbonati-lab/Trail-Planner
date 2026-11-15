@@ -79,6 +79,17 @@ import { watchStartMs, type WatchReport } from './lib/watchLive'
 
 type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre'
 
+/** Onglets de la barre du haut. */
+const NAV: { tab: Tab; label: string; Icon: typeof Flag }[] = [
+  { tab: 'races', label: 'Courses', Icon: Flag },
+  { tab: 'athlete', label: 'Profil athlète', Icon: UserIcon },
+  { tab: 'parcours', label: 'Parcours', Icon: LibraryBig },
+  { tab: 'tracer', label: 'Tracer', Icon: Spline },
+  { tab: 'cs', label: 'Test VC', Icon: Gauge },
+  { tab: 'analyse', label: 'Analyse', Icon: ChartLine },
+  { tab: 'montre', label: 'Montre', Icon: Watch },
+]
+
 function readHash(): { tab: Tab; raceId: string | null } {
   const [hashTab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
   // Calculateur VC et Séances ne font plus qu'un onglet (Test VC) : les anciens liens y mènent.
@@ -516,13 +527,12 @@ export default function App() {
       <header className="topbar no-print">
         <a className="brand" href="#/races"><Mountain className="inline" /> Trail Planner</a>
         <nav>
-          <button className={route.tab === 'races' ? 'on' : ''} onClick={() => go('races')}><Flag /> Courses</button>
-          <button className={route.tab === 'athlete' ? 'on' : ''} onClick={() => go('athlete')}><UserIcon /> Profil athlète</button>
-          <button className={route.tab === 'parcours' ? 'on' : ''} onClick={() => go('parcours')}><LibraryBig /> Parcours</button>
-          <button className={route.tab === 'tracer' ? 'on' : ''} onClick={() => go('tracer')}><Spline /> Tracer</button>
-          <button className={route.tab === 'cs' ? 'on' : ''} onClick={() => go('cs')}><Gauge /> Test VC</button>
-          <button className={route.tab === 'analyse' ? 'on' : ''} onClick={() => go('analyse')}><ChartLine /> Analyse</button>
-          <button className={route.tab === 'montre' ? 'on' : ''} onClick={() => go('montre')}><Watch /> Montre</button>
+          {/* Sur téléphone, seules les icônes s'affichent (libellés masqués, gardés pour les lecteurs d'écran). */}
+          {NAV.map(({ tab, label, Icon }) => (
+            <button key={tab} className={route.tab === tab ? 'on' : ''} onClick={() => go(tab)} title={label} aria-label={label} aria-current={route.tab === tab ? 'page' : undefined}>
+              <Icon /> <span className="nav-label">{label}</span>
+            </button>
+          ))}
         </nav>
         <InstallButton />
         {sync && <SyncBadge status={sync} />}
@@ -557,6 +567,7 @@ export default function App() {
               athlete={athlete}
               race={current ?? null}
               onSave={(d) => saveDrawing(d, current ?? null)}
+              onBack={() => (current ? go(current.kind === 'route' ? 'parcours' : 'races', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
             />
           </Suspense>
         ) : route.tab === 'athlete' ? (
