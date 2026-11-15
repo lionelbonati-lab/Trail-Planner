@@ -7,9 +7,11 @@ const ROUTE_KY = 110540.0d;
 // Plan compact envoyé par l'app web (format « TP1 », voir src/lib/watch.ts) :
 //   TP1
 //   N|<nom>
-//   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>
+//   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>|<c course / p parcours>|<D+ m>|<D- m>
 //   K|<d>:<t>,<d>:<t>,... courbe distance (m) -> temps de déplacement prévu (s, arrêts exclus)
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>
+//   E|<dd>,<du>,<dn>,...  D+ et D- cumulés depuis le départ (m), écarts d'un sommet au suivant à partir
+//     de 0,0,0 ; un sommet à chaque point de passage (D+ / D- d'un point au suivant exacts)
 //   G|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,...   tracé simplifié (lat / lon en
 //     1e-5 degré, puis écarts d'un sommet au suivant) pour caler la position GPS sur le parcours
 // Temps prévu à une distance d = K interpolé + arrêts des points situés avant d.
@@ -18,6 +20,9 @@ class Plan {
     var start as Number = 0;
     var total as Number = 0;
     var fuelMin as Number = 0;
+    var kind as String = "";      // "c" course, "p" parcours d'entraînement, "" plan d'une ancienne version
+    var dPlus as Number = -1;     // D+ / D- du parcours (m), -1 si inconnus
+    var dMinus as Number = -1;
     var curveD as Array<Number> = [] as Array<Number>;
     var curveT as Array<Number> = [] as Array<Number>;
     var cpDist as Array<Number> = [] as Array<Number>;
@@ -35,12 +40,59 @@ class Plan {
     var lat0 as Double = 0.0d;
     var lon0 as Double = 0.0d;
     var kx as Double = 0.0d;      // mètres par degré de longitude à lat0
+    // Dénivelé (ligne E) : D+ et D- cumulés (m) à chaque distance (m) du profil simplifié.
+    var climbD as Array<Number> = [] as Array<Number>;
+    var climbUp as Array<Number> = [] as Array<Number>;
+    var climbDn as Array<Number> = [] as Array<Number>;
 
     function initialize() {
     }
 
     function hasRoute() as Boolean {
         return routeD.size() >= 2;
+    }
+
+    function hasClimb() as Boolean {
+        return climbD.size() >= 2;
+    }
+
+    // Course (heure de départ affichée avant le départ) : plan d'une ancienne version sans type compris.
+    function isRace() as Boolean {
+        return !kind.equals("p");
+    }
+
+    // D+ et D- cumulés depuis le départ (m) à la distance d (m), interpolés entre deux sommets.
+    function climbAt(d as Float) as Array<Float> {
+        var n = climbD.size();
+        if (d <= climbD[0]) {
+            return [climbUp[0].toFloat(), climbDn[0].toFloat()];
+        }
+        if (d >= climbD[n - 1]) {
+            return [climbUp[n - 1].toFloat(), climbDn[n - 1].toFloat()];
+        }
+        var lo = 0;
+        var hi = n - 1;
+        while (hi - lo > 1) {
+            var mid = (lo + hi) / 2;
+            if (climbD[mid] <= d) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        var d0 = climbD[lo].toFloat();
+        var d1 = climbD[hi].toFloat();
+        var f = d1 > d0 ? (d - d0) / (d1 - d0) : 0.0;
+        return [climbUp[lo] + f * (climbUp[hi] - climbUp[lo]), climbDn[lo] + f * (climbDn[hi] - climbDn[lo])];
+    }
+
+    // D+ et D- (m, arrondis) de la distance a à la distance b (m) : [D+, D-].
+    function climbBetween(a as Float, b as Float) as Array<Number> {
+        var x = climbAt(a);
+        var y = climbAt(b);
+        var up = (y[0] - x[0] + 0.5).toNumber();
+        var dn = (y[1] - x[1] + 0.5).toNumber();
+        return [up > 0 ? up : 0, dn > 0 ? dn : 0];
     }
 
     // Écart toléré (m) entre la position et le tracé simplifié avant d'être « hors parcours ».
@@ -242,6 +294,36 @@ function parseRoute(p as Plan, tol as Number, origin as String, data as String) 
     }
 }
 
+// Ligne E : triplets « dd,du,dn » (écarts de distance, de D+ et de D-) à partir de 0,0,0.
+// Lecture au fil de la chaîne, comme la ligne G.
+function parseClimb(p as Plan, data as String) as Void {
+    var vals = [0, 0, 0] as Array<Number>;
+    var d = 0;
+    var up = 0;
+    var dn = 0;
+    var k = 0;
+    var rest = data;
+    var i = rest.find(",");
+    while (true) {
+        vals[k] = toNum(i != null ? rest.substring(0, i) as String : rest);
+        k++;
+        if (k == 3) {
+            d += vals[0];
+            up += vals[1];
+            dn += vals[2];
+            p.climbD.add(d);
+            p.climbUp.add(up);
+            p.climbDn.add(dn);
+            k = 0;
+        }
+        if (i == null) {
+            break;
+        }
+        rest = rest.substring(i + 1, rest.length()) as String;
+        i = rest.find(",");
+    }
+}
+
 // Lit le texte du plan ; renvoie null s'il n'est pas reconnu.
 function parsePlan(text as String) as Plan or Null {
     var lines = splitText(text, "\n");
@@ -258,6 +340,11 @@ function parsePlan(text as String) as Plan or Null {
             p.start = toNum(parts[1]);
             p.total = toNum(parts[2]);
             p.fuelMin = toNum(parts[3]);
+            if (parts.size() >= 7) {
+                p.kind = parts[4];
+                p.dPlus = toNum(parts[5]);
+                p.dMinus = toNum(parts[6]);
+            }
         } else if (tag.equals("K") && parts.size() >= 2) {
             var values = splitText(parts[1], ",");
             for (var k = 0; k < values.size(); k++) {
@@ -274,6 +361,8 @@ function parsePlan(text as String) as Plan or Null {
             p.cpKind.add(parts[4]);
             p.cpName.add(parts[5]);
             p.cpStop.add(parts.size() >= 7 ? toNum(parts[6]) : 0);
+        } else if (tag.equals("E") && parts.size() >= 2) {
+            parseClimb(p, parts[1]);
         } else if (tag.equals("G") && parts.size() >= 4) {
             parseRoute(p, toNum(parts[1]), parts[2], parts[3]);
         }

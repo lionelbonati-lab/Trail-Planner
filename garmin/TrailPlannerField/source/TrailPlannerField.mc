@@ -410,6 +410,15 @@ class TrailPlannerField extends WatchUi.DataField {
         return (t.hour as Number).format("%02d") + ":" + (t.min as Number).format("%02d");
     }
 
+    // Durée : « 3h12 », « 45 min ».
+    function duration(sec as Number) as String {
+        var m = (sec + 30) / 60;
+        if (m < 60) {
+            return m + " min";
+        }
+        return (m / 60) + "h" + (m % 60).format("%02d");
+    }
+
     // « +6' », « −3' », « +1h05 ».
     function signedMinutes(sec as Float or Number) as String {
         var s = sec.toFloat();
@@ -422,6 +431,33 @@ class TrailPlannerField extends WatchUi.DataField {
         return sign + (total / 60) + "h" + (total % 60).format("%02d");
     }
 
+    // Distance, D+ et D- de la distance `from` à la distance `to` (m), du texte le plus complet au plus
+    // court : « 4.2 km · D+245 · D-30 ». Plan sans profil de dénivelé (ancienne version) : distance seule.
+    function remaining(from as Float, to as Float) as Array<String> {
+        var m = to - from;
+        var km = ((m > 0 ? m : 0.0) / 1000.0).format("%.1f");
+        if (!plan.hasClimb()) {
+            return [km + " km"] as Array<String>;
+        }
+        var c = plan.climbBetween(from, to);
+        var up = "D+" + c[0];
+        var dn = "D-" + c[1];
+        return [km + " km · " + up + " · " + dn, km + " km " + up + " " + dn, km + " " + up + " " + dn] as Array<String>;
+    }
+
+    // Avant le départ : distance et D+ du parcours, « 23.4 km · D+1245 ».
+    function courseStats() as Array<String> {
+        var km = (plan.total / 1000.0).format("%.1f");
+        var up = plan.dPlus;
+        if (up < 0 && plan.hasClimb()) {
+            up = plan.climbUp[plan.climbUp.size() - 1];
+        }
+        if (up < 0) {
+            return [km + " km"] as Array<String>;
+        }
+        return [km + " km · D+" + up, km + " km D+" + up] as Array<String>;
+    }
+
     // Raccourcit un texte pour qu'il tienne dans maxW pixels.
     function fit(dc as Graphics.Dc, text as String, font, maxW as Number) as String {
         var t = text;
@@ -429,6 +465,19 @@ class TrailPlannerField extends WatchUi.DataField {
             t = t.substring(0, t.length() - 1) as String;
         }
         return t;
+    }
+
+    // Texte, ou variantes de la plus complète à la plus courte : la première qui tient dans maxW pixels
+    // (la dernière est raccourcie au besoin).
+    function pick(dc as Graphics.Dc, text, font, maxW as Number) as String {
+        var opts = text instanceof Array ? text as Array : [text];
+        var last = opts.size() - 1;
+        for (var k = 0; k < last; k++) {
+            if (dc.getTextWidthInPixels(opts[k] as String, font) <= maxW) {
+                return opts[k] as String;
+            }
+        }
+        return fit(dc, opts[last] as String, font, maxW);
     }
 
     // Largeur utilisable à la hauteur y du champ : sur écran rond (Enduro 3, Fenix…),
@@ -472,23 +521,82 @@ class TrailPlannerField extends WatchUi.DataField {
         return others.size() > 0 ? [others[0], delta].addAll(others.slice(1, null)) : [delta];
     }
 
-    // Dessine des lignes [texte, police, couleur] centrées dans le champ, en évitant les bords arrondis.
-    function drawLines(dc as Graphics.Dc, lines as Array) as Void {
+    // Taille d'une police système, de 0 (XTINY) à 4 (LARGE).
+    function fontRank(font) as Number {
+        if (font == Graphics.FONT_LARGE) {
+            return 4;
+        }
+        if (font == Graphics.FONT_MEDIUM) {
+            return 3;
+        }
+        if (font == Graphics.FONT_SMALL) {
+            return 2;
+        }
+        if (font == Graphics.FONT_TINY) {
+            return 1;
+        }
+        return 0;
+    }
+
+    function linesHeight(dc as Graphics.Dc, lines as Array) as Number {
+        var total = 0;
+        for (var i = 0; i < lines.size(); i++) {
+            total += dc.getFontHeight(lines[i][1]);
+        }
+        return total;
+    }
+
+    // Dessine des lignes [texte, police, couleur, rang] centrées dans le champ, en évitant les bords
+    // arrondis. Texte : chaîne ou variantes (voir pick). Si tout ne tient pas en hauteur : grand chiffre
+    // ramené à la police moyenne, puis lignes facultatives retirées, la moins utile (rang le plus élevé)
+    // d'abord (rang 0 ou absent : toujours affichée), puis polices réduites, la plus grande d'abord.
+    function drawLines(dc as Graphics.Dc, all as Array) as Void {
+        var lines = all;
         var w = dc.getWidth();
         var h = dc.getHeight();
         var flags = getObscurityFlags();
         var top = (flags & OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
         var bottom = (flags & OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
-        var total = 0;
-        for (var i = 0; i < lines.size(); i++) {
-            total += dc.getFontHeight(lines[i][1]);
+        var fonts = [Graphics.FONT_XTINY, Graphics.FONT_TINY, Graphics.FONT_SMALL, Graphics.FONT_MEDIUM];
+        var total = linesHeight(dc, lines);
+        while (total > bottom - top) {
+            var big = -1;
+            var bigRank = 0;
+            var drop = -1;
+            var dropRank = 0;
+            for (var i = 0; i < lines.size(); i++) {
+                var fr = fontRank(lines[i][1]);
+                if (fr > bigRank) {
+                    big = i;
+                    bigRank = fr;
+                }
+                var r = lines[i].size() > 3 ? lines[i][3] as Number : 0;
+                if (r > dropRank) {
+                    drop = i;
+                    dropRank = r;
+                }
+            }
+            if (bigRank == 4 || (drop < 0 && big >= 0)) {
+                lines[big][1] = fonts[bigRank - 1];
+            } else if (drop >= 0) {
+                var kept = [];
+                for (var i = 0; i < lines.size(); i++) {
+                    if (i != drop) {
+                        kept.add(lines[i]);
+                    }
+                }
+                lines = kept;
+            } else {
+                break;
+            }
+            total = linesHeight(dc, lines);
         }
         var y = top + (bottom - top - total) / 2;
         for (var i = 0; i < lines.size(); i++) {
             var font = lines[i][1];
             var fh = dc.getFontHeight(font);
             dc.setColor(lines[i][2], Graphics.COLOR_TRANSPARENT);
-            dc.drawText(w / 2, y, font, fit(dc, lines[i][0], font, usableWidth(y + fh / 2, h, w)), Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(w / 2, y, font, pick(dc, lines[i][0], font, usableWidth(y + fh / 2, h, w)), Graphics.TEXT_JUSTIFY_CENTER);
             y += fh;
         }
     }
@@ -508,7 +616,17 @@ class TrailPlannerField extends WatchUi.DataField {
             return;
         }
         if (!running) {
-            drawLines(dc, [[plan.name, Graphics.FONT_XTINY, fg], [(plan.start > 0) ? "Départ " + clock(plan.start) : "Départ libre", Graphics.FONT_SMALL, fg]]);
+            // Avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une course seulement.
+            var dur = duration(plan.finishTime());
+            var intro = [
+                [plan.name, Graphics.FONT_XTINY, fg, 1],
+                [courseStats(), Graphics.FONT_SMALL, fg, 0],
+                [["Temps prévu " + dur, "Prévu " + dur, dur], Graphics.FONT_XTINY, fg, 2]
+            ];
+            if (plan.isRace()) {
+                intro.add(plan.start > 0 ? ["Départ " + clock(plan.start), Graphics.FONT_SMALL, fg, 0] : ["Départ libre", Graphics.FONT_XTINY, fg, 3]);
+            }
+            drawLines(dc, intro);
             return;
         }
         var now = Time.now().value();
@@ -525,48 +643,79 @@ class TrailPlannerField extends WatchUi.DataField {
         }
 
         var deltaColor = delta > 60 ? red : (delta < -60 ? green : fg);
-        var nextName = next >= 0 ? plan.cpName[next] : "Arrivée";
-        var toNext = next >= 0 ? (plan.cpDist[next] - dist) / 1000.0 : 0.0;
-        var nextLine = toNext.format("%.1f") + " km · " + nextName;
-        var nextColor = fg;
-        if (offRoute) {
-            nextLine = "Hors parcours · " + offBy + " m";
-            nextColor = red;
-        }
         // Polices texte (et non chiffres) : « ' », « + » et « h » y sont toujours disponibles.
         var deltaText = signedMinutes(delta);
-
-        if (h < 90) {
-            // Petit champ (quart d'écran) : écart et prochain point.
-            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_MEDIUM, deltaColor], [[nextLine, Graphics.FONT_XTINY, nextColor]]));
-            return;
+        var nextName = next >= 0 ? plan.cpName[next] : "Arrivée";
+        var target = next >= 0 ? plan.cpDist[next].toFloat() : plan.total.toFloat();
+        // Distance, D+ et D- restants jusqu'au prochain point (« Hors parcours » quand on s'en écarte).
+        var toNext = remaining(dist, target);
+        var toNextColor = fg;
+        if (offRoute) {
+            toNext = ["Hors parcours · " + offBy + " m"] as Array<String>;
+            toNextColor = red;
+        }
+        // Jusqu'à l'arrivée (réglage sur la montre), sauf si le prochain point est l'arrivée.
+        var toFinish = null;
+        if (Application.Properties.getValue("finishStats") == true && next >= 0 && target < plan.total - 50) {
+            var r = remaining(dist, plan.total.toFloat());
+            var f = ["Arrivée · " + r[0]];
+            for (var k = 0; k < r.size(); k++) {
+                f.add("Arr. " + r[k]);
+            }
+            toFinish = [f, Graphics.FONT_XTINY, fg, 1];
         }
 
         var cutText = null;
         var cutColor = fg;
+        var cutWarn = cutIdx >= 0 && margin < CUTOFF_WARN;
         if (cutIdx >= 0) {
             cutText = margin >= 0 ? "Marge BH " + signedMinutes(margin) : "Hors délai " + signedMinutes(margin);
-            cutColor = margin < CUTOFF_WARN ? red : fg;
+            cutColor = cutWarn ? red : fg;
         }
 
-        if (h < 170) {
-            // Demi-écran (ex. Enduro 3 : 280 × 140) : trois lignes.
-            var third = next >= 0 ? "Est. " + clock(nextEta) : "Arrivée " + clock(finishEta);
-            var thirdColor = fg;
-            if (cutText != null && margin < CUTOFF_WARN) {
-                third = cutText;
-                thirdColor = cutColor;
+        if (h < 90) {
+            // Petit champ (quart d'écran) : écart et ce qui reste jusqu'au prochain point (son nom à la
+            // place du dénivelé avec le plan d'une ancienne version).
+            var small = [[offRoute || plan.hasClimb() ? toNext : toNext[0] + " · " + nextName, Graphics.FONT_XTINY, toNextColor, 0]];
+            if (toFinish != null) {
+                small.add(toFinish);
             }
-            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_LARGE, deltaColor], [[nextLine, Graphics.FONT_XTINY, nextColor], [third, Graphics.FONT_XTINY, thirdColor]]));
+            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_MEDIUM, deltaColor, 0], small));
             return;
         }
 
-        // Plein écran : quatre lignes.
-        var lines = [[nextLine, Graphics.FONT_XTINY, nextColor], [deltaText, Graphics.FONT_LARGE, deltaColor]];
-        if (next >= 0) {
-            lines.add(["Prévu " + clock(startUnix + plan.cpPlan[next]) + " · Est. " + clock(nextEta), Graphics.FONT_XTINY, fg]);
+        if (h < 170) {
+            // Demi-écran (ex. Enduro 3 : 280 × 140) : écart, prochain point et heure estimée, ce qui reste
+            // jusqu'à ce point, [jusqu'à l'arrivée], [barrière horaire proche].
+            var est = next >= 0 ? clock(nextEta) : clock(finishEta);
+            var half = [
+                [[nextName + " · Est. " + est, nextName + " · " + est, est + " · " + nextName], Graphics.FONT_XTINY, fg, 2],
+                [toNext, Graphics.FONT_XTINY, toNextColor, 0]
+            ];
+            if (toFinish != null) {
+                half.add(toFinish);
+            }
+            if (cutWarn) {
+                half.add([cutText, Graphics.FONT_XTINY, cutColor, 0]);
+            }
+            drawLines(dc, edgeOrder([deltaText, Graphics.FONT_LARGE, deltaColor, 0], half));
+            return;
         }
-        lines.add(cutText != null ? [cutText, Graphics.FONT_XTINY, cutColor] : ["Arrivée " + clock(finishEta), Graphics.FONT_XTINY, fg]);
+
+        // Plein écran : prochain point, ce qui reste jusqu'à lui, écart, heures prévue et estimée,
+        // [jusqu'à l'arrivée], barrière horaire ou heure d'arrivée estimée.
+        var lines = [
+            [nextName, Graphics.FONT_XTINY, fg, 2],
+            [toNext, Graphics.FONT_XTINY, toNextColor, 0],
+            [deltaText, Graphics.FONT_LARGE, deltaColor, 0]
+        ];
+        if (next >= 0) {
+            lines.add([["Prévu " + clock(startUnix + plan.cpPlan[next]) + " · Est. " + clock(nextEta), "Est. " + clock(nextEta)], Graphics.FONT_XTINY, fg, 3]);
+        }
+        if (toFinish != null) {
+            lines.add(toFinish);
+        }
+        lines.add(cutText != null ? [cutText, Graphics.FONT_XTINY, cutColor, cutWarn ? 0 : 3] : ["Arrivée " + clock(finishEta), Graphics.FONT_XTINY, fg, 3]);
         drawLines(dc, lines);
     }
 }

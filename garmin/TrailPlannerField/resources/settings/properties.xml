@@ -5,4 +5,6 @@
     <property id="vibrate" type="boolean">true</property>
     <!-- Bouton Lap = passage au point le plus proche (désactiver si le tour auto est utilisé). -->
     <property id="lapPass" type="boolean">true</property>
+    <!-- Distance, D+ et D- restant jusqu'à l'arrivée, en plus de ceux jusqu'au prochain point. -->
+    <property id="finishStats" type="boolean">false</property>
 </properties>

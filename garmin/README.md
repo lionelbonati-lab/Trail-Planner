@@ -4,12 +4,16 @@ Champ de données Connect IQ qui s'affiche dans ton activité Trail habituelle (
 ClimbPro et PacePro continuent de fonctionner) :
 
 - **écart au plan** à l'endroit exact où tu es (`+6'` = 6 min de retard, en rouge ; avance en vert) ;
-- **prochain point** : nom, distance, heure prévue (fixe) et heure estimée (recalculée à chaque passage) ;
+- **prochain point** : nom, **distance, D+ et D- restants** jusqu'à lui, heure prévue (fixe) et heure
+  estimée (recalculée à chaque passage) ;
+- **jusqu'à l'arrivée** (réglage « Jusqu'à l'arrivée », désactivé par défaut) : distance, D+ et D- restants
+  jusqu'à l'arrivée, en plus de ceux du prochain point ;
 - **bouton Lap = passage** au point le plus proche : heure de passage notée, position recalée, heures
   estimées des points suivants recalculées (écran « Passage · nom » 5 s) ;
 - **marge sur la prochaine barrière horaire**, avec vibration si elle passe sous 30 min ;
 - **rappels nutrition** (vibration + écran « Manger / boire » 30 s) selon ton plan ;
-- avant le départ : nom de la course et heure de départ prévue ;
+- avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une **course** seulement
+  (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ;
 - **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton
   téléphone ; ils s'affichent sur le lien assistance de la course (position sur le profil, écart au plan,
   heures estimées recalculées).
@@ -17,7 +21,16 @@ ClimbPro et PacePro continuent de fonctionner) :
 ![Aperçu approximatif sur Enduro 3 (écran rond 280 px)](apercu-enduro3.png)
 
 *Aperçu approximatif (polices Garmin simulées). Sur écran rond, l'écart — le texte le plus court — se
-place du côté du bord arrondi et les textes trop longs sont raccourcis à la largeur disponible.*
+place du côté du bord arrondi ; un texte trop long passe à une forme plus courte (« 4.2 km D+245 D-30 »,
+« Arr. » pour l'arrivée), puis est raccourci à la largeur disponible. Si tout ne tient pas en hauteur,
+l'écart passe en police moyenne, puis les lignes secondaires (heure prévue, nom du point) sont retirées.*
+
+**D+ et D- restants.** Le plan contient le profil de dénivelé du parcours (D+ et D- cumulés depuis le
+départ, simplifiés à 5 m près, un sommet à chaque point de passage) : le D+ et le D- d'un point au suivant
+sont exactement ceux du tableau du plan, et ceux qui restent suivent ta position calée sur le tracé.
+Réglage « Jusqu'à l'arrivée » sur la montre (appui long › Champs Connect IQ › Trail Planner) ou dans
+Garmin Connect : ajoute la ligne « Arr. 38.5 km D+2150 D-2380 » (absente quand le prochain point est
+l'arrivée).
 
 **Heures prévues et estimées.** Les heures prévues restent celles du plan pendant toute l'activité. Les
 heures estimées des points sont recalculées **à chaque passage** (bouton Lap, ou point atteint d'après la
@@ -75,7 +88,8 @@ Autre possibilité : coller le code long dans `resources/settings/properties.xml
 **Par le Connect IQ Store (version « bêta » privée)** : publie le `.iq` (« Monkey C: Export Project ») en
 bêta sur <https://apps.garmin.com/developer>. Une fois installé depuis le Store, les réglages sont
 modifiables dans l'app Garmin Connect : *Appareils → ta montre → Activités et applications → Trail Planner
-→ Paramètres* (code montre, intervalle des rappels nutrition, vibrations).
+→ Paramètres* (code montre, intervalle des rappels nutrition, vibrations, distance et dénivelé jusqu'à
+l'arrivée).
 
 Puis, sur la montre : activité **Trail → Paramètres → Écrans de données** → ajoute un champ
 **Connect IQ → Trail Planner** (idéalement en grand : demi-écran ou plein écran).
@@ -85,8 +99,8 @@ Puis, sur la montre : activité **Trail → Paramètres → Écrans de données*
 1. Dans l'app web, la course est « Sur la montre ✓ ». Le parcours FIT (navigation, flèches) reste utile
    pour te guider, mais le champ n'en a plus besoin : il a son propre tracé.
 2. Quelques minutes avant le départ, **ouvre l'activité Trail avec le parcours, téléphone à proximité** :
-   le champ télécharge le plan (contrôle toutes les 5 min, minimum imposé par Garmin) et affiche
-   « Départ hh:mm ».
+   le champ télécharge le plan (contrôle toutes les 5 min, minimum imposé par Garmin) et affiche le nom,
+   la distance, le D+, le temps prévu et « Départ hh:mm ».
 3. Démarre l'activité : le champ fonctionne ensuite sans réseau. Si ton téléphone est avec toi, ton
    assistance suit ta progression sur le lien assistance de la course (créé depuis l'app web,
    « 👥 Lien assistance »).
@@ -98,8 +112,10 @@ connecté ?), « Code inconnu » (code erroné ou course pas encore envoyée), �
 
 - Écrit sans accès au SDK Garmin : la première compilation peut demander de petites corrections
   (signale-les, avec le message d'erreur).
-- Mémoire limitée : le plan tient en 7 Ko au plus (limite de la tâche de fond Garmin : 8 Ko). Le tracé
-  prend la place restante : simplifié à 8 m près sur un trail court, jusqu'à 100–150 m sur un ultra avec
+- Mémoire limitée : le plan tient en 7 Ko au plus (limite de la tâche de fond Garmin : 8 Ko). Le profil
+  de dénivelé prend au plus un tiers de la place restante (simplifié à 5 m près, moins finement sur un
+  ultra, au pire seulement aux points de passage) ; le tracé prend le reste, et passe avant le profil s'il
+  ne tient pas sans lui : simplifié à 8 m près sur un trail court, jusqu'à 100–200 m sur un ultra avec
   beaucoup de points (UTMB) ; dans les lacets simplifiés, la distance de la montre prend le relais à
   l'intérieur du segment, et l'écart reste de l'ordre de 100–200 m au lieu de plusieurs km cumulés.
 - Suivi pour l'assistance : toutes les 5 min au mieux (minimum imposé par Garmin), et seulement si le

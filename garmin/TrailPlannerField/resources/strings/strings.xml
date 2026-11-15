@@ -5,4 +5,7 @@
     <string id="FuelTitle">Rappel nutrition (min) : -1 = selon le plan, 0 = désactivé</string>
     <string id="VibrateTitle">Vibrations</string>
     <string id="LapTitle">Tour = passage au point</string>
+    <string id="FinishTitle">Jusqu'à l'arrivée</string>
+    <string id="FinishSub">Distance, D+ et D-</string>
+    <string id="FinishPrompt">Afficher la distance, le D+ et le D- restant jusqu'à l'arrivée</string>
 </strings>

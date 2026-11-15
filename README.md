@@ -137,15 +137,18 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 
 - **Départ libre** (entraînements) : heures du plan calculées pour un départ maintenant (mises à jour chaque
   minute), puis calées sur le vrai départ — mode course, sinon départ donné par la montre (page du plan et
-  page assistance) — et fixes pendant toute l'activité ; le champ Trail Planner affiche « Départ libre ». En mode course : « Départ maintenant » ou « Déjà
+  page assistance) — et fixes pendant toute l'activité ; le champ Trail Planner affiche « Départ libre » pour
+  une course (aucune heure pour un parcours). En mode course : « Départ maintenant » ou « Déjà
   parti à… » (heure saisie), et « Corriger l'heure de départ » une fois lancé (passages gardés).
 - **Sur téléphone**, chaque page s'ouvre cadres pliés (pas de page à rallonge) : un toucher sur le titre les
   déplie. Restent ouverts le contenu principal (listes des courses et des parcours, import et résultat
   d'analyse, présentation du test VC, en-tête du plan) et l'écran de départ du mode course.
 
 **Montre Garmin**
-- Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point, barrières horaires,
-  rappels nutrition ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
+- Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point (distance, D+ et D- restants,
+  heures prévue et estimée ; jusqu'à l'arrivée en plus par un réglage de la montre), barrières horaires,
+  rappels nutrition ; avant le départ, nom, distance, D+ et temps prévu (heure de départ pour une course
+  seulement) ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
   passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone). Position le long du
   parcours par le **GPS calé sur le tracé** envoyé avec le plan (pas d'erreur cumulée de distance, raccourci
   ou détour recalé, « Hors parcours » affiché). Bouton Lap = passage au point le plus proche ; heures

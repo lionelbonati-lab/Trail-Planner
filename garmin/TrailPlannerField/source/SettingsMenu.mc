@@ -3,6 +3,8 @@
 // par Garmin Connect (dont les réglages manquent quand le champ est installé hors Store).
 // Le code long reste saisissable dans Garmin Connect. 00000000 efface le code.
 // « Tour = passage au point » : le bouton Lap valide le passage au point le plus proche.
+// « Jusqu'à l'arrivée » : distance, D+ et D- restant jusqu'à l'arrivée affichés en plus de ceux
+// jusqu'au prochain point.
 import Toybox.Application;
 import Toybox.Graphics;
 import Toybox.Lang;
@@ -17,6 +19,9 @@ class TrailPlannerSettingsMenu extends WatchUi.Menu2 {
         addItem(_codeItem);
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.LapTitle) as String, null, :lap,
             Application.Properties.getValue("lapPass") != false, {}));
+        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.FinishTitle) as String,
+            WatchUi.loadResource(Rez.Strings.FinishSub) as String, :finish,
+            Application.Properties.getValue("finishStats") == true, {}));
         onShow();
     }
 
@@ -41,6 +46,8 @@ class TrailPlannerSettingsDelegate extends WatchUi.Menu2InputDelegate {
             pushCodePicker();
         } else if (item.getId() == :lap) {
             Application.Properties.setValue("lapPass", (item as WatchUi.ToggleMenuItem).isEnabled());
+        } else if (item.getId() == :finish) {
+            Application.Properties.setValue("finishStats", (item as WatchUi.ToggleMenuItem).isEnabled());
         }
     }
 }

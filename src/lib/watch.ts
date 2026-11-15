@@ -3,18 +3,24 @@
 //
 //   TP1
 //   N|<nom de la course>
-//   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>
+//   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>|<c = course, p = parcours>|<D+ m>|<D− m>
 //   K|<d>:<t>,<d>:<t>,…    courbe distance (m) → temps de déplacement prévu (s, arrêts exclus),
 //                          simplifiée à ±45 s près (points là où l'allure change)
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>   (un par point)
+//   E|<dd>,<du>,<dn>,<dd>,<du>,<dn>,…
+//                          D+ et D− cumulés depuis le départ (m) le long du parcours, en écarts d'un
+//                          sommet au suivant à partir de 0,0,0 : la montre en tire le D+ / D− restant
+//                          jusqu'au point suivant et jusqu'à l'arrivée. Absente si elle ne tient pas.
 //   G|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,<dd>,<dlat>,<dlon>,…
 //                          tracé simplifié pour caler la position GPS sur le parcours : premier point
 //                          (lat / lon en 1e-5 degré), puis écarts de distance (m) et de position
 //                          d'un point au suivant. Absent si le plan dépasserait WATCH_PLAN_MAX.
 // Temps prévu à une distance d = K interpolé + somme des arrêts des points situés avant d.
+// Les champs ajoutés en fin de ligne S et la ligne E sont ignorés par les versions plus anciennes du champ.
+import { indexAt } from './gpx'
 import { simplifyRoute } from './routeGeo'
 import { zonedToUtc } from './time'
-import type { Athlete, Race, SimResult, Track } from './types'
+import type { Athlete, Race, SimResult, Track, TrackPoint } from './types'
 
 /** Tolérance de simplification de la courbe des temps (s). */
 const TOL = 45
@@ -69,10 +75,11 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
   const curve = sim.points.map((p) => [p.dist, p.t - stopsBefore(p.dist + 1e-6)] as [number, number])
   const keep = simplify(curve, TOL)
   const K = keep.map(([d, t]) => `${Math.round(d)}:${Math.round(t)}`).join(',')
+  const kind = race.kind === 'route' ? 'p' : 'c'
   const lines = [
     'TP1',
     `N|${clean(race.name, 24)}`,
-    `S|${start}|${Math.round(track.totalDist)}|${fuelInterval(race, athlete)}`,
+    `S|${start}|${Math.round(track.totalDist)}|${fuelInterval(race, athlete)}|${kind}|${Math.round(track.dPlus)}|${Math.round(track.dMinus)}`,
     `K|${K}`,
     ...sim.splits.map((s) => {
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
@@ -80,9 +87,103 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
     }),
   ]
   const base = lines.join('\n')
-  // Taille en octets (accents des noms sur 2 octets) ; la ligne G n'a que des caractères ASCII.
-  const route = routeLine(track.points, WATCH_PLAN_MAX - new TextEncoder().encode(base).length - 1)
-  return route ? `${base}\n${route}` : base
+  // Taille en octets (accents des noms sur 2 octets) ; les lignes E et G n'ont que des caractères ASCII.
+  // Dénivelé : au plus un tiers de la place restante (le tracé, qui cale la position, prend le reste).
+  const free = WATCH_PLAN_MAX - new TextEncoder().encode(base).length - 1
+  // Le tracé passe avant : s'il ne tient qu'en l'absence de la ligne E, elle est retirée.
+  let climb = climbLine(track.points, sim.splits.map((s) => s.to), Math.min(CLIMB_MAX, Math.floor(free / 3)))
+  let route = routeLine(track.points, free - (climb ? climb.length + 1 : 0))
+  if (!route && climb) {
+    route = routeLine(track.points, free)
+    if (route) climb = null
+  }
+  return [base, climb, route].filter(Boolean).join('\n')
+}
+
+/** Place maximale de la ligne E (caractères). */
+const CLIMB_MAX = 1500
+
+/**
+ * Tolérances essayées pour le dénivelé cumulé (m) : la plus fine qui tient dans sa place. En dernier
+ * recours (Infinity), seuls le départ, les points de passage et l'arrivée sont gardés.
+ */
+const CLIMB_TOLS = [5, 8, 12, 20, 30, 50, 80, 120, Infinity]
+
+/**
+ * Ligne E : D+ et D− cumulés depuis le départ (m), sommets gardés là où la pente change (cumuls à
+ * ± tol m près entre deux sommets) et à chaque point de passage (`marks`, distances en m), avec le
+ * cumul du tableau du plan : la montre retrouve exactement le D+ / D− d'un point au suivant.
+ * null si elle ne tient pas dans `budget` caractères.
+ */
+export function climbLine(points: TrackPoint[], marks: number[], budget: number): string | null {
+  if (points.length < 2 || budget < 20) return null
+  const up = [0]
+  const dn = [0]
+  for (let i = 1; i < points.length; i++) {
+    const d = points[i].ele - points[i - 1].ele
+    up.push(up[i - 1] + Math.max(0, d))
+    dn.push(dn[i - 1] + Math.max(0, -d))
+  }
+  // Échantillons : points du tracé et points de passage (cumul au point du tracé le plus proche, comme
+  // le D+ / D− des tronçons du plan), dans l'ordre ; deux échantillons à moins de 1 m n'en font qu'un.
+  type Sample = { d: number; u: number; n: number; fixed: boolean }
+  const total = points[points.length - 1].dist
+  const ms = marks.map((m) => Math.max(0, Math.min(total, m))).sort((a, b) => a - b)
+  const samples: Sample[] = []
+  const add = (s: Sample) => {
+    const last = samples[samples.length - 1]
+    if (!last || s.d - last.d >= 1) samples.push(s)
+    else if (s.fixed && !last.fixed) samples[samples.length - 1] = s
+  }
+  let k = 0
+  points.forEach((p, i) => {
+    while (k < ms.length && ms[k] < p.dist) {
+      const j = indexAt(points, ms[k])
+      add({ d: ms[k++], u: up[j], n: dn[j], fixed: true })
+    }
+    add({ d: p.dist, u: up[i], n: dn[i], fixed: i === 0 || i === points.length - 1 })
+  })
+  while (k < ms.length) add({ d: ms[k++], u: up[up.length - 1], n: dn[dn.length - 1], fixed: true })
+  samples[samples.length - 1].fixed = true
+
+  for (const tol of CLIMB_TOLS) {
+    // Douglas-Peucker entre deux sommets imposés, sur les deux cumuls à la fois.
+    const keep = samples.map((s) => s.fixed)
+    const fixed = keep.flatMap((f, i) => (f ? [i] : []))
+    const stack: [number, number][] = fixed.slice(1).map((b, i) => [fixed[i], b])
+    while (stack.length) {
+      const [a, b] = stack.pop()!
+      const A = samples[a]
+      const B = samples[b]
+      let worst = tol
+      let idx = -1
+      for (let i = a + 1; i < b; i++) {
+        const S = samples[i]
+        const f = (S.d - A.d) / (B.d - A.d || 1)
+        const e = Math.max(Math.abs(S.u - (A.u + f * (B.u - A.u))), Math.abs(S.n - (A.n + f * (B.n - A.n))))
+        if (e > worst) {
+          worst = e
+          idx = i
+        }
+      }
+      if (idx >= 0) {
+        keep[idx] = true
+        stack.push([a, idx], [idx, b])
+      }
+    }
+    // Cumuls arrondis, puis écarts : la somme des écarts retombe sur les cumuls arrondis.
+    const parts: number[] = []
+    let [d0, u0, n0] = [0, 0, 0]
+    samples.forEach((s, i) => {
+      if (!keep[i]) return
+      const [d, u, n] = [Math.round(s.d), Math.round(s.u), Math.round(s.n)]
+      parts.push(d - d0, u - u0, n - n0)
+      ;[d0, u0, n0] = [d, u, n]
+    })
+    const line = `E|${parts.join(',')}`
+    if (line.length <= budget) return line
+  }
+  return null
 }
 
 /**
