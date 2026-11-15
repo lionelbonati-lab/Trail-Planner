@@ -49,6 +49,8 @@ describe('page assistance', () => {
     expect(html).toContain('class="me"')
     // Partie déjà parcourue grisée sur le profil.
     expect(html).toContain('class="done-area"')
+    // Points dépassés grisés aussi.
+    expect(html).toMatch(/class="mp-pt[^"]*mp-passed"/)
   })
 
   it('profil : nom des points, assistance autorisée et dropbags', () => {

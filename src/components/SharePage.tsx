@@ -736,7 +736,7 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           const label = shown.has(r.id)
           const flip = !!shown.get(r.id)
           return (
-            <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''}`}>
+            <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''} ${r.actual || (follow !== null && r.dist <= follow) ? 'mp-passed' : ''}`}>
               <title>{`${r.name} · km ${(r.dist / 1000).toFixed(1)}${r.assist ? ' · assistance autorisée' : ''}${r.kind === 'base' ? ' · base de vie' : ''}${r.dropbag ? ' · dropbag' : ''}`}</title>
               {label && <line className="mp-stem" x1={xx} x2={xx} y1={T - 4} y2={yy} />}
               {r.assist && <circle className="assist-ring" cx={xx} cy={yy} r={7} />}
