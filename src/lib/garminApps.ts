@@ -1,5 +1,5 @@
-// Applications montre Garmin (Connect IQ) liées à Trail Planner. Lien du Connect IQ Store : null tant
-// que l'application n'y est pas publiée (installation par câble, voir garmin/README.md).
+// Applications montre Garmin (Connect IQ) liées à Trail Planner. Le contenu affiché vient de
+// public/montre/applications.md ; la liste ci-dessous n'est qu'un secours (fichier injoignable).
 
 export interface WatchApp {
   name: string
@@ -11,6 +11,13 @@ export interface WatchApp {
 }
 
 export const REPO_URL = 'https://github.com/lionelbonati-lab/Trail-Planner'
+
+/**
+ * Textes, liens du Store et captures d'écran du cadre « Applications Garmin » : fichier Markdown du
+ * dépôt, modifiable directement sur GitHub (voir son en-tête). WATCH_APPS ne sert qu'en secours.
+ */
+export const APPS_DOC_PATH = 'montre/applications.md'
+export const APPS_DOC_EDIT_URL = `${REPO_URL}/edit/main/public/${APPS_DOC_PATH}`
 
 export const WATCH_APPS: WatchApp[] = [
   {

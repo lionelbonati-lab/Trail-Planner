@@ -580,3 +580,4 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .watch-app { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 .watch-app p { margin: 6px 0 8px; }
 .notice a { word-break: break-all; }
+.watch-shot { display: block; max-width: 100%; max-height: 320px; width: auto; height: auto; margin: 8px auto; border-radius: 10px; border: 1px solid var(--line); }
