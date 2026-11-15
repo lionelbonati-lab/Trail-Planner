@@ -1,6 +1,7 @@
+import { newRace } from './defaults'
 import { parseGpx } from './gpx'
 import { scenarioInputs, simulate, withFinish, type SimOptions } from './model'
-import type { Athlete, Race, SimResult, Track } from './types'
+import type { Athlete, PaceZone, Race, SimResult, Track } from './types'
 
 /** Options de simulation d'une course planifiée. */
 export function planOptions(race: Race, track: Track): SimOptions {
@@ -16,6 +17,16 @@ export function planOptions(race: Race, track: Track): SimOptions {
     // Une course se calcule à l'intensité de course : ses zones éventuelles sont ignorées.
     zones: race.kind === 'race' ? [] : race.zones,
   }
+}
+
+/**
+ * Parcours en cours de tracé, pour la simulation du traceur : type « parcours » (ses zones d'allure
+ * comptent ; une course les ignore), sans nuit, chaleur ni pluie (altitude et technicité seulement).
+ */
+export function draftRoute(name: string, zones: PaceZone[]): Race {
+  const r: Race = { ...newRace(name, ''), kind: 'route', zones }
+  r.env = { ...r.env, night: { ...r.env.night, enabled: false }, heat: { ...r.env.heat, enabled: false }, rain: { ...r.env.rain, enabled: false } }
+  return r
 }
 
 export function computePlan(race: Race, athlete: Athlete): { track: Track; opts: SimOptions; sim: SimResult } | null {
