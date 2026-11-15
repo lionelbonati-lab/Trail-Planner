@@ -3,7 +3,7 @@ import { assistAllowed } from '../assist'
 import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace, normalizeAthlete } from '../defaults'
 import { dropbagPlan, dropbagText, nutritionPlan } from '../nutrition'
 import { computePlan } from '../plan'
-import { checkpointName, defaultStop, isRavitoKind, waypointKind } from '../splits'
+import { checkpointName, commonStop, defaultStop, isRavitoKind, setStops, waypointKind } from '../splits'
 import type { Checkpoint, CheckpointKind } from '../types'
 import { watchPlan } from '../watch'
 
@@ -53,5 +53,31 @@ describe('base de vie et dropbag', () => {
     expect(dropbagText(bags[1])).toMatch(/×/)
     // Aucun point coché : pas de dropbag.
     expect(dropbagPlan(legs, race.checkpoints.map((c) => ({ ...c, dropbag: false })))).toEqual([])
+  })
+})
+
+describe("barrière horaire à l'arrivée et arrêt commun des bases de vie", () => {
+  const A = normalizeAthlete(DEFAULT_ATHLETE)
+  const race = newRace('Ultra', gpx())
+  race.env.start = '2026-07-01T06:00'
+  race.checkpoints = [cp('r1', 8000, 'ravito'), cp('b1', 20000, 'base', { stopMin: 25 }), cp('b2', 30000, 'base')]
+
+  it("l'arrivée prend la barrière de la course : marge, plan montre", () => {
+    expect(computePlan(race, A)!.sim.splits.at(-1)!.cutoffMargin).toBeNull()
+    const withCut = { ...race, finishCutoff: '2026-07-01T23:00' }
+    const plan = computePlan(withCut, A)!
+    const fin = plan.sim.splits.at(-1)!
+    expect(fin.cp.name).toBe('Arrivée')
+    expect(fin.cutoffMargin).toBeCloseTo(17 * 3600 - fin.arrival, 0)
+    const c = watchPlan(withCut, A, plan.track, plan.sim).split('\n').filter((l) => l.startsWith('C|')).at(-1)!
+    expect(Number(c.split('|')[3])).toBeGreaterThan(0)
+    // Parcours : pas de barrière.
+    expect(computePlan({ ...withCut, kind: 'route' }, A)!.sim.splits.at(-1)!.cutoffMargin).toBeNull()
+  })
+
+  it('arrêt commun aux bases de vie, sans toucher aux ravitos', () => {
+    expect(commonStop(race.checkpoints, 'base', 20)).toBe(25)
+    const cps = setStops(race.checkpoints, 40, 'base')
+    expect(cps.map((c) => c.stopMin)).toEqual([3, 40, 40])
   })
 })

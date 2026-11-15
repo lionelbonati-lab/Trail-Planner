@@ -468,7 +468,10 @@ function cutoffMs(cutoff: string, timeZone: string): number | null {
   return Number.isNaN(ms) ? null : ms
 }
 
-/** Liste des points de passage effectifs : ceux de la course + l'arrivée si absente. */
+/**
+ * Liste des points de passage effectifs : ceux de la course + l'arrivée si absente, avec sa
+ * barrière horaire (course).
+ */
 export function withFinish(race: Race, track: Track): Checkpoint[] {
   const cps = [...race.checkpoints].sort((a, b) => a.dist - b.dist)
   const hasFinish = cps.some((c) => c.dist >= track.totalDist - 50)
@@ -479,7 +482,7 @@ export function withFinish(race: Race, track: Track): Checkpoint[] {
       name: 'Arrivée',
       kind: 'info',
       stopMin: 0,
-      cutoff: '',
+      cutoff: race.kind === 'route' ? '' : (race.finishCutoff ?? ''),
       water: 0,
       carbs: 0,
       notes: '',

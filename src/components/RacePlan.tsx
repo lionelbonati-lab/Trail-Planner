@@ -169,7 +169,7 @@ export function RacePlan({
   const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1399px)')
   const [editing, setEditing] = useState<string | null>(null)
   // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
-  const [bulkStop, setBulkStop] = useState<number | null>(null)
+  const [bulkStop, setBulkStop] = useState<Record<string, number>>({})
   const [showMap, setShowMap] = useState(true)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
@@ -353,11 +353,19 @@ export function RacePlan({
     [sim.splits, race.finishAccess, track],
   )
   const ravitos = sim.splits.filter((s) => isRavitoKind(s.cp.kind))
-  // Arrêt commun : à chaque ravito d'une course, à chaque point d'un parcours.
-  const stopKind = isRoute ? null : 'ravito'
-  const stopCount = race.checkpoints.filter((c) => isRoute || c.kind === 'ravito').length
-  const stopAll = bulkStop ?? commonStop(race.checkpoints, stopKind, isRoute ? 0 : 3)
-  const stopWord = isRoute ? (stopCount > 1 ? 'points' : 'point') : stopCount > 1 ? 'ravitos' : 'ravito'
+  // Arrêt commun : à chaque ravito et à chaque base de vie d'une course, à chaque point d'un parcours.
+  const stopGroups = (
+    isRoute
+      ? [{ kind: null, one: 'point', many: 'points' }]
+      : [{ kind: 'ravito', one: 'ravito', many: 'ravitos' }, { kind: 'base', one: 'base de vie', many: 'bases de vie' }]
+  ).flatMap(({ kind, one, many }) => {
+    const k = kind as CheckpointKind | null
+    const targets = race.checkpoints.filter((c) => k === null || c.kind === k)
+    if (!targets.length) return []
+    const key = k ?? 'all'
+    const value = bulkStop[key] ?? commonStop(race.checkpoints, k, k ? defaultStop(k) : 0)
+    return [{ key, kind: k, one, word: targets.length > 1 ? `aux ${targets.length} ${many}` : `${k === 'base' ? 'à la' : 'au'} ${one}`, value, done: targets.every((c) => c.stopMin === value) }]
+  })
   const totalStops = race.checkpoints.reduce((a, c) => a + c.stopMin * 60, 0)
   const nightShare = sim.points.filter((p) => p.night).length / sim.points.length
 
@@ -915,17 +923,20 @@ export function RacePlan({
           title="Temps de passage"
           actions={<button onClick={() => pickPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>}
         >
-          {stopCount > 0 && (
-            <div className="row bulk-stop">
-              <Num label={`Arrêt à chaque ${isRoute ? 'point' : 'ravito'}`} value={stopAll} unit="min" min={0} width={56} onChange={(v) => setBulkStop(Math.max(0, v))} />
+          {stopGroups.map((g) => (
+            <div className="row bulk-stop" key={g.key}>
+              <Num label={`Arrêt à chaque ${g.one}`} value={g.value} unit="min" min={0} width={56} onChange={(v) => setBulkStop((b) => ({ ...b, [g.key]: Math.max(0, v) }))} />
               <button
-                onClick={() => { set({ checkpoints: setStops(race.checkpoints, stopAll, stopKind) }); setBulkStop(null) }}
-                disabled={race.checkpoints.every((c) => !(isRoute || c.kind === 'ravito') || c.stopMin === stopAll)}
+                onClick={() => {
+                  set({ checkpoints: setStops(race.checkpoints, g.value, g.kind) })
+                  setBulkStop((b) => Object.fromEntries(Object.entries(b).filter(([k]) => k !== g.key)))
+                }}
+                disabled={g.done}
               >
-                <Check /> Appliquer {stopCount > 1 ? `aux ${stopCount} ${stopWord}` : `au ${stopWord}`}
+                <Check /> Appliquer {g.word}
               </button>
             </div>
-          )}
+          ))}
           {narrow ? (
             <div className="split-cards">
               {sim.splits.map((s) => {
@@ -964,8 +975,16 @@ export function RacePlan({
                         {dropbagOf(cp, true)}
                       </div>
                     )}
-                    {!isFinish && (
+                    {(!isFinish || !isRoute) && (
                       <button className="ghost" onClick={() => setEditing(open ? null : cp.id)}>{open ? 'Fermer' : 'Modifier'}</button>
+                    )}
+                    {open && isFinish && (
+                      <div className="fields">
+                        <label className="field">
+                          <span className="field-label">Barrière à l’arrivée</span>
+                          <input type="datetime-local" value={cp.cutoff} onChange={(e) => set({ finishCutoff: e.target.value })} />
+                        </label>
+                      </div>
                     )}
                     {open && !isFinish && (
                       <div className="fields">
@@ -1059,9 +1078,12 @@ export function RacePlan({
                       <td>{isFinish ? '' : <Num value={cp.stopMin} width={44} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />}</td>
                       {!isRoute && (
                         <td>
-                          {!isFinish && (
-                            <input type="datetime-local" value={cp.cutoff} onChange={(e) => setCp(cp.id, { cutoff: e.target.value })} />
-                          )}
+                          <input
+                            type="datetime-local"
+                            value={cp.cutoff}
+                            aria-label={`Barrière ${cp.name}`}
+                            onChange={(e) => (isFinish ? set({ finishCutoff: e.target.value }) : setCp(cp.id, { cutoff: e.target.value }))}
+                          />
                           {s.cutoffMargin !== null && (
                             <div className={s.cutoffMargin < 1800 ? 'danger' : s.cutoffMargin < 3600 ? 'warn-text' : 'ok-text'}>
                               {s.cutoffMargin < 0 ? 'Hors délai ' : 'Marge '}{formatDuration(Math.abs(s.cutoffMargin))}
