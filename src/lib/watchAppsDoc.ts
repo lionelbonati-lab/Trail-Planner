@@ -109,6 +109,14 @@ export function parseWatchAppsDoc(md: string): WatchAppsDoc {
   }
 }
 
+/** Paragraphe fait seulement d'images (une ou plusieurs lignes à la suite) : affiché en galerie qui défile. */
+export function galleryImages(b: Block): { alt: string; src: string }[] | null {
+  if (b.kind !== 'p') return null
+  const images = b.parts.flatMap((p) => (p.kind === 'image' ? [{ alt: p.alt, src: p.src }] : []))
+  const onlyImages = b.parts.every((p) => p.kind === 'image' || (p.kind === 'text' && !p.text.trim()))
+  return images.length && onlyImages ? images : null
+}
+
 /** Adresse d'une image ou d'un lien du fichier : relative au dossier montre/ du site, sauf lien complet. */
 export function docUrl(src: string, base: string): string {
   return /^(https?:)?\/\//.test(src) || src.startsWith('/') ? src : `${base}montre/${src.replace(/^\.\//, '')}`

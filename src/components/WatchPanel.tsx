@@ -5,7 +5,7 @@ import { APPS_DOC_PATH, WATCH_APPS } from '../lib/garminApps'
 import { formatPace } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { epVamThresholds } from '../lib/vam'
-import { docUrl, parseWatchAppsDoc, type Block, type Inline, type WatchAppsDoc } from '../lib/watchAppsDoc'
+import { docUrl, galleryImages, parseWatchAppsDoc, type Block, type Inline, type WatchAppsDoc } from '../lib/watchAppsDoc'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
 import { Card, Hint } from './ui'
 
@@ -146,7 +146,16 @@ function Blocks({ blocks }: { blocks: Block[] }) {
   return (
     <>
       {blocks.map((b, i) =>
-        b.kind === 'p' ? (
+        galleryImages(b) ? (
+          // Images à la suite : galerie qui défile, chaque capture s'ouvre en grand.
+          <div key={i} className="watch-gallery">
+            {galleryImages(b)!.map((img, k) => (
+              <a key={k} href={docUrl(img.src, BASE)} target="_blank" rel="noreferrer">
+                <img src={docUrl(img.src, BASE)} alt={img.alt} title={img.alt} loading="lazy" />
+              </a>
+            ))}
+          </div>
+        ) : b.kind === 'p' ? (
           <p key={i} className="small"><InlineParts parts={b.parts} /></p>
         ) : (
           <ul key={i} className="small">{b.items.map((it, k) => <li key={k}><InlineParts parts={it} /></li>)}</ul>

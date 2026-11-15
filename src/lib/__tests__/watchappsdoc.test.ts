@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { docUrl, parseInline, parseWatchAppsDoc } from '../watchAppsDoc'
+import { docUrl, galleryImages, parseInline, parseWatchAppsDoc } from '../watchAppsDoc'
 
 describe('page « Applications Garmin » modifiable sur GitHub', () => {
   it('fichier du dépôt : introduction, deux applications, champs, image et liste', () => {
@@ -14,6 +14,13 @@ describe('page « Applications Garmin » modifiable sur GitHub', () => {
     expect(JSON.stringify(doc)).not.toContain('Commit changes')
     // L'image citée existe dans le dossier.
     expect(() => readFileSync(`public/montre/${tp.image}`)).not.toThrow()
+    // Galerie des captures en course : cinq images, toutes présentes dans le dossier.
+    const gallery = tp.body.map(galleryImages).find(Boolean)!
+    expect(gallery.map((g) => g.alt)).toEqual(['Sur le parcours', 'Entrée de ravito', 'Passage validé', 'Au ravito', 'Alerte nourriture'])
+    for (const g of gallery) expect(() => readFileSync(`public/montre/${g.src}`)).not.toThrow()
+    // Texte mêlé d'une image : pas une galerie.
+    expect(galleryImages({ kind: 'p', parts: parseInline('un ![écran](a.png)') })).toBeNull()
+    expect(galleryImages({ kind: 'list', items: [] })).toBeNull()
   })
 
   it('lien du Store, image et guide ; texte libre après les champs', () => {

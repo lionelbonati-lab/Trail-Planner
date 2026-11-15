@@ -93,7 +93,7 @@ touche ⌚ sur une autre : la montre la récupère d'elle-même.
    + le profil de ta montre).
 2. Installe **VS Code** et l'extension **Monkey C** (Garmin), puis « Monkey C: Generate a Developer Key ».
 3. Ouvre le dossier `garmin/TrailPlannerField`.
-4. Ta montre doit figurer dans `manifest.xml` (`<iq:products>`). Montres prévues : **Enduro 2 et 3**,
+4. Ta montre doit figurer dans `manifest.xml` (`<iq:products>`). Montres prévues : **Enduro 3**,
    **epix 2**, **Forerunner 255, 265, 955 et 965**, et la famille **fēnix** :
    - fēnix 5 Plus, 5S Plus, 5X Plus (`fenix5plus`, `fenix5splus`, `fenix5xplus`) ;
    - fēnix 6 Pro, 6S Pro, 6X Pro, Solar et Sapphire compris (`fenix6pro`, `fenix6spro`, `fenix6xpro`) ;

@@ -12,6 +12,8 @@
       Image : nom d'un fichier de ce dossier (capture de l'écran de la montre)
       Guide : lien du guide d'installation par câble (sinon celui du dépôt)
   - Ensuite, du texte libre : paragraphes, listes « - », **gras**, [liens](https://…), images ![texte](fichier.png).
+  - Plusieurs images à la suite (une par ligne, sans texte entre elles) : galerie qui défile, chaque image
+    s'ouvre en grand d'un clic.
   - Images : dépose-les dans ce dossier (public/montre) avec « Add file › Upload files ».
   - Le texte avant le premier « ## » s'affiche en introduction.
 -->
@@ -32,7 +34,15 @@ Ton plan de course au poignet :
 - **bouton Lap** = passage à un point, estimations recalculées ;
 - passages et position envoyés à ton **assistance**.
 
-Montres : fēnix 5 Plus, 6 Pro, 7, 7 Pro, 8, 9 et E, epix 2, Enduro 2 et 3, Forerunner 255, 265, 955 et 965.
+En course (captures simulées sur Enduro 3) :
+
+![Sur le parcours](ecran-1-sur-le-parcours.png)
+![Entrée de ravito](ecran-2-entree-de-ravito.png)
+![Passage validé](ecran-3-passage-valide.png)
+![Au ravito](ecran-4-au-ravito.png)
+![Alerte nourriture](ecran-5-alerte-nourriture.png)
+
+Montres : fēnix 5 Plus, 6 Pro, 7, 7 Pro, 8, 9 et E, epix 2, Enduro 3, Forerunner 255, 265, 955 et 965.
 
 ## EndurancePro
 Type : Champ de données

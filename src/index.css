@@ -616,6 +616,10 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .watch-app p { margin: 6px 0 8px; }
 .notice a { word-break: break-all; }
 .watch-shot { display: block; max-width: 100%; max-height: 320px; width: auto; height: auto; margin: 8px auto; border-radius: 10px; border: 1px solid var(--line); }
+/* Galerie de captures (images à la suite dans applications.md) : défile à l'horizontale. */
+.watch-gallery { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 0 8px; margin: 6px 0; }
+.watch-gallery a { flex: none; scroll-snap-align: start; }
+.watch-gallery img { display: block; height: 220px; width: auto; border-radius: 10px; border: 1px solid var(--line); }
 
 /* Assistance dans les temps de passage : coche et accès (épingle). */
 .assist-ctl { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
