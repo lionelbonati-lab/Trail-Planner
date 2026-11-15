@@ -47,6 +47,8 @@ describe('page assistance', () => {
     expect(html).toContain('il y a 3 min')
     expect(html).toContain('Prochain : <strong>Sommet B</strong>')
     expect(html).toContain('class="me"')
+    // Partie déjà parcourue grisée sur le profil.
+    expect(html).toContain('class="done-area"')
   })
 
   it('profil : nom des points, assistance autorisée et dropbags', () => {

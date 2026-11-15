@@ -1,7 +1,7 @@
 import { isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Map as MapIcon, Mountain, Navigation, Radio, Route } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
@@ -593,6 +593,7 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   // Rendu à l'échelle 1 (largeur mesurée) : texte lisible aussi sur téléphone.
   const wrap = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
+  const clipId = `done-${useId().replace(/:/g, '')}`
   const [Wc, setWc] = useState(900)
   useEffect(() => {
     const el = wrap.current
@@ -714,6 +715,18 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
         ))}
         <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="area" />
         <path d={line} className="line" />
+        {/* Partie déjà parcourue : profil grisé jusqu'au coureur. */}
+        {follow !== null && follow > 0 && (
+          <g className="done-part">
+            <clipPath id={clipId}>
+              <rect x={0} y={0} width={x(Math.min(follow, total))} height={H} />
+            </clipPath>
+            <g clipPath={`url(#${clipId})`}>
+              <path d={`${line}L${x(total)},${H - 8}L${x(0)},${H - 8}Z`} className="done-area" />
+              <path d={line} className="done-line" />
+            </g>
+          </g>
+        )}
         {kmTicks.map((k) => (
           <text key={k} x={x(k * 1000)} y={H - 12} textAnchor="middle" className="tick km-tick">{k}</text>
         ))}

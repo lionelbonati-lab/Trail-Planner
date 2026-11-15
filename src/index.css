@@ -276,6 +276,8 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .mp-legend .lg-leg { background: var(--surface); border: 1px solid var(--line); border-radius: 2px; }
 .mp-legend .lg-leg-ravito { background: #fdf3ec; border: 1px solid var(--ravito); border-radius: 2px; }
 .assist-profile .km-tick { font-size: 10px; opacity: 0.8; }
+.assist-profile .done-area { fill: #dcdcd8; }
+.assist-profile .done-line { fill: none; stroke: #9a9d99; stroke-width: 1.6; }
 .assist-profile .ele-tick { font-size: 10px; }
 .assist-profile .ele-axis { position: absolute; left: 0; top: 0; pointer-events: none; }
 .assist-profile .ele-axis-bg { fill: var(--bg); opacity: 0.88; }
