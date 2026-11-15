@@ -4,7 +4,6 @@
 <iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
     <iq:application id="e492e667-f7c2-45cd-8b61-3964047d7e5f" type="datafield" name="@Strings.AppName" entry="TrailPlannerApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.2.0">
         <iq:products>
-            <iq:product id="enduro2"/>
             <iq:product id="enduro3"/>
             <iq:product id="epix2"/>
             <!-- Famille fēnix : 5 Plus, 6 Pro, 7, 7 Pro, 8, 9 et E. Pas les fēnix 3, 5, 5S, 5X et Chronos
