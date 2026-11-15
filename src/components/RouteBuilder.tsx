@@ -2,6 +2,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   ArrowDownUp,
+  ArrowLeft,
   ArrowLeftRight,
   Bookmark,
   BookmarkX,
@@ -89,6 +90,8 @@ interface Props {
   /** Course ou parcours dont on modifie le tracé, ou null pour un nouveau tracé. */
   race: Race | null
   onSave: (r: DrawResult) => void
+  /** Sortie du traceur sans enregistrer (flèche de retour, sur téléphone où il couvre tout l'écran). */
+  onBack: () => void
 }
 
 /** Segment calculé ; `offroad` : point hors du réseau de chemins, tracé en ligne droite. */
@@ -231,7 +234,7 @@ function ModeSeg({ value, onChange }: { value: SegMode; onChange: (m: SegMode) =
 }
 
 /** Traceur de parcours plein écran : toucher = point sur les chemins, appui long = point hors sentier. */
-export default function RouteBuilder({ athlete, race, onSave }: Props) {
+export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const init = useMemo(() => initialState(race, athlete), []) // eslint-disable-line react-hooks/exhaustive-deps
   const cache = useRef(init.cache)
   const [wps, setWps] = useState<Waypoint[]>(init.wps)
@@ -812,6 +815,12 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
     if (!race) writeJson(DRAFT_KEY, { wps: [], name: '', kind, pace: paceChoice })
     onSave(r)
   }
+  // Retour (téléphone) : un nouveau tracé reste en brouillon ; les modifications d'un tracé existant
+  // seraient perdues, d'où la confirmation.
+  const back = () => {
+    if (race && history.current.length && !confirm('Quitter sans enregistrer les modifications du tracé ?')) return
+    onBack()
+  }
   const exportGpx = () => {
     const r = result()
     if (r) download(`${r.name.replace(/[^\w-]+/g, '_')}.gpx`, r.gpxText)
@@ -1013,6 +1022,7 @@ export default function RouteBuilder({ athlete, race, onSave }: Props) {
         {holdAt && <span className="hold-ring" style={{ left: holdAt.x, top: holdAt.y, animationDuration: `${HOLD_MS}ms` }} aria-hidden />}
 
         <div className="draw-top">
+          {mobile && <button className="fab" onClick={back} title="Retour" aria-label="Retour"><ArrowLeft /></button>}
           <form className="draw-search" onSubmit={search}>
             <Search className="draw-search-icon" aria-hidden />
             <input type="search" placeholder="Rechercher un lieu…" value={query} onChange={(e) => setQuery(e.target.value)} />
