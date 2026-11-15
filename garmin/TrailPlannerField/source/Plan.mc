@@ -16,7 +16,8 @@ const ROUTE_KY = 110540.0d;
 //   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,...  un par tronçon entre ravitos
 //     (indices des lignes C, -1 = départ) : sac « À emporter » et produits dans l'ordre de prise
 //   W|<volume d'une flasque dL>|<isotonique : indice dans P, -1 sans>  flasques de chaque tronçon
-//     tirées de son eau : autant que de volumes commencés, au moins 2 avec isotonique (eau puis iso)
+//     tirées de son eau : autant que de volumes commencés ; avec isotonique, 1 iso seule si une suffit,
+//     sinon en alternant eau puis iso
 //   G|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,...   tracé simplifié (lat / lon en
 //     1e-5 degré, puis écarts d'un sommet au suivant) pour caler la position GPS sur le parcours
 // Temps prévu à une distance d = K interpolé + arrêts des points situés avant d.
@@ -137,23 +138,35 @@ class Plan {
     // l'ordre de prise, l'isotonique compté dans les flasques) et sel.
     function bag(l as Number) as Array<String> {
         var out = [] as Array<String>;
-        // Flasques (comme flaskSplit côté web) : autant que de volumes commencés, au moins 2 avec
-        // isotonique, en alternant eau puis isotonique (1,1 L : 2 eau + 1 iso ; 1,6 L : 2 eau + 2 iso).
+        // Flasques (comme flaskSplit côté web) : autant que de volumes commencés ; avec isotonique, une
+        // seule d'isotonique si une flasque suffit, sinon en alternant eau puis isotonique
+        // (0,4 L : 1 iso ; 1,1 L : 2 eau + 1 iso ; 1,6 L : 2 eau + 2 iso).
         var fw = 0;
         var fi = 0;
         if (flaskDl > 0 && legWater[l] > 0) {
             var n = (legWater[l] + flaskDl - 1) / flaskDl;
-            var low = isoP >= 0 ? 2 : 1;
-            if (n < low) {
-                n = low;
+            if (n < 1) {
+                n = 1;
             }
-            fw = isoP >= 0 ? (n + 1) / 2 : n;
-            fi = isoP >= 0 ? n / 2 : 0;
+            if (isoP < 0) {
+                fw = n;
+            } else if (n == 1) {
+                fi = 1;
+            } else {
+                fw = (n + 1) / 2;
+                fi = n / 2;
+            }
         }
         if (legWater[l] > 0) {
             var water = (legWater[l] / 10.0).format("%.1f") + " L";
             if (fw + fi > 0) {
-                water += " : " + fw + " eau" + (fi > 0 ? " + " + fi + " iso" : "");
+                water += " :";
+                if (fw > 0) {
+                    water += " " + fw + " eau";
+                }
+                if (fi > 0) {
+                    water += (fw > 0 ? " +" : "") + " " + fi + " iso";
+                }
             } else {
                 water += " d'eau";
             }

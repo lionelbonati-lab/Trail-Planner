@@ -65,7 +65,9 @@ describe('nutrition', () => {
     const carried = legs[0].products.reduce((a, x) => a + x.count * x.product.carbs, 0)
     expect(carried).toBeGreaterThanOrEqual(legs[0].carbs - 10)
     expect(legs[1].duration).toBeCloseTo(plan.sim.totalTime - plan.sim.splits[0].departure, 0)
-    expect(bagText(legs[0])).toMatch(/^[\d.]+ L : \d flasques? d'eau \+ \d flasques? Isotonique, \d+ × Gel/)
+    // 500 ml ou moins : une seule flasque, d'isotonique.
+    expect(legs[0].water).toBeLessThanOrEqual(0.5)
+    expect(bagText(legs[0])).toMatch(/^[\d.]+ L : 1 flasque Isotonique, \d+ × Gel/)
   })
 })
 
