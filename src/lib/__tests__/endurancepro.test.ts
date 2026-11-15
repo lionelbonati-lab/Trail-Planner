@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
-import { climbEquivalence, descentEquivalence, epPayload } from '../endurancepro'
+import { athleteKme, autoKme, climbEquivalence, descentEquivalence, epPayload } from '../endurancepro'
 import { wholeRoute, zoneTarget } from '../zones'
 
 const A = normalizeAthlete({ ...DEFAULT_ATHLETE, cs: 4.0417 })
@@ -48,6 +48,26 @@ describe('réglages EndurancePro', () => {
     expect(descentEquivalence({ ...A, descent: [{ grade: -30, factor: 0.2 }] })).toBe(100)
     expect(descentEquivalence({ ...A, descent: [] })).toBeNull()
     expect(epValue(epPayload({ ...A, descent: [] }, null), 'dn')).toBeNull()
+  })
+
+  it('km-effort automatique : même calcul qu’EndurancePro, sans plafond pour le D-', () => {
+    // D+ comme EndurancePro (110 m) ; D- du profil par défaut : ~8 460 m (800 m pour la montre).
+    expect(autoKme(A).upPer1km).toBe(110)
+    expect(autoKme(A).downPer1km).toBeGreaterThan(800)
+    // Descendeur prudent : 300 m, comme la montre.
+    const careful = { ...A, descent: [{ grade: -20, factor: 0.6 }, { grade: -30, factor: 0.5 }] }
+    expect(autoKme(careful).downPer1km).toBe(300)
+    // Descente un peu plus lente que le plat (0,925 à −20 %) : 1000 / ((1/0,925 − 1) × 5) ≈ 2 470 m
+    // (la montre reçoit 800 m, son plafond).
+    const mild = { ...A, descent: [{ grade: -20, factor: 0.925 }] }
+    expect(autoKme(mild).downPer1km).toBe(2470)
+    expect(descentEquivalence(mild)).toBe(800)
+    // Descente jamais plus lente que le plat : D- ignoré ; sans VAM : D+ par défaut.
+    expect(autoKme({ ...A, descent: [{ grade: -10, factor: 1.1 }] }).downPer1km).toBe(0)
+    expect(autoKme({ ...A, vam: [] }).upPer1km).toBe(100)
+    // Valeurs saisies si les équivalences automatiques sont décochées.
+    expect(athleteKme({ ...A, kmeAuto: false, kme: { upPer1km: 90, downPer1km: 500 } })).toEqual({ upPer1km: 90, downPer1km: 500 })
+    expect(athleteKme({ ...A, kme: { upPer1km: 90, downPer1km: 500 } })).toEqual(autoKme(A))
   })
 
   it('séance envoyée à la montre en Z2 sur tout le parcours : alarme au-dessus de Z2', () => {

@@ -31,6 +31,7 @@ import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
 import { indexAt, parseGpx } from '../lib/gpx'
 import { assistAllowed, FINISH_ID } from '../lib/assist'
 import { isDefaultLevel } from '../lib/level'
+import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, mergeAutoPoints, METHOD_LABELS, setStops, withKind, type AutoSplitMethod } from '../lib/splits'
@@ -98,8 +99,7 @@ export function useRaceComputation(race: Race, athlete: Athlete, watchStart: num
     }
   }, [race.gpxText, race.smoothing])
 
-  const kme = athlete.kme
-  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(effective, track, { kme }) : null), [track, effective, kme])
+  const opts = useMemo<SimOptions | null>(() => (track ? planOptions(effective, track, athlete) : null), [track, effective, athlete])
 
   const sim = useMemo<SimResult | null>(() => (track && opts ? simulate(track, athlete, opts) : null), [track, opts, athlete])
   return { track, opts, sim, start, free, started: free ? started : null }
@@ -248,7 +248,7 @@ export function RacePlan({
   }
 
   const generate = () => {
-    const pts = computeAutoPoints(track, { method, value: methodValue }, athlete.kme, sim.points)
+    const pts = computeAutoPoints(track, { method, value: methodValue }, athleteKme(athlete), sim.points)
     set({ checkpoints: mergeAutoPoints(race.checkpoints, pts) })
   }
 
@@ -721,8 +721,9 @@ export function RacePlan({
               </>
             )}
             <Hint>
-              Mode « Km-effort » et colonnes km-e : équivalences du <a href="#/athlete">profil athlète</a> (1 km-e = {athlete.kme.upPer1km} m de D+
-              {athlete.kme.downPer1km > 0 ? ` ou ${athlete.kme.downPer1km} m de D−` : ', D− ignoré'}).
+              Mode « Km-effort » et colonnes km-e : équivalences du <a href="#/athlete">profil athlète</a> (1 km-e = {athleteKme(athlete).upPer1km} m de D+
+              {athleteKme(athlete).downPer1km > 0 ? ` ou ${athleteKme(athlete).downPer1km} m de D−` : ', D− ignoré'}
+              {athlete.kmeAuto === false ? '' : ', calculées d’après ta VAM et ta descente'}).
             </Hint>
             <Toggle label="Relancer les montées (D′)" checked={race.push.enabled} onChange={(v) => set({ push: { ...race.push, enabled: v } })} />
             {race.push.enabled && (
