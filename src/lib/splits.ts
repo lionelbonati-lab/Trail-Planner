@@ -217,3 +217,26 @@ export function setStops(cps: Checkpoint[], stopMin: number, kind: CheckpointKin
   const v = Math.max(0, stopMin)
   return cps.map((c) => (stopTarget(c, kind) && c.stopMin !== v ? { ...c, stopMin: v } : c))
 }
+
+/** Libellé de chaque type de point de passage. */
+export const CHECKPOINT_LABELS: Record<CheckpointKind, string> = {
+  ravito: 'Ravito',
+  split: 'Point inter',
+  cutoff: 'Barrière',
+  info: 'Repère',
+}
+
+/** Nom par défaut d'un point : « Type km N » (« Ravito km 13.9 »). */
+export function checkpointName(kind: CheckpointKind, dist: number): string {
+  return `${CHECKPOINT_LABELS[kind]} km ${(dist / 1000).toFixed(1)}`
+}
+
+const DEFAULT_NAME = new RegExp(`^(${Object.values(CHECKPOINT_LABELS).join('|')}) km \\d+(?:[.,]\\d+)?$`)
+
+/**
+ * Changement de type d'un point : un point qui porte encore un nom par défaut (« Ravito km 13.9 »)
+ * est renommé d'après le nouveau type et sa distance actuelle ; un nom choisi est gardé.
+ */
+export function withKind(cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoint> {
+  return DEFAULT_NAME.test(cp.name.trim()) || !cp.name.trim() ? { kind, name: checkpointName(kind, cp.dist) } : { kind }
+}
