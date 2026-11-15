@@ -1,6 +1,6 @@
 import { Check, Copy, ExternalLink, Watch } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, epPayload } from '../lib/endurancepro'
+import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, EP_TARGET_ZONES, epPayload, epTargetRank } from '../lib/endurancepro'
 import { APPS_DOC_PATH, WATCH_APPS } from '../lib/garminApps'
 import { formatPace } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
@@ -214,7 +214,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
         <Hint>
           Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis le code de synchronisation ci-dessus
           (00000000 l'efface). La ligne affiche ensuite « Synchro hh:mm » à chaque mise à jour. Une séance envoyée à la montre avec
-          une zone sur tout le parcours devient la cible (référence « Zone VC »).
+          une zone sur tout le parcours (Z1 à Z5) devient la zone cible de toutes les alarmes : allure (référence « Zone VC »), FC et VAM.
         </Hint>
       )}
       <table className="table compact">
@@ -273,12 +273,22 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
             </td>
           </tr>
           <tr>
-            <td>Zone cible</td>
+            <td>Zone cible<br /><span className="muted small">allure, FC et VAM</span></td>
             <td>
-              {k !== null && onWatch ? (
-                <><strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} », envoyée à la montre)</span></>
+              {k !== null && onWatch && (epTargetRank(athlete, onWatch) ?? 0) <= EP_TARGET_ZONES ? (
+                <>
+                  <strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} », envoyée à la montre) : les alarmes d'allure (référence Zone VC), de FC et de VAM se déclenchent au-dessus de cette zone</span>
+                </>
+              ) : k !== null && onWatch ? (
+                <span className="muted">
+                  inchangée : « {onWatch.name} » est en {athlete.zones[k].name}, or la zone cible d'EndurancePro va de Z1 à Z{EP_TARGET_ZONES} (zones que la
+                  FC et la VAM ont aussi)
+                </span>
               ) : (
-                <span className="muted">inchangée (réglée sur la montre) : envoie à la montre une séance avec une zone sur tout le parcours pour la régler d'ici</span>
+                <span className="muted">
+                  inchangée (réglée sur la montre, Z1 à Z{EP_TARGET_ZONES}) : envoie à la montre une séance avec une zone sur tout le parcours pour la
+                  régler d'ici ; elle règle les alarmes d'allure, de FC et de VAM
+                </span>
               )}
             </td>
           </tr>
