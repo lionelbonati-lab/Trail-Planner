@@ -183,9 +183,6 @@ function WatchAppsCard() {
           </div>
         ))}
       </div>
-      <p className="small">
-        <a className="muted" href={APPS_DOC_EDIT_URL} target="_blank" rel="noreferrer"><Pencil className="inline" /> Modifier ces textes et liens sur GitHub</a>
-      </p>
     </Card>
   )
 }
