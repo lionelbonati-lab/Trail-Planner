@@ -587,7 +587,7 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   // On saute celles qui chevaucheraient une autre (assistance, dropbag, ravitos d'abord).
   const short = (n: string) => (n.length > 20 ? `${n.slice(0, 19)}…` : n)
   const reach = (n: string) => short(n).length * 7 * Math.cos((40 * Math.PI) / 180)
-  const rank = (r: (typeof rows)[number]) => (r.assist ? 4 : 0) + (r.dropbag ? 2 : 0) + (isRavitoKind(r.kind) ? 1 : 0)
+  const rank = (r: (typeof rows)[number]) => (r.assist ? 4 : 0) + (r.kind === 'base' ? 3 : 0) + (r.dropbag ? 2 : 0) + (isRavitoKind(r.kind) ? 1 : 0)
   const shown = new Map<string, boolean>()
   const taken: { x: number; flip: boolean; reach: number }[] = []
   for (const r of [...rows].sort((a, b) => rank(b) - rank(a))) {
@@ -607,6 +607,7 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   }
   const hasAssist = rows.some((r) => r.assist)
   const hasBag = rows.some((r) => r.dropbag)
+  const hasBase = rows.some((r) => r.kind === 'base')
   return (
     <div className="assist-profile" ref={wrap}>
       <svg className="profile" viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }} role="img" aria-label="Profil du parcours">
@@ -619,10 +620,14 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           const flip = !!shown.get(r.id)
           return (
             <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''}`}>
-              <title>{`${r.name} · km ${(r.dist / 1000).toFixed(1)}${r.assist ? ' · assistance autorisée' : ''}${r.dropbag ? ' · dropbag' : ''}`}</title>
+              <title>{`${r.name} · km ${(r.dist / 1000).toFixed(1)}${r.assist ? ' · assistance autorisée' : ''}${r.kind === 'base' ? ' · base de vie' : ''}${r.dropbag ? ' · dropbag' : ''}`}</title>
               {label && <line className="mp-stem" x1={xx} x2={xx} y1={T - 4} y2={yy} />}
               {r.assist && <circle className="assist-ring" cx={xx} cy={yy} r={7} />}
-              <circle cx={xx} cy={yy} r={isRavitoKind(r.kind) ? 4 : 2.5} className={r.actual ? 'done-dot' : isRavitoKind(r.kind) ? 'ravito-dot' : 'cp-dot'} />
+              {r.kind === 'base' ? (
+                <rect x={xx - 5} y={yy - 5} width={10} height={10} rx={1.5} className={r.actual ? 'done-dot' : 'base-mark'} />
+              ) : (
+                <circle cx={xx} cy={yy} r={isRavitoKind(r.kind) ? 4 : 2.5} className={r.actual ? 'done-dot' : isRavitoKind(r.kind) ? 'ravito-dot' : 'cp-dot'} />
+              )}
               {r.dropbag && <rect className="bag-mark" x={xx - 4} y={T - 12} width={8} height={8} rx={1.5} />}
               {label && (
                 <text
@@ -645,9 +650,10 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           </g>
         )}
       </svg>
-      {(hasAssist || hasBag) && (
+      {(hasAssist || hasBag || hasBase) && (
         <div className="mp-legend muted small">
           {hasAssist && <span><i className="lg-assist" /> Assistance autorisée</span>}
+          {hasBase && <span><i className="lg-base" /> Base de vie</span>}
           {hasBag && <span><i className="lg-bag" /> Dropbag</span>}
         </div>
       )}

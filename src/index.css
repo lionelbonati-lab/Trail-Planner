@@ -259,11 +259,13 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .assist-profile .mp-assist .mp-stem { stroke: var(--series-1); stroke-dasharray: none; opacity: 0.6; }
 .assist-profile .assist-ring { fill: none; stroke: var(--series-1); stroke-width: 2; }
 .assist-profile .bag-mark { fill: var(--warn); }
+.assist-profile .base-mark { fill: var(--danger); stroke: var(--surface); stroke-width: 1.5; }
 .assist-profile .cp-label { font-size: 12px; }
 .assist-profile .cp-label.strong { font-weight: 650; fill: var(--series-1); }
 .mp-legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 2px 0 6px; }
 .mp-legend i { display: inline-block; width: 10px; height: 10px; vertical-align: -1px; margin-right: 4px; }
 .mp-legend .lg-assist { border: 2px solid var(--series-1); border-radius: 50%; }
+.mp-legend .lg-base { background: var(--danger); border-radius: 2px; }
 .mp-legend .lg-bag { background: var(--warn); border-radius: 2px; }
 
 .map { height: 380px; border-radius: 10px; border: 1px solid var(--line); margin-top: 8px; z-index: 0; isolation: isolate; contain: paint; }

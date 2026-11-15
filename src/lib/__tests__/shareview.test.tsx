@@ -62,6 +62,11 @@ describe('page assistance', () => {
     expect(svg.match(/class="bag-mark"/g)).toHaveLength(1)
     expect(html).toContain('Assistance autorisée')
     expect(html).toContain('Dropbag')
+    // Base de vie : carré rouge sur le point, et dans la légende.
+    const base = { ...s2, rows: s2.rows.map((r, i) => (i === 0 ? { ...r, kind: 'base' } : r)) }
+    const hb = renderToStaticMarkup(<ShareView snap={base} report={null} />)
+    expect(hb.match(/class="base-mark"/g)).toHaveLength(1)
+    expect(hb).toContain('Base de vie')
   })
 
   it('navigation : lien par point (accès assistance s’il est placé) et trajet entre les points cochés', () => {
