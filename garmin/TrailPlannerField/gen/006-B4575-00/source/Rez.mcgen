@@ -640,6 +640,7 @@ module Rez {
     module Strings {
         (:initialized) var FuelTitle as ResourceId;
         (:initialized) var VibrateTitle as ResourceId;
+        (:initialized) var LapTitle as ResourceId;
         (:initialized) var CodePrompt as ResourceId;
         (:initialized) var CodeTitle as ResourceId;
         (:initialized) var AppName as ResourceId;

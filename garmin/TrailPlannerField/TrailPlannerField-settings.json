@@ -44,11 +44,27 @@
     "configMin" : null,
     "configMax" : null,
     "configMaxLength" : null
+  }, {
+    "key" : "lapPass",
+    "valueType" : "boolean",
+    "defaultValue" : true,
+    "configTitle" : "LapTitle",
+    "configPrompt" : null,
+    "configType" : "boolean",
+    "configError" : null,
+    "configHelpUrl" : null,
+    "configReadonly" : false,
+    "configRequired" : false,
+    "configOptions" : null,
+    "configMin" : null,
+    "configMax" : null,
+    "configMaxLength" : null
   } ],
   "supportsLiveValidation" : false,
   "languages" : {
     "valyrian" : {
       "VibrateTitle" : "Vibrations",
+      "LapTitle" : "Tour = passage au point",
       "FuelTitle" : "Rappel nutrition (min) : -1 = selon le plan, 0 = désactivé",
       "CodePrompt" : "Code affiché par l'app web (bouton « Mettre sur la montre ») : le code long ici, ou le code à 8 chiffres sur la montre",
       "CodeTitle" : "Code montre",
