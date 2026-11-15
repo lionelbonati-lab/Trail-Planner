@@ -15,6 +15,8 @@ const ROUTE_KY = 110540.0d;
 //   P|<produit>|<produit>|...  noms des produits du plan nutrition
 //   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,...  un par tronçon entre ravitos
 //     (indices des lignes C, -1 = départ) : sac « À emporter » et produits dans l'ordre de prise
+//   W|<volume d'une flasque dL>|<isotonique : indice dans P, -1 sans>  flasques de chaque tronçon
+//     tirées de son eau : autant que de volumes commencés, au moins 2 avec isotonique (eau puis iso)
 //   G|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,...   tracé simplifié (lat / lon en
 //     1e-5 degré, puis écarts d'un sommet au suivant) pour caler la position GPS sur le parcours
 // Temps prévu à une distance d = K interpolé + arrêts des points situés avant d.
@@ -57,6 +59,9 @@ class Plan {
     var legSalt as Array<Number> = [] as Array<Number>;
     var legFirst as Array<Number> = [] as Array<Number>;
     var foodP as Array<Number> = [] as Array<Number>;
+    // Ligne W : volume d'une flasque (dL, 0 = pas de flasques) et isotonique (indice dans foodName, -1 sans).
+    var flaskDl as Number = 0;
+    var isoP as Number = -1;
 
     function initialize() {
     }
@@ -128,16 +133,39 @@ class Plan {
         return (p >= 0 && p < foodName.size()) ? foodName[p] : "Manger";
     }
 
-    // Sac « À emporter » du tronçon l : eau, produits (nombre et nom, dans l'ordre de prise) et sel.
+    // Sac « À emporter » du tronçon l : eau (quantité réelle et flasques), produits (nombre et nom, dans
+    // l'ordre de prise, l'isotonique compté dans les flasques) et sel.
     function bag(l as Number) as Array<String> {
         var out = [] as Array<String>;
+        // Flasques (comme flaskSplit côté web) : autant que de volumes commencés, au moins 2 avec
+        // isotonique, en alternant eau puis isotonique (1,1 L : 2 eau + 1 iso ; 1,6 L : 2 eau + 2 iso).
+        var fw = 0;
+        var fi = 0;
+        if (flaskDl > 0 && legWater[l] > 0) {
+            var n = (legWater[l] + flaskDl - 1) / flaskDl;
+            var low = isoP >= 0 ? 2 : 1;
+            if (n < low) {
+                n = low;
+            }
+            fw = isoP >= 0 ? (n + 1) / 2 : n;
+            fi = isoP >= 0 ? n / 2 : 0;
+        }
         if (legWater[l] > 0) {
-            out.add((legWater[l] / 10.0).format("%.1f") + " L d'eau");
+            var water = (legWater[l] / 10.0).format("%.1f") + " L";
+            if (fw + fi > 0) {
+                water += " : " + fw + " eau" + (fi > 0 ? " + " + fi + " iso" : "");
+            } else {
+                water += " d'eau";
+            }
+            out.add(water);
         }
         var seen = [] as Array<Number>;
         var count = [] as Array<Number>;
         var end = legFirst[l] + legCount(l);
         for (var k = legFirst[l]; k < end; k++) {
+            if (fi > 0 && foodP[k] == isoP) {
+                continue;
+            }
             var i = seen.indexOf(foodP[k]);
             if (i < 0) {
                 seen.add(foodP[k]);
@@ -487,6 +515,9 @@ function parsePlan(text as String) as Plan or Null {
                     p.foodP.add(toNum(items[k]));
                 }
             }
+        } else if (tag.equals("W") && parts.size() >= 3) {
+            p.flaskDl = toNum(parts[1]);
+            p.isoP = toNum(parts[2]);
         } else if (tag.equals("G") && parts.size() >= 4) {
             parseRoute(p, toNum(parts[1]), parts[2], parts[3]);
         }

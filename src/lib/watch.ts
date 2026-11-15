@@ -13,6 +13,9 @@
 //                          « À emporter » au départ du tronçon (eau, sodium à ajouter en sel, produits) et
 //                          produits dans l'ordre où les prendre (indices dans P). La montre répartit ces
 //                          rappels sur le tronçon (au milieu de la part de chacun, en temps prévu).
+//   W|<volume d'une flasque, dL>|<isotonique : indice dans P, −1 sans>
+//                          flasques de chaque tronçon tirées de son eau (voir flaskSplit) : autant que de
+//                          volumes commencés, au moins 2 avec isotonique, en alternant eau puis isotonique.
 //   E|<dd>,<du>,<dn>,<dd>,<du>,<dn>,…
 //                          D+ et D− cumulés depuis le départ (m) le long du parcours, en écarts d'un
 //                          sommet au suivant à partir de 0,0,0 : la montre en tire le D+ / D− restant
@@ -25,7 +28,7 @@
 // Les champs ajoutés en fin de ligne S et les lignes E, P et F sont ignorés par les versions plus anciennes
 // du champ.
 import { indexAt } from './gpx'
-import { extraSodium, intakeOrder, nutritionPlan, type Leg } from './nutrition'
+import { extraSodium, FLASK_L, intakeOrder, nutritionPlan, type Leg } from './nutrition'
 import { isFreeStart } from './plan'
 import { simplifyRoute } from './routeGeo'
 import { zonedToUtc } from './time'
@@ -137,6 +140,11 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
     if (!order.length && !water && !salt) continue
     out.push(`F|${index(leg.fromId)}|${index(leg.toId)}|${water}|${salt}|${order.join(',')}`)
   }
+  // Flasques : volume (dL) et isotonique (indice dans P, −1 sans) ; la montre en tire les flasques de
+  // chaque tronçon d'après son eau, comme flaskSplit.
+  const isoId = legs.find((l) => l.flasks.isoId)?.flasks.isoId
+  const iso = isoId ? ids.indexOf(isoId) : -1
+  if (out.length && legs.some((l) => l.flasks.water > 0)) out.push(`W|${Math.round(FLASK_L * 10)}|${iso}`)
   return names.length ? [`P|${names.join('|')}`, ...out] : out
 }
 

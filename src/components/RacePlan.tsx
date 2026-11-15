@@ -24,7 +24,7 @@ import {
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { bagText, dropbagPlan, dropbagText, nutritionPlan } from '../lib/nutrition'
+import { bagText, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
@@ -1134,7 +1134,11 @@ export function RacePlan({
                     <td>{l.from} → {l.to}</td>
                     <td>{formatDuration(l.duration)}</td>
                     <td>{Math.round(l.temp)} °C</td>
-                    <td>{l.water} L</td>
+                    <td>
+                      {l.water} L
+                      {flaskText(l) && <div className="muted small">{flaskText(l)}</div>}
+                      {flaskWarning(l) && <div className="warn-text small">{flaskWarning(l)}</div>}
+                    </td>
                     <td>{l.carbs} g</td>
                     <td>{l.sodium} mg</td>
                     <td>{bagText(l)}</td>
@@ -1143,7 +1147,11 @@ export function RacePlan({
               </tbody>
             </table>
           </div>
-          <Hint>Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant).</Hint>
+          <Hint>
+            Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant). Flasques de 500 ml :
+            toujours une d'eau et une d'isotonique, puis une de plus par 500 ml commencés en alternant eau et isotonique ;
+            les glucides et le sodium de l'isotonique sont déduits, les autres produits complètent.
+          </Hint>
           {dropbags.length > 0 && (
             <>
               <h3>Dropbags</h3>
