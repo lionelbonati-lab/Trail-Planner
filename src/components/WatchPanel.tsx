@@ -1,10 +1,11 @@
-import { Check, Copy, ExternalLink, Watch } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Copy, ExternalLink, Pencil, Watch } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, epPayload } from '../lib/endurancepro'
-import { WATCH_APPS } from '../lib/garminApps'
+import { APPS_DOC_EDIT_URL, APPS_DOC_PATH, WATCH_APPS } from '../lib/garminApps'
 import { formatPace } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { epVamThresholds } from '../lib/vam'
+import { docUrl, parseWatchAppsDoc, type Block, type Inline, type WatchAppsDoc } from '../lib/watchAppsDoc'
 import { colorForIndex, wholeRouteZone } from '../lib/zones'
 import { Card, Hint } from './ui'
 
@@ -35,32 +36,7 @@ export function WatchPanel({
   const code = athlete.epCode
   return (
     <div className="grid two">
-      <Card title="Applications Garmin" className="span2" fold="open">
-        <div className="watch-apps">
-          {WATCH_APPS.map((app) => (
-            <div key={app.name} className="watch-app">
-              <div>
-                <strong>{app.name}</strong> <span className="muted small">· {app.kind}</span>
-              </div>
-              <p className="small">{app.what}</p>
-              {app.storeUrl ? (
-                <a className="button primary" href={app.storeUrl} target="_blank" rel="noreferrer">
-                  <ExternalLink /> Connect IQ Store
-                </a>
-              ) : (
-                <span className="small">
-                  <span className="muted">Pas encore sur le Connect IQ Store : </span>
-                  <a href={app.guideUrl} target="_blank" rel="noreferrer">installation par câble</a>
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-        <Hint>
-          Depuis le Store : installe l’application Connect IQ sur ton téléphone, ajoute le champ, il arrive sur la montre à la
-          prochaine synchronisation. Ajoute-le ensuite à un écran de ton activité Trail (Paramètres › Écrans de données › Connect IQ).
-        </Hint>
-      </Card>
+      <WatchAppsCard />
 
       <Card title="Code de synchronisation" fold="open">
         {!signedIn ? (
@@ -118,6 +94,99 @@ export function WatchPanel({
 
       <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />
     </div>
+  )
+}
+
+const BASE = import.meta.env.BASE_URL
+
+/** Contenu de secours (fichier injoignable, hors ligne sans cache) : textes intégrés à l'app. */
+const FALLBACK_DOC: WatchAppsDoc = {
+  intro: [],
+  apps: WATCH_APPS.map((a) => ({ name: a.name, type: a.kind, store: a.storeUrl, image: null, guide: a.guideUrl, body: [{ kind: 'p', parts: [{ kind: 'text', text: a.what }] }] })),
+}
+
+/** Contenu du cadre, lu dans public/montre/applications.md (modifiable sur GitHub). */
+function useWatchAppsDoc(): WatchAppsDoc {
+  const [doc, setDoc] = useState<WatchAppsDoc>(FALLBACK_DOC)
+  useEffect(() => {
+    let off = false
+    fetch(`${BASE}${APPS_DOC_PATH}`, { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
+      .then((text) => {
+        const d = parseWatchAppsDoc(text)
+        if (!off && d.apps.length) setDoc(d)
+      })
+      .catch(() => undefined)
+    return () => {
+      off = true
+    }
+  }, [])
+  return doc
+}
+
+function InlineParts({ parts }: { parts: Inline[] }) {
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.kind === 'text' ? (
+          p.text
+        ) : p.kind === 'bold' ? (
+          <strong key={i}>{p.text}</strong>
+        ) : p.kind === 'link' ? (
+          <a key={i} href={docUrl(p.href, BASE)} target="_blank" rel="noreferrer">{p.text}</a>
+        ) : (
+          <img key={i} className="watch-shot" src={docUrl(p.src, BASE)} alt={p.alt} loading="lazy" />
+        ),
+      )}
+    </>
+  )
+}
+
+function Blocks({ blocks }: { blocks: Block[] }) {
+  return (
+    <>
+      {blocks.map((b, i) =>
+        b.kind === 'p' ? (
+          <p key={i} className="small"><InlineParts parts={b.parts} /></p>
+        ) : (
+          <ul key={i} className="small">{b.items.map((it, k) => <li key={k}><InlineParts parts={it} /></li>)}</ul>
+        ),
+      )}
+    </>
+  )
+}
+
+/** Applications Garmin : textes, liens du Store et captures d'écran venant du fichier modifiable. */
+function WatchAppsCard() {
+  const doc = useWatchAppsDoc()
+  return (
+    <Card title="Applications Garmin" className="span2" fold="open">
+      <Blocks blocks={doc.intro} />
+      <div className="watch-apps">
+        {doc.apps.map((app) => (
+          <div key={app.name} className="watch-app">
+            <div>
+              <strong>{app.name}</strong> {app.type && <span className="muted small">· {app.type}</span>}
+            </div>
+            {app.image && <img className="watch-shot" src={docUrl(app.image, BASE)} alt={`Écran de la montre : ${app.name}`} loading="lazy" />}
+            <Blocks blocks={app.body} />
+            {app.store ? (
+              <a className="button primary" href={app.store} target="_blank" rel="noreferrer">
+                <ExternalLink /> Connect IQ Store
+              </a>
+            ) : (
+              <span className="small">
+                <span className="muted">Pas encore sur le Connect IQ Store : </span>
+                <a href={app.guide ?? WATCH_APPS[0].guideUrl} target="_blank" rel="noreferrer">installation par câble</a>
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="small">
+        <a className="muted" href={APPS_DOC_EDIT_URL} target="_blank" rel="noreferrer"><Pencil className="inline" /> Modifier ces textes et liens sur GitHub</a>
+      </p>
+    </Card>
   )
 }
 

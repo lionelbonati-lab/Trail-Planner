@@ -1,6 +1,7 @@
 // Service worker : l'app reste utilisable hors ligne (en course, sans réseau).
-// Pages : réseau d'abord, cache en secours. Fichiers statiques : cache d'abord,
-// mis à jour en arrière-plan. Les appels externes (Firebase, météo) ne sont pas interceptés.
+// Pages et contenu modifiable sur GitHub (dossier montre/) : réseau d'abord, cache en secours.
+// Fichiers statiques : cache d'abord, mis à jour en arrière-plan. Les appels externes (Firebase,
+// météo) ne sont pas interceptés.
 const CACHE = 'trail-planner-v3'
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png']
 
@@ -39,6 +40,21 @@ self.addEventListener('fetch', (e) => {
           return res
         })
         .catch(() => caches.match('./index.html', { ignoreVary: true })),
+    )
+    return
+  }
+
+  if (new URL(req.url).pathname.includes('/montre/')) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone()
+            caches.open(CACHE).then((c) => c.put(req, copy))
+          }
+          return res
+        })
+        .catch(() => caches.match(req, { ignoreVary: true })),
     )
     return
   }

@@ -77,6 +77,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Onglet Montre** : liens vers les applications Garmin (Connect IQ Store, ou installation par câble tant
   qu'elles n'y sont pas), **code de synchronisation** (seul endroit où il s'affiche : 8 chiffres, et code long
   pour Garmin Connect), course ou parcours sur la montre, synchronisation EndurancePro.
+  Textes, liens du Store et captures d'écran des applications : fichier
+  [`public/montre/applications.md`](public/montre/applications.md), **modifiable directement sur GitHub**
+  (crayon « Edit », puis « Commit changes » sur main ; mode d'emploi en tête du fichier). Images à déposer dans
+  `public/montre/` (« Add file › Upload files »). Le site se met à jour environ une minute après.
 - **Listes des courses et des parcours** : sur chaque ligne, ⌚ met la course ou le parcours sur la montre et 👥
   copie le lien assistance (créé au besoin). Sur téléphone, résumé sous le nom (date, distance, D+) pour
   tenir dans l'écran.
