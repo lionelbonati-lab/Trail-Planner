@@ -241,8 +241,8 @@ class TrailPlannerField extends WatchUi.DataField {
         var flags = getObscurityFlags();
         var sh = ds.screenHeight;
         var fieldTop = (sh - h) / 2;
-        var topEdge = (flags & WatchUi.OBSCURE_TOP) != 0;
-        var bottomEdge = (flags & WatchUi.OBSCURE_BOTTOM) != 0;
+        var topEdge = (flags & OBSCURE_TOP) != 0;
+        var bottomEdge = (flags & OBSCURE_BOTTOM) != 0;
         if (topEdge && !bottomEdge) {
             fieldTop = 0;
         } else if (bottomEdge && !topEdge) {
@@ -261,8 +261,8 @@ class TrailPlannerField extends WatchUi.DataField {
     // Ordre des lignes : la plus courte (l'écart) du côté du bord arrondi, là où l'écran est le plus étroit.
     function edgeOrder(delta as Array, others as Array) as Array {
         var flags = getObscurityFlags();
-        var topEdge = (flags & WatchUi.OBSCURE_TOP) != 0;
-        var bottomEdge = (flags & WatchUi.OBSCURE_BOTTOM) != 0;
+        var topEdge = (flags & OBSCURE_TOP) != 0;
+        var bottomEdge = (flags & OBSCURE_BOTTOM) != 0;
         if (topEdge && !bottomEdge) {
             return [delta].addAll(others);
         }
@@ -277,8 +277,8 @@ class TrailPlannerField extends WatchUi.DataField {
         var w = dc.getWidth();
         var h = dc.getHeight();
         var flags = getObscurityFlags();
-        var top = (flags & WatchUi.OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
-        var bottom = (flags & WatchUi.OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
+        var top = (flags & OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
+        var bottom = (flags & OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
         var total = 0;
         for (var i = 0; i < lines.size(); i++) {
             total += dc.getFontHeight(lines[i][1]);

@@ -1,0 +1,973 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<debugInfo>
+    <manifest filename="C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\manifest.xml"/>
+    <pcToLineNum>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="1" lineNum="11" parent="globals/PlanService" pc="268435457" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="2" lineNum="9" parent="globals/TrailPlannerApp" pc="268435469" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="81" parent="globals/PlanService" pc="268435481" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="82" parent="globals/PlanService" pc="268435484" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="83" parent="globals/PlanService" pc="268435487" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="84" parent="globals/PlanService" pc="268435511" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="85" parent="globals/PlanService" pc="268435521" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="86" parent="globals/PlanService" pc="268435536" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="87" parent="globals/PlanService" pc="268435546" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="88" parent="globals/PlanService" pc="268435561" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="3" lineNum="93" parent="globals/PlanService" pc="268435571" symbol="onResponse"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="4" lineNum="62" parent="globals/PlanService" pc="268435598" symbol="onProgressSent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="4" lineNum="63" parent="globals/PlanService" pc="268435601" symbol="onProgressSent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="4" lineNum="64" parent="globals/PlanService" pc="268435620" symbol="onProgressSent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="34" parent="globals/PlanService" pc="268435632" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="35" parent="globals/PlanService" pc="268435635" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="42" parent="globals/PlanService" pc="268435771" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="43" parent="globals/PlanService" pc="268435795" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="44" parent="globals/PlanService" pc="268435829" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="46" parent="globals/PlanService" pc="268435863" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="47" parent="globals/PlanService" pc="268435875" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="49" parent="globals/PlanService" pc="268435915" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="5" lineNum="50" parent="globals/PlanService" pc="268435925" symbol="sendProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="18" parent="globals/PlanService" pc="268436038" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="19" parent="globals/PlanService" pc="268436041" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="20" parent="globals/PlanService" pc="268436060" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="21" parent="globals/PlanService" pc="268436090" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="22" parent="globals/PlanService" pc="268436104" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="25" parent="globals/PlanService" pc="268436105" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="26" parent="globals/PlanService" pc="268436124" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="28" parent="globals/PlanService" pc="268436192" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="6" lineNum="30" parent="globals/PlanService" pc="268436206" symbol="onTemporalEvent"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="7" lineNum="14" parent="globals/PlanService" pc="268436218" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="7" lineNum="15" parent="globals/PlanService" pc="268436220" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="8" lineNum="67" parent="globals/PlanService" pc="268436233" symbol="fetchPlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="8" lineNum="68" parent="globals/PlanService" pc="268436236" symbol="fetchPlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\PlanService.mc" id="8" lineNum="70" parent="globals/PlanService" pc="268436246" symbol="fetchPlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="9" lineNum="27" parent="globals/TrailPlannerApp" pc="268436300" symbol="getSettingsView"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="9" lineNum="28" parent="globals/TrailPlannerApp" pc="268436302" symbol="getSettingsView"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="57" parent="globals/TrailPlannerApp" pc="268436349" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="59" parent="globals/TrailPlannerApp" pc="268436351" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="60" parent="globals/TrailPlannerApp" pc="268436370" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="61" parent="globals/TrailPlannerApp" pc="268436389" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="62" parent="globals/TrailPlannerApp" pc="268436398" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="64" parent="globals/TrailPlannerApp" pc="268436410" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="10" lineNum="65" parent="globals/TrailPlannerApp" pc="268436417" symbol="onSettingsChanged"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="11" lineNum="22" parent="globals/TrailPlannerApp" pc="268436429" symbol="getServiceDelegate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="11" lineNum="23" parent="globals/TrailPlannerApp" pc="268436431" symbol="getServiceDelegate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="12" lineNum="16" parent="globals/TrailPlannerApp" pc="268436457" symbol="getInitialView"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="12" lineNum="17" parent="globals/TrailPlannerApp" pc="268436459" symbol="getInitialView"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="12" lineNum="18" parent="globals/TrailPlannerApp" pc="268436484" symbol="getInitialView"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="12" lineNum="19" parent="globals/TrailPlannerApp" pc="268436491" symbol="getInitialView"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="32" parent="globals/TrailPlannerApp" pc="268436504" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="33" parent="globals/TrailPlannerApp" pc="268436507" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="34" parent="globals/TrailPlannerApp" pc="268436523" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="36" parent="globals/TrailPlannerApp" pc="268436524" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="37" parent="globals/TrailPlannerApp" pc="268436543" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="38" parent="globals/TrailPlannerApp" pc="268436572" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="13" lineNum="40" parent="globals/TrailPlannerApp" pc="268436611" symbol="scheduleFetch"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="14" lineNum="12" parent="globals/TrailPlannerApp" pc="268436623" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="14" lineNum="13" parent="globals/TrailPlannerApp" pc="268436625" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="44" parent="globals/TrailPlannerApp" pc="268436638" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="45" parent="globals/TrailPlannerApp" pc="268436640" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="46" parent="globals/TrailPlannerApp" pc="268436669" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="47" parent="globals/TrailPlannerApp" pc="268436689" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="48" parent="globals/TrailPlannerApp" pc="268436711" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="49" parent="globals/TrailPlannerApp" pc="268436726" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="51" parent="globals/TrailPlannerApp" pc="268436746" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="52" parent="globals/TrailPlannerApp" pc="268436755" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerApp.mc" id="15" lineNum="54" parent="globals/TrailPlannerApp" pc="268436767" symbol="onBackgroundData"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="16" lineNum="44" parent="globals/CodeDigitFactory" pc="268436779" symbol="&lt;init&gt;"/>
+        <entry filename="c:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\gen\\006-B4575-00\\source\\Rez.mcgen" id="17" lineNum="635" parent="globals/Rez" pc="268436791" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="111" parent="globals" pc="268436811" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="112" parent="globals" pc="268436822" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="113" parent="globals" pc="268436839" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="114" parent="globals" pc="268436873" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="116" parent="globals" pc="268436875" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="117" parent="globals" pc="268436895" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="118" parent="globals" pc="268436912" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="119" parent="globals" pc="268436932" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="120" parent="globals" pc="268436938" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="121" parent="globals" pc="268436968" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="122" parent="globals" pc="268436984" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="123" parent="globals" pc="268437014" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="124" parent="globals" pc="268437035" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="125" parent="globals" pc="268437056" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="126" parent="globals" pc="268437080" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="127" parent="globals" pc="268437110" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="128" parent="globals" pc="268437130" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="129" parent="globals" pc="268437146" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="130" parent="globals" pc="268437166" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="131" parent="globals" pc="268437179" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="132" parent="globals" pc="268437206" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="135" parent="globals" pc="268437244" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="136" parent="globals" pc="268437274" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="137" parent="globals" pc="268437302" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="138" parent="globals" pc="268437330" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="139" parent="globals" pc="268437358" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="140" parent="globals" pc="268437378" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="141" parent="globals" pc="268437398" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="144" parent="globals" pc="268437453" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="145" parent="globals" pc="268437482" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="18" lineNum="147" parent="globals" pc="268437484" symbol="parsePlan"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="15" parent="globals/Plan" pc="268437487" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="16" parent="globals/Plan" pc="268437496" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="17" parent="globals/Plan" pc="268437505" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="18" parent="globals/Plan" pc="268437514" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="19" parent="globals/Plan" pc="268437523" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="20" parent="globals/Plan" pc="268437532" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="21" parent="globals/Plan" pc="268437541" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="19" lineNum="22" parent="globals/Plan" pc="268437550" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="20" lineNum="10" parent="globals/TrailPlannerSettingsMenu" pc="268437560" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="21" lineNum="14" parent="globals/TrailPlannerField" pc="268437572" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="21" lineNum="30" parent="globals/TrailPlannerField" pc="268437583" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="21" lineNum="33" parent="globals/TrailPlannerField" pc="268437592" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="22" lineNum="91" parent="globals/CodePickerDelegate" pc="268437602" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="68" parent="globals" pc="268437614" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="69" parent="globals" pc="268437625" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="70" parent="globals" pc="268437644" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="71" parent="globals" pc="268437685" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="72" parent="globals" pc="268437689" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="73" parent="globals" pc="268437693" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="74" parent="globals" pc="268437704" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="75" parent="globals" pc="268437728" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="76" parent="globals" pc="268437756" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="78" parent="globals" pc="268437803" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="23" lineNum="88" parent="globals" pc="268437948" symbol="pushCodePicker"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="24" lineNum="105" parent="globals" pc="268437984" symbol="toNum"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="24" lineNum="106" parent="globals" pc="268437995" symbol="toNum"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="24" lineNum="107" parent="globals" pc="268438004" symbol="toNum"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="25" lineNum="31" parent="globals/TrailPlannerSettingsDelegate" pc="268438017" symbol="&lt;init&gt;"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="92" parent="globals" pc="268438029" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="93" parent="globals" pc="268438040" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="94" parent="globals" pc="268438044" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="95" parent="globals" pc="268438048" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="96" parent="globals" pc="268438061" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="97" parent="globals" pc="268438067" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="98" parent="globals" pc="268438089" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="99" parent="globals" pc="268438117" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="101" parent="globals" pc="268438133" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="26" lineNum="102" parent="globals" pc="268438145" symbol="splitText"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="27" lineNum="53" parent="globals/CodeDigitFactory" pc="268438148" symbol="getValue"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="27" lineNum="54" parent="globals/CodeDigitFactory" pc="268438150" symbol="getValue"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="28" lineNum="49" parent="globals/CodeDigitFactory" pc="268438153" symbol="getSize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="28" lineNum="50" parent="globals/CodeDigitFactory" pc="268438155" symbol="getSize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="29" lineNum="57" parent="globals/CodeDigitFactory" pc="268438158" symbol="getDrawable"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="29" lineNum="58" parent="globals/CodeDigitFactory" pc="268438160" symbol="getDrawable"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="30" lineNum="45" parent="globals/CodeDigitFactory" pc="268438242" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="30" lineNum="46" parent="globals/CodeDigitFactory" pc="268438244" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="31" lineNum="70" parent="globals/Plan" pc="268438257" symbol="finishTime"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="31" lineNum="71" parent="globals/Plan" pc="268438260" symbol="finishTime"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="31" lineNum="72" parent="globals/Plan" pc="268438302" symbol="finishTime"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="31" lineNum="73" parent="globals/Plan" pc="268438322" symbol="finishTime"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="31" lineNum="74" parent="globals/Plan" pc="268438339" symbol="finishTime"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="31" lineNum="77" parent="globals/Plan" pc="268438362" symbol="finishTime"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="28" parent="globals/Plan" pc="268438365" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="29" parent="globals/Plan" pc="268438368" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="30" parent="globals/Plan" pc="268438381" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="31" parent="globals/Plan" pc="268438389" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="34" parent="globals/Plan" pc="268438391" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="35" parent="globals/Plan" pc="268438394" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="36" parent="globals/Plan" pc="268438401" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="37" parent="globals/Plan" pc="268438414" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="38" parent="globals/Plan" pc="268438421" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="39" parent="globals/Plan" pc="268438438" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="41" parent="globals/Plan" pc="268438448" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="42" parent="globals/Plan" pc="268438459" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="43" parent="globals/Plan" pc="268438469" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="44" parent="globals/Plan" pc="268438483" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="46" parent="globals/Plan" pc="268438490" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="50" parent="globals/Plan" pc="268438497" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="51" parent="globals/Plan" pc="268438504" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="52" parent="globals/Plan" pc="268438520" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="53" parent="globals/Plan" pc="268438536" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="54" parent="globals/Plan" pc="268438561" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="55" parent="globals/Plan" pc="268438568" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="57" parent="globals/Plan" pc="268438571" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="58" parent="globals/Plan" pc="268438582" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="60" parent="globals/Plan" pc="268438589" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="61" parent="globals/Plan" pc="268438620" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="62" parent="globals/Plan" pc="268438640" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="63" parent="globals/Plan" pc="268438654" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="32" lineNum="66" parent="globals/Plan" pc="268438677" symbol="plannedAt"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="33" lineNum="81" parent="globals/Plan" pc="268438680" symbol="nextIndex"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="33" lineNum="82" parent="globals/Plan" pc="268438683" symbol="nextIndex"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="33" lineNum="83" parent="globals/Plan" pc="268438703" symbol="nextIndex"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="33" lineNum="84" parent="globals/Plan" pc="268438720" symbol="nextIndex"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\Plan.mc" id="33" lineNum="87" parent="globals/Plan" pc="268438733" symbol="nextIndex"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="20" parent="globals/TrailPlannerSettingsMenu" pc="268438736" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="21" parent="globals/TrailPlannerSettingsMenu" pc="268438739" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="22" parent="globals/TrailPlannerSettingsMenu" pc="268438758" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="23" parent="globals/TrailPlannerSettingsMenu" pc="268438765" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="24" parent="globals/TrailPlannerSettingsMenu" pc="268438793" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="25" parent="globals/TrailPlannerSettingsMenu" pc="268438797" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="35" lineNum="27" parent="globals/TrailPlannerSettingsMenu" pc="268438835" symbol="onShow"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="36" lineNum="13" parent="globals/TrailPlannerSettingsMenu" pc="268438852" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="36" lineNum="14" parent="globals/TrailPlannerSettingsMenu" pc="268438854" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="36" lineNum="15" parent="globals/TrailPlannerSettingsMenu" pc="268438884" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="36" lineNum="16" parent="globals/TrailPlannerSettingsMenu" pc="268438952" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="36" lineNum="17" parent="globals/TrailPlannerSettingsMenu" pc="268438966" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="73" parent="globals/TrailPlannerField" pc="268438974" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="74" parent="globals/TrailPlannerField" pc="268438977" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="75" parent="globals/TrailPlannerField" pc="268438996" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="76" parent="globals/TrailPlannerField" pc="268439003" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="78" parent="globals/TrailPlannerField" pc="268439004" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="79" parent="globals/TrailPlannerField" pc="268439019" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="82" parent="globals/TrailPlannerField" pc="268439274" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="84" parent="globals/TrailPlannerField" pc="268439289" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="37" lineNum="85" parent="globals/TrailPlannerField" pc="268439304" symbol="vibrate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="89" parent="globals/TrailPlannerField" pc="268439330" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="90" parent="globals/TrailPlannerField" pc="268439333" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="91" parent="globals/TrailPlannerField" pc="268439342" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="93" parent="globals/TrailPlannerField" pc="268439343" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="94" parent="globals/TrailPlannerField" pc="268439371" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="95" parent="globals/TrailPlannerField" pc="268439382" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="96" parent="globals/TrailPlannerField" pc="268439391" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="100" parent="globals/TrailPlannerField" pc="268439392" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="101" parent="globals/TrailPlannerField" pc="268439420" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="102" parent="globals/TrailPlannerField" pc="268439428" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="103" parent="globals/TrailPlannerField" pc="268439441" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="104" parent="globals/TrailPlannerField" pc="268439462" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="105" parent="globals/TrailPlannerField" pc="268439469" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="106" parent="globals/TrailPlannerField" pc="268439476" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="108" parent="globals/TrailPlannerField" pc="268439482" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="109" parent="globals/TrailPlannerField" pc="268439511" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="112" parent="globals/TrailPlannerField" pc="268439515" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="114" parent="globals/TrailPlannerField" pc="268439524" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="115" parent="globals/TrailPlannerField" pc="268439538" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="116" parent="globals/TrailPlannerField" pc="268439547" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="117" parent="globals/TrailPlannerField" pc="268439556" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="119" parent="globals/TrailPlannerField" pc="268439564" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="121" parent="globals/TrailPlannerField" pc="268439573" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="122" parent="globals/TrailPlannerField" pc="268439590" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="123" parent="globals/TrailPlannerField" pc="268439615" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="124" parent="globals/TrailPlannerField" pc="268439622" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="125" parent="globals/TrailPlannerField" pc="268439631" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="126" parent="globals/TrailPlannerField" pc="268439638" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="127" parent="globals/TrailPlannerField" pc="268439649" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="129" parent="globals/TrailPlannerField" pc="268439656" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="130" parent="globals/TrailPlannerField" pc="268439667" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="132" parent="globals/TrailPlannerField" pc="268439674" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="134" parent="globals/TrailPlannerField" pc="268439696" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="135" parent="globals/TrailPlannerField" pc="268439714" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="136" parent="globals/TrailPlannerField" pc="268439731" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="137" parent="globals/TrailPlannerField" pc="268439753" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="138" parent="globals/TrailPlannerField" pc="268439763" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="140" parent="globals/TrailPlannerField" pc="268439801" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="141" parent="globals/TrailPlannerField" pc="268439814" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="144" parent="globals/TrailPlannerField" pc="268439838" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="145" parent="globals/TrailPlannerField" pc="268439847" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="146" parent="globals/TrailPlannerField" pc="268439857" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="147" parent="globals/TrailPlannerField" pc="268439886" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="148" parent="globals/TrailPlannerField" pc="268439904" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="149" parent="globals/TrailPlannerField" pc="268439913" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="150" parent="globals/TrailPlannerField" pc="268439962" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="154" parent="globals/TrailPlannerField" pc="268439975" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="155" parent="globals/TrailPlannerField" pc="268440019" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="156" parent="globals/TrailPlannerField" pc="268440039" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="160" parent="globals/TrailPlannerField" pc="268440049" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="161" parent="globals/TrailPlannerField" pc="268440052" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="162" parent="globals/TrailPlannerField" pc="268440077" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="163" parent="globals/TrailPlannerField" pc="268440118" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="164" parent="globals/TrailPlannerField" pc="268440136" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="167" parent="globals/TrailPlannerField" pc="268440149" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="168" parent="globals/TrailPlannerField" pc="268440168" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="172" parent="globals/TrailPlannerField" pc="268440183" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="173" parent="globals/TrailPlannerField" pc="268440191" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="174" parent="globals/TrailPlannerField" pc="268440198" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="175" parent="globals/TrailPlannerField" pc="268440208" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="176" parent="globals/TrailPlannerField" pc="268440224" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="177" parent="globals/TrailPlannerField" pc="268440235" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="178" parent="globals/TrailPlannerField" pc="268440250" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="38" lineNum="179" parent="globals/TrailPlannerField" pc="268440262" symbol="compute"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="39" lineNum="226" parent="globals/TrailPlannerField" pc="268440273" symbol="fit"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="39" lineNum="227" parent="globals/TrailPlannerField" pc="268440276" symbol="fit"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="39" lineNum="228" parent="globals/TrailPlannerField" pc="268440280" symbol="fit"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="39" lineNum="229" parent="globals/TrailPlannerField" pc="268440315" symbol="fit"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="39" lineNum="231" parent="globals/TrailPlannerField" pc="268440340" symbol="fit"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="214" parent="globals/TrailPlannerField" pc="268440343" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="215" parent="globals/TrailPlannerField" pc="268440346" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="216" parent="globals/TrailPlannerField" pc="268440355" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="217" parent="globals/TrailPlannerField" pc="268440377" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="218" parent="globals/TrailPlannerField" pc="268440401" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="219" parent="globals/TrailPlannerField" pc="268440417" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="220" parent="globals/TrailPlannerField" pc="268440425" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="40" lineNum="222" parent="globals/TrailPlannerField" pc="268440437" symbol="signedMinutes"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="42" parent="globals/TrailPlannerField" pc="268440471" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="43" parent="globals/TrailPlannerField" pc="268440474" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="44" parent="globals/TrailPlannerField" pc="268440493" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="45" parent="globals/TrailPlannerField" pc="268440529" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="46" parent="globals/TrailPlannerField" pc="268440548" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="47" parent="globals/TrailPlannerField" pc="268440567" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="48" parent="globals/TrailPlannerField" pc="268440597" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="49" parent="globals/TrailPlannerField" pc="268440612" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="50" parent="globals/TrailPlannerField" pc="268440621" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="51" parent="globals/TrailPlannerField" pc="268440630" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="52" parent="globals/TrailPlannerField" pc="268440645" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="53" parent="globals/TrailPlannerField" pc="268440651" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="55" parent="globals/TrailPlannerField" pc="268440669" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="58" parent="globals/TrailPlannerField" pc="268440684" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="60" parent="globals/TrailPlannerField" pc="268440696" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="61" parent="globals/TrailPlannerField" pc="268440705" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="41" lineNum="62" parent="globals/TrailPlannerField" pc="268440713" symbol="reload"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="42" lineNum="65" parent="globals/TrailPlannerField" pc="268440723" symbol="fuelInterval"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="42" lineNum="66" parent="globals/TrailPlannerField" pc="268440726" symbol="fuelInterval"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="42" lineNum="67" parent="globals/TrailPlannerField" pc="268440745" symbol="fuelInterval"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="42" lineNum="68" parent="globals/TrailPlannerField" pc="268440767" symbol="fuelInterval"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="42" lineNum="70" parent="globals/TrailPlannerField" pc="268440770" symbol="fuelInterval"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="43" lineNum="208" parent="globals/TrailPlannerField" pc="268440794" symbol="clock"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="43" lineNum="209" parent="globals/TrailPlannerField" pc="268440797" symbol="clock"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="43" lineNum="210" parent="globals/TrailPlannerField" pc="268440836" symbol="clock"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="262" parent="globals/TrailPlannerField" pc="268440882" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="263" parent="globals/TrailPlannerField" pc="268440885" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="264" parent="globals/TrailPlannerField" pc="268440893" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="265" parent="globals/TrailPlannerField" pc="268440902" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="266" parent="globals/TrailPlannerField" pc="268440911" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="267" parent="globals/TrailPlannerField" pc="268440922" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="269" parent="globals/TrailPlannerField" pc="268440942" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="270" parent="globals/TrailPlannerField" pc="268440953" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="44" lineNum="272" parent="globals/TrailPlannerField" pc="268440965" symbol="edgeOrder"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="185" parent="globals/TrailPlannerField" pc="268441026" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="186" parent="globals/TrailPlannerField" pc="268441029" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="187" parent="globals/TrailPlannerField" pc="268441036" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="188" parent="globals/TrailPlannerField" pc="268441049" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="189" parent="globals/TrailPlannerField" pc="268441065" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="191" parent="globals/TrailPlannerField" pc="268441124" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="192" parent="globals/TrailPlannerField" pc="268441171" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="193" parent="globals/TrailPlannerField" pc="268441179" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="194" parent="globals/TrailPlannerField" pc="268441185" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="195" parent="globals/TrailPlannerField" pc="268441195" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="196" parent="globals/TrailPlannerField" pc="268441220" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="198" parent="globals/TrailPlannerField" pc="268441246" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="199" parent="globals/TrailPlannerField" pc="268441258" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="200" parent="globals/TrailPlannerField" pc="268441275" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="202" parent="globals/TrailPlannerField" pc="268441303" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="45" lineNum="203" parent="globals/TrailPlannerField" pc="268441323" symbol="saveProgress"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="236" parent="globals/TrailPlannerField" pc="268441333" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="237" parent="globals/TrailPlannerField" pc="268441336" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="238" parent="globals/TrailPlannerField" pc="268441348" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="239" parent="globals/TrailPlannerField" pc="268441360" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="241" parent="globals/TrailPlannerField" pc="268441366" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="242" parent="globals/TrailPlannerField" pc="268441374" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="243" parent="globals/TrailPlannerField" pc="268441382" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="244" parent="globals/TrailPlannerField" pc="268441392" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="245" parent="globals/TrailPlannerField" pc="268441401" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="246" parent="globals/TrailPlannerField" pc="268441410" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="247" parent="globals/TrailPlannerField" pc="268441421" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="248" parent="globals/TrailPlannerField" pc="268441427" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="249" parent="globals/TrailPlannerField" pc="268441438" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="251" parent="globals/TrailPlannerField" pc="268441445" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="252" parent="globals/TrailPlannerField" pc="268441459" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="253" parent="globals/TrailPlannerField" pc="268441475" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="254" parent="globals/TrailPlannerField" pc="268441488" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="255" parent="globals/TrailPlannerField" pc="268441495" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="257" parent="globals/TrailPlannerField" pc="268441497" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="46" lineNum="258" parent="globals/TrailPlannerField" pc="268441525" symbol="usableWidth"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="276" parent="globals/TrailPlannerField" pc="268441547" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="277" parent="globals/TrailPlannerField" pc="268441550" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="278" parent="globals/TrailPlannerField" pc="268441559" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="279" parent="globals/TrailPlannerField" pc="268441568" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="280" parent="globals/TrailPlannerField" pc="268441576" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="281" parent="globals/TrailPlannerField" pc="268441607" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="282" parent="globals/TrailPlannerField" pc="268441644" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="283" parent="globals/TrailPlannerField" pc="268441647" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="284" parent="globals/TrailPlannerField" pc="268441663" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="286" parent="globals/TrailPlannerField" pc="268441695" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="287" parent="globals/TrailPlannerField" pc="268441711" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="288" parent="globals/TrailPlannerField" pc="268441727" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="289" parent="globals/TrailPlannerField" pc="268441737" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="290" parent="globals/TrailPlannerField" pc="268441750" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="291" parent="globals/TrailPlannerField" pc="268441770" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="47" lineNum="292" parent="globals/TrailPlannerField" pc="268441830" symbol="drawLines"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="48" lineNum="37" parent="globals/TrailPlannerField" pc="268441848" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="48" lineNum="38" parent="globals/TrailPlannerField" pc="268441850" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="48" lineNum="39" parent="globals/TrailPlannerField" pc="268441862" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="296" parent="globals/TrailPlannerField" pc="268441870" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="297" parent="globals/TrailPlannerField" pc="268441873" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="298" parent="globals/TrailPlannerField" pc="268441881" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="299" parent="globals/TrailPlannerField" pc="268441887" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="300" parent="globals/TrailPlannerField" pc="268441903" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="301" parent="globals/TrailPlannerField" pc="268441923" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="302" parent="globals/TrailPlannerField" pc="268441941" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="303" parent="globals/TrailPlannerField" pc="268441955" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="304" parent="globals/TrailPlannerField" pc="268441963" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="306" parent="globals/TrailPlannerField" pc="268441972" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="307" parent="globals/TrailPlannerField" pc="268441981" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="308" parent="globals/TrailPlannerField" pc="268442018" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="310" parent="globals/TrailPlannerField" pc="268442019" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="311" parent="globals/TrailPlannerField" pc="268442028" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="312" parent="globals/TrailPlannerField" pc="268442111" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="314" parent="globals/TrailPlannerField" pc="268442112" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="315" parent="globals/TrailPlannerField" pc="268442130" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="316" parent="globals/TrailPlannerField" pc="268442141" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="317" parent="globals/TrailPlannerField" pc="268442161" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="318" parent="globals/TrailPlannerField" pc="268442169" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="319" parent="globals/TrailPlannerField" pc="268442212" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="322" parent="globals/TrailPlannerField" pc="268442213" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="323" parent="globals/TrailPlannerField" pc="268442249" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="324" parent="globals/TrailPlannerField" pc="268442285" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="325" parent="globals/TrailPlannerField" pc="268442329" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="327" parent="globals/TrailPlannerField" pc="268442354" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="329" parent="globals/TrailPlannerField" pc="268442369" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="331" parent="globals/TrailPlannerField" pc="268442377" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="332" parent="globals/TrailPlannerField" pc="268442435" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="335" parent="globals/TrailPlannerField" pc="268442436" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="336" parent="globals/TrailPlannerField" pc="268442439" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="337" parent="globals/TrailPlannerField" pc="268442443" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="338" parent="globals/TrailPlannerField" pc="268442453" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="339" parent="globals/TrailPlannerField" pc="268442506" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="342" parent="globals/TrailPlannerField" pc="268442527" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="344" parent="globals/TrailPlannerField" pc="268442536" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="345" parent="globals/TrailPlannerField" pc="268442589" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="346" parent="globals/TrailPlannerField" pc="268442593" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="347" parent="globals/TrailPlannerField" pc="268442611" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="348" parent="globals/TrailPlannerField" pc="268442615" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="350" parent="globals/TrailPlannerField" pc="268442619" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="351" parent="globals/TrailPlannerField" pc="268442696" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="355" parent="globals/TrailPlannerField" pc="268442697" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="356" parent="globals/TrailPlannerField" pc="268442741" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="357" parent="globals/TrailPlannerField" pc="268442751" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="359" parent="globals/TrailPlannerField" pc="268442831" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\TrailPlannerField.mc" id="49" lineNum="360" parent="globals/TrailPlannerField" pc="268442899" symbol="onUpdate"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="50" lineNum="108" parent="globals/CodePickerDelegate" pc="268442913" symbol="onCancel"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="50" lineNum="109" parent="globals/CodePickerDelegate" pc="268442915" symbol="onCancel"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="50" lineNum="110" parent="globals/CodePickerDelegate" pc="268442930" symbol="onCancel"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="51" lineNum="92" parent="globals/CodePickerDelegate" pc="268442932" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="51" lineNum="93" parent="globals/CodePickerDelegate" pc="268442934" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="96" parent="globals/CodePickerDelegate" pc="268442947" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="97" parent="globals/CodePickerDelegate" pc="268442950" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="98" parent="globals/CodePickerDelegate" pc="268442957" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="99" parent="globals/CodePickerDelegate" pc="268442973" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="101" parent="globals/CodePickerDelegate" pc="268442999" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="103" parent="globals/CodePickerDelegate" pc="268443044" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="104" parent="globals/CodePickerDelegate" pc="268443061" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="52" lineNum="105" parent="globals/CodePickerDelegate" pc="268443076" symbol="onAccept"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="53" lineNum="32" parent="globals/TrailPlannerSettingsDelegate" pc="268443078" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="53" lineNum="33" parent="globals/TrailPlannerSettingsDelegate" pc="268443080" symbol="initialize"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="54" lineNum="36" parent="globals/TrailPlannerSettingsDelegate" pc="268443093" symbol="onSelect"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="54" lineNum="37" parent="globals/TrailPlannerSettingsDelegate" pc="268443095" symbol="onSelect"/>
+        <entry filename="C:\\Users\\lione\\Documents\\MesChampsGarmin\\Trail-Planner\\garmin\\TrailPlannerField\\source\\SettingsMenu.mc" id="54" lineNum="38" parent="globals/TrailPlannerSettingsDelegate" pc="268443111" symbol="onSelect"/>
+    </pcToLineNum>
+    <symbolTable>
+        <entry id="65" symbol="code"/>
+        <entry id="8388639" module="true" symbol="Graphics"/>
+        <entry field="true" id="34" symbol="&lt;globals/TrailPlannerSettingsMenu/&lt;&gt;_codeItem&gt;"/>
+        <entry id="8389626" method="true" symbol="onAccept"/>
+        <entry field="true" id="39" symbol="dist"/>
+        <entry field="true" id="23" symbol="cpDist"/>
+        <entry field="true" id="8389346" symbol="text"/>
+        <entry id="44" method="true" symbol="fuelInterval"/>
+        <entry id="10" object="true" symbol="TrailPlannerField"/>
+        <entry field="true" id="20" symbol="field"/>
+        <entry id="32" method="true" symbol="nextIndex"/>
+        <entry id="8388632" method="true" symbol="&lt;init&gt;"/>
+        <entry field="true" id="8392269" symbol="status"/>
+        <entry field="true" id="24" symbol="cpKind"/>
+        <entry id="8389683" method="true" symbol="onSettingsChanged"/>
+        <entry field="true" id="8388826" method="true" symbol="next"/>
+        <entry id="53" method="true" symbol="reload"/>
+        <entry field="true" id="61" symbol="CodePrompt"/>
+        <entry id="17" method="true" symbol="fetchPlan"/>
+        <entry id="8388924" module="true" symbol="Gregorian"/>
+        <entry id="19" method="true" symbol="sendProgress"/>
+        <entry id="56" method="true" symbol="signedMinutes"/>
+        <entry id="8389629" method="true" symbol="getValue"/>
+        <entry field="true" id="8388611" module="true" symbol="Toybox"/>
+        <entry id="8389108" method="true" symbol="onResponse"/>
+        <entry id="33" method="true" symbol="plannedAt"/>
+        <entry field="true" id="64" symbol="VibrateTitle"/>
+        <entry field="true" id="60" symbol="AppName"/>
+        <entry id="4" module="true" symbol="globals/Rez/Strings"/>
+        <entry id="8389594" symbol="headers"/>
+        <entry field="true" id="29" symbol="curveT"/>
+        <entry field="true" id="28" symbol="curveD"/>
+        <entry id="8388631" module="true" symbol="Activity"/>
+        <entry id="8390147" object="true" symbol="ServiceDelegate"/>
+        <entry field="true" id="50" symbol="nextFuel"/>
+        <entry id="18" method="true" symbol="onProgressSent"/>
+        <entry id="8388648" module="true" symbol="WatchUi"/>
+        <entry id="13" method="true" symbol="parsePlan"/>
+        <entry id="14" method="true" symbol="pushCodePicker"/>
+        <entry id="2" module="true" symbol="globals/Rez"/>
+        <entry id="8390148" method="true" symbol="onTemporalEvent"/>
+        <entry id="5" object="true" symbol="CodeDigitFactory"/>
+        <entry id="8389124" method="true" symbol="onUpdate"/>
+        <entry field="true" id="8389065" symbol="locY"/>
+        <entry field="true" id="8389064" symbol="locX"/>
+        <entry field="true" id="22" symbol="cpCut"/>
+        <entry id="8388771" module="true" object="true" symbol="Drawables"/>
+        <entry id="21" method="true" symbol="scheduleFetch"/>
+        <entry id="8389348" symbol="font"/>
+        <entry id="30" method="true" symbol="finishTime"/>
+        <entry id="8389630" method="true" symbol="getSize"/>
+        <entry id="8390169" method="true" symbol="getServiceDelegate"/>
+        <entry field="true" id="52" symbol="plan"/>
+        <entry field="true" id="26" symbol="cpPlan"/>
+        <entry field="true" id="31" symbol="fuelMin"/>
+        <entry id="41" method="true" symbol="edgeOrder"/>
+        <entry field="true" id="57" symbol="startUnix"/>
+        <entry id="8389137" method="true" symbol="compute"/>
+        <entry id="8" object="true" symbol="PlanService"/>
+        <entry field="true" id="46" symbol="lastElapsed"/>
+        <entry id="8388987" method="true" symbol="vibrate"/>
+        <entry id="11" object="true" symbol="TrailPlannerSettingsDelegate"/>
+        <entry field="true" id="49" symbol="nextEta"/>
+        <entry id="43" method="true" symbol="fit"/>
+        <entry id="8389644" symbol="defaults"/>
+        <entry id="12" object="true" symbol="TrailPlannerSettingsMenu"/>
+        <entry id="8388637" module="true" symbol="Communications"/>
+        <entry id="3" module="true" symbol="globals/Rez/Drawables"/>
+        <entry id="8390170" method="true" symbol="onBackgroundData"/>
+        <entry id="55" method="true" symbol="saveProgress"/>
+        <entry id="8389844" symbol="responseType"/>
+        <entry field="true" id="27" symbol="cpStop"/>
+        <entry id="8389628" method="true" symbol="getDrawable"/>
+        <entry id="8388985" method="true" symbol="playTone"/>
+        <entry id="8388786" method="true" symbol="method"/>
+        <entry id="8388644" module="true" symbol="System"/>
+        <entry id="7" object="true" symbol="Plan"/>
+        <entry field="true" id="37" symbol="cutIdx"/>
+        <entry id="8389619" method="true" symbol="onSelect"/>
+        <entry id="8388645" module="true" symbol="Time"/>
+        <entry id="8388769" module="true" object="true" symbol="Rez"/>
+        <entry field="true" id="42" symbol="finishEta"/>
+        <entry field="true" id="54" symbol="running"/>
+        <entry id="8388640" module="true" symbol="Lang"/>
+        <entry field="true" id="62" symbol="CodeTitle"/>
+        <entry field="true" id="59" symbol="LauncherIcon"/>
+        <entry id="8388610" symbol="statics"/>
+        <entry id="8389123" method="true" symbol="onShow"/>
+        <entry field="true" id="45" symbol="fuelUntil"/>
+        <entry id="8389350" module="true" symbol="globals"/>
+        <entry id="40" method="true" symbol="drawLines"/>
+        <entry id="8388770" module="true" object="true" symbol="Strings"/>
+        <entry id="8390146" module="true" symbol="Background"/>
+        <entry field="true" id="63" symbol="FuelTitle"/>
+        <entry id="8388702" method="true" symbol="initialize"/>
+        <entry id="16" method="true" symbol="toNum"/>
+        <entry field="true" id="51" symbol="passes"/>
+        <entry field="true" id="35" symbol="alerted"/>
+        <entry field="true" id="8388892" symbol="name"/>
+        <entry id="8388641" module="true" symbol="Math"/>
+        <entry field="true" id="25" symbol="cpName"/>
+        <entry id="8389541" method="true" symbol="onCancel"/>
+        <entry id="8391703" method="true" symbol="getSettingsView"/>
+        <entry id="8389280" method="true" symbol="getInitialView"/>
+        <entry field="true" id="8389347" symbol="color"/>
+        <entry field="true" id="48" symbol="margin"/>
+        <entry id="9" object="true" symbol="TrailPlannerApp"/>
+        <entry field="true" id="47" symbol="lastSaved"/>
+        <entry id="58" method="true" symbol="usableWidth"/>
+        <entry id="8388636" module="true" symbol="Attention"/>
+        <entry field="true" id="8388698" method="true" symbol="start"/>
+        <entry id="8389643" symbol="pattern"/>
+        <entry field="true" id="8389866" symbol="total"/>
+        <entry id="6" object="true" symbol="CodePickerDelegate"/>
+        <entry id="8388635" module="true" symbol="Application"/>
+        <entry field="true" id="8389642" symbol="title"/>
+        <entry id="15" method="true" symbol="splitText"/>
+        <entry field="true" id="38" symbol="delta"/>
+        <entry id="36" method="true" symbol="clock"/>
+    </symbolTable>
+    <localVars>
+        <entry arg="true" endPc="268435597" name="responseCode" stackId="1" startPc="268435481"/>
+        <entry arg="true" endPc="268435597" name="data" stackId="2" startPc="268435481"/>
+        <entry endPc="268435596" name="text" stackId="3" startPc="268435484"/>
+        <entry endPc="268435570" name="fields" stackId="4" startPc="268435511"/>
+        <entry endPc="268435570" name="w" stackId="5" startPc="268435536"/>
+        <entry arg="true" endPc="268435631" name="responseCode" stackId="1" startPc="268435598"/>
+        <entry arg="true" endPc="268435631" name="data" stackId="2" startPc="268435598"/>
+        <entry endPc="268435630" name="code" stackId="3" startPc="268435601"/>
+        <entry arg="true" endPc="268436037" name="code" stackId="1" startPc="268435632"/>
+        <entry arg="true" endPc="268436037" name="progress" stackId="2" startPc="268435632"/>
+        <entry endPc="268436036" name="fields" stackId="3" startPc="268435635"/>
+        <entry endPc="268436036" name="name" stackId="4" startPc="268435635"/>
+        <entry endPc="268436216" name="code" stackId="1" startPc="268436041"/>
+        <entry endPc="268436216" name="progress" stackId="2" startPc="268436041"/>
+        <entry arg="true" endPc="268436299" name="code" stackId="1" startPc="268436233"/>
+        <entry endPc="268436298" name="url" stackId="2" startPc="268436236"/>
+        <entry endPc="268436621" name="code" stackId="1" startPc="268436507"/>
+        <entry arg="true" endPc="268436778" name="data" stackId="1" startPc="268436638"/>
+        <entry arg="true" endPc="268437486" name="text" stackId="1" startPc="268436811"/>
+        <entry endPc="268437486" name="lines" stackId="2" startPc="268436822"/>
+        <entry endPc="268437486" name="p" stackId="3" startPc="268436822"/>
+        <entry endPc="268437452" name="li" stackId="4" startPc="268436912"/>
+        <entry endPc="268437442" name="parts" stackId="5" startPc="268436912"/>
+        <entry endPc="268437442" name="tag" stackId="6" startPc="268436912"/>
+        <entry endPc="268437243" name="values" stackId="7" startPc="268437110"/>
+        <entry endPc="268437243" name="k" stackId="8" startPc="268437146"/>
+        <entry endPc="268437233" name="pair" stackId="9" startPc="268437146"/>
+        <entry endPc="268437982" name="cur" stackId="1" startPc="268437625"/>
+        <entry endPc="268437982" name="code" stackId="2" startPc="268437625"/>
+        <entry endPc="268437982" name="pattern" stackId="3" startPc="268437625"/>
+        <entry endPc="268437982" name="defaults" stackId="4" startPc="268437625"/>
+        <entry endPc="268437802" name="i" stackId="5" startPc="268437704"/>
+        <entry endPc="268437792" name="d" stackId="6" startPc="268437704"/>
+        <entry endPc="268437982" name="picker" stackId="7" startPc="268437625"/>
+        <entry arg="true" endPc="268438016" name="s" stackId="1" startPc="268437984"/>
+        <entry endPc="268438016" name="n" stackId="2" startPc="268437995"/>
+        <entry arg="true" endPc="268438147" name="text" stackId="1" startPc="268438029"/>
+        <entry arg="true" endPc="268438147" name="sep" stackId="2" startPc="268438029"/>
+        <entry endPc="268438147" name="out" stackId="3" startPc="268438040"/>
+        <entry endPc="268438147" name="rest" stackId="4" startPc="268438040"/>
+        <entry endPc="268438147" name="i" stackId="5" startPc="268438040"/>
+        <entry arg="true" endPc="268438152" name="index" stackId="1" startPc="268438148"/>
+        <entry arg="true" endPc="268438241" name="index" stackId="1" startPc="268438158"/>
+        <entry arg="true" endPc="268438241" name="selected" stackId="2" startPc="268438158"/>
+        <entry endPc="268438364" name="t" stackId="1" startPc="268438260"/>
+        <entry endPc="268438361" name="c" stackId="2" startPc="268438322"/>
+        <entry arg="true" endPc="268438679" name="d" stackId="1" startPc="268438365"/>
+        <entry endPc="268438679" name="n" stackId="2" startPc="268438368"/>
+        <entry endPc="268438679" name="lo" stackId="3" startPc="268438368"/>
+        <entry endPc="268438679" name="hi" stackId="4" startPc="268438368"/>
+        <entry endPc="268438493" name="mid" stackId="5" startPc="268438459"/>
+        <entry endPc="268438679" name="d0" stackId="6" startPc="268438368"/>
+        <entry endPc="268438679" name="d1" stackId="7" startPc="268438368"/>
+        <entry endPc="268438679" name="f" stackId="8" startPc="268438368"/>
+        <entry endPc="268438679" name="t" stackId="9" startPc="268438368"/>
+        <entry endPc="268438676" name="c" stackId="10" startPc="268438640"/>
+        <entry arg="true" endPc="268438735" name="d" stackId="1" startPc="268438680"/>
+        <entry endPc="268438732" name="i" stackId="2" startPc="268438703"/>
+        <entry endPc="268438850" name="code" stackId="1" startPc="268438739"/>
+        <entry endPc="268438850" name="label" stackId="2" startPc="268438739"/>
+        <entry endPc="268438834" name="c" stackId="3" startPc="268438793"/>
+        <entry arg="true" endPc="268439329" name="strong" stackId="1" startPc="268438974"/>
+        <entry endPc="268439328" name="on" stackId="2" startPc="268438977"/>
+        <entry endPc="268439288" name="pattern" stackId="3" startPc="268439019"/>
+        <entry arg="true" endPc="268440272" name="info" stackId="1" startPc="268439330"/>
+        <entry endPc="268440271" name="elapsed" stackId="2" startPc="268439333"/>
+        <entry endPc="268440271" name="d" stackId="3" startPc="268439333"/>
+        <entry endPc="268440271" name="toDest" stackId="4" startPc="268439333"/>
+        <entry endPc="268439514" name="along" stackId="5" startPc="268439441"/>
+        <entry endPc="268439514" name="gap" stackId="6" startPc="268439441"/>
+        <entry endPc="268440271" name="planned" stackId="7" startPc="268439333"/>
+        <entry endPc="268440271" name="ratio" stackId="8" startPc="268439333"/>
+        <entry endPc="268439695" name="raw" stackId="9" startPc="268439631"/>
+        <entry endPc="268440271" name="now" stackId="10" startPc="268439333"/>
+        <entry endPc="268440271" name="lastPlan" stackId="11" startPc="268439333"/>
+        <entry endPc="268439974" name="i" stackId="12" startPc="268439886"/>
+        <entry endPc="268440271" name="changed" stackId="13" startPc="268439333"/>
+        <entry endPc="268440148" name="i" stackId="14" startPc="268440077"/>
+        <entry endPc="268440271" name="interval" stackId="15" startPc="268439333"/>
+        <entry arg="true" endPc="268440342" name="dc" stackId="1" startPc="268440273"/>
+        <entry arg="true" endPc="268440342" name="text" stackId="2" startPc="268440273"/>
+        <entry arg="true" endPc="268440342" name="font" stackId="3" startPc="268440273"/>
+        <entry arg="true" endPc="268440342" name="maxW" stackId="4" startPc="268440273"/>
+        <entry endPc="268440342" name="t" stackId="5" startPc="268440276"/>
+        <entry arg="true" endPc="268440470" name="sec" stackId="1" startPc="268440343"/>
+        <entry endPc="268440470" name="s" stackId="2" startPc="268440346"/>
+        <entry endPc="268440470" name="sign" stackId="3" startPc="268440346"/>
+        <entry endPc="268440470" name="m" stackId="4" startPc="268440346"/>
+        <entry endPc="268440470" name="total" stackId="5" startPc="268440346"/>
+        <entry endPc="268440721" name="text" stackId="1" startPc="268440474"/>
+        <entry endPc="268440721" name="code" stackId="2" startPc="268440474"/>
+        <entry endPc="268440721" name="err" stackId="3" startPc="268440474"/>
+        <entry endPc="268440793" name="v" stackId="1" startPc="268440726"/>
+        <entry arg="true" endPc="268440881" name="sec" stackId="1" startPc="268440794"/>
+        <entry endPc="268440881" name="t" stackId="2" startPc="268440797"/>
+        <entry arg="true" endPc="268441025" name="delta" stackId="1" startPc="268440882"/>
+        <entry arg="true" endPc="268441025" name="others" stackId="2" startPc="268440882"/>
+        <entry endPc="268441025" name="flags" stackId="3" startPc="268440885"/>
+        <entry endPc="268441025" name="topEdge" stackId="4" startPc="268440885"/>
+        <entry endPc="268441025" name="bottomEdge" stackId="5" startPc="268440885"/>
+        <entry arg="true" endPc="268441332" name="info" stackId="1" startPc="268441026"/>
+        <entry arg="true" endPc="268441332" name="now" stackId="2" startPc="268441026"/>
+        <entry arg="true" endPc="268441332" name="d" stackId="3" startPc="268441026"/>
+        <entry endPc="268441331" name="p" stackId="4" startPc="268441029"/>
+        <entry endPc="268441331" name="keys" stackId="5" startPc="268441029"/>
+        <entry endPc="268441123" name="k" stackId="6" startPc="268441065"/>
+        <entry endPc="268441331" name="progress" stackId="7" startPc="268441029"/>
+        <entry endPc="268441331" name="loc" stackId="8" startPc="268441029"/>
+        <entry endPc="268441245" name="deg" stackId="9" startPc="268441185"/>
+        <entry endPc="268441331" name="stats" stackId="10" startPc="268441029"/>
+        <entry arg="true" endPc="268441546" name="y" stackId="1" startPc="268441333"/>
+        <entry arg="true" endPc="268441546" name="h" stackId="2" startPc="268441333"/>
+        <entry arg="true" endPc="268441546" name="w" stackId="3" startPc="268441333"/>
+        <entry endPc="268441546" name="ds" stackId="4" startPc="268441336"/>
+        <entry endPc="268441546" name="flags" stackId="5" startPc="268441336"/>
+        <entry endPc="268441546" name="sh" stackId="6" startPc="268441336"/>
+        <entry endPc="268441546" name="fieldTop" stackId="7" startPc="268441336"/>
+        <entry endPc="268441546" name="topEdge" stackId="8" startPc="268441336"/>
+        <entry endPc="268441546" name="bottomEdge" stackId="9" startPc="268441336"/>
+        <entry endPc="268441546" name="r" stackId="10" startPc="268441336"/>
+        <entry endPc="268441546" name="dy" stackId="11" startPc="268441336"/>
+        <entry endPc="268441546" name="c2" stackId="12" startPc="268441336"/>
+        <entry endPc="268441546" name="chord" stackId="13" startPc="268441336"/>
+        <entry arg="true" endPc="268441847" name="dc" stackId="1" startPc="268441547"/>
+        <entry arg="true" endPc="268441847" name="lines" stackId="2" startPc="268441547"/>
+        <entry endPc="268441846" name="w" stackId="3" startPc="268441550"/>
+        <entry endPc="268441846" name="h" stackId="4" startPc="268441550"/>
+        <entry endPc="268441846" name="flags" stackId="5" startPc="268441550"/>
+        <entry endPc="268441846" name="top" stackId="6" startPc="268441550"/>
+        <entry endPc="268441846" name="bottom" stackId="7" startPc="268441550"/>
+        <entry endPc="268441846" name="total" stackId="8" startPc="268441550"/>
+        <entry endPc="268441694" name="i" stackId="9" startPc="268441663"/>
+        <entry endPc="268441846" name="y" stackId="10" startPc="268441550"/>
+        <entry endPc="268441846" name="i" stackId="11" startPc="268441727"/>
+        <entry endPc="268441836" name="font" stackId="12" startPc="268441727"/>
+        <entry endPc="268441836" name="fh" stackId="13" startPc="268441727"/>
+        <entry arg="true" endPc="268442912" name="dc" stackId="1" startPc="268441870"/>
+        <entry endPc="268442911" name="bg" stackId="2" startPc="268441873"/>
+        <entry endPc="268442911" name="dark" stackId="3" startPc="268441873"/>
+        <entry endPc="268442911" name="fg" stackId="4" startPc="268441873"/>
+        <entry endPc="268442911" name="red" stackId="5" startPc="268441873"/>
+        <entry endPc="268442911" name="green" stackId="6" startPc="268441873"/>
+        <entry endPc="268442911" name="h" stackId="7" startPc="268441873"/>
+        <entry endPc="268442911" name="now" stackId="8" startPc="268441873"/>
+        <entry endPc="268442911" name="deltaColor" stackId="9" startPc="268441873"/>
+        <entry endPc="268442911" name="nextName" stackId="10" startPc="268441873"/>
+        <entry endPc="268442911" name="toNext" stackId="11" startPc="268441873"/>
+        <entry endPc="268442911" name="nextLine" stackId="12" startPc="268441873"/>
+        <entry endPc="268442911" name="deltaText" stackId="13" startPc="268441873"/>
+        <entry endPc="268442911" name="cutText" stackId="14" startPc="268441873"/>
+        <entry endPc="268442911" name="cutColor" stackId="15" startPc="268441873"/>
+        <entry endPc="268442696" name="third" stackId="16" startPc="268442536"/>
+        <entry endPc="268442696" name="thirdColor" stackId="17" startPc="268442536"/>
+        <entry endPc="268442911" name="lines" stackId="18" startPc="268441873"/>
+        <entry arg="true" endPc="268443077" name="values" stackId="1" startPc="268442947"/>
+        <entry endPc="268443077" name="code" stackId="2" startPc="268442950"/>
+        <entry endPc="268442998" name="i" stackId="3" startPc="268442973"/>
+        <entry arg="true" endPc="268443118" name="item" stackId="1" startPc="268443093"/>
+    </localVars>
+    <deviceInfo deviceVersion="69f9c27a08d175c50b86464a70c24d15718945cb" partNumber="006-B4575-00"/>
+    <annotations>
+        <annotationEntry annotation="initialized" class="Drawables" module="globals/Rez" symbol="LauncherIcon"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="initialize"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="getSettingsView"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="onBackgroundData"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="FuelTitle"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="getServiceDelegate"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="field"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="onSettingsChanged"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="fetchPlan"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="onResponse"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="AppName"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="onProgressSent"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="onTemporalEvent"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="getInitialView"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="CodePrompt"/>
+        <annotationEntry annotation="background" class="TrailPlannerApp" module="globals" symbol="scheduleFetch"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="sendProgress"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="CodeTitle"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="PROJECT"/>
+        <annotationEntry annotation="background" class="PlanService" module="globals" symbol="initialize"/>
+        <annotationEntry annotation="initialized" class="Strings" module="globals/Rez" symbol="VibrateTitle"/>
+    </annotations>
+    <dataEntryOffsetMappings>
+        <dataEntry label="globals" offset="49" parentId="" symbolId="globals" type="module"/>
+        <dataEntry label="globals/PlanService" offset="197" parentId="globals" symbolId="PlanService" type="class"/>
+        <dataEntry label="globals/TrailPlannerApp" offset="286" parentId="globals" symbolId="TrailPlannerApp" type="class"/>
+        <dataEntry label="globals/CodeDigitFactory" offset="1024" parentId="globals" symbolId="CodeDigitFactory" type="class"/>
+        <dataEntry label="globals/Rez" offset="1095" parentId="globals" symbolId="Rez" type="module"/>
+        <dataEntry label="globals/Plan" offset="1139" parentId="globals" symbolId="Plan" type="class"/>
+        <dataEntry label="globals/TrailPlannerSettingsMenu" offset="1318" parentId="globals" symbolId="TrailPlannerSettingsMenu" type="class"/>
+        <dataEntry label="globals/TrailPlannerField" offset="1380" parentId="globals" symbolId="TrailPlannerField" type="class"/>
+        <dataEntry label="globals/CodePickerDelegate" offset="1685" parentId="globals" symbolId="CodePickerDelegate" type="class"/>
+        <dataEntry label="globals/TrailPlannerSettingsDelegate" offset="1747" parentId="globals" symbolId="TrailPlannerSettingsDelegate" type="class"/>
+        <dataEntry label="globals/Rez/Drawables" offset="1800" parentId="Rez" symbolId="Drawables" type="module"/>
+        <dataEntry label="globals/Rez/Strings" offset="1835" parentId="Rez" symbolId="Strings" type="module"/>
+    </dataEntryOffsetMappings>
+    <functions>
+        <functionEntry accessMode="public" endPc="268435468" name="&lt;init&gt;" parent="PlanService" startPc="268435457">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435480" name="&lt;init&gt;" parent="TrailPlannerApp" startPc="268435469">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435597" name="onResponse" parent="PlanService" startPc="268435481">
+            <param id="responseCode"/>
+            <param id="data"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268435631" name="onProgressSent" parent="PlanService" startPc="268435598">
+            <param id="responseCode"/>
+            <param id="data"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436037" name="sendProgress" parent="PlanService" startPc="268435632">
+            <param id="code"/>
+            <param id="progress"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436217" name="onTemporalEvent" parent="PlanService" startPc="268436038">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436232" name="initialize" parent="PlanService" startPc="268436218">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436299" name="fetchPlan" parent="PlanService" startPc="268436233">
+            <param id="code"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436348" name="getSettingsView" parent="TrailPlannerApp" startPc="268436300">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436428" name="onSettingsChanged" parent="TrailPlannerApp" startPc="268436349">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436456" name="getServiceDelegate" parent="TrailPlannerApp" startPc="268436429">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436503" name="getInitialView" parent="TrailPlannerApp" startPc="268436457">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436622" name="scheduleFetch" parent="TrailPlannerApp" startPc="268436504">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436637" name="initialize" parent="TrailPlannerApp" startPc="268436623">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436778" name="onBackgroundData" parent="TrailPlannerApp" startPc="268436638">
+            <param id="data"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436790" name="&lt;init&gt;" parent="CodeDigitFactory" startPc="268436779">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268436810" name="&lt;init&gt;" parent="Rez" startPc="268436791">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437486" name="parsePlan" startPc="268436811">
+            <param id="text"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437559" name="&lt;init&gt;" parent="Plan" startPc="268437487">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437571" name="&lt;init&gt;" parent="TrailPlannerSettingsMenu" startPc="268437560">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437601" name="&lt;init&gt;" parent="TrailPlannerField" startPc="268437572">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437613" name="&lt;init&gt;" parent="CodePickerDelegate" startPc="268437602">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268437983" name="pushCodePicker" startPc="268437614">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438016" name="toNum" startPc="268437984">
+            <param id="s"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438028" name="&lt;init&gt;" parent="TrailPlannerSettingsDelegate" startPc="268438017">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438147" name="splitText" startPc="268438029">
+            <param id="text"/>
+            <param id="sep"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438152" name="getValue" parent="CodeDigitFactory" startPc="268438148">
+            <param id="index"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438157" name="getSize" parent="CodeDigitFactory" startPc="268438153">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438241" name="getDrawable" parent="CodeDigitFactory" startPc="268438158">
+            <param id="index"/>
+            <param id="selected"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438256" name="initialize" parent="CodeDigitFactory" startPc="268438242">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" name="&lt;init&gt;" parent="Drawables">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" name="&lt;init&gt;" parent="Strings">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438364" name="finishTime" parent="Plan" startPc="268438257">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438679" name="plannedAt" parent="Plan" startPc="268438365">
+            <param id="d"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438735" name="nextIndex" parent="Plan" startPc="268438680">
+            <param id="d"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" name="initialize" parent="Plan">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438851" name="onShow" parent="TrailPlannerSettingsMenu" startPc="268438736">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268438973" name="initialize" parent="TrailPlannerSettingsMenu" startPc="268438852">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268439329" name="vibrate" parent="TrailPlannerField" startPc="268438974">
+            <param id="strong"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268440272" name="compute" parent="TrailPlannerField" startPc="268439330">
+            <param id="info"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268440342" name="fit" parent="TrailPlannerField" startPc="268440273">
+            <param id="dc"/>
+            <param id="text"/>
+            <param id="font"/>
+            <param id="maxW"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268440470" name="signedMinutes" parent="TrailPlannerField" startPc="268440343">
+            <param id="sec"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268440722" name="reload" parent="TrailPlannerField" startPc="268440471">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268440793" name="fuelInterval" parent="TrailPlannerField" startPc="268440723">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268440881" name="clock" parent="TrailPlannerField" startPc="268440794">
+            <param id="sec"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268441025" name="edgeOrder" parent="TrailPlannerField" startPc="268440882">
+            <param id="delta"/>
+            <param id="others"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268441332" name="saveProgress" parent="TrailPlannerField" startPc="268441026">
+            <param id="info"/>
+            <param id="now"/>
+            <param id="d"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268441546" name="usableWidth" parent="TrailPlannerField" startPc="268441333">
+            <param id="y"/>
+            <param id="h"/>
+            <param id="w"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268441847" name="drawLines" parent="TrailPlannerField" startPc="268441547">
+            <param id="dc"/>
+            <param id="lines"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268441869" name="initialize" parent="TrailPlannerField" startPc="268441848">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268442912" name="onUpdate" parent="TrailPlannerField" startPc="268441870">
+            <param id="dc"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268442931" name="onCancel" parent="CodePickerDelegate" startPc="268442913">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268442946" name="initialize" parent="CodePickerDelegate" startPc="268442932">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268443077" name="onAccept" parent="CodePickerDelegate" startPc="268442947">
+            <param id="values"/>
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268443092" name="initialize" parent="TrailPlannerSettingsDelegate" startPc="268443078">
+            <documentation/>
+        </functionEntry>
+        <functionEntry accessMode="public" endPc="268443118" name="onSelect" parent="TrailPlannerSettingsDelegate" startPc="268443093">
+            <param id="item"/>
+            <documentation/>
+        </functionEntry>
+    </functions>
+</debugInfo>

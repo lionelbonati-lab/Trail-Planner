@@ -1,0 +1,339 @@
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 1; @symbol_importdef<0> = [Toybox,1,7,13]; @symbol_importdef<1> = [Application,1,14,25]; ]
+import Toybox.Application;
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 2; @symbol_importdef<0> = [Toybox,2,7,13]; @symbol_importdef<1> = [Background,2,14,24]; ]
+import Toybox.Background;
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 3; @symbol_importdef<0> = [Toybox,3,7,13]; @symbol_importdef<1> = [Lang,3,14,18]; ]
+import Toybox.Lang;
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 4; @symbol_importdef<0> = [Toybox,4,7,13]; @symbol_importdef<1> = [System,4,14,20]; ]
+import Toybox.System;
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 5; @symbol_importdef<0> = [Toybox,5,7,13]; @symbol_importdef<1> = [Time,5,14,18]; ]
+import Toybox.Time;
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 6; @symbol_importdef<0> = [Toybox,6,7,13]; @symbol_importdef<1> = [WatchUi,6,14,21]; ]
+import Toybox.WatchUi;
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 9; background = true; @symbol_classdef = [TrailPlannerApp,9,6,21]; @symbol_extends<0> = [Application,9,30,41]; @symbol_extends<1> = [AppBase,9,42,49]; ]
+class TrailPlannerApp extends Application.AppBase {
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 9; ]
+    <init> {
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 9; ]
+    static
+    <init> {
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 10; @position = 8; @symbol_vardef = [field,10,8,13]; ]
+    var field = null;
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 12; @symbol_functiondef = [initialize,12,13,23]; ]
+    function initialize() as Void {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_12_26_14_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 13 8 ]
+        symbol [ AppBase %tmp.2 13 8 15 ];
+        %tmp.2 = getv ? :AppBase;
+        symbol [ initialize %tmp.3 13 16 26 ];
+        %tmp.3 = getv function %tmp.2 :initialize;
+        invoke %tmp.2 %tmp.3();
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_12_26_14_4_stop:
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 16; @symbol_functiondef = [getInitialView,16,13,27]; ]
+    function getInitialView() {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_16_30_20_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 17 8 ]
+        symbol [ TrailPlannerField %tmp.4 17 20 37 ];
+        %tmp.4 = getv ? :TrailPlannerField;
+        %tmp.1 = newc %tmp.4 ();
+        symbol [ field ? 17 8 13 ];
+        putv self :field %tmp.1;
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 18 8 ]
+        %tmp.5 = self;
+        symbol [ scheduleFetch %tmp.6 18 8 21 ];
+        %tmp.6 = getv function %tmp.5 :scheduleFetch;
+        invoke %tmp.5 %tmp.6();
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 19 8 ]
+        %tmp.7 = newa 1;
+        symbol [ field %tmp.9 19 16 21 ];
+        %tmp.9 = getv ? :field;
+        %tmp.10 = dup %tmp.7;
+        %tmp.11 = aputv %tmp.10 0 %tmp.9;
+        ret %tmp.11;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_16_30_20_4_stop:
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 22; @symbol_functiondef = [getServiceDelegate,22,13,31]; ]
+    function getServiceDelegate() {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_22_34_24_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 23 8 ]
+        %tmp.1 = newa 1;
+        symbol [ PlanService %tmp.5 23 20 31 ];
+        %tmp.5 = getv ? :PlanService;
+        %tmp.2 = newc %tmp.5 ();
+        %tmp.6 = dup %tmp.1;
+        %tmp.7 = aputv %tmp.6 0 %tmp.2;
+        ret %tmp.7;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_22_34_24_4_stop:
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 27; @symbol_functiondef = [getSettingsView,27,13,28]; ]
+    function getSettingsView() {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_27_31_29_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 28 8 ]
+        %tmp.1 = newa 2;
+        symbol [ TrailPlannerSettingsMenu %tmp.5 28 20 44 ];
+        %tmp.5 = getv ? :TrailPlannerSettingsMenu;
+        %tmp.2 = newc %tmp.5 ();
+        %tmp.6 = dup %tmp.1;
+        %tmp.7 = aputv %tmp.6 0 %tmp.2;
+        symbol [ TrailPlannerSettingsDelegate %tmp.11 28 52 80 ];
+        %tmp.11 = getv ? :TrailPlannerSettingsDelegate;
+        %tmp.8 = newc %tmp.11 ();
+        %tmp.12 = dup %tmp.7;
+        %tmp.13 = aputv %tmp.12 1 %tmp.8;
+        ret %tmp.13;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_27_31_29_4_stop:
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 32; @symbol_functiondef = [scheduleFetch,32,13,26]; ]
+    function scheduleFetch() as Void {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_32_37_42_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 33 8 ]
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_8_35_8_if_stmt:
+        symbol [ Toybox %tmp.2 33 14 20 ];
+        %tmp.2 = getv ? :Toybox;
+        symbol [ System %tmp.3 33 21 27 ];
+        %tmp.3 = getv %tmp.2 :System;
+        %tmp.5 = const :ServiceDelegate;
+        symbol [ ServiceDelegate %tmp.5 33 33 48 const ];
+        %tmp.6 = canhazplz %tmp.3 %tmp.5;
+        %tmp.7 = not %tmp.6;
+        bf %tmp.7 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_8_35_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_8_35_8_if_true:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_51_35_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 34 12 ]
+        ret ?;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_51_35_8_stop:
+        goto @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_8_35_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_33_8_35_8_if_end:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 36 8 ]
+        [ "C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_32_37_42_4_start" "C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_32_37_42_4_stop" ]
+        %code.1 = local;
+        symbol [ code %code.1 36 12 16 ];
+        symbol [ Application %tmp.8 36 19 30 ];
+        %tmp.8 = getm $.Toybox.Application;
+        symbol [ Properties %tmp.9 36 31 41 ];
+        %tmp.9 = getv %tmp.8 :Properties;
+        symbol [ getValue %tmp.10 36 42 50 ];
+        %tmp.10 = getv function %tmp.9 :getValue;
+        %tmp.11 = "code";
+        %tmp.12 = invoke %tmp.9 %tmp.10(%tmp.11);
+        lputv %code.1 %tmp.12;
+        symbol [ code %code.1 36 12 16 ];
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 37 8 ]
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_stmt:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_12_37_55_begin:
+        %tmp.13 = lgetv %code.1;
+        symbol [ code %tmp.13 37 12 16 ];
+        symbol [ String %tmp.15 37 28 34 ];
+        %tmp.15 = getv ? :String;
+        %tmp.16 = isa %tmp.13 %tmp.15;
+        bf %tmp.16 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_else_false;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_38_37_55_true:
+        %tmp.17 = lgetv %code.1;
+        symbol [ code %tmp.17 37 38 42 ];
+        %tmp.18 = as %tmp.17 { (String) };
+        symbol [ length %tmp.19 37 43 49 ];
+        %tmp.19 = getv function %tmp.18 :length;
+        %tmp.20 = invoke %tmp.18 %tmp.19();
+        %tmp.21 = 8;
+        %tmp.22 = gte %tmp.20 %tmp.21;
+        push %tmp.22;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_38_37_55_end:
+        %tmp.23 = phi [%tmp.16 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_12_37_55_begin] [%tmp.22 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_38_37_55_true] [%tmp.23 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_38_37_55_end];
+        bf %tmp.23 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_else_false;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_true:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_58_39_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 38 12 ]
+        symbol [ Background %tmp.24 38 12 22 ];
+        %tmp.24 = getm $.Toybox.Background;
+        symbol [ registerForTemporalEvent %tmp.25 38 23 47 ];
+        %tmp.25 = getv function %tmp.24 :registerForTemporalEvent;
+        symbol [ Time %tmp.28 38 52 56 ];
+        %tmp.28 = getm $.Toybox.Time;
+        symbol [ Duration %tmp.29 38 57 65 ];
+        %tmp.29 = getv function ? %tmp.28 :Duration;
+        %tmp.30 = 5;
+        %tmp.31 = 60;
+        %tmp.32 = mul %tmp.30 %tmp.31;
+        %tmp.26 = newc %tmp.29 (%tmp.32);
+        invoke %tmp.24 %tmp.25(%tmp.26);
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_58_39_8_stop:
+        goto @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_else_false:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_39_15_41_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 40 12 ]
+        symbol [ Background %tmp.33 40 12 22 ];
+        %tmp.33 = getm $.Toybox.Background;
+        symbol [ deleteTemporalEvent %tmp.34 40 23 42 ];
+        %tmp.34 = getv function %tmp.33 :deleteTemporalEvent;
+        invoke %tmp.33 %tmp.34();
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_39_15_41_8_stop:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_37_8_41_8_if_end:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_32_37_42_4_stop:
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 44; @symbol_functiondef = [onBackgroundData,44,13,29]; @symbol_param<0> = [data,44,30,34]; ]
+    function onBackgroundData(data) as Void {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_44_44_55_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 45 8 ]
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_stmt:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_12_45_54_begin:
+        %tmp.1 = lgetv %data;
+        symbol [ data %tmp.1 45 12 16 ];
+        symbol [ String %tmp.3 45 28 34 ];
+        %tmp.3 = getv ? :String;
+        %tmp.4 = isa %tmp.1 %tmp.3;
+        bf %tmp.4 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_false;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_38_45_54_true:
+        %tmp.5 = lgetv %data;
+        symbol [ data %tmp.5 45 38 42 ];
+        %tmp.6 = as %tmp.5 { (String) };
+        symbol [ length %tmp.7 45 43 49 ];
+        %tmp.7 = getv function %tmp.6 :length;
+        %tmp.8 = invoke %tmp.6 %tmp.7();
+        %tmp.9 = 4;
+        %tmp.10 = gt %tmp.8 %tmp.9;
+        push %tmp.10;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_38_45_54_end:
+        %tmp.11 = phi [%tmp.4 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_12_45_54_begin] [%tmp.10 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_38_45_54_true] [%tmp.11 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_38_45_54_end];
+        bf %tmp.11 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_false;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_true:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_57_48_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 46 12 ]
+        symbol [ Application %tmp.12 46 12 23 ];
+        %tmp.12 = getm $.Toybox.Application;
+        symbol [ Storage %tmp.13 46 24 31 ];
+        %tmp.13 = getv %tmp.12 :Storage;
+        symbol [ setValue %tmp.14 46 32 40 ];
+        %tmp.14 = getv function %tmp.13 :setValue;
+        %tmp.15 = "plan";
+        %tmp.16 = lgetv %data;
+        symbol [ data %tmp.16 46 49 53 ];
+        %tmp.17 = as %tmp.16 { (String) };
+        invoke %tmp.13 %tmp.14(%tmp.15, %tmp.17);
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 47 12 ]
+        symbol [ Application %tmp.18 47 12 23 ];
+        %tmp.18 = getm $.Toybox.Application;
+        symbol [ Storage %tmp.19 47 24 31 ];
+        %tmp.19 = getv %tmp.18 :Storage;
+        symbol [ setValue %tmp.20 47 32 40 ];
+        %tmp.20 = getv function %tmp.19 :setValue;
+        %tmp.21 = "fetchError";
+        %tmp.22 = null;
+        invoke %tmp.19 %tmp.20(%tmp.21, %tmp.22);
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_57_48_8_stop:
+        goto @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_false:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 48 15 ]
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_15_50_8_if_stmt:
+        %tmp.23 = lgetv %data;
+        symbol [ data %tmp.23 48 19 23 ];
+        symbol [ Number %tmp.25 48 35 41 ];
+        %tmp.25 = getv ? :Number;
+        %tmp.26 = isa %tmp.23 %tmp.25;
+        bf %tmp.26 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_15_50_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_15_50_8_if_true:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_43_50_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 49 12 ]
+        symbol [ Application %tmp.27 49 12 23 ];
+        %tmp.27 = getm $.Toybox.Application;
+        symbol [ Storage %tmp.28 49 24 31 ];
+        %tmp.28 = getv %tmp.27 :Storage;
+        symbol [ setValue %tmp.29 49 32 40 ];
+        %tmp.29 = getv function %tmp.28 :setValue;
+        %tmp.30 = "fetchError";
+        %tmp.31 = lgetv %data;
+        symbol [ data %tmp.31 49 55 59 ];
+        %tmp.32 = as %tmp.31 { (Number) };
+        invoke %tmp.28 %tmp.29(%tmp.30, %tmp.32);
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_43_50_8_stop:
+        goto @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_15_50_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_48_15_50_8_if_end:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_45_8_50_8_if_end:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 51 8 ]
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_8_53_8_if_stmt:
+        symbol [ field %tmp.34 51 12 17 ];
+        %tmp.34 = getv ? :field;
+        %tmp.35 = null;
+        %tmp.36 = ne %tmp.34 %tmp.35;
+        bf %tmp.36 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_8_53_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_8_53_8_if_true:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_27_53_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 52 12 ]
+        symbol [ field %tmp.38 52 12 17 ];
+        %tmp.38 = getv ? :field;
+        %tmp.39 = as %tmp.38 { (!Null) };
+        symbol [ reload %tmp.40 52 18 24 ];
+        %tmp.40 = getv function %tmp.39 :reload;
+        invoke %tmp.39 %tmp.40();
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_27_53_8_stop:
+        goto @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_8_53_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_51_8_53_8_if_end:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 54 8 ]
+        symbol [ WatchUi %tmp.41 54 8 15 ];
+        %tmp.41 = getm $.Toybox.WatchUi;
+        symbol [ requestUpdate %tmp.42 54 16 29 ];
+        %tmp.42 = getv function %tmp.41 :requestUpdate;
+        invoke %tmp.41 %tmp.42();
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_44_44_55_4_stop:
+    }
+    [ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 57; @symbol_functiondef = [onSettingsChanged,57,13,30]; ]
+    function onSettingsChanged() as Void {
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_57_41_66_4_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 59 8 ]
+        symbol [ Application %tmp.1 59 8 19 ];
+        %tmp.1 = getm $.Toybox.Application;
+        symbol [ Storage %tmp.2 59 20 27 ];
+        %tmp.2 = getv %tmp.1 :Storage;
+        symbol [ setValue %tmp.3 59 28 36 ];
+        %tmp.3 = getv function %tmp.2 :setValue;
+        %tmp.4 = "plan";
+        %tmp.5 = null;
+        invoke %tmp.2 %tmp.3(%tmp.4, %tmp.5);
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 60 8 ]
+        symbol [ Application %tmp.6 60 8 19 ];
+        %tmp.6 = getm $.Toybox.Application;
+        symbol [ Storage %tmp.7 60 20 27 ];
+        %tmp.7 = getv %tmp.6 :Storage;
+        symbol [ setValue %tmp.8 60 28 36 ];
+        %tmp.8 = getv function %tmp.7 :setValue;
+        %tmp.9 = "fetchError";
+        %tmp.10 = null;
+        invoke %tmp.7 %tmp.8(%tmp.9, %tmp.10);
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 61 8 ]
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_8_63_8_if_stmt:
+        symbol [ field %tmp.12 61 12 17 ];
+        %tmp.12 = getv ? :field;
+        %tmp.13 = null;
+        %tmp.14 = ne %tmp.12 %tmp.13;
+        bf %tmp.14 @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_8_63_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_8_63_8_if_true:
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_27_63_8_start:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 62 12 ]
+        symbol [ field %tmp.16 62 12 17 ];
+        %tmp.16 = getv ? :field;
+        %tmp.17 = as %tmp.16 { (!Null) };
+        symbol [ reload %tmp.18 62 18 24 ];
+        %tmp.18 = getv function %tmp.17 :reload;
+        invoke %tmp.17 %tmp.18();
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_27_63_8_stop:
+        goto @C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_8_63_8_if_end;
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_61_8_63_8_if_end:
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 64 8 ]
+        %tmp.19 = self;
+        symbol [ scheduleFetch %tmp.20 64 8 21 ];
+        %tmp.20 = getv function %tmp.19 :scheduleFetch;
+        invoke %tmp.19 %tmp.20();
+[ "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc" 65 8 ]
+        symbol [ WatchUi %tmp.21 65 8 15 ];
+        %tmp.21 = getm $.Toybox.WatchUi;
+        symbol [ requestUpdate %tmp.22 65 16 29 ];
+        %tmp.22 = getv function %tmp.21 :requestUpdate;
+        invoke %tmp.21 %tmp.22();
+C__Users_lione_Documents_MesChampsGarmin_Trail_Planner_garmin_TrailPlannerField_source_TrailPlannerApp_mc_57_41_66_4_stop:
+    }
+}
+[ @file = "C:\Users\lione\Documents\MesChampsGarmin\Trail-Planner\garmin\TrailPlannerField\source\TrailPlannerApp.mc"; @line = 1; ]
+<init> {
+}

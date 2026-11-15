@@ -1,0 +1,58 @@
+{
+  "settings" : [ {
+    "key" : "code",
+    "valueType" : "string",
+    "defaultValue" : "",
+    "configTitle" : "CodeTitle",
+    "configPrompt" : "CodePrompt",
+    "configType" : "alphaNumeric",
+    "configError" : null,
+    "configHelpUrl" : null,
+    "configReadonly" : false,
+    "configRequired" : false,
+    "configOptions" : null,
+    "configMin" : null,
+    "configMax" : null,
+    "configMaxLength" : null
+  }, {
+    "key" : "fuelMin",
+    "valueType" : "number",
+    "defaultValue" : -1,
+    "configTitle" : "FuelTitle",
+    "configPrompt" : null,
+    "configType" : "numeric",
+    "configError" : null,
+    "configHelpUrl" : null,
+    "configReadonly" : false,
+    "configRequired" : false,
+    "configOptions" : null,
+    "configMin" : -1,
+    "configMax" : 120,
+    "configMaxLength" : null
+  }, {
+    "key" : "vibrate",
+    "valueType" : "boolean",
+    "defaultValue" : true,
+    "configTitle" : "VibrateTitle",
+    "configPrompt" : null,
+    "configType" : "boolean",
+    "configError" : null,
+    "configHelpUrl" : null,
+    "configReadonly" : false,
+    "configRequired" : false,
+    "configOptions" : null,
+    "configMin" : null,
+    "configMax" : null,
+    "configMaxLength" : null
+  } ],
+  "supportsLiveValidation" : false,
+  "languages" : {
+    "valyrian" : {
+      "VibrateTitle" : "Vibrations",
+      "FuelTitle" : "Rappel nutrition (min) : -1 = selon le plan, 0 = désactivé",
+      "CodePrompt" : "Code affiché par l'app web (bouton « Mettre sur la montre ») : le code long ici, ou le code à 8 chiffres sur la montre",
+      "CodeTitle" : "Code montre",
+      "AppName" : "Trail Planner"
+    }
+  }
+}
