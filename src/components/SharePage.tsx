@@ -448,6 +448,8 @@ export function ShareView({
             )}
           </>
         )}
+        {/* Tableau plus large qu'un téléphone : il défile seul, la colonne des points reste visible. */}
+        <div className="scroll share-points">
         <table className="table">
           <thead>
             <tr><th>Point</th><th>Km</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
@@ -476,6 +478,7 @@ export function ShareView({
             ))}
           </tbody>
         </table>
+        </div>
         </>
         )}
         <p className="hint">Mis à jour {formatClock(new Date(snap.updatedAt), tz, true)}. Cette page se met à jour toute seule.</p>
