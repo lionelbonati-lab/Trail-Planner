@@ -136,3 +136,16 @@ describe('eau minérale salée (St-Yorre)', () => {
     expect(rien.flasks.waterId).toBeNull()
   })
 })
+
+describe('eau minérale décochée (case Flasque)', () => {
+  it('ignorée : pas de mélange ni de sodium', () => {
+    const race = newRace('Sel', gpx(30))
+    race.waterPerH = 0.8
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const off: Product = { id: 'sy', name: 'St-Yorre', carbs: 0, sodium: 850, share: 0, type: 'water', flask: false }
+    const [sans] = nutritionPlan(race, plan.sim, DEFAULT_PRODUCTS)
+    const [leg] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, off])
+    expect(leg.flasks.waterId).toBeNull()
+    expect(leg.sodiumFromProducts).toBe(sans.sodiumFromProducts)
+  })
+})

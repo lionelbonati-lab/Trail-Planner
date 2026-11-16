@@ -59,7 +59,10 @@ export function productType(p: Product): ProductType {
  * liquide (le produit « boisson » des anciens profils). Un liquide sans flasque (bouillon, coca) se compte
  * comme un gel ou un solide.
  */
-export const isFlask = (p: Product): boolean => p.flask ?? productType(p) === 'liquid'
+export const isFlask = (p: Product): boolean => productType(p) === 'liquid' && (p.flask ?? true)
+
+/** Eau en flasque (case « Flasque » d'un produit Eau, cochée par défaut) ; décochée, elle est ignorée. */
+export const isFlaskWater = (p: Product): boolean => productType(p) === 'water' && (p.flask ?? true)
 
 /** Poids d'une portion par défaut (g) : produits saisis avant les valeurs au 100 g. */
 const DEFAULT_WEIGHT: Record<ProductType, number> = { gel: 40, solid: 50, liquid: 40, water: 500 }
@@ -113,7 +116,7 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   // (gels, barres…) complètent les glucides selon leurs parts.
   const iso = products.find((p) => isFlask(p)) ?? null
   // Eau minérale salée (type « Eau » avec du sodium, par flasque de 500 ml) : remplit les flasques d'eau.
-  const mineral = products.find((p) => productType(p) === 'water' && p.sodium > 0) ?? null
+  const mineral = products.find((p) => isFlaskWater(p) && p.sodium > 0) ?? null
   const usable = products.filter((p) => p !== iso && productType(p) !== 'water' && p.carbs > 0 && p.share > 0)
   const totalShare = usable.reduce((a, p) => a + p.share, 0) || 1
   for (const s of stops) {

@@ -40,7 +40,7 @@ export const PRODUCT_LIBRARY: LibraryItem[] = [
   { id: 'rv-soupe', brand: RAVITO_BRAND, name: 'Soupe de pâtes / vermicelles', type: 'solid', carbs: 8, sodium: 300, weight: 250, note: 'un bol (base de vie)' },
   { id: 'rv-bouillon', brand: RAVITO_BRAND, name: 'Bouillon', type: 'liquid', carbs: 1, sodium: 350, weight: 200, note: 'un gobelet' },
   { id: 'rv-coca', brand: RAVITO_BRAND, name: 'Coca-Cola', type: 'liquid', carbs: 10.6, sodium: 5, weight: 150, note: 'un gobelet' },
-  { id: 'rv-st-yorre', brand: RAVITO_BRAND, name: 'Eau gazeuse salée (St-Yorre)', type: 'water', carbs: 0, sodium: 170, weight: 500, note: 'mélangée à l’eau des flasques' },
+  { id: 'rv-st-yorre', brand: RAVITO_BRAND, name: 'Eau gazeuse salée (St-Yorre)', type: 'water', carbs: 0, sodium: 170, weight: 500, flask: true, note: 'mélangée à l’eau des flasques' },
 
   // Baouw (bio).
   { id: 'baouw-stick', brand: 'Baouw', name: 'Gel stick 44 g', type: 'gel', carbs: 69, sodium: 50, weight: 44, note: 'citron-yuzu, caramel salé, framboise-grenade, cerise-guarana…' },
@@ -52,10 +52,12 @@ export const PRODUCT_LIBRARY: LibraryItem[] = [
   // Näak.
   { id: 'naak-bar', brand: 'Näak', name: 'Ultra Energy Bar 50 g', type: 'solid', carbs: 56, sodium: 360, weight: 50, note: 'toutes saveurs' },
   { id: 'naak-gel', brand: 'Näak', name: 'Ultra Energy Gel', type: 'gel', carbs: 49, sodium: 330, weight: 57, note: 'sirop d’érable salé, chocolat…' },
+  { id: 'naak-drink', brand: 'Näak', name: 'Ultra Energy Drink Mix (dose)', type: 'liquid', carbs: 76, sodium: 556, weight: 72, flask: true, note: '72 g (2 mesures) pour une flasque ; citron vert, ananas-ginseng, pêche-abricot…' },
 
   // TA Energy.
   { id: 'ta-gel', brand: 'TA Energy', name: 'Energie Gel 40 ml', type: 'gel', carbs: 82, sodium: 250, weight: 40, note: 'pastèque salée, vanille, caramel salé… (café : moins de sodium)' },
   { id: 'ta-jelly', brand: 'TA Energy', name: 'Jelly Gel 51 g', type: 'gel', carbs: 68, sodium: 392, weight: 51, note: 'neutre, citron-yuzu, fruits des bois' },
+  { id: 'ta-drink', brand: 'TA Energy', name: 'Energy Drink Mix (dose)', type: 'liquid', carbs: 88, sodium: 875, weight: 40, flask: true, note: '40 g pour une flasque ; tropical, cola, fruits rouges, citron' },
 
   // Overstim.s.
   { id: 'ovs-gel-antiox', brand: 'Overstim.s', name: 'Gel Antioxydant 34 g', type: 'gel', carbs: 75, sodium: 212, weight: 34, note: 'toutes saveurs' },
@@ -73,6 +75,8 @@ export const PRODUCT_LIBRARY: LibraryItem[] = [
 
   // Decathlon.
   { id: 'dkt-gel', brand: 'Decathlon', name: 'Energy Gel 32 g', type: 'gel', carbs: 72, sodium: 100, weight: 32, note: 'courte et longue distance, toutes saveurs' },
+  { id: 'dkt-barre-clak', brand: 'Decathlon', name: 'Barre céréales Clak 21 g', type: 'solid', carbs: 70, sodium: 140, weight: 21, note: 'chocolat, chocolat-caramel, fruits rouges' },
+  { id: 'dkt-barre-amande', brand: 'Decathlon', name: "Barre pâte d'amande 25 g", type: 'solid', carbs: 58, sodium: 200, weight: 25, note: 'nature, miel, banane, bio' },
   { id: 'dkt-iso-plus', brand: 'Decathlon', name: 'Boisson ISO+ (dose)', type: 'liquid', carbs: 86, sodium: 1040, weight: 38, flask: true, note: '38 g pour 500 ml' },
 ]
 
@@ -88,7 +92,7 @@ export function libraryProduct(item: LibraryItem): Product {
     share,
     carbs: 0,
     sodium: 0,
-    ...(item.type === 'liquid' ? { flask: !!item.flask } : {}),
+    ...(item.type === 'liquid' || item.type === 'water' ? { flask: !!item.flask } : {}),
   }
   return withPer100(base, { carbs: item.carbs, sodium: item.sodium, weight: item.weight })
 }

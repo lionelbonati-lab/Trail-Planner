@@ -1,6 +1,6 @@
 import { Check, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { brandsOf, isFlask, per100, PRODUCT_TYPES, productType, withPer100 } from '../lib/nutrition'
+import { brandsOf, isFlask, isFlaskWater, per100, PRODUCT_TYPES, productType, withPer100 } from '../lib/nutrition'
 import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY } from '../lib/productLibrary'
 import type { Athlete, Product, ProductType } from '../lib/types'
 import { Card, Hint, Num } from './ui'
@@ -21,8 +21,8 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
           pour 500 ml d'eau (si plusieurs, la première retenue pour la course sert) ; un liquide sans flasque (bouillon, coca) se compte comme un gel ou un solide. Isotonique en flasque : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon,
           sinon une d'eau et une d'isotonique, puis une de plus par 500 ml d'eau commencés (en alternant eau et isotonique),
           ses glucides et son sodium déduits du plan ; au-delà de 4 flasques, le plan signale qu'il faut remplir en route.
-          <strong> Eau</strong> : par flasque de 500 ml ; une eau minérale salée (St-Yorre : environ 850 mg de sodium par
-          500 ml) remplit les flasques d'eau et son sodium est déduit du sel à ajouter ; une eau sans sodium n'est pas comptée. Dans chaque course, la carte « Nutrition » choisit les
+          <strong> Eau</strong> (case Flasque cochée) : remplit les flasques d'eau ; une eau minérale salée (St-Yorre : environ
+          850 mg de sodium par 500 ml) y est mélangée à l'eau plate, juste assez pour le sodium visé ; case décochée : ignorée. Dans chaque course, la carte « Nutrition » choisit les
           produits retenus ou la marque présente aux ravitaillements.
         </Hint>
         <datalist id="tp-brands">{brandsOf(products).map((b) => <option key={b} value={b} />)}</datalist>
@@ -48,8 +48,14 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                     </select>
                   </td>
                   <td>
-                    {productType(p) === 'liquid' ? (
-                      <input type="checkbox" checked={isFlask(p)} onChange={(e) => setP({ flask: e.target.checked })} aria-label={`${p.name} en flasque`} title="Poudre pour une flasque de 500 ml (isotonique)" />
+                    {productType(p) === 'liquid' || productType(p) === 'water' ? (
+                      <input
+                        type="checkbox"
+                        checked={productType(p) === 'water' ? isFlaskWater(p) : isFlask(p)}
+                        onChange={(e) => setP({ flask: e.target.checked })}
+                        aria-label={`${p.name} en flasque`}
+                        title={productType(p) === 'water' ? "Eau des flasques (une eau salée y est mélangée) ; décochée : ignorée" : 'Poudre pour une flasque de 500 ml (isotonique)'}
+                      />
                     ) : (
                       <span className="muted">—</span>
                     )}
