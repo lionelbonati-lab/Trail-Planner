@@ -137,6 +137,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   (0,4 L → 1 iso ; 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2),
   quantité réelle toujours affichée ; glucides et sodium de l'isotonique déduits, gels et barres complètent ;
   alerte au-delà de 4 flasques (remplir en route).
+- Onglet **Nutrition** : tes produits (marque, glucides, sodium, flasque, part des glucides). Carte **Nutrition** de
+  chaque course : glucides, eau et sodium par heure, **marque présente aux ravitaillements** (coche ses produits)
+  et **produits retenus** pour la course (plan nutrition, dropbags et montre n'utilisent qu'eux).
 - Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 
@@ -165,7 +168,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **Sur téléphone**, chaque page s'ouvre cadres pliés (pas de page à rallonge) : un toucher sur le titre les
   déplie. Restent ouverts le contenu principal (listes des courses et des parcours, import et résultat
   d'analyse, présentation du test VC, en-tête du plan) et l'écran de départ du mode course.
-  Les onglets n'y affichent que leur icône (sept icônes sur la largeur de l'écran), et le traceur, qui couvre
+  Les onglets n'y affichent que leur icône (huit icônes sur la largeur de l'écran), et le traceur, qui couvre
   tout l'écran, a une flèche de retour en haut à gauche (confirmation si un tracé existant a été modifié ; un
   nouveau tracé reste en brouillon).
 

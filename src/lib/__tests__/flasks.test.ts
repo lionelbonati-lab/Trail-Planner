@@ -79,3 +79,22 @@ describe('flasques de 500 ml : eau et isotonique', () => {
     expect(bagText(leg)).toMatch(/^[\d.]+ L : \d flasques? d'eau, \d+ × Gel/)
   })
 })
+
+describe('produits retenus pour une course', () => {
+  it('tous par défaut, sinon ceux choisis ; marques triées sans doublon', async () => {
+    const { raceProducts, brandsOf } = await import('../nutrition')
+    const ps: Product[] = [
+      { id: 'a', name: 'Gel', carbs: 25, sodium: 50, share: 0.5, brand: 'Overstim' },
+      { id: 'b', name: 'Barre', carbs: 30, sodium: 100, share: 0.5, brand: ' Maurten ' },
+      { id: 'c', name: 'Isotonique', carbs: 30, sodium: 300, share: 0, flask: true, brand: 'Overstim' },
+    ]
+    expect(raceProducts({}, ps)).toBe(ps)
+    expect(raceProducts({ productIds: ['c', 'a'] }, ps).map((p) => p.id)).toEqual(['a', 'c'])
+    expect(brandsOf(ps)).toEqual(['Maurten', 'Overstim'])
+    // Plan montre : seuls les produits retenus.
+    const race = { ...newRace('Choix', gpx(20)), productIds: ['a'] }
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const P = watchPlan(race, { ...DEFAULT_ATHLETE, products: ps }, plan.track, plan.sim).split('\n').find((l) => l.startsWith('P|'))
+    expect(P).toBe('P|Gel')
+  })
+})

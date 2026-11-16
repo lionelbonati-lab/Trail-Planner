@@ -21,11 +21,13 @@ import {
   Upload,
   User as UserIcon,
   Watch,
+  Wheat,
   X,
 } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
+import { NutritionPanel } from './components/NutritionPanel'
 import { ListLinkButtons } from './components/ListLinkButtons'
 import { WatchPanel } from './components/WatchPanel'
 import { LiveMode } from './components/LiveMode'
@@ -78,12 +80,13 @@ const rememberSignedIn = (on: boolean) => {
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { watchStartMs, type WatchReport } from './lib/watchLive'
 
-type Tab = 'races' | 'athlete' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre'
+type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre'
 
 /** Onglets de la barre du haut. */
 const NAV: { tab: Tab; label: string; Icon: typeof Flag }[] = [
   { tab: 'races', label: 'Courses', Icon: Flag },
   { tab: 'athlete', label: 'Profil athlète', Icon: UserIcon },
+  { tab: 'nutrition', label: 'Nutrition', Icon: Wheat },
   { tab: 'parcours', label: 'Parcours', Icon: LibraryBig },
   { tab: 'tracer', label: 'Tracer', Icon: Spline },
   { tab: 'cs', label: 'Test VC', Icon: Gauge },
@@ -96,7 +99,7 @@ function readHash(): { tab: Tab; raceId: string | null } {
   // Calculateur VC et Séances ne font plus qu'un onglet (Test VC) : les anciens liens y mènent.
   const tab = hashTab === 'seances' ? 'cs' : hashTab
   return {
-    tab: tab === 'athlete' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' || tab === 'montre' ? tab : 'races',
+    tab: tab === 'athlete' || tab === 'nutrition' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' || tab === 'montre' ? tab : 'races',
     raceId: (tab === 'races' || tab === 'live' || tab === 'tracer' || tab === 'parcours') && raceId ? raceId : null,
   }
 }
@@ -574,6 +577,8 @@ export default function App() {
           </Suspense>
         ) : route.tab === 'athlete' ? (
           <AthletePanel athlete={athlete} races={races} onChange={updateAthlete} />
+        ) : route.tab === 'nutrition' ? (
+          <NutritionPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'montre' ? (
           <WatchPanel
             athlete={athlete}
