@@ -99,6 +99,8 @@ describe('produits retenus pour une course', () => {
   })
 })
 
+import { foodLines, watchWaterText } from '../watch'
+
 describe('eau minérale salée (St-Yorre)', () => {
   it('remplit les flasques d’eau ; son sodium est déduit du sel', () => {
     const race = newRace('Sel', gpx(30))
@@ -118,6 +120,17 @@ describe('eau minérale salée (St-Yorre)', () => {
     expect(bagText(avec)).toMatch(new RegExp(`${avec.flasks.water} flasques St-Yorre`))
     if (mix < 1) expect(bagText(avec)).toMatch(/St-Yorre \+ eau \(\d+ ml \+ \d+ ml\)/)
     expect(bagText(avec)).not.toContain('× St-Yorre')
+    // Montre : le St-Yorre n'est pas un produit à prendre (pas de rappel « 1 St-Yorre ») ; le sac donne
+    // le mélange comme le plan.
+    const F = foodLines([avec], plan.sim.splits).find((l) => l.startsWith('F|'))!.split('|')
+    const P = foodLines([avec], plan.sim.splits).find((l) => l.startsWith('P|'))!.split('|').slice(1)
+    expect(F[5].split(',').filter(Boolean).map((i) => P[Number(i)])).not.toContain('St-Yorre')
+    expect(P).not.toContain('St-Yorre')
+    const text = watchWaterText(avec)
+    expect(F[6]).toBe(text)
+    expect(text).toMatch(new RegExp(`^${avec.water.toFixed(1)} L : ${avec.flasks.water} St-Yorre`))
+    if (mix < 1) expect(text).toMatch(/St-Yorre\+eau.*;St-Yorre \d+ \+ eau \d+ ml$/)
+    expect(watchWaterText(sans)).toMatch(/^\d+\.\d L : \d+ (eau|iso)/)
     // Sodium déjà couvert : pas de St-Yorre.
     const [rien] = nutritionPlan({ ...race, sodiumPerH: 0 }, plan.sim, [...DEFAULT_PRODUCTS, styorre])
     expect(rien.flasks.waterId).toBeNull()

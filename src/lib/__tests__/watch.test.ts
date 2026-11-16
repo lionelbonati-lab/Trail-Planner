@@ -232,7 +232,7 @@ describe('nutrition sur la montre (lignes P et F)', () => {
     // Sans produits : eau seule, pas de ligne P.
     const p4 = watchPlan(race, DEFAULT_ATHLETE, plan.track, plan.sim).split('\n')
     expect(p4.some((l) => l.startsWith('P|'))).toBe(false)
-    expect(p4.filter((l) => l.startsWith('F|')).every((l) => l.endsWith('|'))).toBe(true)
+    expect(p4.filter((l) => l.startsWith('F|')).every((l) => l.split('|')[5] === '' && /^\d+\.\d L/.test(l.split('|')[6]))).toBe(true)
   })
 })
 

@@ -10,7 +10,7 @@
 //                          simplifiée à ±45 s près (points là où l'allure change)
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>|<note>   (un par point)
 //   P|<produit>|<produit>|…   noms des produits du plan nutrition (gels, barres…)
-//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,…
+//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,…|<eau du sac>
 //                          un par tronçon entre ravitos (indices des lignes C, −1 = départ) : sac
 //                          « À emporter » au départ du tronçon (eau, sodium à ajouter en sel, produits) et
 //                          produits dans l'ordre où les prendre (indices dans P). La montre répartit ces
@@ -133,7 +133,10 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
   const index = (cpId: string | null) => (cpId === null ? -1 : splits.findIndex((s) => s.cp.id === cpId))
   const out: string[] = []
   for (const leg of legs) {
-    const order = intakeOrder(leg.products.map((x) => ({ product: x.product, count: x.count }))).map((p) => {
+    // L'eau minérale mélangée à l'eau des flasques n'est pas un produit à prendre : elle est dans le texte
+    // de l'eau (sinon la montre rappelait « 1 St-Yorre » au lieu du mélange).
+    const taken = leg.products.filter((x) => x.product.id !== leg.flasks.waterId)
+    const order = intakeOrder(taken.map((x) => ({ product: x.product, count: x.count }))).map((p) => {
       if (!ids.includes(p.id)) {
         ids.push(p.id)
         names.push(clean(p.name.replace(/,/g, ' '), 16))
@@ -143,7 +146,7 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
     const water = Math.round(leg.water * 10)
     const salt = extraSodium(leg)
     if (!order.length && !water && !salt) continue
-    out.push(`F|${index(leg.fromId)}|${index(leg.toId)}|${water}|${salt}|${order.join(',')}`)
+    out.push(`F|${index(leg.fromId)}|${index(leg.toId)}|${water}|${salt}|${order.join(',')}|${watchWaterText(leg)}`)
   }
   // Flasques : volume (dL) et isotonique (indice dans P, −1 sans) ; la montre en tire les flasques de
   // chaque tronçon d'après son eau, comme flaskSplit.
@@ -151,6 +154,24 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
   const iso = isoId ? ids.indexOf(isoId) : -1
   if (out.length && legs.some((l) => l.flasks.water > 0)) out.push(`W|${Math.round(FLASK_L * 10)}|${iso}`)
   return names.length ? [`P|${names.join('|')}`, ...out] : out
+}
+
+/**
+ * Eau du sac pour la montre, comme le plan : « 1.2 L : 2 eau + 1 iso » ; avec un mélange d'eau minérale,
+ * « 1.2 L : 2 St-Yorre+eau + 1 iso;St-Yorre 200 + eau 300 ml » (« ; » : ligne suivante sur la montre).
+ */
+export function watchWaterText(leg: Leg): string {
+  if (!(leg.water > 0)) return ''
+  const { water, iso, waterId } = leg.flasks
+  const mix = leg.flasks.mix ?? 0
+  const mineral = waterId ? leg.products.find((x) => x.product.id === waterId)?.product.name : undefined
+  const name = mineral ? clean(mineral.replace(/[;,]/g, ' '), 12) : ''
+  const kind = !mineral ? 'eau' : mix >= 1 ? name : `${name}+eau`
+  const parts = [water ? `${water} ${kind}` : '', iso ? `${iso} iso` : ''].filter(Boolean)
+  const head = `${leg.water.toFixed(1)} L${parts.length ? ` : ${parts.join(' + ')}` : " d'eau"}`
+  if (!mineral || mix >= 1 || !water) return head
+  const ml = Math.round((mix * FLASK_L * 1000) / 50) * 50
+  return `${head};${name} ${ml} + eau ${FLASK_L * 1000 - ml} ml`
 }
 
 /** Place maximale de la ligne E (caractères). */

@@ -13,7 +13,8 @@ const ROUTE_KY = 110540.0d;
 //   E|<dd>,<du>,<dn>,...  D+ et D- cumulés depuis le départ (m), écarts d'un sommet au suivant à partir
 //     de 0,0,0 ; un sommet à chaque point de passage (D+ / D- d'un point au suivant exacts)
 //   P|<produit>|<produit>|...  noms des produits du plan nutrition
-//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,...  un par tronçon entre ravitos
+//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,...|<eau du sac>  un par tronçon entre ravitos
+//     (eau du sac : texte du plan, flasques et mélange d'eau minérale, « ; » = ligne suivante)
 //     (indices des lignes C, -1 = départ) : sac « À emporter » et produits dans l'ordre de prise
 //   W|<volume d'une flasque dL>|<isotonique : indice dans P, -1 sans>  flasques de chaque tronçon
 //     tirées de son eau : autant que de volumes commencés ; avec isotonique, 1 iso seule si une suffit,
@@ -61,6 +62,7 @@ class Plan {
     var legWater as Array<Number> = [] as Array<Number>;
     var legSalt as Array<Number> = [] as Array<Number>;
     var legFirst as Array<Number> = [] as Array<Number>;
+    var legWaterText as Array<String> = [] as Array<String>;
     var foodP as Array<Number> = [] as Array<Number>;
     // Ligne W : volume d'une flasque (dL, 0 = pas de flasques) et isotonique (indice dans foodName, -1 sans).
     var flaskDl as Number = 0;
@@ -171,7 +173,14 @@ class Plan {
                 fi = n / 2;
             }
         }
-        if (legWater[l] > 0) {
+        var wt = l < legWaterText.size() ? legWaterText[l] : "";
+        if (wt.length() > 0) {
+            // Texte du plan (flasques, mélange d'eau minérale) : une ligne par partie séparée par « ; ».
+            var w = splitText(wt, ";");
+            for (var k = 0; k < w.size(); k++) {
+                out.add(w[k]);
+            }
+        } else if (legWater[l] > 0) {
             var water = (legWater[l] / 10.0).format("%.1f") + " L";
             if (fw + fi > 0) {
                 water += " :";
@@ -540,6 +549,7 @@ function parsePlan(text as String) as Plan or Null {
             p.legWater.add(toNum(parts[3]));
             p.legSalt.add(toNum(parts[4]));
             p.legFirst.add(p.foodP.size());
+            p.legWaterText.add(parts.size() >= 7 ? parts[6] : "");
             if (parts[5].length() > 0) {
                 var items = splitText(parts[5], ",");
                 for (var k = 0; k < items.size(); k++) {
