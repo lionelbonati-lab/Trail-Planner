@@ -21,8 +21,11 @@ export interface Leg {
   products: { product: Product; count: number }[]
   /** Sodium apporté par les produits (mg). */
   sodiumFromProducts: number
-  /** Flasques à emporter : d'eau et d'isotonique (produit `isoId`, compté aussi dans `products`). */
-  flasks: { water: number; iso: number; isoId: string | null }
+  /**
+   * Flasques à emporter : d'eau et d'isotonique (produit `isoId`, compté aussi dans `products`) ; les
+   * flasques d'eau sont remplies d'eau minérale salée (`waterId`, ex. St-Yorre) si la course en retient une.
+   */
+  flasks: { water: number; iso: number; isoId: string | null; waterId?: string | null }
 }
 
 /** Produits retenus pour une course (tous si aucun choix n'a été fait). */
@@ -80,6 +83,8 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   // Isotonique en flasque : nombre fixé par l'eau, glucides et sodium déduits ; les autres produits
   // (gels, barres…) complètent les glucides selon leurs parts.
   const iso = products.find((p) => isFlask(p)) ?? null
+  // Eau minérale salée (type « Eau » avec du sodium, par flasque de 500 ml) : remplit les flasques d'eau.
+  const mineral = products.find((p) => productType(p) === 'water' && p.sodium > 0) ?? null
   const usable = products.filter((p) => p !== iso && productType(p) !== 'water' && p.carbs > 0 && p.share > 0)
   const totalShare = usable.reduce((a, p) => a + p.share, 0) || 1
   for (const s of stops) {
@@ -109,6 +114,7 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
     }
     const items = [
       ...(iso && flasks.iso ? [{ product: iso, count: flasks.iso }] : []),
+      ...(mineral && flasks.water ? [{ product: mineral, count: flasks.water }] : []),
       ...usable.map((p, i) => ({ product: p, count: counts[i] })).filter((x) => x.count > 0),
     ]
     legs.push({
@@ -123,7 +129,7 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
       sodium,
       products: items,
       sodiumFromProducts: items.reduce((a, x) => a + x.count * x.product.sodium, 0),
-      flasks: { ...flasks, isoId: iso && flasks.iso ? iso.id : null },
+      flasks: { ...flasks, isoId: iso && flasks.iso ? iso.id : null, waterId: mineral && flasks.water ? mineral.id : null },
     })
     fromName = s.cp.name
     fromId = s.cp.id
@@ -143,10 +149,11 @@ const flaskWord = (n: number) => `${n} flasque${n > 1 ? 's' : ''}`
 
 /** Flasques d'un tronçon : « 2 flasques d'eau + 1 flasque Isotonique » (vide sans eau). */
 export function flaskText(leg: Leg): string {
-  const { water, iso, isoId } = leg.flasks
+  const { water, iso, isoId, waterId } = leg.flasks
   if (!water && !iso) return ''
   const isoName = leg.products.find((x) => x.product.id === isoId)?.product.name ?? 'isotonique'
-  return [water ? `${flaskWord(water)} d'eau` : '', iso ? `${flaskWord(iso)} ${isoName}` : ''].filter(Boolean).join(' + ')
+  const waterName = leg.products.find((x) => x.product.id === waterId)?.product.name
+  return [water ? `${flaskWord(water)} ${waterName ?? "d'eau"}` : '', iso ? `${flaskWord(iso)} ${isoName}` : ''].filter(Boolean).join(' + ')
 }
 
 /** Plus de flasques que celles portées : alerte (remplir en route), sinon null. */
@@ -157,7 +164,7 @@ export function flaskWarning(leg: Leg): string | null {
 
 /** Contenu du sac à prendre au départ d'un tronçon, en une ligne : eau réelle et flasques, produits, sel. */
 export function bagText(leg: Leg): string {
-  const items = leg.products.filter((x) => x.product.id !== leg.flasks.isoId).map((x) => `${x.count} × ${x.product.name}`)
+  const items = leg.products.filter((x) => x.product.id !== leg.flasks.isoId && x.product.id !== leg.flasks.waterId).map((x) => `${x.count} × ${x.product.name}`)
   const salt = extraSodium(leg)
   if (salt) items.push(`+${salt} mg de sodium (sel)`)
   const flasks = flaskText(leg)

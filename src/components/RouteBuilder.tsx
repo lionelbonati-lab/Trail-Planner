@@ -73,7 +73,8 @@ import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 import { Num } from './ui'
 import { AssistControls } from './AssistControls'
 import { assistAllowed } from '../lib/assist'
-import { checkpointName, CHECKPOINT_LABELS, defaultStop, isRavitoKind, withKind } from '../lib/splits'
+import { checkpointName, CHECKPOINT_LABELS, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, withKind, type AutoSplitMethod } from '../lib/splits'
+import { athleteKme } from '../lib/endurancepro'
 
 export interface DrawResult {
   name: string
@@ -290,6 +291,20 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
   const [selCp, setSelCp] = useState<string | null>(null)
   const [accessFor, setAccessFor] = useState<string | null>(null)
   const cpLayer = useRef<L.LayerGroup | null>(null)
+  // Ordinateur : profil sous la carte (un quart de la hauteur, séparation déplaçable).
+  const [profFrac, setProfFrac] = useState(0.25)
+  const [wrapH, setWrapH] = useState(0)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const splitDrag = useRef(false)
+  useLayoutEffect(() => {
+    const w = wrapRef.current
+    if (!w) return
+    const ro = new ResizeObserver(() => setWrapH(w.clientHeight))
+    ro.observe(w)
+    return () => ro.disconnect()
+  }, [])
+  const [autoMethod, setAutoMethod] = useState<AutoSplitMethod>('peaks')
+  const [autoValue, setAutoValue] = useState(METHOD_LABELS.peaks.def)
   const [menu, setMenu] = useState(false)
   const [sheet, setSheet] = useState<SheetState>('peek')
   // Glisser la feuille : hauteur suivie au doigt, puis calage sur la hauteur voisine.
@@ -485,12 +500,12 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     if (!track) return null
     return track.points[nearestIndex(track.points, lat, lon)]
   }
-  const addCp = (lat: number, lon: number) => {
+  const addCp = (lat: number, lon: number, kindIn?: CheckpointKind, nameIn?: string) => {
     const p = cpAt(lat, lon)
     if (!p) return
-    const k: CheckpointKind = isRaceKind ? 'ravito' : 'split'
+    const k: CheckpointKind = kindIn ?? (isRaceKind ? 'ravito' : 'split')
     const cp: PlacedCp = {
-      id: crypto.randomUUID(), dist: Math.round(p.dist), name: checkpointName(k, p.dist), kind: k, stopMin: defaultStop(k),
+      id: crypto.randomUUID(), dist: Math.round(p.dist), name: nameIn || checkpointName(k, p.dist), kind: k, stopMin: defaultStop(k), ...(k === 'base' ? { dropbag: true } : {}),
       cutoff: '', water: 0, carbs: 0, notes: '', auto: false, lat: p.lat, lon: p.lon,
     }
     editCps([...cps, cp])
@@ -508,7 +523,21 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
       ...(k === 'base' && c.kind !== 'base' ? { ...(c.stopMin <= defaultStop(c.kind) ? { stopMin: defaultStop('base') } : {}), ...(c.dropbag === undefined ? { dropbag: true } : {}) } : {}),
       ...(c.kind === 'base' && k !== 'base' && c.stopMin === defaultStop('base') ? { stopMin: defaultStop(k) } : {}),
     })
-  const selCpObj = tool === 'points' && selCp ? placed.find((c) => c.id === selCp) ?? null : null
+  const selCpObj = selCp ? placed.find((c) => c.id === selCp) ?? null : null
+  // Points automatiques (sommets, distance…) : remplacent les précédents, les points posés à la main restent.
+  const generateAuto = () => {
+    if (!track || !estimate) return
+    const pts = computeAutoPoints(track, { method: autoMethod, value: autoValue }, athleteKme(athlete), estimate.sim.points)
+    const merged = mergeAutoPoints(placed, pts)
+    editCps(
+      merged.map((c) => {
+        const old = placed.find((x) => x.id === c.id)
+        if (old) return { ...old, ...c }
+        const p = track.points[indexAt(track.points, c.dist)]
+        return { ...c, lat: p.lat, lon: p.lon }
+      }),
+    )
+  }
   const switchTool = (t: 'trace' | 'points') => {
     setTool(t)
     setSel(null)
@@ -1172,7 +1201,19 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     setSheet(SHEET_ORDER[Math.max(0, Math.min(SHEET_ORDER.length - 1, i + (dy < 0 ? steps : -steps)))])
   }
 
-  const floatBottom = (mobile ? sheetH : 0) + 12
+  const profH = !mobile && track ? Math.round(wrapH * profFrac) : 0
+  const floatBottom = (mobile ? sheetH : profH) + 12
+  const profileEl = track ? (
+    <MiniProfile
+                  track={track}
+                  onHover={setHover}
+                  onPick={tool === 'points' ? (d) => { const p = track.points[indexAt(track.points, d)]; addCp(p.lat, p.lon) } : act.pickDist}
+                  marks={[
+                    ...placed.map((c) => ({ d: c.dist, label: c.kind === 'base' ? 'BV' : c.kind === 'ravito' ? 'R' : c.kind === 'chrono' ? 'C' : c.kind === 'cutoff' ? 'B' : 'P' })),
+                    ...(rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []),
+                  ]}
+                />
+  ) : null
   const paceLabel = pace === 'model' ? 'Course' : pace === 'route' ? 'Zones' : (athlete.zones[pace]?.name ?? '').replace(/^Zone\s*/i, 'Z')
   const paceColor = typeof pace === 'number' ? colorForIndex(pace, athlete) : MODEL_COLOR
   const wpName = (k: number) =>
@@ -1181,9 +1222,10 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
 
   return (
     <div className="draw-shell" style={{ ['--sheet-h' as string]: `${mobile ? sheetH : 0}px`, top: topOffset }}>
-      <div className="draw-mapwrap">
+      <div className="draw-mapwrap" ref={wrapRef}>
         <div
           ref={el}
+          style={profH ? { bottom: profH } : undefined}
           className={`draw-map${dropping ? ' dropping' : ''}`}
           role="region"
           aria-label="Carte de tracé"
@@ -1398,6 +1440,25 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
                     <ModeSeg value={wps[sel.k].mode} onChange={(m) => setSegMode(sel.k, m)} />
                   </div>
                 )}
+                {race && sel.k > 0 && sel.k < wps.length - 1 && (
+                  <label className="field">
+                    <span className="field-label">Type de point</span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const k = e.target.value as CheckpointKind
+                        const w = wps[sel.k]
+                        // Le point du tracé devient un point de course (il garde son nom) ; il n'est plus repère.
+                        if (w.mark) act.toggleMark(sel.k)
+                        setSel(null)
+                        addCp(w.lat, w.lon, k, w.name)
+                      }}
+                    >
+                      <option value="">Point du tracé{wps[sel.k].mark ? ' (repère)' : ''}</option>
+                      {cpKinds.map((k) => <option key={k} value={k}>{CHECKPOINT_LABELS[k]}</option>)}
+                    </select>
+                  </label>
+                )}
                 <div className="row tight">
                   {sel.k > 0 && sel.k < wps.length - 1 && (
                     <button onClick={() => act.toggleMark(sel.k)}>
@@ -1426,11 +1487,38 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
                 <div className="row tight">
                   <button className="primary" onClick={() => act.insert(sel.k, sel.lat, sel.lon, true)}><Bookmark /> Point de repère ici</button>
                   <button onClick={() => act.insert(sel.k, sel.lat, sel.lon)}><Plus /> Point de tracé</button>
+                  {race && (
+                    <button onClick={() => { const at = sel; setSel(null); addCp(at.lat, at.lon) }}><Flag /> Point de course ici</button>
+                  )}
                 </div>
               </>
             ) : null}
           </div>
         ) : null}
+        {profH > 0 && track && (
+          <div className="draw-bottom" style={{ height: profH }}>
+            <div
+              className="draw-split"
+              role="separator"
+              aria-label="Séparation carte / profil"
+              title="Glisser pour agrandir la carte ou le profil"
+              onPointerDown={(e) => {
+                e.currentTarget.setPointerCapture(e.pointerId)
+                splitDrag.current = true
+              }}
+              onPointerMove={(e) => {
+                const box = wrapRef.current?.getBoundingClientRect()
+                if (!splitDrag.current || !box) return
+                setProfFrac(Math.max(0.12, Math.min(0.6, (box.bottom - e.clientY) / box.height)))
+              }}
+              onPointerUp={() => (splitDrag.current = false)}
+              onPointerCancel={() => (splitDrag.current = false)}
+            >
+              <span />
+            </div>
+            {profileEl}
+          </div>
+        )}
       </div>
 
       <aside
@@ -1487,36 +1575,23 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
             </div>
           )}
 
-          {track && (
-            <div className="draw-profile">
-              <MiniProfile
-                track={track}
-                onHover={setHover}
-                onPick={tool === 'points' ? (d) => { const p = track.points[indexAt(track.points, d)]; addCp(p.lat, p.lon) } : act.pickDist}
-                marks={tool === 'points' ? placed.map((c) => ({ d: c.dist, label: isRavitoKind(c.kind) ? 'R' : '•' })) : rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []}
-              />
+          {race && tool === 'points' && track && (
+            <div className="auto-points">
+              <h3 className="draw-h">Points automatiques</h3>
+              <div className="row tight">
+                <select value={autoMethod} onChange={(e) => { const m = e.target.value as AutoSplitMethod; setAutoMethod(m); setAutoValue(METHOD_LABELS[m].def) }} aria-label="Méthode">
+                  {Object.entries(METHOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+                <Num value={autoValue} onChange={setAutoValue} unit={METHOD_LABELS[autoMethod].unit} min={1} width={60} />
+              </div>
+              <div className="row tight">
+                <button className="primary" onClick={generateAuto} disabled={!estimate}><WandSparkles /> Générer</button>
+                <button className="ghost" onClick={() => editCps(cps.filter((c) => !c.auto))} disabled={!cps.some((c) => c.auto)}>Effacer les auto</button>
+              </div>
+              <p className="muted small">Générer remplace les points auto précédents ; les points posés ou modifiés à la main restent.</p>
             </div>
           )}
-          {tool === 'points' && (
-            <ul className="cp-list">
-              {placed.map((c) => (
-                <li key={c.id}>
-                  <button
-                    className={`ghost${selCp === c.id ? ' on' : ''}`}
-                    onClick={() => {
-                      setSelCp(c.id)
-                      map.current?.panTo([c.lat, c.lon])
-                      if (mobile && sheet === 'full') setSheet('peek')
-                    }}
-                  >
-                    <i className={`cp-dot kind-${c.kind}`} /> <span className="cp-name">{c.name}</span> <span className="muted">km {km(c.dist)}</span>
-                    {c.dropbag && isRavitoKind(c.kind) ? <span className="muted"> · DB</span> : null}
-                  </button>
-                </li>
-              ))}
-              {placed.length === 0 && <li className="muted small">Aucun point : appuie sur le tracé, glisse et lâche pour en poser un.</li>}
-            </ul>
-          )}
+          {mobile && track && <div className="draw-profile">{profileEl}</div>}
 
           <div className="draw-more">
             {paceOpen && kind !== 'race' && (
@@ -1553,58 +1628,93 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
             )}
             {wps.length > 0 && (
               <>
-                <h3 className="draw-h">Points de repère</h3>
+                <h3 className="draw-h">{race ? 'Points du parcours' : 'Points de repère'}</h3>
                 <ol className="wp-list">
-                  {listed.map((k, j) => {
-                    const w = wps[k]
-                    const r = rows?.[k]
-                    const nk = listed[j + 1]
-                    const next = nk !== undefined ? rows?.[nk] : undefined
-                    const g = r && next && track ? elevationGain(track.points, r.d, next.d) : null
-                    const role = k === 0 ? 'start' : k === wps.length - 1 && !loop ? 'end' : 'mark'
-                    const loopEnd = loop && k === wps.length - 1
-                    return (
-                      <li key={k}>
-                        <div className={`wp-row${sel?.kind === 'wp' && sel.k === k ? ' on' : ''}`}>
-                          <button
-                            className={`wp-dot wp-${loopEnd ? 'end' : role}`}
-                            onClick={() => {
-                              if (loopEnd) return
-                              act.selectWp(k)
-                              map.current?.panTo([w.lat, w.lon])
-                              if (mobile) setSheet('peek')
-                            }}
-                            aria-label="Voir sur la carte"
-                          >
-                            {role === 'start' && !loopEnd ? <MapPinIcon /> : role === 'end' || loopEnd ? <FlagIcon /> : letters.get(k)}
-                          </button>
-                          <input
-                            className="wp-name"
-                            value={loopEnd ? 'Arrivée (départ)' : (w.name ?? '')}
-                            placeholder={wpName(k)}
-                            readOnly={loopEnd}
-                            onChange={(e) => act.rename(k, e.target.value)}
-                            aria-label="Nom du point"
-                          />
-                          <span className="muted">{r ? `${km(r.d)} km · ${Math.round(r.ele)} m` : '…'}</span>
-                          <strong className="wp-time">{r?.t !== null && r?.t !== undefined ? shortTime(r.t) : ''}</strong>
+                  {(() => {
+                    // Départ, points de repère du tracé et points de course mêlés dans l'ordre du parcours, arrivée.
+                    type Entry = { key: string; d: number; wp?: number; cp?: PlacedCp }
+                    const entries: Entry[] = [
+                      ...listed.map((k): Entry => ({ key: `w${k}`, d: rows?.[k]?.d ?? (k === 0 ? 0 : Infinity), wp: k })),
+                      ...placed.map((c): Entry => ({ key: c.id, d: c.dist, cp: c })),
+                    ].sort((a, b) => (a.wp === 0 ? -1 : b.wp === 0 ? 1 : a.wp === wps.length - 1 ? 1 : b.wp === wps.length - 1 ? -1 : a.d - b.d))
+                    return entries.map((e, j) => {
+                      const next = entries[j + 1]
+                      const g = next && track && Number.isFinite(e.d) && Number.isFinite(next.d) ? elevationGain(track.points, e.d, next.d) : null
+                      const seg = next ? (
+                        <div className="wp-seg">
+                          {g ? <>{km(next.d - e.d)} km <TrendingUp className="inline" /> {Math.round(g.dPlus)} m <TrendingDown className="inline" /> {Math.round(g.dMinus)} m</> : '…'}
                         </div>
-                        {nk !== undefined && (
-                          <div className="wp-seg">
-                            {g && r && next ? (
-                              <>
-                                {km(next.d - r.d)} km <TrendingUp className="inline" /> {Math.round(g.dPlus)} m <TrendingDown className="inline" /> {Math.round(g.dMinus)} m
-                              </>
-                            ) : (
-                              '…'
-                            )}
+                      ) : null
+                      if (e.cp) {
+                        const c = e.cp
+                        const t = estimate && track ? estimate.sim.points[indexAt(track.points, c.dist)]?.t : undefined
+                        return (
+                          <li key={e.key}>
+                            <div className={`wp-row${selCp === c.id ? ' on' : ''}`}>
+                              <button
+                                className={`wp-dot cp-kind kind-${c.kind}`}
+                                onClick={() => {
+                                  setSel(null)
+                                  setSelCp(c.id)
+                                  map.current?.panTo([c.lat, c.lon])
+                                  if (mobile) setSheet('peek')
+                                }}
+                                aria-label="Voir sur la carte"
+                                title={CHECKPOINT_LABELS[c.kind]}
+                              >
+                                {c.kind === 'base' ? 'BV' : c.kind === 'ravito' ? 'R' : c.kind === 'chrono' ? 'C' : c.kind === 'cutoff' ? 'B' : 'P'}
+                              </button>
+                              <input className="wp-name" value={c.name} onChange={(ev) => patchCp(c.id, { name: ev.target.value })} aria-label="Nom du point" />
+                              <span className="muted">{km(c.dist)} km{c.dropbag && isRavitoKind(c.kind) ? ' · DB' : ''}</span>
+                              <strong className="wp-time">{t !== undefined ? shortTime(t) : ''}</strong>
+                            </div>
+                            {seg}
+                          </li>
+                        )
+                      }
+                      const k = e.wp!
+                      const w = wps[k]
+                      const r = rows?.[k]
+                      const role = k === 0 ? 'start' : k === wps.length - 1 && !loop ? 'end' : 'mark'
+                      const loopEnd = loop && k === wps.length - 1
+                      return (
+                        <li key={e.key}>
+                          <div className={`wp-row${sel?.kind === 'wp' && sel.k === k ? ' on' : ''}`}>
+                            <button
+                              className={`wp-dot wp-${loopEnd ? 'end' : role}`}
+                              onClick={() => {
+                                if (loopEnd) return
+                                setSelCp(null)
+                                act.selectWp(k)
+                                map.current?.panTo([w.lat, w.lon])
+                                if (mobile) setSheet('peek')
+                              }}
+                              aria-label="Voir sur la carte"
+                            >
+                              {role === 'start' && !loopEnd ? <MapPinIcon /> : role === 'end' || loopEnd ? <FlagIcon /> : letters.get(k)}
+                            </button>
+                            <input
+                              className="wp-name"
+                              value={loopEnd ? 'Arrivée (départ)' : (w.name ?? '')}
+                              placeholder={wpName(k)}
+                              readOnly={loopEnd}
+                              onChange={(ev) => act.rename(k, ev.target.value)}
+                              aria-label="Nom du point"
+                            />
+                            <span className="muted">{r ? `${km(r.d)} km · ${Math.round(r.ele)} m` : '…'}</span>
+                            <strong className="wp-time">{r?.t !== null && r?.t !== undefined ? shortTime(r.t) : ''}</strong>
                           </div>
-                        )}
-                      </li>
-                    )
-                  })}
+                          {seg}
+                        </li>
+                      )
+                    })
+                  })()}
                 </ol>
-                <p className="muted small">Touche le tracé ou le profil pour ajouter un point de repère ; il devient un point de passage de la course.</p>
+                <p className="muted small">
+                  {race
+                    ? 'Points de course (R ravito, BV base de vie, P point inter, C chrono, B barrière) et points de repère du tracé, dans l’ordre du parcours. Un point du tracé se change en point de course depuis sa fenêtre.'
+                    : 'Touche le tracé ou le profil pour ajouter un point de repère ; il devient un point de passage de la course.'}
+                </p>
               </>
             )}
 
@@ -1725,8 +1835,8 @@ function MiniProfile({
         aria-label="Profil d'altitude du tracé"
       >
         <path d={path} fill="rgba(224,0,122,0.12)" stroke={ACCENT} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-        {marks.map((m) => (
-          <line key={m.label} x1={px(m.d)} x2={px(m.d)} y1={0} y2={H} stroke={ACCENT} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+        {marks.map((m, i) => (
+          <line key={i} x1={px(m.d)} x2={px(m.d)} y1={0} y2={H} stroke={ACCENT} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
         ))}
         {x !== null && <line x1={x} x2={x} y1={0} y2={H} stroke="#1f2420" strokeWidth={1} vectorEffect="non-scaling-stroke" />}
       </svg>

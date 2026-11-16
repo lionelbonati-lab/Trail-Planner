@@ -1,4 +1,4 @@
-import { ArrowLeftToLine, ArrowRightToLine, Check, ChevronDown, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Maximize2, Moon, Plus, Printer, Scissors, Sparkles, Trash2, Users, Watch } from 'lucide-react'
+import { ArrowLeftToLine, ArrowRightToLine, Check, ChevronDown, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Moon, Pencil, Printer, Scissors, Trash2, Users, Watch } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
@@ -12,7 +12,7 @@ import { isDefaultLevel } from '../lib/level'
 import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, setStops, waypointCheckpoints, withKind, type AutoSplitMethod } from '../lib/splits'
+import { CHECKPOINT_LABELS, commonStop, defaultStop, isRavitoKind, setStops, waypointCheckpoints } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
 import type { Athlete, CalcMode, Checkpoint, CheckpointKind, ProductType, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
@@ -113,34 +113,11 @@ export function RacePlan({
   const [sending, setSending] = useState<{ target: string | null; name: string } | null>(null)
   const [sent, setSent] = useState<{ id: string; name: string; replaced: boolean } | null>(null)
   const isRoute = race.kind === 'route'
-  // Types proposés : un parcours n'a que des points intermédiaires et chronos (le type actuel reste
-  // affiché s'il en a un autre, venu d'une course) ; plus de repères (devenus points inter).
-  const kindOptions = (current: CheckpointKind) =>
-    Object.entries(KIND_LABELS).filter(([k]) => (k !== 'info' && (!isRoute || k === 'split' || k === 'chrono')) || k === current) as [CheckpointKind, string][]
   const [copied, setCopied] = useState(false)
   const [showWatch, setShowWatch] = useState(false)
   const [hoverDist, setHoverDist] = useState<number | null>(null)
   const [selection, setSelection] = useState<{ from: number; to: number } | null>(null)
   const [segment, setSegment] = useState<number | null>(null)
-  // Clic sur le profil : fin de cycle (entraînement) ou ravito (compétition).
-  // Clic sur le profil : fin de cycle (zones, parcours) ou ajout d'un point (repère / ravito).
-  const [clickMode, setClickMode] = useState<'cycle' | 'point'>(race.kind === 'route' ? 'cycle' : 'point')
-  // Course : type du point ajouté d'un clic sur le profil ou sur la carte.
-  const [clickKind, setClickKind] = useState<'ravito' | 'base' | 'split' | 'chrono' | 'cutoff'>('ravito')
-  /**
-   * Changement de type : renommage (voir withKind) ; passage en base de vie : arrêt de 20 min et
-   * dropbag prévus d'office s'ils n'étaient pas réglés ; retour d'une base de vie : arrêt par défaut
-   * du nouveau type si celui de la base n'avait pas été changé.
-   */
-  const kindPatch = (cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoint> => ({
-    ...withKind(cp, kind),
-    ...(kind === 'base' && cp.kind !== 'base'
-      ? { ...(cp.stopMin <= defaultStop(cp.kind) ? { stopMin: defaultStop('base') } : {}), ...(cp.dropbag === undefined ? { dropbag: true } : {}) }
-      : {}),
-    ...(cp.kind === 'base' && kind !== 'base' && cp.stopMin === defaultStop('base') ? { stopMin: defaultStop(kind) } : {}),
-  })
-  /** Clic sur le profil ou la carte : repère (parcours) ou point du type choisi (course). */
-  const pickPoint = (d: number) => addPoint(d, isRoute ? 'split' : clickKind)
   // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
   const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1399px)')
   const [editing, setEditing] = useState<string | null>(null)
@@ -189,8 +166,6 @@ export function RacePlan({
   }, [pickAccess])
   const [osm, setOsm] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null })
   const { track, opts, sim, start, started, free } = useRaceComputation(race, athlete, watchStart)
-  const [method, setMethod] = useState<AutoSplitMethod>('peaks')
-  const [methodValue, setMethodValue] = useState(METHOD_LABELS.peaks.def)
   const [printFormat, setPrintFormat] = useState<PrintFormat | null>(null)
   const [compare, setCompare] = useState(false)
   const [weather, setWeather] = useState<{ busy: boolean; info: string | null; error: string | null }>({ busy: false, info: null, error: null })
@@ -223,32 +198,6 @@ export function RacePlan({
 
   if (!track || !sim || !opts) {
     return <Card title={race.name} fold={false}><p className="warn">Impossible de lire le GPX de cette course.</p></Card>
-  }
-
-  const addPoint = (dist: number, kind: CheckpointKind = race.kind === 'route' ? 'split' : 'ravito', name?: string) => {
-    const cp: Checkpoint = {
-      id: crypto.randomUUID(),
-      dist: Math.round(dist),
-      name: name ?? checkpointName(kind, dist),
-      kind,
-      stopMin: defaultStop(kind),
-      cutoff: '',
-      water: 0,
-      carbs: 0,
-      notes: '',
-      auto: false,
-      // Base de vie : dropbag prévu d'office (à décocher si l'organisation n'en prévoit pas).
-      ...(kind === 'base' ? { dropbag: true } : {}),
-    }
-    // Un point manuel remplace un point auto trop proche (moins de 300 m).
-    const kept = race.checkpoints.filter((c) => !(c.auto && Math.abs(c.dist - cp.dist) < 300))
-    set({ checkpoints: [...kept, cp].sort((a, b) => a.dist - b.dist) })
-    return cp.id
-  }
-
-  const generate = () => {
-    const pts = computeAutoPoints(track, { method, value: methodValue }, athleteKme(athlete), sim.points)
-    set({ checkpoints: mergeAutoPoints(race.checkpoints, pts) })
   }
 
   // Waypoints du GPX pas encore repris en points de passage (importés d'office à l'import du GPX).
@@ -524,24 +473,11 @@ export function RacePlan({
               />
             )}
           </div>
-          {!isRoute && (
-            <div className="row profile-tools">
-              <span className="muted small">Clic sur le profil ou la carte :</span>
-              <span className="click-mode" role="group" aria-label="Type du point ajouté d'un clic">
-                {(['ravito', 'base', 'split', 'chrono', 'cutoff'] as const).map((k) => (
-                  <button key={k} className={clickKind === k ? 'on' : ''} onClick={() => setClickKind(k)} aria-pressed={clickKind === k}>
-                    <Plus /> {KIND_LABELS[k]}
-                  </button>
-                ))}
-              </span>
-            </div>
-          )}
           {isRoute && (
             <div className="row profile-tools">
               <span className="muted small">Clic sur le profil :</span>
               <span className="click-mode">
-                <button className={clickMode === 'cycle' ? 'on' : ''} onClick={() => setClickMode('cycle')} title="Le clic coupe la portion de zone : fin de cycle"><Scissors /> Fin de cycle</button>
-                <button className={clickMode === 'point' ? 'on' : ''} onClick={() => setClickMode('point')} title="Le clic ajoute un point intermédiaire"><Plus /> Point inter</button>
+                <button className="on" title="Le clic coupe la portion de zone : fin de cycle"><Scissors /> Fin de cycle</button>
               </span>
               <span className="muted small">Glisser : appliquer une zone à une portion.</span>
             </div>
@@ -551,7 +487,7 @@ export function RacePlan({
             splits={sim.splits}
             timeZone={race.env.timeZone}
             startMs={startMs}
-            onPick={(d) => (isRoute && clickMode === 'cycle' ? set({ zones: splitAt(race.zones, track.totalDist, d) }) : pickPoint(d))}
+            onPick={isRoute ? (d) => set({ zones: splitAt(race.zones, track.totalDist, d) }) : undefined}
             onSelect={
               isRoute
                 ? (from, to) => {
@@ -638,8 +574,8 @@ export function RacePlan({
           {showMap && (
             <div id="race-map" className="map-wrap">
               {onRedraw && (
-                <button className="map-expand" onClick={() => onRedraw('points')} title="Carte agrandie : modifier le tracé, poser et déplacer les points" aria-label="Carte agrandie">
-                  <Maximize2 />
+                <button className="map-expand" onClick={() => onRedraw('points')} title="Modifier le tracé et les points de passage">
+                  <Pencil /> Modifier
                 </button>
               )}
               {pickAccess && (
@@ -657,7 +593,6 @@ export function RacePlan({
                   splits={sim.splits}
                   timeZone={race.env.timeZone}
                   hoverDist={hoverDist}
-                  onPick={pickPoint}
                   accessPick={
                     pickAccess
                       ? (at) => {
@@ -833,30 +768,14 @@ export function RacePlan({
                 ? 'Température et pluie prises à chaque instant et à chaque endroit du parcours, corrigées de l’altitude.'
                 : 'Chaleur : cycle min à 6 h / max à 15 h, −0,65 °C par 100 m de montée. La pluie ne compte qu’avec la météo heure par heure.'}
             </Hint>
-          </Card>
-
-          <Card title="Points automatiques" foldDesktop>
-            <div className="fields">
-              <label className="field">
-                <span className="field-label">Méthode</span>
-                <select value={method} onChange={(e) => { const m = e.target.value as AutoSplitMethod; setMethod(m); setMethodValue(METHOD_LABELS[m].def) }}>
-                  {Object.entries(METHOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-              </label>
-              <Num label="Valeur" value={methodValue} onChange={setMethodValue} unit={METHOD_LABELS[method].unit} min={1} />
-            </div>
-            <div className="row">
-              <button className="primary" onClick={generate}><Sparkles /> Générer</button>
-              <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => !c.auto) })}>Effacer les auto</button>
-              {newWaypoints.length > 0 && (
-                <button className="ghost" onClick={importWaypoints} title="Waypoints du GPX pas encore repris en points de passage">
-                  Importer {newWaypoints.length} waypoint{newWaypoints.length > 1 ? 's' : ''} GPX
-                </button>
-              )}
-            </div>
-            <Hint>Générer remplace les points auto précédents ; tes ravitos et points modifiés à la main sont conservés.</Hint>
+            {newWaypoints.length > 0 && (
+              <button className="ghost" onClick={importWaypoints} title="Waypoints du GPX pas encore repris en points de passage">
+                Importer {newWaypoints.length} waypoint{newWaypoints.length > 1 ? 's' : ''} GPX
+              </button>
+            )}
             <TechOverrides race={race} onChange={onChange} />
           </Card>
+
         </div>
 
         {compareResults && (
@@ -898,7 +817,7 @@ export function RacePlan({
                   <Droplets /> Reporter eau et glucides sur les ravitos
                 </button>
               )}
-              <button onClick={() => pickPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>
+              {onRedraw && <button onClick={() => onRedraw('points')} title="Ajouter, déplacer, renommer ou supprimer des points dans l'éditeur"><Pencil /> Modifier les points</button>}
             </>
           }
         >
@@ -967,17 +886,6 @@ export function RacePlan({
                     )}
                     {open && !isFinish && (
                       <div className="fields">
-                        <label className="field">
-                          <span className="field-label">Type</span>
-                          <select value={cp.kind} onChange={(e) => setCp(cp.id, kindPatch(cp, e.target.value as CheckpointKind))}>
-                            {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                          </select>
-                        </label>
-                        <label className="field">
-                          <span className="field-label">Nom</span>
-                          <input type="text" value={cp.name} onChange={(e) => setCp(cp.id, { name: e.target.value })} />
-                        </label>
-                        <Num label="Km" value={cp.dist / 1000} onChange={(v) => setCp(cp.id, { dist: Math.max(0, Math.min(track.totalDist, v * 1000)) })} />
                         <Num label="Arrêt" value={cp.stopMin} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />
                         {!isRoute && (
                           <>
@@ -993,7 +901,6 @@ export function RacePlan({
                           <span className="field-label">Notes</span>
                           <input type="text" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />
                         </label>
-                        <button className="ghost danger" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })}>Supprimer ce point</button>
                       </div>
                     )}
                   </div>
@@ -1020,7 +927,6 @@ export function RacePlan({
                   {!isRoute && <th title="Assistance autorisée à ce point, et son accès placé sur la carte">Assist.</th>}
                   {!isRoute && <th title="Dropbag prévu par l'organisation à ce point (ravito ou base de vie)">Dropbag</th>}
                   <th>Notes</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -1030,14 +936,10 @@ export function RacePlan({
                   return (
                     <tr key={cp.id} className={`${s.night ? 'is-night' : ''} kind-${cp.kind} ${cp.auto ? 'is-auto' : ''}`}>
                       <td>
-                        {isFinish ? 'Arrivée' : (
-                          <select value={cp.kind} onChange={(e) => setCp(cp.id, kindPatch(cp, e.target.value as CheckpointKind))}>
-                            {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                          </select>
-                        )}
+                        {isFinish ? 'Arrivée' : KIND_LABELS[cp.kind]}
                       </td>
-                      <td>{isFinish ? cp.name : <input type="text" className="wide" value={cp.name} onChange={(e) => setCp(cp.id, { name: e.target.value })} />}</td>
-                      <td>{isFinish ? (s.to / 1000).toFixed(1) : <Num value={cp.dist / 1000} width={64} onChange={(v) => setCp(cp.id, { dist: Math.max(0, Math.min(track.totalDist, v * 1000)) })} />}</td>
+                      <td className="cp-name-cell">{cp.name}</td>
+                      <td>{(s.to / 1000).toFixed(1)}</td>
                       <td>{(s.dist / 1000).toFixed(1)} km<br /><span className="muted">{s.kme.toFixed(1)} km-e</span></td>
                       <td>+{Math.round(s.dPlus)}<br /><span className="muted">−{Math.round(s.dMinus)}</span></td>
                       <td>{formatDuration(s.moveTime)}</td>
@@ -1083,7 +985,6 @@ export function RacePlan({
                       {!isRoute && <td>{assistOf(cp)}</td>}
                       {!isRoute && <td>{dropbagOf(cp)}</td>}
                       <td>{!isFinish && <input type="text" className="wide" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
-                      <td>{!isFinish && <button className="ghost" onClick={() => set({ checkpoints: race.checkpoints.filter((c) => c.id !== cp.id) })} aria-label="Supprimer"><Trash2 /></button>}</td>
                     </tr>
                   )
                 })}

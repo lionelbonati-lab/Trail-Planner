@@ -671,7 +671,7 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 /* Carte du plan : bouton plein écran. */
 .map-wrap { position: relative; }
-.map-expand { position: absolute; top: 96px; left: 10px; z-index: 500; width: 36px; height: 36px; padding: 0; border-radius: 8px; background: #fff; color: #1f2420; box-shadow: 0 1px 5px rgba(0,0,0,0.3); display: inline-flex; align-items: center; justify-content: center; }
+.map-expand { position: absolute; top: 96px; left: 10px; z-index: 500; height: 36px; padding: 0 12px; gap: 6px; font-weight: 600; border-radius: 8px; background: #fff; color: #1f2420; box-shadow: 0 1px 5px rgba(0,0,0,0.3); display: inline-flex; align-items: center; justify-content: center; }
 .map-wrap .banner ~ .map-expand { top: 150px; }
 
 /* Points de course dans le traceur. */
@@ -705,3 +705,17 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .multi-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 8px 10px; display: grid; gap: 8px; max-height: 320px; overflow: auto; }
 .multi-group { display: grid; gap: 2px; }
 .points-hint { pointer-events: none; } .points-hint .banner { pointer-events: auto; }
+
+/* Traceur sur ordinateur : profil sous la carte. */
+.draw-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1000; background: var(--surface); border-top: 1px solid var(--line); display: flex; flex-direction: column; padding: 0 12px 6px; }
+.draw-split { flex: none; height: 12px; margin: 0 -12px; cursor: row-resize; touch-action: none; display: flex; align-items: center; justify-content: center; }
+.draw-split span { width: 48px; height: 4px; border-radius: 2px; background: var(--muted); opacity: 0.6; }
+.draw-bottom .mini-profile { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.draw-bottom .mini-profile svg { flex: 1; height: auto; min-height: 40px; }
+.draw-shell .draw-map { bottom: 0; }
+.wp-dot.cp-kind { font-size: 10px; font-weight: 800; color: #fff; background: #1f2420; }
+.wp-dot.cp-kind.kind-ravito { background: #c0571b; }
+.wp-dot.cp-kind.kind-base { background: #c2410c; }
+.wp-dot.cp-kind.kind-chrono { background: #1d4ed8; }
+.wp-dot.cp-kind.kind-cutoff { background: var(--danger); }
+.auto-points { margin-top: 8px; }
