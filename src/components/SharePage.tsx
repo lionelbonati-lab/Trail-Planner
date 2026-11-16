@@ -1,5 +1,5 @@
-import { isRavitoKind } from '../lib/splits'
-import { Activity, Bell, BellOff, Check, Map as MapIcon, Mountain, Navigation, Radio, Route } from 'lucide-react'
+import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
+import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
@@ -12,6 +12,25 @@ const ShareMap = lazy(() => import('./ShareMap'))
 
 /** Un relevé de montre plus ancien que ceci n'est plus considéré comme « en direct ». */
 const WATCH_FRESH_S = 3 * 3600
+
+/** Icône du type de point (arrivée à part). */
+function KindIcon({ kind, finish }: { kind: string; finish?: boolean }) {
+  const label = finish ? 'Arrivée' : (CHECKPOINT_LABELS as Record<string, string>)[kind] ?? 'Point'
+  const Icon = finish ? Flag : kind === 'ravito' ? Utensils : kind === 'base' ? Tent : kind === 'cutoff' ? Hourglass : kind === 'info' ? Info : MapPin
+  return (
+    <span className={`kind-icon kind-${finish ? 'finish' : kind}`} title={label} aria-label={label} role="img">
+      <Icon />
+    </span>
+  )
+}
+
+/** Avance (−) ou retard (+) sur l'heure prévue, en min ou en h. */
+function signedDelay(sec: number): string {
+  const m = Math.round(sec / 60)
+  const sign = m > 0 ? '+' : m < 0 ? '−' : ''
+  const a = Math.abs(m)
+  return a >= 60 ? `${sign}${Math.floor(a / 60)} h ${String(a % 60).padStart(2, '0')}` : `${sign}${a} min`
+}
 
 function signedMin(sec: number): string {
   const m = Math.round(sec / 60)
@@ -293,7 +312,7 @@ function NotifyBox({ alerts }: { alerts: ReturnType<typeof useCrossingAlerts> })
 /** Affichage du lien assistance (séparé du chargement, pour pouvoir le tester). */
 export function ShareView({
   snap: input,
-  report,
+  report: rawReport,
   nowMs = Date.now(),
   shareId,
   initialTab,
@@ -313,6 +332,14 @@ export function ShareView({
   }
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
+  // Relevé d'une autre activité (fait avant l'envoi de cette course à la montre, ou au-delà de son
+  // arrivée) : ignoré, sinon tout le parcours paraît fait dès l'ouverture d'un nouveau parcours.
+  const report =
+    rawReport &&
+    !(input.watchSince && rawReport.t * 1000 < Date.parse(input.watchSince)) &&
+    !(input.totalDist > 0 && rawReport.d > input.totalDist + 1000)
+      ? rawReport
+      : null
   const nowSec0 = nowMs / 1000
   // Heures recalées sur le départ réel (montre, sinon mode course) s'il diffère du départ officiel ;
   // les barrières horaires suivent le même décalage. Départ libre pas encore parti : heures pour un
@@ -468,10 +495,10 @@ export function ShareView({
             <tr><th>Point</th><th>Km</th><th>Au plus tôt</th><th>Prévu</th><th>Au plus tard</th><th>Réel / estimé</th><th>Barrière</th></tr>
           </thead>
           <tbody>
-            {snap.rows.map((r) => (
+            {snap.rows.map((r, i) => (
               <tr key={r.id} className={`${isRavitoKind(r.kind) ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
                 <td>
-                  {r.name}
+                  <KindIcon kind={r.kind} finish={i === snap.rows.length - 1} /> {r.name}
                   {r.notes && <div className="muted small">{r.notes}</div>}
                   {r.lat !== undefined && r.lon !== undefined && (
                     <div>
@@ -485,7 +512,18 @@ export function ShareView({
                 <td>{clock(r.early, long)}</td>
                 <td><strong>{clock(r.planned, long)}</strong></td>
                 <td>{clock(r.late, long)}</td>
-                <td>{r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live || watch ? <span className="muted">~{clock(r.eta, long)}</span> : ''}</td>
+                <td>
+                  {r.actual ? <strong><Check className="inline" /> {clock(r.actual, long)}</strong> : snap.live || watch ? <span className="muted">~{clock(r.eta, long)}</span> : ''}
+                  {(r.actual || snap.live || watch) && (() => {
+                    // Avance / retard sur l'heure prévue : réel si passé, sinon estimé.
+                    const delay = (Date.parse(r.actual ?? r.eta) - Date.parse(r.planned)) / 1000
+                    return Math.abs(delay) >= 60 ? (
+                      <div className={`delay ${delay > 0 ? 'late' : 'early'} ${r.actual ? '' : 'est'}`}>{signedDelay(delay)}</div>
+                    ) : (
+                      <div className="delay on-time">à l'heure</div>
+                    )
+                  })()}
+                </td>
                 <td>{clock(r.cutoff, long)}</td>
               </tr>
             ))}
@@ -535,7 +573,7 @@ function AssistTrip({
               <label>
                 <input type="checkbox" checked={checked(r)} disabled={done} onChange={(e) => onCheck(r.id, e.target.checked)} />
                 <span>
-                  <strong>{r.name}</strong> <span className="muted small">km {(r.dist / 1000).toFixed(1).replace('.', ',')}</span>
+                  <KindIcon kind={r.kind} finish={r === points[points.length - 1] && r.id === '__finish'} /> <strong>{r.name}</strong> <span className="muted small">km {(r.dist / 1000).toFixed(1).replace('.', ',')}</span>
                   <br />
                   <span className="small">
                     {done ? `passé à ${clock(r.actual)}` : `${live ? 'estimé' : 'prévu'} ${clock(live ? r.eta : r.planned)}`}

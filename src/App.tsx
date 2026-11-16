@@ -439,7 +439,7 @@ export default function App() {
   const sendToWatch = (race: Race) => {
     // Sans tirets : plus simple à saisir dans les réglages Garmin.
     const watchId = athlete.watchId ?? crypto.randomUUID().replace(/-/g, '')
-    const next = { ...athlete, watchId, watchRaceId: race.id }
+    const next = { ...athlete, watchId, watchRaceId: race.id, watchRaceAt: athlete.watchRaceId === race.id && athlete.watchRaceAt ? athlete.watchRaceAt : new Date().toISOString() }
     updateAthlete(next)
     publish(race, next, watchId).catch((e) => setError(`Envoi à la montre impossible : ${(e as Error).message}`))
   }

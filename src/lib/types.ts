@@ -112,6 +112,8 @@ export interface Athlete {
   watchId?: string
   /** Course actuellement envoyée à la montre. */
   watchRaceId?: string
+  /** Quand elle y a été envoyée (ISO) : les relevés plus anciens viennent d'une autre activité. */
+  watchRaceAt?: string
   /** Synchroniser le datafield EndurancePro (VC, zones…) via le code montre. */
   epSync?: boolean
   /**

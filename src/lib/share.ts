@@ -61,6 +61,8 @@ export interface ShareSnapshot {
   liveRefShort?: string | null
   /** Réglages du datafield EndurancePro (document du code montre seulement, voir endurancepro.ts). */
   ep?: string
+  /** Envoi de cette course à la montre (ISO) : un relevé antérieur vient d'une autre activité. */
+  watchSince?: string
   /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */
   freeStart?: boolean
 }
@@ -99,6 +101,7 @@ export function buildSnapshot(
     ...(isFreeStart(race) ? { freeStart: true } : {}),
     liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
     liveRefShort: athlete.epCode && athlete.watchRaceId === race.id ? athlete.epCode : null,
+    ...(athlete.watchRaceId === race.id && athlete.watchRaceAt ? { watchSince: athlete.watchRaceAt } : {}),
     rows: sim.splits.map((s, i) => {
       const w = windowOf(s.cp.id)
       const row = status?.rows[i]

@@ -265,6 +265,17 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .share-points { max-width: 100%; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .share-points td:first-child, .share-points th:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg); min-width: 130px; max-width: 46vw; box-shadow: 1px 0 0 var(--line); }
 .share-points td:not(:first-child) { white-space: nowrap; }
+.kind-icon { display: inline-flex; vertical-align: -2px; color: var(--muted); }
+.kind-icon svg { width: 14px; height: 14px; }
+.kind-icon.kind-ravito, .kind-icon.kind-base { color: var(--ravito); }
+.kind-icon.kind-base { color: var(--danger); }
+.kind-icon.kind-cutoff { color: var(--danger); }
+.kind-icon.kind-finish { color: var(--ink); }
+.share-points .delay { font-size: 12px; font-weight: 600; }
+.share-points .delay.late { color: var(--warn); }
+.share-points .delay.early { color: var(--ok); }
+.share-points .delay.on-time { color: var(--muted); font-weight: 400; }
+.share-points .delay.est { font-weight: 400; font-style: italic; }
 .assist-profile { position: relative; }
 .assist-profile-scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 .assist-profile .leg-bg { fill: var(--surface); }

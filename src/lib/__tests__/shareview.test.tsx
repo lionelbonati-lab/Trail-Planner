@@ -164,6 +164,34 @@ describe('page assistance', () => {
     expect(html).toMatch(/~\d{2}:\d{2}/)
   })
 
+  it('relevé d’une autre activité : ignoré (avant l’envoi à la montre, ou au-delà de l’arrivée)', () => {
+    const s = Math.round(Date.parse(snap.start) / 1000)
+    const report = { t: s + 3600, s, d: 8000 }
+    const live = renderToStaticMarkup(<ShareView snap={snap} report={report} nowMs={(s + 3700) * 1000} />)
+    expect(live).toContain('done-area')
+    // Course envoyée à la montre après ce relevé : relevé de l'activité précédente.
+    const sent = { ...snap, watchSince: new Date((s + 3650) * 1000).toISOString() }
+    const html = renderToStaticMarkup(<ShareView snap={sent} report={report} nowMs={(s + 3700) * 1000} />)
+    expect(html).not.toContain('done-area')
+    expect(html).not.toContain('mp-passed')
+    // Distance au-delà de l'arrivée (autre parcours, plus long).
+    const far = renderToStaticMarkup(<ShareView snap={snap} report={{ ...report, d: snap.totalDist + 5000 }} nowMs={(s + 3700) * 1000} />)
+    expect(far).not.toContain('done-area')
+  })
+
+  it('tableau : icône du type de point, avance ou retard sur l’heure prévue', () => {
+    const s = Math.round(Date.parse(snap.start) / 1000)
+    const w = parseWatchPlan(snap.w)!
+    // Passage au ravito A 12 min après l'heure prévue.
+    const passA = s + w.cps[0].planned + 720
+    const html = renderToStaticMarkup(<ShareView snap={snap} report={{ t: passA + 60, s, d: 5200, p: `0:${passA}` }} nowMs={(passA + 60) * 1000} />)
+    expect(html).toContain('kind-icon kind-ravito')
+    expect(html).toContain('kind-icon kind-finish')
+    expect(html).toMatch(/class="delay late ">\+1[12] min</)
+    // Points suivants : retard estimé (en italique).
+    expect(html).toMatch(/class="delay late est">\+\d+ min</)
+  })
+
   it('relevé trop ancien : ignoré', () => {
     const s = Math.round(Date.parse(snap.start) / 1000)
     const html = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 600, s, d: 2000 }} nowMs={(s + 600 + 4 * 3600) * 1000} />)
