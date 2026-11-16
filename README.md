@@ -134,8 +134,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   (0,4 L → 1 iso ; 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2),
   quantité réelle toujours affichée ; glucides et sodium de l'isotonique déduits, gels et barres complètent ;
   alerte au-delà de 4 flasques (remplir en route).
-- Onglet **Nutrition** : tes produits avec leur **type** (solide, liquide, gel, eau), une case **Flasque** (poudre pour une
-  flasque de 500 ml ; pour une eau : cochée, elle remplit les flasques d'eau, décochée, elle est ignorée), leur marque, les glucides et le sodium **au 100 g** et le **poids** d'une portion (la portion en est
+- Onglet **Nutrition** : tes produits avec leur **type** (solide, liquide, gel ; l'eau est un liquide sans glucides), une case **Flasque** (poudre pour une
+  flasque de 500 ml ; pour une eau, liquide sans glucides : cochée, elle remplit les flasques d'eau, décochée, elle est ignorée), leur marque, les glucides et le sodium **au 100 g** et le **poids** d'une portion (la portion en est
   déduite) et la part des glucides ; une eau minérale salée comme la St-Yorre est mélangée à l'eau des flasques, juste assez
   pour le sodium visé. **Bibliothèque de produits** : aliments fréquents aux ravitaillements (banane, orange, fruits secs,
   pain d'épices, chips, fromage, bouillon, coca, soupe, St-Yorre…) et produits Baouw, Näak (dont la boisson Ultra Energy), TA Energy (dont l'Energy Drink Mix), Overstim.s, Maurten,

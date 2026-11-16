@@ -19,6 +19,7 @@ import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { CourseProfile } from './CourseProfile'
+import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY } from '../lib/productLibrary'
 import { ZonePicker, ZonesCard } from './Zones'
 import { Card, Hint, Kpi, Num, Toggle } from './ui'
 
@@ -131,6 +132,7 @@ export function RacePlan({
   const [editing, setEditing] = useState<string | null>(null)
   // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
   const [bulkStop, setBulkStop] = useState<Record<string, number>>({})
+  const [addingProduct, setAddingProduct] = useState(false)
   const [showMap, setShowMap] = useState(true)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
@@ -213,6 +215,50 @@ export function RacePlan({
   const importWaypoints = () => set({ checkpoints: [...race.checkpoints, ...newWaypoints].sort((a, b) => a.dist - b.dist) })
 
   const products = raceProducts(race, athlete.products)
+  /**
+   * Produit choisi pour la course (à la place de `replace`, ou en plus) : un des tiens, ou un article de la
+   * bibliothèque, alors copié dans tes produits (onglet Nutrition).
+   */
+  const chooseProduct = (value: string, replace?: string) => {
+    let id = value
+    let all = athlete.products
+    if (value.startsWith('lib:')) {
+      const item = PRODUCT_LIBRARY.find((x) => x.id === value.slice(4))
+      if (!item) return
+      const np = libraryProduct(item)
+      all = [...athlete.products, np]
+      id = np.id
+      onAthleteChange({ ...athlete, products: all })
+    }
+    const ids = products.map((x) => x.id)
+    const next = replace ? ids.map((x) => (x === replace ? id : x)) : [...ids, id]
+    set({ productIds: all.filter((x) => next.includes(x.id)).map((x) => x.id) })
+  }
+  /** Options du choix d'un produit : tes produits pas encore retenus, puis la bibliothèque par marque. */
+  const productOptions = (current?: string) => {
+    const ids = new Set(products.map((x) => x.id))
+    const owned = new Set(athlete.products.map((x) => x.libraryId).filter(Boolean))
+    return (
+      <>
+        {(Object.keys(PRODUCT_TYPES) as ProductType[]).map((t) => {
+          const of = athlete.products.filter((x) => productType(x) === t && (x.id === current || !ids.has(x.id)))
+          return of.length ? (
+            <optgroup key={t} label={`Mes produits · ${PRODUCT_TYPES[t]}`}>
+              {of.map((x) => <option key={x.id} value={x.id}>{x.name}{x.brand ? ` · ${x.brand}` : ''}</option>)}
+            </optgroup>
+          ) : null
+        })}
+        {LIBRARY_BRANDS.map((b) => {
+          const of = PRODUCT_LIBRARY.filter((it) => it.brand === b && !owned.has(it.id))
+          return of.length ? (
+            <optgroup key={b} label={`Bibliothèque · ${b}`}>
+              {of.map((it) => <option key={it.id} value={`lib:${it.id}`}>{it.name}</option>)}
+            </optgroup>
+          ) : null
+        })}
+      </>
+    )
+  }
   // Profil (comme la page assistance) : altitudes échantillonnées, points, technicité, nuit.
   const profileStride = Math.max(1, Math.floor(sim.points.length / 1500))
   const profilePts = sim.points.filter((_, i) => i % profileStride === 0 || i === sim.points.length - 1).map((p) => [p.dist, p.ele] as [number, number])
@@ -1016,38 +1062,32 @@ export function RacePlan({
           <div className="field">
             <span className="field-label">Produits sur {isRoute ? 'ce parcours' : 'cette course'}</span>
             <div className="product-rows">
-              {products.map((p) => {
-                const ids = products.map((x) => x.id)
-                const setIds = (next: string[]) => set({ productIds: athlete.products.filter((x) => next.includes(x.id)).map((x) => x.id) })
-                return (
-                  <div className="row tight" key={p.id}>
-                    <select
-                      value={p.id}
-                      onChange={(e) => setIds(ids.map((x) => (x === p.id ? e.target.value : x)))}
-                      aria-label="Produit"
-                    >
-                      {(Object.keys(PRODUCT_TYPES) as ProductType[]).map((t) => {
-                        const of = athlete.products.filter((x) => productType(x) === t && (x.id === p.id || !ids.includes(x.id)))
-                        return of.length ? (
-                          <optgroup key={t} label={PRODUCT_TYPES[t]}>
-                            {of.map((x) => <option key={x.id} value={x.id}>{x.name}{x.brand ? ` · ${x.brand}` : ''}</option>)}
-                          </optgroup>
-                        ) : null
-                      })}
-                    </select>
-                    <button className="ghost" onClick={() => setIds(ids.filter((x) => x !== p.id))} aria-label={`Retirer ${p.name}`}><Trash2 /></button>
-                  </div>
-                )
-              })}
-              {products.length < athlete.products.length && (
-                <button
-                  className="ghost"
-                  onClick={() => {
-                    const ids = products.map((x) => x.id)
-                    const next = athlete.products.find((x) => !ids.includes(x.id))
-                    if (next) set({ productIds: athlete.products.filter((x) => ids.includes(x.id) || x.id === next.id).map((x) => x.id) })
-                  }}
-                >
+              {products.map((p) => (
+                <div className="row tight" key={p.id}>
+                  <select value={p.id} onChange={(e) => chooseProduct(e.target.value, p.id)} aria-label="Produit">
+                    {productOptions(p.id)}
+                  </select>
+                  <button className="ghost" onClick={() => set({ productIds: products.filter((x) => x.id !== p.id).map((x) => x.id) })} aria-label={`Retirer ${p.name}`}><Trash2 /></button>
+                </div>
+              ))}
+              {addingProduct ? (
+                <div className="row tight">
+                  <select
+                    value=""
+                    autoFocus
+                    onChange={(e) => {
+                      if (e.target.value) chooseProduct(e.target.value)
+                      setAddingProduct(false)
+                    }}
+                    aria-label="Produit à ajouter"
+                  >
+                    <option value="">Choisir un produit…</option>
+                    {productOptions()}
+                  </select>
+                  <button className="ghost" onClick={() => setAddingProduct(false)} aria-label="Annuler"><Trash2 /></button>
+                </div>
+              ) : (
+                <button className="ghost" onClick={() => setAddingProduct(true)}>
                   <Plus /> Ajouter un produit
                 </button>
               )}
@@ -1056,7 +1096,8 @@ export function RacePlan({
           </div>
           <Hint>
             Tes produits (gels, barres, isotonique en flasque) et leur marque se règlent dans l’onglet <a href="#/nutrition">Nutrition</a>.
-            Choisir la marque présente aux ravitaillements retient ses produits ; « Ajouter un produit » en ajoute un à la liste. L'eau augmente de 4 % par °C au-dessus de 15 °C.
+            Choisir la marque présente aux ravitaillements retient ses produits ; « Ajouter un produit » en ajoute autant que tu veux,
+            parmi tes produits ou la bibliothèque (le produit choisi est alors copié dans tes produits). L'eau augmente de 4 % par °C au-dessus de 15 °C.
           </Hint>
         </Card>
 

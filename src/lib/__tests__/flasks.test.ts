@@ -106,7 +106,7 @@ describe('eau minérale salée (St-Yorre)', () => {
     const race = newRace('Sel', gpx(30))
     race.waterPerH = 0.8
     const plan = computePlan(race, DEFAULT_ATHLETE)!
-    const styorre: Product = { id: 'sy', name: 'St-Yorre', carbs: 0, sodium: 850, share: 0, type: 'water' }
+    const styorre: Product = { id: 'sy', name: 'St-Yorre', carbs: 0, sodium: 850, share: 0, type: 'liquid' }
     const [sans] = nutritionPlan(race, plan.sim, DEFAULT_PRODUCTS)
     const [avec] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, styorre])
     expect(avec.flasks.waterId).toBe('sy')
@@ -142,7 +142,7 @@ describe('eau minérale décochée (case Flasque)', () => {
     const race = newRace('Sel', gpx(30))
     race.waterPerH = 0.8
     const plan = computePlan(race, DEFAULT_ATHLETE)!
-    const off: Product = { id: 'sy', name: 'St-Yorre', carbs: 0, sodium: 850, share: 0, type: 'water', flask: false }
+    const off: Product = { id: 'sy', name: 'St-Yorre', carbs: 0, sodium: 850, share: 0, type: 'liquid', flask: false }
     const [sans] = nutritionPlan(race, plan.sim, DEFAULT_PRODUCTS)
     const [leg] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, off])
     expect(leg.flasks.waterId).toBeNull()

@@ -40,7 +40,7 @@ export const PRODUCT_LIBRARY: LibraryItem[] = [
   { id: 'rv-soupe', brand: RAVITO_BRAND, name: 'Soupe de pâtes / vermicelles', type: 'solid', carbs: 8, sodium: 300, weight: 250, note: 'un bol (base de vie)' },
   { id: 'rv-bouillon', brand: RAVITO_BRAND, name: 'Bouillon', type: 'liquid', carbs: 1, sodium: 350, weight: 200, note: 'un gobelet' },
   { id: 'rv-coca', brand: RAVITO_BRAND, name: 'Coca-Cola', type: 'liquid', carbs: 10.6, sodium: 5, weight: 150, note: 'un gobelet' },
-  { id: 'rv-st-yorre', brand: RAVITO_BRAND, name: 'Eau gazeuse salée (St-Yorre)', type: 'water', carbs: 0, sodium: 170, weight: 500, flask: true, note: 'mélangée à l’eau des flasques' },
+  { id: 'rv-st-yorre', brand: RAVITO_BRAND, name: 'Eau gazeuse salée (St-Yorre)', type: 'liquid', carbs: 0, sodium: 170, weight: 500, flask: true, note: 'mélangée à l’eau des flasques' },
 
   // Baouw (bio).
   { id: 'baouw-stick', brand: 'Baouw', name: 'Gel stick 44 g', type: 'gel', carbs: 69, sodium: 50, weight: 44, note: 'citron-yuzu, caramel salé, framboise-grenade, cerise-guarana…' },
@@ -92,7 +92,7 @@ export function libraryProduct(item: LibraryItem): Product {
     share,
     carbs: 0,
     sodium: 0,
-    ...(item.type === 'liquid' || item.type === 'water' ? { flask: !!item.flask } : {}),
+    ...(item.type === 'liquid' ? { flask: !!item.flask } : {}),
   }
   return withPer100(base, { carbs: item.carbs, sodium: item.sodium, weight: item.weight })
 }

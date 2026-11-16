@@ -48,10 +48,19 @@ describe('ajouts : barres Decathlon, boissons Näak et TA Energy, eau en flasque
   })
   it('eau : case flasque cochée par défaut ; décochée, ignorée', async () => {
     const { isFlaskWater } = await import('../nutrition')
-    const sy: Product = { id: 'sy', name: 'St-Yorre', type: 'water', carbs: 0, sodium: 850, share: 0 }
+    const sy: Product = { id: 'sy', name: 'St-Yorre', type: 'liquid', carbs: 0, sodium: 850, share: 0 }
     expect(isFlaskWater(sy)).toBe(true)
     expect(isFlaskWater({ ...sy, flask: false })).toBe(false)
     // L'eau n'est jamais prise pour l'isotonique.
     expect(isFlask(sy)).toBe(false)
+  })
+})
+
+describe('plus de type Eau : liquide sans glucides', () => {
+  it('ancien type « water » lu comme liquide ; eau sans glucides en flasque, pas isotonique', () => {
+    const old = { id: 'w', name: 'St-Yorre', type: 'water', carbs: 0, sodium: 850, share: 0 } as unknown as Product
+    expect(productType(old)).toBe('liquid')
+    expect(per100(old).weight).toBe(500)
+    expect(isFlask(old)).toBe(false)
   })
 })
