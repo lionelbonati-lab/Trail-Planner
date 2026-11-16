@@ -702,3 +702,4 @@ body.points-open { overflow: hidden; }
   .points-top .click-mode { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; }
   .points-top .click-mode button { white-space: nowrap; }
 }
+.row.wrap { flex-wrap: wrap; }

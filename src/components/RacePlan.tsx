@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { bagText, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan } from '../lib/nutrition'
+import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan, raceProducts } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
@@ -309,7 +309,9 @@ export function RacePlan({
   const newWaypoints = waypointCheckpoints(track, race.kind, race.checkpoints)
   const importWaypoints = () => set({ checkpoints: [...race.checkpoints, ...newWaypoints].sort((a, b) => a.dist - b.dist) })
 
-  const legs = nutritionPlan(race, sim, athlete.products)
+  const products = raceProducts(race, athlete.products)
+  const legs = nutritionPlan(race, sim, products)
+  const brands = brandsOf(athlete.products)
   // Dropbags prévus par l'organisation (course) : contenu jusqu'au suivant.
   const dropbags = isRoute ? [] : dropbagPlan(legs, sim.splits.map((s) => s.cp))
   const parts = partition(race.zones, track.totalDist)
@@ -911,13 +913,6 @@ export function RacePlan({
               )}
             </div>
             <Hint>Générer remplace les points auto précédents ; tes ravitos et points modifiés à la main sont conservés.</Hint>
-            <h3>Nutrition</h3>
-            <div className="fields">
-              <Num label="Glucides" value={race.carbsPerH} onChange={(v) => set({ carbsPerH: v })} unit="g/h" />
-              <Num label="Eau (à 15 °C)" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
-              <Num label="Sodium" value={race.sodiumPerH} onChange={(v) => set({ sodiumPerH: v })} unit="mg/h" />
-            </div>
-            <Hint>Tes produits (gels, boissons…) se règlent dans le profil athlète. L'eau augmente de 4 % par °C au-dessus de 15 °C.</Hint>
             <TechOverrides race={race} onChange={onChange} />
           </Card>
         </div>
@@ -1162,6 +1157,61 @@ export function RacePlan({
               la carte, destination de son lien GPS.
             </Hint>
           )}
+        </Card>
+
+        <Card title="Nutrition">
+          <div className="fields">
+            <Num label="Glucides" value={race.carbsPerH} onChange={(v) => set({ carbsPerH: v })} unit="g/h" />
+            <Num label="Eau (à 15 °C)" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
+            <Num label="Sodium" value={race.sodiumPerH} onChange={(v) => set({ sodiumPerH: v })} unit="mg/h" />
+            {!isRoute && (
+              <label className="field">
+                <span className="field-label">Marque aux ravitaillements</span>
+                <select
+                  value={race.ravitoBrand ?? ''}
+                  onChange={(e) => {
+                    const brand = e.target.value || undefined
+                    // La marque coche ses produits et décoche ceux des autres marques ; les produits sans marque restent.
+                    const ids = athlete.products
+                      .filter((p) => (brand ? !p.brand?.trim() ? products.includes(p) : p.brand.trim() === brand : products.includes(p)))
+                      .map((p) => p.id)
+                    set({ ravitoBrand: brand, productIds: brand ? ids : race.productIds })
+                  }}
+                  disabled={brands.length === 0}
+                >
+                  <option value="">{brands.length ? 'Aucune en particulier' : 'Aucune marque saisie'}</option>
+                  {brands.map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
+          <div className="field">
+            <span className="field-label">Produits sur {isRoute ? 'ce parcours' : 'cette course'}</span>
+            <div className="row tight wrap">
+              {athlete.products.map((p) => (
+                <label key={p.id} className="assist-check">
+                  <input
+                    type="checkbox"
+                    checked={products.includes(p)}
+                    onChange={(e) => {
+                      const ids = new Set(products.map((x) => x.id))
+                      if (e.target.checked) ids.add(p.id)
+                      else ids.delete(p.id)
+                      set({ productIds: athlete.products.filter((x) => ids.has(x.id)).map((x) => x.id) })
+                    }}
+                  />
+                  <span>{p.name}{p.brand ? <span className="muted"> · {p.brand}</span> : null}</span>
+                </label>
+              ))}
+              {race.productIds && (
+                <button className="ghost" onClick={() => set({ productIds: undefined, ravitoBrand: undefined })}>Tous mes produits</button>
+              )}
+            </div>
+          </div>
+          <Hint>
+            Tes produits (gels, barres, isotonique en flasque) et leur marque se règlent dans l’onglet <a href="#/nutrition">Nutrition</a>.
+            Choisir la marque présente aux ravitaillements coche ses produits. L'eau augmente de 4 % par °C au-dessus de 15 °C.
+          </Hint>
         </Card>
 
         <Card

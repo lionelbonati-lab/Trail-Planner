@@ -202,6 +202,8 @@ export interface Product {
    * « boisson » des profils.
    */
   flask?: boolean
+  /** Marque (Overstim, Maurten…) : choix de la marque présente aux ravitos d'une course. */
+  brand?: string
 }
 
 export interface TrainingZone {
@@ -455,6 +457,10 @@ export interface Race {
   finishAccess?: GeoPoint
   /** Barrière horaire à l'arrivée (heure locale, « AAAA-MM-JJTHH:MM » ; course seulement). */
   finishCutoff?: string
+  /** Produits retenus pour cette course (identifiants) ; absent : tous les produits de l'onglet Nutrition. */
+  productIds?: string[]
+  /** Marque présente aux ravitaillements (choix qui coche ses produits). */
+  ravitoBrand?: string
   /**
    * Départ libre (entraînement) : heures calculées pour un départ maintenant, puis calées sur le
    * vrai départ (mode course, montre) ; l'heure de départ saisie est ignorée.

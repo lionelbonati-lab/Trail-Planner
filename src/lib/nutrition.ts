@@ -25,6 +25,16 @@ export interface Leg {
   flasks: { water: number; iso: number; isoId: string | null }
 }
 
+/** Produits retenus pour une course (tous si aucun choix n'a été fait). */
+export function raceProducts(race: Pick<Race, 'productIds'>, products: Product[]): Product[] {
+  return race.productIds ? products.filter((p) => race.productIds!.includes(p.id)) : products
+}
+
+/** Marques des produits, triées. */
+export function brandsOf(products: Product[]): string[] {
+  return [...new Set(products.map((p) => p.brand?.trim()).filter((b): b is string => !!b))].sort((a, b) => a.localeCompare(b))
+}
+
 /** Volume d'une flasque (L). */
 export const FLASK_L = 0.5
 /** Flasques portées au plus : au-delà, il faut remplir en route. */

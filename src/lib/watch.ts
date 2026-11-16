@@ -31,7 +31,7 @@
 // Les champs ajoutés en fin de ligne S et les lignes E, P et F sont ignorés par les versions plus anciennes
 // du champ.
 import { indexAt } from './gpx'
-import { extraSodium, FLASK_L, intakeOrder, nutritionPlan, type Leg } from './nutrition'
+import { extraSodium, FLASK_L, intakeOrder, nutritionPlan, raceProducts, type Leg } from './nutrition'
 import { isFreeStart } from './plan'
 import { simplifyRoute } from './routeGeo'
 import { zonedToUtc } from './time'
@@ -108,7 +108,7 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
       return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}|${clean((s.cp.notes ?? '').replace(/[|\s]+/g, ' '), 40)}`
     }),
-    ...foodLines(nutritionPlan(race, sim, athlete.products), sim.splits),
+    ...foodLines(nutritionPlan(race, sim, raceProducts(race, athlete.products)), sim.splits),
   ]
   const base = lines.join('\n')
   // Taille en octets (accents des noms sur 2 octets) ; les lignes E et G n'ont que des caractères ASCII.
