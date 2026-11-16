@@ -17,7 +17,8 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         <Hint>
           Tes produits habituels : type, marque, glucides et sodium <strong>au 100 g</strong> (ou 100 ml) et poids d'une portion, comme
           sur l'étiquette ; la portion en est déduite. Le plan nutrition de chaque course en tire le nombre de gels ou de solides à
-          emporter entre deux ravitos, selon la part des glucides. <strong>Flasque</strong> (liquide) : ta boisson isotonique en poudre
+          emporter entre deux ravitos, selon la part des glucides. <strong>Sur ravito</strong> : aliment mangé ou bu au ravito (banane, bouillon…), compté
+          dans le tronçon qui en part mais pas emporté (ni au départ, ni dans le sac ou les dropbags). <strong>Flasque</strong> (liquide) : ta boisson isotonique en poudre
           pour 500 ml d'eau (si plusieurs, la première retenue pour la course sert) ; un liquide sans flasque (bouillon, coca) se compte comme un gel ou un solide. Isotonique en flasque : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon,
           sinon une d'eau et une d'isotonique, puis une de plus par 500 ml d'eau commencés (en alternant eau et isotonique),
           ses glucides et son sodium déduits du plan ; au-delà de 4 flasques, le plan signale qu'il faut remplir en route.
@@ -31,7 +32,7 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         <table className="table compact">
           <thead>
             <tr>
-              <th>Produit</th><th>Type</th><th title="Boisson en poudre pour une flasque de 500 ml">Flasque</th><th>Marque</th>
+              <th>Produit</th><th>Type</th><th title="Boisson en poudre pour une flasque de 500 ml">Flasque</th><th title="Mangé ou bu au ravito (fourni par l'organisation), pas emporté">Sur ravito</th><th>Marque</th>
               <th>Glucides /100 g</th><th>Sodium /100 g</th><th>Poids (g)</th><th>Par portion</th><th>Part des glucides (%)</th><th />
             </tr>
           </thead>
@@ -61,6 +62,13 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                       <span className="muted">—</span>
                     )}
                   </td>
+                  <td>
+                    {isFlask(p) || isFlaskWater(p) ? (
+                      <span className="muted">—</span>
+                    ) : (
+                      <input type="checkbox" checked={!!p.atRavito} onChange={(e) => setP({ atRavito: e.target.checked })} aria-label={`${p.name} sur ravito`} title="Mangé ou bu au ravito, pas emporté" />
+                    )}
+                  </td>
                   <td><input type="text" value={p.brand ?? ''} placeholder="—" list="tp-brands" size={10} onChange={(e) => setP({ brand: e.target.value || undefined })} aria-label={`Marque de ${p.name}`} /></td>
                   <td><Num value={v.carbs} width={60} min={0} unit="g" onChange={(x) => setV({ carbs: x })} /></td>
                   <td><Num value={v.sodium} width={64} min={0} unit="mg" onChange={(x) => setV({ sodium: x })} /></td>
@@ -82,7 +90,7 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
               )
             })}
             <tr>
-              <td colSpan={10}>
+              <td colSpan={11}>
                 <button className="ghost" onClick={() => set([...products, withPer100({ id: crypto.randomUUID(), name: 'Nouveau produit', type: 'gel', carbs: 0, sodium: 0, share: 0 }, { carbs: 65, sodium: 100, weight: 40 })])}>
                   <Plus /> Ajouter un produit
                 </button>

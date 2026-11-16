@@ -2,7 +2,7 @@ import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, Fil
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, legSupply, nutritionPlan, PRODUCT_TYPES, productType, raceProducts, shortOf } from '../lib/nutrition'
+import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, isAtRavito, legSupply, nutritionPlan, PRODUCT_TYPES, productType, raceProducts, ravitoText, shortOf } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
@@ -19,7 +19,7 @@ import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { CourseProfile } from './CourseProfile'
-import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY } from '../lib/productLibrary'
+import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY, RAVITO_BRAND } from '../lib/productLibrary'
 import { ZonePicker, ZonesCard } from './Zones'
 import { Card, Hint, Kpi, Num, Toggle } from './ui'
 
@@ -244,7 +244,7 @@ export function RacePlan({
           const of = athlete.products.filter((x) => productType(x) === t && (x.id === current || !ids.has(x.id)))
           return of.length ? (
             <optgroup key={t} label={`Mes produits · ${PRODUCT_TYPES[t]}`}>
-              {of.map((x) => <option key={x.id} value={x.id}>{x.name}{x.brand ? ` · ${x.brand}` : ''}</option>)}
+              {of.map((x) => <option key={x.id} value={x.id}>{x.name}{x.brand ? ` · ${x.brand}` : ''}{isAtRavito(x) ? ' · sur ravito' : ''}</option>)}
             </optgroup>
           ) : null
         })}
@@ -252,7 +252,7 @@ export function RacePlan({
           const of = PRODUCT_LIBRARY.filter((it) => it.brand === b && !owned.has(it.id))
           return of.length ? (
             <optgroup key={b} label={`Bibliothèque · ${b}`}>
-              {of.map((it) => <option key={it.id} value={`lib:${it.id}`}>{it.name}</option>)}
+              {of.map((it) => <option key={it.id} value={`lib:${it.id}`}>{it.name}{it.brand === RAVITO_BRAND && !it.flask ? ' · sur ravito' : ''}</option>)}
             </optgroup>
           ) : null
         })}
@@ -1067,6 +1067,7 @@ export function RacePlan({
                   <select value={p.id} onChange={(e) => chooseProduct(e.target.value, p.id)} aria-label="Produit">
                     {productOptions(p.id)}
                   </select>
+                  {isAtRavito(p) && <span className="tag ravito-tag" title="Mangé ou bu au ravito, pas emporté">sur ravito</span>}
                   <button className="ghost" onClick={() => set({ productIds: products.filter((x) => x.id !== p.id).map((x) => x.id) })} aria-label={`Retirer ${p.name}`}><Trash2 /></button>
                 </div>
               ))}
@@ -1141,7 +1142,10 @@ export function RacePlan({
                         </>
                       )
                     })()}
-                    <td>{bagText(l)}</td>
+                    <td>
+                      {bagText(l, false)}
+                      {ravitoText(l) && <div className="small ravito-line">Sur ravito : {ravitoText(l)}</div>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -212,6 +212,8 @@ export interface Product {
   weight?: number
   /** Repris de la bibliothèque de base (identifiant de l'article). */
   libraryId?: string
+  /** Sur ravito : mangé ou bu au ravitaillement (fourni par l'organisation), pas emporté. */
+  atRavito?: boolean
 }
 
 /** Type de produit ; l'eau (plate ou minérale) est un liquide sans glucides. */

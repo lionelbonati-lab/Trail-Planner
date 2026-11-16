@@ -166,3 +166,25 @@ describe('quantités prévues à côté des requises', () => {
     expect(shortOf(75, 78)).toBe(false)
   })
 })
+
+describe('produits « sur ravito »', () => {
+  it('pas au départ, mangés au ravito : hors du sac, des dropbags et des rappels montre', async () => {
+    const { isAtRavito, ravitoText, dropbagPlan } = await import('../nutrition')
+    const race = newRace('Ravito', gpx(40))
+    race.checkpoints = [{ id: 'a', dist: 15000, name: 'A', kind: 'ravito', stopMin: 3, cutoff: '', water: 0, carbs: 0, notes: '', auto: false, dropbag: true }]
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const banane: Product = { id: 'ban', name: 'Banane', type: 'solid', carbs: 13, sodium: 1, share: 0.5, atRavito: true }
+    const products = [...DEFAULT_PRODUCTS, banane]
+    expect(isAtRavito(banane)).toBe(true)
+    const legs = nutritionPlan(race, plan.sim, products)
+    expect(legs[0].products.some((x) => x.product.id === 'ban')).toBe(false)
+    expect(legs[1].products.some((x) => x.product.id === 'ban')).toBe(true)
+    expect(bagText(legs[1])).toMatch(/ ; sur ravito : \d+ × Banane$/)
+    expect(bagText(legs[1], false)).not.toContain('Banane')
+    expect(ravitoText(legs[1])).toMatch(/Banane/)
+    const [bag] = dropbagPlan(legs, race.checkpoints)
+    expect(bag.products.some((x) => x.product.id === 'ban')).toBe(false)
+    const lines = watchPlan(race, { ...DEFAULT_ATHLETE, products }, plan.track, plan.sim).split('\n')
+    expect(lines.find((l) => l.startsWith('P|')) ?? '').not.toContain('Banane')
+  })
+})

@@ -71,6 +71,12 @@ export const isFlask = (p: Product): boolean => productType(p) === 'liquid' && (
  */
 export const isFlaskWater = (p: Product): boolean => productType(p) === 'liquid' && (p.flask ?? true) && !(p.carbs > 0)
 
+/**
+ * Sur ravito : mangé ou bu au ravitaillement, pas emporté (pas au départ, ni dans le sac ou les
+ * dropbags). Une boisson en flasque reste emportée.
+ */
+export const isAtRavito = (p: Product): boolean => !!p.atRavito && !isFlask(p) && !isFlaskWater(p)
+
 /** Poids d'une portion par défaut (g) : produits saisis avant les valeurs au 100 g. */
 const DEFAULT_WEIGHT: Record<ProductType, number> = { gel: 40, solid: 50, liquid: 40 }
 
@@ -125,9 +131,11 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   const iso = products.find((p) => isFlask(p)) ?? null
   // Eau minérale salée (type « Eau » avec du sodium, par flasque de 500 ml) : remplit les flasques d'eau.
   const mineral = products.find((p) => isFlaskWater(p) && p.sodium > 0) ?? null
-  const usable = products.filter((p) => p !== iso && !isFlaskWater(p) && p.carbs > 0 && p.share > 0)
-  const totalShare = usable.reduce((a, p) => a + p.share, 0) || 1
+  const usableAll = products.filter((p) => p !== iso && !isFlaskWater(p) && p.carbs > 0 && p.share > 0)
   for (const s of stops) {
+    // Au départ, pas de ravito : les produits « sur ravito » n'y sont pas proposés.
+    const usable = fromId === null ? usableAll.filter((p) => !isAtRavito(p)) : usableAll
+    const totalShare = usable.reduce((a, p) => a + p.share, 0) || 1
     const duration = Math.max(0, s.arrival - fromTime)
     const h = duration / 3600
     const seg = sim.points.filter((p) => p.dist >= fromDist && p.dist <= s.to)
@@ -228,14 +236,25 @@ export function flaskWarning(leg: Leg): string | null {
 }
 
 /** Contenu du sac à prendre au départ d'un tronçon, en une ligne : eau réelle et flasques, produits, sel. */
-export function bagText(leg: Leg): string {
-  const items = leg.products.filter((x) => x.product.id !== leg.flasks.isoId && x.product.id !== leg.flasks.waterId).map((x) => `${x.count} × ${x.product.name}`)
+export function bagText(leg: Leg, withRavito = true): string {
+  const items = leg.products
+    .filter((x) => x.product.id !== leg.flasks.isoId && x.product.id !== leg.flasks.waterId && !isAtRavito(x.product))
+    .map((x) => `${x.count} × ${x.product.name}`)
   const salt = extraSodium(leg)
   if (salt) items.push(`+${salt} mg de sodium (sel)`)
   const flasks = flaskText(leg)
   const warn = flaskWarning(leg)
   const water = leg.water ? `${leg.water} L${flasks ? ` : ${flasks}` : ' d\'eau'}${warn ? ` (⚠ ${warn})` : ''}` : ''
-  return [water, ...items].filter(Boolean).join(', ')
+  const onSite = withRavito ? ravitoText(leg) : ''
+  return [water, ...items].filter(Boolean).join(', ') + (onSite ? ` ; sur ravito : ${onSite}` : '')
+}
+
+/** Produits « sur ravito » d'un tronçon (mangés ou bus au ravito de départ), en une ligne, ou ''. */
+export function ravitoText(leg: Leg): string {
+  return leg.products
+    .filter((x) => isAtRavito(x.product))
+    .map((x) => `${x.count} × ${x.product.name}`)
+    .join(', ')
 }
 
 /**
@@ -276,7 +295,7 @@ export function dropbagPlan(legs: Leg[], checkpoints: { id: string; name: string
     const next = legs.findIndex((l, i) => i > start && bags.some((b) => b.id === l.fromId))
     const span = legs.slice(start, next < 0 ? legs.length : next)
     const byId = new Map<string, { product: Product; count: number }>()
-    for (const l of span) for (const x of l.products) byId.set(x.product.id, { product: x.product, count: (byId.get(x.product.id)?.count ?? 0) + x.count })
+    for (const l of span) for (const x of l.products.filter((y) => !isAtRavito(y.product))) byId.set(x.product.id, { product: x.product, count: (byId.get(x.product.id)?.count ?? 0) + x.count })
     out.push({
       id: bag.id,
       name: bag.name,
