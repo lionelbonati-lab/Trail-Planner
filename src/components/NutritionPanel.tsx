@@ -21,8 +21,9 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
           pour 500 ml d'eau (si plusieurs, la première retenue pour la course sert) ; un liquide sans flasque (bouillon, coca) se compte comme un gel ou un solide. Isotonique en flasque : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon,
           sinon une d'eau et une d'isotonique, puis une de plus par 500 ml d'eau commencés (en alternant eau et isotonique),
           ses glucides et son sodium déduits du plan ; au-delà de 4 flasques, le plan signale qu'il faut remplir en route.
-          <strong> Eau</strong> (case Flasque cochée) : remplit les flasques d'eau ; une eau minérale salée (St-Yorre : environ
-          850 mg de sodium par 500 ml) y est mélangée à l'eau plate, juste assez pour le sodium visé ; case décochée : ignorée. Dans chaque course, la carte « Nutrition » choisit les
+          L'eau est un <strong>liquide sans glucides</strong> : case Flasque cochée, elle remplit les flasques d'eau ; une eau
+          minérale salée (St-Yorre : environ 850 mg de sodium par 500 ml) y est mélangée à l'eau plate, juste assez pour le sodium
+          visé ; case décochée : ignorée. Dans chaque course, la carte « Nutrition » choisit les
           produits retenus ou la marque présente aux ravitaillements.
         </Hint>
         <datalist id="tp-brands">{brandsOf(products).map((b) => <option key={b} value={b} />)}</datalist>
@@ -48,13 +49,13 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                     </select>
                   </td>
                   <td>
-                    {productType(p) === 'liquid' || productType(p) === 'water' ? (
+                    {productType(p) === 'liquid' ? (
                       <input
                         type="checkbox"
-                        checked={productType(p) === 'water' ? isFlaskWater(p) : isFlask(p)}
+                        checked={p.carbs > 0 ? isFlask(p) : isFlaskWater(p)}
                         onChange={(e) => setP({ flask: e.target.checked })}
                         aria-label={`${p.name} en flasque`}
-                        title={productType(p) === 'water' ? "Eau des flasques (une eau salée y est mélangée) ; décochée : ignorée" : 'Poudre pour une flasque de 500 ml (isotonique)'}
+                        title={p.carbs > 0 ? 'Poudre pour une flasque de 500 ml (isotonique)' : 'Eau des flasques (une eau salée y est mélangée) ; décochée : ignorée'}
                       />
                     ) : (
                       <span className="muted">—</span>
@@ -68,7 +69,9 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                   <td>
                     {isFlask(p) ? (
                       <span className="muted">selon l’eau</span>
-                    ) : productType(p) === 'water' ? (
+                    ) : isFlaskWater(p) ? (
+                      <span className="muted">eau des flasques</span>
+                    ) : productType(p) === 'liquid' && !(p.carbs > 0) ? (
                       <span className="muted">—</span>
                     ) : (
                       <Num value={p.share} scale={100} width={70} min={0} max={100} onChange={(v) => setP({ share: v })} />

@@ -43,14 +43,18 @@ export const FLASK_L = 0.5
 /** Flasques portées au plus : au-delà, il faut remplir en route. */
 export const MAX_FLASKS = 4
 
-export const PRODUCT_TYPES: Record<ProductType, string> = { solid: 'Solide', liquid: 'Liquide', gel: 'Gel', water: 'Eau' }
+export const PRODUCT_TYPES: Record<ProductType, string> = { solid: 'Solide', liquid: 'Liquide', gel: 'Gel' }
 
-/** Type d'un produit ; anciens produits : déduit de la case flasque et du nom. */
+/**
+ * Type d'un produit ; anciens produits : déduit de la case flasque et du nom. L'ancien type « Eau » est
+ * un liquide (sans glucides).
+ */
 export function productType(p: Product): ProductType {
+  if ((p.type as string) === 'water') return 'liquid'
   if (p.type) return p.type
   if (p.flask ?? p.id === 'boisson') return 'liquid'
   if (/gel/i.test(p.name)) return 'gel'
-  if (/^eau\b|water/i.test(p.name)) return 'water'
+  if (/^eau\b|water|yorre/i.test(p.name)) return 'liquid'
   return 'solid'
 }
 
@@ -59,17 +63,21 @@ export function productType(p: Product): ProductType {
  * liquide (le produit « boisson » des anciens profils). Un liquide sans flasque (bouillon, coca) se compte
  * comme un gel ou un solide.
  */
-export const isFlask = (p: Product): boolean => productType(p) === 'liquid' && (p.flask ?? true)
+export const isFlask = (p: Product): boolean => productType(p) === 'liquid' && (p.flask ?? true) && p.carbs > 0
 
-/** Eau en flasque (case « Flasque » d'un produit Eau, cochée par défaut) ; décochée, elle est ignorée. */
-export const isFlaskWater = (p: Product): boolean => productType(p) === 'water' && (p.flask ?? true)
+/**
+ * Eau en flasque : liquide sans glucides (eau plate, eau minérale salée) avec la case « Flasque »
+ * (cochée par défaut) ; décochée, elle est ignorée.
+ */
+export const isFlaskWater = (p: Product): boolean => productType(p) === 'liquid' && (p.flask ?? true) && !(p.carbs > 0)
 
 /** Poids d'une portion par défaut (g) : produits saisis avant les valeurs au 100 g. */
-const DEFAULT_WEIGHT: Record<ProductType, number> = { gel: 40, solid: 50, liquid: 40, water: 500 }
+const DEFAULT_WEIGHT: Record<ProductType, number> = { gel: 40, solid: 50, liquid: 40 }
 
 /** Valeurs au 100 g et poids d'une portion ; anciens produits : déduits des valeurs par portion. */
 export function per100(p: Product): { carbs: number; sodium: number; weight: number } {
-  const weight = p.weight && p.weight > 0 ? p.weight : DEFAULT_WEIGHT[productType(p)]
+  // Eau (liquide sans glucides) : une flasque de 500 ml.
+  const weight = p.weight && p.weight > 0 ? p.weight : productType(p) === 'liquid' && !(p.carbs > 0) ? 500 : DEFAULT_WEIGHT[productType(p)]
   return {
     carbs: p.per100Carbs ?? Math.round((p.carbs * 1000) / weight) / 10,
     sodium: p.per100Sodium ?? Math.round((p.sodium * 100) / weight),
@@ -117,7 +125,7 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   const iso = products.find((p) => isFlask(p)) ?? null
   // Eau minérale salée (type « Eau » avec du sodium, par flasque de 500 ml) : remplit les flasques d'eau.
   const mineral = products.find((p) => isFlaskWater(p) && p.sodium > 0) ?? null
-  const usable = products.filter((p) => p !== iso && productType(p) !== 'water' && p.carbs > 0 && p.share > 0)
+  const usable = products.filter((p) => p !== iso && !isFlaskWater(p) && p.carbs > 0 && p.share > 0)
   const totalShare = usable.reduce((a, p) => a + p.share, 0) || 1
   for (const s of stops) {
     const duration = Math.max(0, s.arrival - fromTime)

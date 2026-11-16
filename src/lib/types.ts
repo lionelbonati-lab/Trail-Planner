@@ -214,7 +214,8 @@ export interface Product {
   libraryId?: string
 }
 
-export type ProductType = 'solid' | 'liquid' | 'gel' | 'water'
+/** Type de produit ; l'eau (plate ou minérale) est un liquide sans glucides. */
+export type ProductType = 'solid' | 'liquid' | 'gel'
 
 export interface TrainingZone {
   name: string
