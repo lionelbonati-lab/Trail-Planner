@@ -134,9 +134,15 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   (0,4 L → 1 iso ; 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2),
   quantité réelle toujours affichée ; glucides et sodium de l'isotonique déduits, gels et barres complètent ;
   alerte au-delà de 4 flasques (remplir en route).
-- Onglet **Nutrition** : tes produits avec leur **type** (solide, liquide = isotonique en flasque, gel, eau ; une eau minérale salée comme la St-Yorre est mélangée à l'eau des flasques, juste assez pour le sodium visé), marque, glucides, sodium et part des glucides. Carte **Nutrition** de
-  chaque course : glucides, eau et sodium par heure, **marque présente aux ravitaillements** (coche ses produits)
-  et **produits retenus** pour la course (une liste : chaque ligne choisit un produit, « Ajouter un produit » en ajoute une) (plan nutrition, dropbags et montre n'utilisent qu'eux).
+- Onglet **Nutrition** : tes produits avec leur **type** (solide, liquide, gel, eau), une case **Flasque** (poudre pour une
+  flasque de 500 ml), leur marque, les glucides et le sodium **au 100 g** et le **poids** d'une portion (la portion en est
+  déduite) et la part des glucides ; une eau minérale salée comme la St-Yorre est mélangée à l'eau des flasques, juste assez
+  pour le sodium visé. **Bibliothèque de produits** : aliments fréquents aux ravitaillements (banane, orange, fruits secs,
+  pain d'épices, chips, fromage, bouillon, coca, soupe, St-Yorre…) et produits Baouw, Näak, TA Energy, Overstim.s, Maurten,
+  Sponser et Decathlon, saveurs aux apports presque identiques regroupées ; valeurs indicatives, « Ajouter » les copie dans
+  tes produits. Carte **Nutrition** de chaque course : glucides, eau et sodium par heure, **marque présente aux
+  ravitaillements** (« Ravitaillement » pour les aliments servis par l'organisation) et **produits retenus** (une liste :
+  chaque ligne choisit un produit, « Ajouter un produit » en ajoute une).
 - Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 

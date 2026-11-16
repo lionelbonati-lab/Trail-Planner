@@ -206,6 +206,12 @@ export interface Product {
   brand?: string
   /** Type : solide, liquide (boisson isotonique en flasque), gel ou eau. */
   type?: ProductType
+  /** Valeurs au 100 g (ou 100 ml) et poids d'une portion (g) : `carbs` et `sodium` en sont tirés. */
+  per100Carbs?: number
+  per100Sodium?: number
+  weight?: number
+  /** Repris de la bibliothèque de base (identifiant de l'article). */
+  libraryId?: string
 }
 
 export type ProductType = 'solid' | 'liquid' | 'gel' | 'water'

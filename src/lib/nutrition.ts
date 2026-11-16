@@ -54,8 +54,37 @@ export function productType(p: Product): ProductType {
   return 'solid'
 }
 
-/** Boisson isotonique en flasque : produit liquide (par défaut, le produit « boisson » des profils). */
-export const isFlask = (p: Product): boolean => productType(p) === 'liquid'
+/**
+ * Boisson en flasque (poudre pour 500 ml d'eau) : case « Flasque » du produit ; par défaut, un produit
+ * liquide (le produit « boisson » des anciens profils). Un liquide sans flasque (bouillon, coca) se compte
+ * comme un gel ou un solide.
+ */
+export const isFlask = (p: Product): boolean => p.flask ?? productType(p) === 'liquid'
+
+/** Poids d'une portion par défaut (g) : produits saisis avant les valeurs au 100 g. */
+const DEFAULT_WEIGHT: Record<ProductType, number> = { gel: 40, solid: 50, liquid: 40, water: 500 }
+
+/** Valeurs au 100 g et poids d'une portion ; anciens produits : déduits des valeurs par portion. */
+export function per100(p: Product): { carbs: number; sodium: number; weight: number } {
+  const weight = p.weight && p.weight > 0 ? p.weight : DEFAULT_WEIGHT[productType(p)]
+  return {
+    carbs: p.per100Carbs ?? Math.round((p.carbs * 1000) / weight) / 10,
+    sodium: p.per100Sodium ?? Math.round((p.sodium * 100) / weight),
+    weight,
+  }
+}
+
+/** Produit aux valeurs au 100 g : glucides et sodium d'une portion recalculés. */
+export function withPer100(p: Product, v: { carbs: number; sodium: number; weight: number }): Product {
+  return {
+    ...p,
+    per100Carbs: v.carbs,
+    per100Sodium: v.sodium,
+    weight: v.weight,
+    carbs: Math.round((v.carbs * v.weight) / 10) / 10,
+    sodium: Math.round((v.sodium * v.weight) / 100),
+  }
+}
 
 /**
  * Flasques de 500 ml pour `water` litres : autant que de 500 ml commencés. Avec isotonique : une seule

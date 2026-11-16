@@ -1,5 +1,7 @@
-import { Plus, Trash2 } from 'lucide-react'
-import { brandsOf, isFlask, PRODUCT_TYPES, productType } from '../lib/nutrition'
+import { Check, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { brandsOf, isFlask, per100, PRODUCT_TYPES, productType, withPer100 } from '../lib/nutrition'
+import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY } from '../lib/productLibrary'
 import type { Athlete, Product, ProductType } from '../lib/types'
 import { Card, Hint, Num } from './ui'
 
@@ -7,13 +9,16 @@ import { Card, Hint, Num } from './ui'
 export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
   const products = athlete.products
   const set = (next: Product[]) => onChange({ ...athlete, products: next })
+  const [libBrand, setLibBrand] = useState<string>(LIBRARY_BRANDS[0])
+  const owned = new Set(products.map((p) => p.libraryId).filter(Boolean))
   return (
     <div className="grid two">
       <Card title="Mes produits" className="span2" fold="open">
         <Hint>
-          Tes produits habituels, leur type, leur marque et la part des glucides que chacun apporte : le plan nutrition de chaque
-          course en déduit le nombre de gels ou de solides à emporter entre deux ravitos. <strong>Liquide</strong> : ta boisson
-          isotonique en flasque (poudre pour 500 ml d'eau) : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon,
+          Tes produits habituels : type, marque, glucides et sodium <strong>au 100 g</strong> (ou 100 ml) et poids d'une portion, comme
+          sur l'étiquette ; la portion en est déduite. Le plan nutrition de chaque course en tire le nombre de gels ou de solides à
+          emporter entre deux ravitos, selon la part des glucides. <strong>Flasque</strong> (liquide) : ta boisson isotonique en poudre
+          pour 500 ml d'eau (si plusieurs, la première retenue pour la course sert) ; un liquide sans flasque (bouillon, coca) se compte comme un gel ou un solide. Isotonique en flasque : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon,
           sinon une d'eau et une d'isotonique, puis une de plus par 500 ml d'eau commencés (en alternant eau et isotonique),
           ses glucides et son sodium déduits du plan ; au-delà de 4 flasques, le plan signale qu'il faut remplir en route.
           <strong> Eau</strong> : par flasque de 500 ml ; une eau minérale salée (St-Yorre : environ 850 mg de sodium par
@@ -24,11 +29,16 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         <div className="scroll">
         <table className="table compact">
           <thead>
-            <tr><th>Produit</th><th>Type</th><th>Marque</th><th>Glucides (g)</th><th>Sodium (mg)</th><th>Part des glucides (%)</th><th /></tr>
+            <tr>
+              <th>Produit</th><th>Type</th><th title="Boisson en poudre pour une flasque de 500 ml">Flasque</th><th>Marque</th>
+              <th>Glucides /100 g</th><th>Sodium /100 g</th><th>Poids (g)</th><th>Par portion</th><th>Part des glucides (%)</th><th />
+            </tr>
           </thead>
           <tbody>
             {products.map((p, i) => {
-              const setP = (patch: Partial<Product>) => set( products.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+              const setP = (patch: Partial<Product>) => set(products.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+              const v = per100(p)
+              const setV = (patch: Partial<typeof v>) => set(products.map((x, j) => (j === i ? withPer100(x, { ...v, ...patch }) : x)))
               return (
                 <tr key={p.id}>
                   <td><input type="text" value={p.name} onChange={(e) => setP({ name: e.target.value })} /></td>
@@ -37,11 +47,20 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                       {(Object.keys(PRODUCT_TYPES) as ProductType[]).map((t) => <option key={t} value={t}>{PRODUCT_TYPES[t]}</option>)}
                     </select>
                   </td>
-                  <td><input type="text" value={p.brand ?? ''} placeholder="—" list="tp-brands" size={10} onChange={(e) => setP({ brand: e.target.value || undefined })} aria-label={`Marque de ${p.name}`} /></td>
-                  <td><Num value={p.carbs} width={70} min={0} onChange={(v) => setP({ carbs: v })} /></td>
-                  <td><Num value={p.sodium} width={70} min={0} onChange={(v) => setP({ sodium: v })} /></td>
                   <td>
                     {productType(p) === 'liquid' ? (
+                      <input type="checkbox" checked={isFlask(p)} onChange={(e) => setP({ flask: e.target.checked })} aria-label={`${p.name} en flasque`} title="Poudre pour une flasque de 500 ml (isotonique)" />
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                  <td><input type="text" value={p.brand ?? ''} placeholder="—" list="tp-brands" size={10} onChange={(e) => setP({ brand: e.target.value || undefined })} aria-label={`Marque de ${p.name}`} /></td>
+                  <td><Num value={v.carbs} width={60} min={0} unit="g" onChange={(x) => setV({ carbs: x })} /></td>
+                  <td><Num value={v.sodium} width={64} min={0} unit="mg" onChange={(x) => setV({ sodium: x })} /></td>
+                  <td><Num value={v.weight} width={60} min={1} unit="g" onChange={(x) => setV({ weight: Math.max(1, x) })} /></td>
+                  <td className="muted small">{Math.round(p.carbs)} g gluc. · {Math.round(p.sodium)} mg Na</td>
+                  <td>
+                    {isFlask(p) ? (
                       <span className="muted">selon l’eau</span>
                     ) : productType(p) === 'water' ? (
                       <span className="muted">—</span>
@@ -54,8 +73,8 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
               )
             })}
             <tr>
-              <td colSpan={7}>
-                <button className="ghost" onClick={() => set( [...products, { id: crypto.randomUUID(), name: 'Nouveau produit', carbs: 25, sodium: 0, share: 0 }])}>
+              <td colSpan={10}>
+                <button className="ghost" onClick={() => set([...products, withPer100({ id: crypto.randomUUID(), name: 'Nouveau produit', type: 'gel', carbs: 0, sodium: 0, share: 0 }, { carbs: 65, sodium: 100, weight: 40 })])}>
                   <Plus /> Ajouter un produit
                 </button>
                 {(() => {
@@ -66,6 +85,55 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
             </tr>
           </tbody>
         </table>
+        </div>
+      </Card>
+
+      <Card title="Bibliothèque de produits" className="span2">
+        <Hint>
+          Produits fréquents aux ravitaillements et produits de quelques marques, saveurs aux apports presque identiques regroupées.
+          Valeurs indicatives relevées sur les fiches des fabricants ou des revendeurs : vérifie l'étiquette. « Ajouter » copie le
+          produit dans tes produits (modifiable).
+        </Hint>
+        <div className="seg lib-brands" role="group" aria-label="Marque">
+          {LIBRARY_BRANDS.map((b) => (
+            <button key={b} className={libBrand === b ? 'on' : ''} onClick={() => setLibBrand(b)}>{b}</button>
+          ))}
+        </div>
+        <div className="scroll">
+          <table className="table compact">
+            <thead>
+              <tr><th>Produit</th><th>Type</th><th>Glucides /100 g</th><th>Sodium /100 g</th><th>Portion</th><th /></tr>
+            </thead>
+            <tbody>
+              {PRODUCT_LIBRARY.filter((it) => it.brand === libBrand).map((it) => (
+                <tr key={it.id}>
+                  <td>
+                    <strong>{it.name}</strong>
+                    {it.note && <div className="muted small">{it.note}</div>}
+                  </td>
+                  <td>{PRODUCT_TYPES[it.type]}{it.flask ? ' · flasque' : ''}</td>
+                  <td>{it.carbs} g</td>
+                  <td>{it.sodium} mg</td>
+                  <td>{it.weight} g · {Math.round((it.carbs * it.weight) / 100)} g gluc. · {Math.round((it.sodium * it.weight) / 100)} mg Na</td>
+                  <td>
+                    {owned.has(it.id) ? (
+                      <span className="muted small"><Check className="inline" /> ajouté</span>
+                    ) : (
+                      <button className="ghost" onClick={() => set([...products, libraryProduct(it)])}><Plus /> Ajouter</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="row">
+          <button
+            onClick={() => set([...products, ...PRODUCT_LIBRARY.filter((it) => it.brand === libBrand && !owned.has(it.id)).map(libraryProduct)])}
+            disabled={PRODUCT_LIBRARY.filter((it) => it.brand === libBrand).every((it) => owned.has(it.id))}
+          >
+            <Plus /> Ajouter tous les produits {libBrand === 'Ravitaillement' ? 'de ravitaillement' : libBrand}
+          </button>
         </div>
       </Card>
     </div>
