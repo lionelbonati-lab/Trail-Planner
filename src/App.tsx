@@ -293,7 +293,9 @@ export default function App() {
         .map((m) => ({ id: crypto.randomUUID(), dist: m.dist, name: m.name, kind: 'split', stopMin: 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }))
     if (edited) {
       const next = { ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name }
-      const checkpoints = [...next.checkpoints, ...markPoints(next.checkpoints)].sort((a, b) => a.dist - b.dist)
+      // Points de course placés dans le traceur : ils remplacent ceux recalés sur le nouveau tracé.
+      const base = d.checkpoints ?? next.checkpoints
+      const checkpoints = [...base, ...markPoints(base)].sort((a, b) => a.dist - b.dist)
       updateRace({ ...next, checkpoints, ...(d.zones ? { zones: d.zones } : {}) })
       go(edited.kind === 'route' ? 'parcours' : 'races', edited.id)
     } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [], checkpoints: markPoints([]) })
@@ -572,6 +574,7 @@ export default function App() {
               athlete={athlete}
               race={current ?? null}
               onSave={(d) => saveDrawing(d, current ?? null)}
+              startTool={window.location.hash.endsWith('/points') ? 'points' : 'trace'}
               onBack={() => (current ? go(current.kind === 'route' ? 'parcours' : 'races', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
             />
           </Suspense>
@@ -623,8 +626,9 @@ export default function App() {
               watchStart={watchStart}
               onChange={updateRace}
               onAthleteChange={updateAthlete}
-              onLive={() => go('live', current.id)}
-              onRedraw={() => go('tracer', current.id)}
+              onRedraw={(tool) => {
+                window.location.hash = `/tracer/${current.id}${tool === 'points' ? '/points' : ''}`
+              }}
               library={{
                 kind: current.kind,
                 addToLibrary: () => addRaceCopy(toRoute(current)),

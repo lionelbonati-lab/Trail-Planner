@@ -13,6 +13,7 @@ import {
   Eraser,
   FileDown,
   FileUp,
+  Flag,
   Footprints,
   LocateFixed,
   MapPin,
@@ -66,10 +67,13 @@ import {
   type Waypoint,
 } from '../lib/routing'
 import { formatDuration, formatPace } from '../lib/time'
-import type { Athlete, PaceZone, Race, RaceKind, SimResult, Track } from '../lib/types'
+import type { Athlete, Checkpoint, CheckpointKind, GeoPoint, PaceZone, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { colorForIndex, MODEL_COLOR, wholeRoute, wholeRouteZone, zoneTarget, type Target } from '../lib/zones'
 import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 import { Num } from './ui'
+import { AssistControls } from './AssistControls'
+import { assistAllowed } from '../lib/assist'
+import { checkpointName, CHECKPOINT_LABELS, defaultStop, isRavitoKind, withKind } from '../lib/splits'
 
 export interface DrawResult {
   name: string
@@ -82,6 +86,27 @@ export interface DrawResult {
   zones: PaceZone[] | null
   /** Points de repère : deviennent des points de passage de la course. */
   marks: { name: string; dist: number }[]
+  /** Points de passage placés en mode « Points de course » (distances sur le nouveau tracé), sinon absent. */
+  checkpoints?: Checkpoint[]
+}
+
+/** Point de passage avec sa position (il suit le tracé si celui-ci est modifié). */
+type PlacedCp = Checkpoint & { lat: number; lon: number }
+
+function initialCps(race: Race | null): PlacedCp[] {
+  if (!race) return []
+  try {
+    const raw = gpxRawPoints(race.gpxText)
+    let acc = 0
+    const dists = raw.map((p, i) => (acc += i ? haversine(raw[i - 1].lat, raw[i - 1].lon, p.lat, p.lon) : 0))
+    return race.checkpoints.map((c) => {
+      let i = 0
+      while (i < dists.length - 1 && dists[i] < c.dist) i++
+      return { ...c, lat: raw[i].lat, lon: raw[i].lon }
+    })
+  } catch {
+    return []
+  }
 }
 
 /** Allure simulée : modèle de course, zones déjà placées sur le parcours, ou une zone du profil (indice). */
@@ -94,6 +119,8 @@ interface Props {
   onSave: (r: DrawResult) => void
   /** Sortie du traceur sans enregistrer (flèche de retour, sur téléphone où il couvre tout l'écran). */
   onBack: () => void
+  /** Outil à l'ouverture : tracé, ou points de course (carte agrandie d'une course). */
+  startTool?: 'trace' | 'points'
 }
 
 /** Segment calculé ; `offroad` : point hors du réseau de chemins, tracé en ligne droite. */
@@ -236,7 +263,7 @@ function ModeSeg({ value, onChange }: { value: SegMode; onChange: (m: SegMode) =
 }
 
 /** Traceur de parcours plein écran : toucher = point sur les chemins, appui long = point hors sentier. */
-export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
+export default function RouteBuilder({ athlete, race, onSave, onBack, startTool }: Props) {
   const init = useMemo(() => initialState(race, athlete), []) // eslint-disable-line react-hooks/exhaustive-deps
   const cache = useRef(init.cache)
   const [wps, setWps] = useState<Waypoint[]>(init.wps)
@@ -256,6 +283,13 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const [pendingImport, setPendingImport] = useState<{ name: string; raw: RawPoint[]; marks?: TrackMark[] } | null>(null)
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<Sel>(null)
+  // Mode « Points de course » (course ou parcours existant) : points de passage posés et déplacés sur le tracé.
+  const [tool, setTool] = useState<'trace' | 'points'>(race && startTool === 'points' ? 'points' : 'trace')
+  const [cps, setCps] = useState<PlacedCp[]>(() => initialCps(race))
+  const [cpsDirty, setCpsDirty] = useState(false)
+  const [selCp, setSelCp] = useState<string | null>(null)
+  const [accessFor, setAccessFor] = useState<string | null>(null)
+  const cpLayer = useRef<L.LayerGroup | null>(null)
   const [menu, setMenu] = useState(false)
   const [sheet, setSheet] = useState<SheetState>('peek')
   // Glisser la feuille : hauteur suivie au doigt, puis calage sur la hauteur voisine.
@@ -430,6 +464,58 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     if (j <= 0 || j >= wps.length || wps[j].mode === m) return
     change(wps.map((w, i) => (i === j ? { ...w, mode: m } : w)))
   }
+  // Points de passage sur le tracé actuel (distance recalculée si le tracé a changé).
+  const placed = useMemo<PlacedCp[]>(() => {
+    if (!track) return cps
+    return cps
+      .map((c) => {
+        const i = nearestIndex(track.points, c.lat, c.lon)
+        return { ...c, dist: Math.round(track.points[i].dist) }
+      })
+      .sort((a, b) => a.dist - b.dist)
+  }, [cps, track])
+  const isRaceKind = (race?.kind ?? kind) === 'race'
+  const cpKinds: CheckpointKind[] = isRaceKind ? ['ravito', 'base', 'split', 'chrono', 'cutoff'] : ['split', 'chrono']
+  const editCps = (next: PlacedCp[]) => {
+    setCps(next)
+    setCpsDirty(true)
+  }
+  const patchCp = (id: string, patch: Partial<PlacedCp>) => editCps(cps.map((c) => (c.id === id ? { ...c, ...patch, auto: false } : c)))
+  const cpAt = (lat: number, lon: number) => {
+    if (!track) return null
+    return track.points[nearestIndex(track.points, lat, lon)]
+  }
+  const addCp = (lat: number, lon: number) => {
+    const p = cpAt(lat, lon)
+    if (!p) return
+    const k: CheckpointKind = isRaceKind ? 'ravito' : 'split'
+    const cp: PlacedCp = {
+      id: crypto.randomUUID(), dist: Math.round(p.dist), name: checkpointName(k, p.dist), kind: k, stopMin: defaultStop(k),
+      cutoff: '', water: 0, carbs: 0, notes: '', auto: false, lat: p.lat, lon: p.lon,
+    }
+    editCps([...cps, cp])
+    setSelCp(cp.id)
+  }
+  const moveCp = (id: string, lat: number, lon: number) => {
+    const p = cpAt(lat, lon)
+    const c = cps.find((x) => x.id === id)
+    if (!p || !c) return
+    patchCp(id, { lat: p.lat, lon: p.lon, dist: Math.round(p.dist), ...withKind({ ...c, dist: p.dist }, c.kind) })
+  }
+  const setCpKind = (c: PlacedCp, k: CheckpointKind) =>
+    patchCp(c.id, {
+      ...withKind(c, k),
+      ...(k === 'base' && c.kind !== 'base' ? { ...(c.stopMin <= defaultStop(c.kind) ? { stopMin: defaultStop('base') } : {}), ...(c.dropbag === undefined ? { dropbag: true } : {}) } : {}),
+      ...(c.kind === 'base' && k !== 'base' && c.stopMin === defaultStop('base') ? { stopMin: defaultStop(k) } : {}),
+    })
+  const selCpObj = tool === 'points' && selCp ? placed.find((c) => c.id === selCp) ?? null : null
+  const switchTool = (t: 'trace' | 'points') => {
+    setTool(t)
+    setSel(null)
+    setSelCp(null)
+    setAccessFor(null)
+  }
+
   const act = {
     add: (lat: number, lon: number, m: SegMode = mode) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
@@ -446,12 +532,14 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     // Clic (souris) : ferme d'abord ce qui est ouvert, sinon ajoute un point (ou place le départ
     // de la boucle automatique).
     tap: (lat: number, lon: number) => {
+      if (tool === 'points') return
       if (act.dismiss()) return
       if (autoOpen) act.placeStart(lat, lon)
       else act.add(lat, lon)
     },
     // Appui maintenu (téléphone) : ajoute toujours un point (ou place le départ de la boucle).
     holdAdd: (lat: number, lon: number) => {
+      if (tool === 'points') return
       setMenu(false)
       setPlaces(null)
       if (autoOpen) act.placeStart(lat, lon)
@@ -526,6 +614,18 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
       map.current?.panTo([p.lat, p.lon])
       if (mobile && sheet === 'full') setSheet('peek')
     },
+    addCp: (lat: number, lon: number) => addCp(lat, lon),
+    moveCp: (id: string, lat: number, lon: number) => moveCp(id, lat, lon),
+    /** Mode points : toucher la carte place l'accès assistance attendu, sinon ferme la fenêtre du point. */
+    pointsClick: (lat: number, lon: number): boolean => {
+      if (tool !== 'points') return false
+      if (accessFor) {
+        const at: GeoPoint = { lat, lon }
+        patchCp(accessFor, { access: at })
+        setAccessFor(null)
+      } else setSelCp(null)
+      return true
+    },
     deleteSel: () => {
       if (sel?.kind === 'wp') act.remove(sel.k)
     },
@@ -545,6 +645,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     kms.current = L.layerGroup().addTo(m)
     lines.current = L.layerGroup().addTo(m)
     marks.current = L.layerGroup().addTo(m)
+    cpLayer.current = L.layerGroup().addTo(m)
     cursor.current = L.circleMarker([0, 0], { radius: 7, color: '#1f2420', fillColor: '#f5c542', fillOpacity: 1, weight: 2, interactive: false })
     if (pts.length >= 2) m.fitBounds(L.latLngBounds(pts.map((p) => [p.lat, p.lon])), { padding: [40, 40] })
     else if (pts.length === 1) m.setView([pts[0].lat, pts[0].lon], 15)
@@ -552,6 +653,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     // Souris : un clic pose un point. Doigt : un toucher bref ne fait que fermer ce qui est
     // ouvert (on peut déplacer la carte sans rien poser) ; un point se pose par un appui maintenu.
     m.on('click', (e: L.LeafletMouseEvent) => {
+      if (actRef.current.pointsClick(e.latlng.lat, e.latlng.lng)) return
       if (Date.now() - held.current < 800) return
       if (lastPointer.current === 'mouse') actRef.current.tap(e.latlng.lat, e.latlng.lng)
       else actRef.current.dismiss()
@@ -665,7 +767,8 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
         dashArray: s.status !== 'ok' ? '4 6' : straight ? '9 7' : undefined,
         interactive: false,
       }).addTo(g)
-      // Bande invisible plus large : facile à toucher au doigt.
+      // Bande invisible plus large : facile à toucher au doigt (mode tracé seulement).
+      if (tool === 'points') return
       L.polyline(latlngs, { color: '#000', weight: 24, opacity: 0.01, bubblingMouseEvents: false })
         .on('click', (e: L.LeafletMouseEvent) => actRef.current.selectSeg(k, e.latlng.lat, e.latlng.lng))
         .addTo(g)
@@ -684,9 +787,12 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     }
     wps.forEach((_, k) => {
       if (loop && k === n - 1) return // arrivée = départ
+      // Mode points : seuls le départ et l'arrivée restent affichés, sans être déplaçables.
+      if (tool === 'points' && k > 0 && k < n - 1) return
       const picked = sel?.kind === 'wp' && sel.k === k
       L.marker(k === 0 && loop ? at(0) : at(k), {
-        draggable: true,
+        draggable: tool !== 'points',
+        interactive: tool !== 'points',
         // En boucle, l'arrivée est le départ (épingle) : aucun drapeau sur le dernier point posé.
         icon: wpIcon(k, n, picked, letters.get(k) ?? null),
         zIndexOffset: picked ? 2000 : k === 0 || k === n - 1 ? 1000 : 0,
@@ -700,7 +806,73 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
         .on('click', () => actRef.current.selectWp(k))
         .addTo(mk)
     })
-  }, [segs, wps, loop, sel, letters])
+  }, [segs, wps, loop, sel, letters, tool])
+
+  // Points de course : déplaçables en mode points (appui sur le tracé, glisser, lâcher pour en poser un),
+  // simples pastilles en mode tracé.
+  useEffect(() => {
+    const g = cpLayer.current
+    const m = map.current
+    if (!g || !m) return
+    g.clearLayers()
+    if (!track) return
+    if (tool !== 'points') {
+      for (const c of placed) {
+        L.circleMarker([c.lat, c.lon], { radius: isRavitoKind(c.kind) ? 6 : 4, color: '#ffffff', fillColor: isRavitoKind(c.kind) ? '#c0571b' : '#1f2420', fillOpacity: 1, weight: 2, interactive: false }).addTo(g)
+      }
+      return
+    }
+    const latlngs = track.points.map((p) => [p.lat, p.lon] as [number, number])
+    const hit = L.polyline(latlngs, { color: '#000', weight: 26, opacity: 0.001, className: 'edit-hit' }).addTo(g)
+    const ghost = L.circleMarker(latlngs[0], { radius: 9, color: '#ffffff', fillColor: '#e0007a', fillOpacity: 1, weight: 3, interactive: false })
+    const onDown = (ev: Event) => {
+      const pe = ev as PointerEvent
+      if (pe.button > 0 || accessFor) return
+      pe.preventDefault()
+      pe.stopPropagation()
+      m.dragging.disable()
+      const at = (x: PointerEvent) => {
+        const ll = m.mouseEventToLatLng(x as unknown as MouseEvent)
+        return track.points[nearestIndex(track.points, ll.lat, ll.lng)]
+      }
+      const p0 = at(pe)
+      ghost.setLatLng([p0.lat, p0.lon]).addTo(g)
+      const move = (x: PointerEvent) => {
+        const p = at(x)
+        ghost.setLatLng([p.lat, p.lon])
+      }
+      const up = (x: PointerEvent) => {
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+        document.removeEventListener('pointercancel', up)
+        m.dragging.enable()
+        ghost.remove()
+        if (x.type === 'pointerup') {
+          const p = at(x)
+          actRef.current.addCp(p.lat, p.lon)
+        }
+      }
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+      document.addEventListener('pointercancel', up)
+    }
+    hit.getElement()?.addEventListener('pointerdown', onDown)
+    for (const c of placed) {
+      const size = c.kind === 'base' ? 22 : isRavitoKind(c.kind) ? 18 : 14
+      const mk = L.marker([c.lat, c.lon], {
+        draggable: true,
+        zIndexOffset: 3000,
+        icon: L.divIcon({ className: `edit-pt kind-${c.kind}${selCp === c.id ? ' sel' : ''}`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+      })
+        .bindTooltip(`${c.name} · km ${km(c.dist)}`)
+        .addTo(g)
+      mk.on('click', () => setSelCp(c.id))
+      mk.on('dragend', () => {
+        const ll = mk.getLatLng()
+        actRef.current.moveCp(c.id, ll.lat, ll.lng)
+      })
+    }
+  }, [tool, placed, track, selCp, accessFor])
 
   // Bornes kilométriques.
   useEffect(() => {
@@ -810,7 +982,8 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
       drawn: {
         waypoints: wps.map((w, k) => ({ lat: w.lat, lon: w.lon, mode: w.mode, i: joined.starts[k], ...(w.mark ? { mark: true } : {}), ...(w.name ? { name: w.name } : {}) })),
       },
-      marks: rows ? [...letters].map(([k, letter]) => ({ name: wps[k].name || `Repère ${letter}`, dist: Math.round(rows[k].d) })) : [],
+      marks: rows ? [...letters].map(([k, letter]) => ({ name: wps[k].name || `Point inter ${letter}`, dist: Math.round(rows[k].d) })) : [],
+      ...(race && cpsDirty ? { checkpoints: placed.map(({ lat: _la, lon: _lo, ...c }) => c) } : {}),
       total: track.totalDist,
       // Zone du profil : tout le parcours dans cette zone ; allure de course : aucune zone. Course : zones
       // inchangées (elle les ignore).
@@ -826,7 +999,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   // Retour (téléphone) : un nouveau tracé reste en brouillon ; les modifications d'un tracé existant
   // seraient perdues, d'où la confirmation.
   const back = () => {
-    if (race && history.current.length && !confirm('Quitter sans enregistrer les modifications du tracé ?')) return
+    if (race && (history.current.length || cpsDirty) && !confirm('Quitter sans enregistrer les modifications ?')) return
     onBack()
   }
   const exportGpx = () => {
@@ -1043,8 +1216,26 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
             )}
           </form>
         </div>
+        {race && (
+          <div className="draw-pill draw-tool" role="group" aria-label="Outil">
+            <button className={tool === 'trace' ? 'on' : ''} onClick={() => switchTool('trace')}><Route className="inline" /> Tracé</button>
+            <button className={tool === 'points' ? 'on' : ''} onClick={() => switchTool('points')}><Flag className="inline" /> Points de course</button>
+          </div>
+        )}
+        {tool === 'points' && !selCpObj && (
+          <div className="draw-banner points-hint">
+            {accessFor ? (
+              <div className="banner info">
+                <span><MapPin className="inline" /> Touche la carte à l'endroit où ton assistance se gare pour « {placed.find((c) => c.id === accessFor)?.name} ».</span>
+                <button className="ghost" onClick={() => setAccessFor(null)}>Annuler</button>
+              </div>
+            ) : (
+              <div className="draw-tip">Appuie sur le tracé, glisse et lâche : un point est posé là. Glisse un point pour le déplacer, touche-le pour l'ouvrir.</div>
+            )}
+          </div>
+        )}
 
-        {(pendingImport || notice || !wps.length) && (
+        {tool === 'trace' && (pendingImport || notice || !wps.length) && (
           <div className="draw-banner">
             {pendingImport ? (
               <div className="banner info">
@@ -1144,6 +1335,53 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                 <button className="primary" onClick={closeAuto}><Check /> Garder</button>
               </div>
             )}
+          </div>
+        ) : selCpObj ? (
+          <div className="draw-card cp-card" style={{ bottom: floatBottom + 26 }}>
+            <div className="draw-card-head">
+              <strong>km {km(selCpObj.dist)}</strong>
+              <span className="muted">{CHECKPOINT_LABELS[selCpObj.kind]}</span>
+              <button className="ghost" onClick={() => setSelCp(null)} aria-label="Fermer"><X /></button>
+            </div>
+            <label className="field">
+              <span className="field-label">Nom</span>
+              <input type="text" value={selCpObj.name} autoFocus onFocus={(e) => e.target.select()} onChange={(e) => patchCp(selCpObj.id, { name: e.target.value })} />
+            </label>
+            <div className="row tight">
+              <label className="field">
+                <span className="field-label">Type</span>
+                <select value={selCpObj.kind} onChange={(e) => setCpKind(selCpObj, e.target.value as CheckpointKind)}>
+                  {[...new Set([...cpKinds, selCpObj.kind])].map((k) => <option key={k} value={k}>{CHECKPOINT_LABELS[k]}</option>)}
+                </select>
+              </label>
+              <Num label="Arrêt" value={selCpObj.stopMin} unit="min" min={0} width={56} onChange={(v) => patchCp(selCpObj.id, { stopMin: v })} />
+            </div>
+            {isRaceKind && isRavitoKind(selCpObj.kind) && (
+              <div className="row tight">
+                <AssistControls
+                  name={selCpObj.name}
+                  allowed={assistAllowed(selCpObj)}
+                  finish={false}
+                  placed={!!selCpObj.access}
+                  picking={accessFor === selCpObj.id}
+                  onAllow={(v) => patchCp(selCpObj.id, { assist: v })}
+                  onPick={(start) => {
+                    setAccessFor(start ? selCpObj.id : null)
+                    if (start) setSelCp(null)
+                  }}
+                  onClear={() => patchCp(selCpObj.id, { access: undefined })}
+                  labels
+                />
+                <label className="assist-check" title="Dropbag prévu par l'organisation à ce point">
+                  <input type="checkbox" checked={!!selCpObj.dropbag} onChange={(e) => patchCp(selCpObj.id, { dropbag: e.target.checked })} />
+                  <span>Dropbag</span>
+                </label>
+              </div>
+            )}
+            <div className="row tight">
+              <button className="primary" onClick={() => setSelCp(null)}><Check /> OK</button>
+              <button className="danger-btn" onClick={() => { editCps(cps.filter((c) => c.id !== selCpObj.id)); setSelCp(null) }}><Trash2 /> Supprimer</button>
+            </div>
           </div>
         ) : sel ? (
           <div className="draw-card" style={{ bottom: floatBottom + 26 }}>
@@ -1254,10 +1492,30 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
               <MiniProfile
                 track={track}
                 onHover={setHover}
-                onPick={act.pickDist}
-                marks={rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []}
+                onPick={tool === 'points' ? (d) => { const p = track.points[indexAt(track.points, d)]; addCp(p.lat, p.lon) } : act.pickDist}
+                marks={tool === 'points' ? placed.map((c) => ({ d: c.dist, label: isRavitoKind(c.kind) ? 'R' : '•' })) : rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []}
               />
             </div>
+          )}
+          {tool === 'points' && (
+            <ul className="cp-list">
+              {placed.map((c) => (
+                <li key={c.id}>
+                  <button
+                    className={`ghost${selCp === c.id ? ' on' : ''}`}
+                    onClick={() => {
+                      setSelCp(c.id)
+                      map.current?.panTo([c.lat, c.lon])
+                      if (mobile && sheet === 'full') setSheet('peek')
+                    }}
+                  >
+                    <i className={`cp-dot kind-${c.kind}`} /> <span className="cp-name">{c.name}</span> <span className="muted">km {km(c.dist)}</span>
+                    {c.dropbag && isRavitoKind(c.kind) ? <span className="muted"> · DB</span> : null}
+                  </button>
+                </li>
+              ))}
+              {placed.length === 0 && <li className="muted small">Aucun point : appuie sur le tracé, glisse et lâche pour en poser un.</li>}
+            </ul>
           )}
 
           <div className="draw-more">

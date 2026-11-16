@@ -1,7 +1,7 @@
 // Plan de nutrition par tronçon entre ravitos : eau, glucides, sodium et
 // nombre de produits à emporter.
 import { isRavitoKind } from './splits'
-import type { Product, Race, SimResult } from './types'
+import type { Product, ProductType, Race, SimResult } from './types'
 
 export interface Leg {
   /** Point de départ du tronçon (« Départ » ou nom du ravito). */
@@ -40,8 +40,19 @@ export const FLASK_L = 0.5
 /** Flasques portées au plus : au-delà, il faut remplir en route. */
 export const MAX_FLASKS = 4
 
-/** Boisson isotonique en flasque (par défaut : le produit « boisson » des profils). */
-export const isFlask = (p: Product): boolean => p.flask ?? p.id === 'boisson'
+export const PRODUCT_TYPES: Record<ProductType, string> = { solid: 'Solide', liquid: 'Liquide', gel: 'Gel', water: 'Eau' }
+
+/** Type d'un produit ; anciens produits : déduit de la case flasque et du nom. */
+export function productType(p: Product): ProductType {
+  if (p.type) return p.type
+  if (p.flask ?? p.id === 'boisson') return 'liquid'
+  if (/gel/i.test(p.name)) return 'gel'
+  if (/^eau\b|water/i.test(p.name)) return 'water'
+  return 'solid'
+}
+
+/** Boisson isotonique en flasque : produit liquide (par défaut, le produit « boisson » des profils). */
+export const isFlask = (p: Product): boolean => productType(p) === 'liquid'
 
 /**
  * Flasques de 500 ml pour `water` litres : autant que de 500 ml commencés. Avec isotonique : une seule
@@ -69,7 +80,7 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   // Isotonique en flasque : nombre fixé par l'eau, glucides et sodium déduits ; les autres produits
   // (gels, barres…) complètent les glucides selon leurs parts.
   const iso = products.find((p) => isFlask(p)) ?? null
-  const usable = products.filter((p) => p !== iso && p.carbs > 0 && p.share > 0)
+  const usable = products.filter((p) => p !== iso && productType(p) !== 'water' && p.carbs > 0 && p.share > 0)
   const totalShare = usable.reduce((a, p) => a + p.share, 0) || 1
   for (const s of stops) {
     const duration = Math.max(0, s.arrival - fromTime)
