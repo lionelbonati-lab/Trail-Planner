@@ -54,15 +54,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   descente, même calcul que pour EndurancePro mais sans son plafond de 800 m pour le D−), ou saisies.
 - Facteurs : nuit (soleil), chaleur, **météo heure par heure** le long du parcours avec pluie
   (Open-Meteo), altitude, **technicité OpenStreetMap** (échelle SAC…) ou manuelle.
-- **Courses et parcours séparés** : une course prépare ravitos, barrières, eau/glucides, assistance et lien de
-  partage (sans zones d'allure) ; un parcours d'entraînement garde ses zones d'allure, ses points de repère, le
-  plan nutrition, l'envoi à la montre, le mode course et le lien assistance (suivi en direct), sans ravitos, barrières
-  ni assistance, et **sans heure de départ** (toujours en départ libre). Un parcours ouvert depuis
-  l'onglet Parcours reste dans Parcours.
-- **Bibliothèque de parcours d'entraînement** (onglet Parcours) : parcours modèles réutilisables (import GPX
-  ou depuis une course), étiquettes et recherche. **« Vers une course »** crée une
-  nouvelle course à partir du parcours (copie indépendante, sans les zones) ou remplace le tracé d'une course
-  existante (ses ravitos dans la nouvelle distance et ses réglages sont gardés).
+- **Une seule page Parcours** : courses et parcours d'entraînement dans une même liste (bouton « Courses » pour n'afficher
+  que les courses, recherche, étiquettes, duplication, sauvegarde JSON). Le bouton **« Course »** en haut d'un parcours en
+  fait une course : date et heure de départ dans « Départ et calcul », barrières horaires. Sinon, départ libre et zones
+  d'allure. Mêmes points de passage partout (ravito, base de vie, point inter, chrono, barrière), avec assistance,
+  dropbag et eau / glucides. « Créer un parcours » ouvre l'éditeur, le même que pour modifier un parcours ; les anciens
+  liens « Courses » et « Tracer » mènent à Parcours.
 - **Traceur plein écran façon appli mobile** : carte entière, feuille du bas (téléphone) ou panneau (ordinateur)
   avec distance, D+/D−, temps, profil et points de repère (km, altitude, temps prévu à chaque point) ; barre
   réglages / annuler / rétablir / supprimer / OK. Sur téléphone, la feuille se glisse entre trois hauteurs : chiffres

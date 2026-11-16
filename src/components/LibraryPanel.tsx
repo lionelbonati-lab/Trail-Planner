@@ -1,4 +1,4 @@
-import { FileDown, Spline, Trash2, Upload } from 'lucide-react'
+import { Copy, FileDown, FileUp, Flag, Spline, Trash2, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { download } from '../lib/exportGpx'
 import { parseGpx } from '../lib/gpx'
@@ -18,27 +18,50 @@ interface Props {
   onDraw: () => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
+  /** Copie (ex. tester une autre stratégie). */
+  onDuplicate: (r: Race) => void
+  /** Sauvegarde JSON et courses enregistrées sans compte. */
+  backup: { onExport: () => void; onImport: (f: FileList | null) => void; storeKind: 'local' | 'cloud'; localCount: number; onPushLocal: () => void; onDiscardLocal: () => void }
   /** Parcours sur la montre (id), mise sur la montre et lien assistance copié. */
   onWatchId?: string | null
   onWatch?: (r: Race) => void
   onShare?: (r: Race) => void
 }
 
-export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete, onWatchId = null, onWatch, onShare }: Props) {
-  const routes = races.filter((r) => r.kind === 'route')
+export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, onDelete, onDuplicate, backup, onWatchId = null, onWatch, onShare }: Props) {
+  // Courses et parcours d'entraînement dans une seule liste ; un bouton n'affiche que les courses.
+  const routes = races
   const [query, setQuery] = useState('')
   const [activeTags, setActiveTags] = useState<string[]>([])
+  const [racesOnly, setRacesOnly] = useState(false)
   const allTags = [...new Set(routes.flatMap((r) => r.tags))].sort()
-  const shown = filterRoutes(routes, query, activeTags).sort((a, b) => a.name.localeCompare(b.name))
+  const shown = filterRoutes(racesOnly ? routes.filter((r) => r.kind === 'race') : routes, query, activeTags).sort((a, b) =>
+    // Courses d'abord, par date de départ ; puis les parcours par nom.
+    a.kind !== b.kind ? (a.kind === 'race' ? -1 : 1) : a.kind === 'race' ? a.env.start.localeCompare(b.env.start) : a.name.localeCompare(b.name),
+  )
 
   return (
     <div className="grid">
+      {backup.localCount > 0 && (
+        <div className="banner info">
+          <span>
+            Ce navigateur contient {backup.localCount} parcours enregistré{backup.localCount > 1 ? 's' : ''} sans compte.
+          </span>
+          <span className="row tight">
+            <button className="primary" onClick={backup.onPushLocal}>Les ajouter à mon compte</button>
+            <button className="ghost" onClick={backup.onDiscardLocal}>Les effacer</button>
+          </span>
+        </div>
+      )}
       <Card
         fold="open"
-        title="Bibliothèque de parcours"
+        title="Parcours"
         actions={
           <>
-            <button onClick={onDraw} title="Dessine un parcours sur la carte, sur les sentiers"><Spline /> Tracer sur la carte</button>
+            <button className={racesOnly ? 'on-watch' : ''} onClick={() => setRacesOnly(!racesOnly)} aria-pressed={racesOnly} title="N'afficher que les courses">
+              <Flag /> Courses{racesOnly ? ' seulement' : ''}
+            </button>
+            <button onClick={onDraw} title="Dessine un parcours sur la carte, sur les sentiers"><Spline /> Créer un parcours</button>
             <label className="button primary">
               <Upload /> Importer un GPX
               <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { onAdd(e.target.files); e.target.value = '' }} />
@@ -47,9 +70,9 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
         }
       >
         <Hint>
-          Tes parcours d'entraînement réutilisables (boucle du jeudi, côte de référence, piste…) : zones d'allure, points de repère,
-          envoi à la montre. Depuis un parcours, « Vers une course » crée une course (ou remplace le tracé d'une course) pour y préparer
-          ravitos et assistance. Une course peut aussi être ajoutée à la bibliothèque depuis sa page.
+          Tes courses et tes parcours d'entraînement (boucle du jeudi, côte de référence…) : points de passage, nutrition, assistance,
+          envoi à la montre. Le bouton « Course » en haut d'un parcours en fait une course, avec sa date et son heure de départ.
+          « Créer un parcours » ouvre l'éditeur, le même que pour modifier un parcours.
         </Hint>
         {routes.length > 0 && (
           <div className="row library-filters">
@@ -66,12 +89,12 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
           </div>
         )}
         {routes.length === 0 ? (
-          <p className="muted">Aucun parcours. Trace-en un sur la carte, importe un GPX ou ajoute une course à la bibliothèque.</p>
+          <p className="muted">Aucun parcours. Crée-en un sur la carte ou importe un GPX (course ou entraînement).</p>
         ) : (
           <div className="scroll">
             <table className="table list-table">
               <thead>
-                <tr><th>Parcours</th><th className="hide-sm">Distance</th><th className="hide-sm">D+</th><th className="hide-sm">Étiquettes</th><th /></tr>
+                <tr><th>Parcours</th><th className="hide-sm">Départ</th><th className="hide-sm">Distance</th><th className="hide-sm">D+</th><th className="hide-sm">Étiquettes</th><th /></tr>
               </thead>
               <tbody>
                 {shown.map((r) => (
@@ -82,14 +105,27 @@ export function LibraryPanel({ races, athlete, onOpen, onAdd, onDraw, onUpdate, 
                     onOpen={onOpen}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
+                    onDuplicate={onDuplicate}
                     links={onWatch && onShare ? { onWatchId, onWatch, onShare } : null}
                   />
                 ))}
               </tbody>
             </table>
-            {shown.length === 0 && <p className="muted">Aucun parcours ne correspond.</p>}
+            {shown.length === 0 && <p className="muted">{racesOnly ? 'Aucune course.' : 'Aucun parcours ne correspond.'}</p>}
           </div>
         )}
+      </Card>
+      <Card title="Sauvegarde">
+        <p className="muted">
+          Données stockées {backup.storeKind === 'cloud' ? 'dans ton compte (synchronisées)' : 'dans ce navigateur uniquement'}.
+        </p>
+        <div className="row">
+          <button onClick={backup.onExport}><FileDown /> Exporter (JSON)</button>
+          <label className="button">
+            <FileUp /> Importer (JSON)
+            <input type="file" accept=".json,application/json" hidden onChange={(e) => { backup.onImport(e.target.files); e.target.value = '' }} />
+          </label>
+        </div>
       </Card>
 
     </div>
@@ -102,6 +138,7 @@ function RouteRow({
   onOpen,
   onUpdate,
   onDelete,
+  onDuplicate,
   links,
 }: {
   route: Race
@@ -109,6 +146,7 @@ function RouteRow({
   onOpen: (id: string) => void
   onUpdate: (r: Race) => void
   onDelete: (id: string) => void
+  onDuplicate: (r: Race) => void
   links: { onWatchId: string | null; onWatch: (r: Race) => void; onShare: (r: Race) => void } | null
 }) {
   const [tagText, setTagText] = useState<string | null>(null)
@@ -130,11 +168,14 @@ function RouteRow({
       <tr className="clickable" onClick={() => onOpen(route.id)}>
         <td>
           <strong>{route.name}</strong>
+          {route.kind === 'race' && <span className="badge race-badge">Course</span>}
           <div className="only-sm muted small">
+            {route.kind === 'race' ? `${route.env.start.replace('T', ' ')} · ` : ''}
             {info ? `${(info.dist / 1000).toFixed(1)} km · ${Math.round(info.dPlus)} m D+` : ''}
             {route.tags.length > 0 && ` · ${route.tags.join(', ')}`}
           </div>
         </td>
+        <td className="hide-sm">{route.kind === 'race' ? route.env.start.replace('T', ' ') : <span className="muted">libre</span>}</td>
         <td className="hide-sm">{info ? `${(info.dist / 1000).toFixed(1)} km` : '—'}</td>
         <td className="hide-sm">{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
         <td className="hide-sm" onClick={(e) => e.stopPropagation()}>
@@ -161,7 +202,8 @@ function RouteRow({
           <span className="list-actions">
             {links && <ListLinkButtons race={route} {...links} />}
             {route.zones.length > 0 && <button className="ghost" onClick={exportWorkout} title="Entraînement Garmin (.fit) d'après les zones d'allure" aria-label="Entraînement Garmin (.fit)"><FileDown /></button>}
-            <button className="ghost" onClick={() => confirm(`Supprimer « ${route.name} » de la bibliothèque ? Les courses créées depuis ce parcours sont conservées.`) && onDelete(route.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
+            <button className="ghost" onClick={() => onDuplicate(route)} title="Dupliquer (ex. tester une autre stratégie)" aria-label="Dupliquer"><Copy /></button>
+            <button className="ghost" onClick={() => confirm(`Supprimer « ${route.name} » ?`) && onDelete(route.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
           </span>
         </td>
       </tr>

@@ -733,3 +733,5 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .assist-profile .hover-text { font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .mp-legend .lg-tech { background: linear-gradient(90deg, #f5c542, #f08a24, #d9452b, #7a1f6b); border-radius: 2px; width: 18px; }
 .mp-legend .lg-night { background: #8a8f98; opacity: 0.4; border-radius: 2px; }
+
+.race-badge { margin-left: 8px; vertical-align: 2px; }
