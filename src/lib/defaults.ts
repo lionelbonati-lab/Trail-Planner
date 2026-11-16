@@ -87,9 +87,9 @@ export const DEFAULT_PUSH: PushSettings = { enabled: false, climbPct: 1.05, budg
 
 /** Produits proposés à un nouveau profil (modifiables). */
 export const DEFAULT_PRODUCTS: Product[] = [
-  { id: 'gel', name: 'Gel', carbs: 25, sodium: 50, share: 0.7 },
-  { id: 'boisson', name: 'Isotonique', carbs: 30, sodium: 300, share: 0, flask: true },
-  { id: 'barre', name: 'Barre', carbs: 30, sodium: 100, share: 0.3 },
+  { id: 'gel', name: 'Gel', carbs: 25, sodium: 50, share: 0.7, type: 'gel' },
+  { id: 'boisson', name: 'Isotonique', carbs: 30, sodium: 300, share: 0, type: 'liquid' },
+  { id: 'barre', name: 'Barre', carbs: 30, sodium: 100, share: 0.3, type: 'solid' },
 ]
 
 export const DEFAULT_KME: KmeSettings = { upPer1km: 100, downPer1km: 0 }

@@ -204,7 +204,11 @@ export interface Product {
   flask?: boolean
   /** Marque (Overstim, Maurten…) : choix de la marque présente aux ravitos d'une course. */
   brand?: string
+  /** Type : solide, liquide (boisson isotonique en flasque), gel ou eau. */
+  type?: ProductType
 }
+
+export type ProductType = 'solid' | 'liquid' | 'gel' | 'water'
 
 export interface TrainingZone {
   name: string

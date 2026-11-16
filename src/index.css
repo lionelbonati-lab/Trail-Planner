@@ -671,35 +671,37 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 /* Carte du plan : bouton plein écran. */
 .map-wrap { position: relative; }
-.map-expand { position: absolute; top: 18px; right: 10px; z-index: 500; width: 36px; height: 36px; padding: 0; border-radius: 8px; background: #fff; color: #1f2420; box-shadow: 0 1px 5px rgba(0,0,0,0.3); display: inline-flex; align-items: center; justify-content: center; }
-.map-wrap .banner ~ .map-expand { top: 70px; }
+.map-expand { position: absolute; top: 96px; left: 10px; z-index: 500; width: 36px; height: 36px; padding: 0; border-radius: 8px; background: #fff; color: #1f2420; box-shadow: 0 1px 5px rgba(0,0,0,0.3); display: inline-flex; align-items: center; justify-content: center; }
+.map-wrap .banner ~ .map-expand { top: 150px; }
 
-/* Pose des points en plein écran : carte 3/4, profil 1/4, séparation déplaçable. */
-body.points-open { overflow: hidden; }
-.points-shell { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); }
-.points-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
-.points-title { font-size: 16px; }
-.points-tip { flex: 1; min-width: 200px; }
-.points-map { position: relative; min-height: 0; }
-.points-map .map.fill { position: absolute; inset: 0; height: auto; margin: 0; border: none; border-radius: 0; }
-.points-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1001; width: min(560px, calc(100% - 20px)); margin: 0; }
-.points-card { top: 10px; }
-.points-card .field { margin: 0; }
-.points-split { flex: none; height: 14px; cursor: row-resize; touch-action: none; background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
-.points-split span { width: 48px; height: 4px; border-radius: 2px; background: var(--muted); opacity: 0.6; }
-.points-profile { min-height: 0; overflow: hidden; background: var(--surface); padding: 2px 8px 0; }
+/* Points de course dans le traceur. */
 .edit-pt { border-radius: 50%; background: #fff; border: 3px solid #1f2420; box-shadow: 0 1px 4px rgba(0,0,0,0.4); cursor: grab; }
 .edit-pt.kind-ravito { background: #c0571b; border-color: #fff; }
 .edit-pt.kind-base { background: #c2410c; border-color: #fff; outline: 2px solid #c2410c; }
 .edit-pt.kind-cutoff { background: var(--danger); border-color: #fff; }
 .edit-pt.kind-chrono { background: #1d4ed8; border-color: #fff; }
 .edit-pt.sel { outline: 3px solid #e0007a; outline-offset: 2px; }
-.points-map .edit-hit { cursor: copy; }
-@media (max-width: 720px) {
-  .points-top { padding: 6px 8px; gap: 6px; }
-  .points-title { flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .points-tip { display: none; }
-  .points-top .click-mode { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; }
-  .points-top .click-mode button { white-space: nowrap; }
-}
+.draw-map .edit-hit { cursor: copy; }
 .row.wrap { flex-wrap: wrap; }
+
+.draw-tool { top: 62px; }
+.draw-tool button { display: inline-flex; align-items: center; gap: 6px; }
+.points-hint { top: 116px; }
+.cp-card .field { margin: 0; }
+.cp-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 2px; }
+.cp-list button { width: 100%; justify-content: flex-start; gap: 6px; text-align: left; }
+.cp-list button.on { background: var(--accent-soft); }
+.cp-list .cp-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #fff; border: 2px solid #1f2420; flex: none; }
+.cp-dot.kind-ravito, .cp-dot.kind-base { background: #c0571b; border-color: #c0571b; }
+.cp-dot.kind-chrono { background: #1d4ed8; border-color: #1d4ed8; }
+.cp-dot.kind-cutoff { background: var(--danger); border-color: var(--danger); }
+
+/* Liste à choix (plusieurs produits). */
+.multi-select { position: relative; }
+.multi-select summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--surface); min-height: 36px; }
+.multi-select summary::-webkit-details-marker { display: none; }
+.multi-select[open] summary .lucide { transform: rotate(180deg); }
+.multi-list { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 8px 10px; display: grid; gap: 8px; max-height: 320px; overflow: auto; }
+.multi-group { display: grid; gap: 2px; }
+.points-hint { pointer-events: none; } .points-hint .banner { pointer-events: auto; }

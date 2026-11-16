@@ -1,9 +1,8 @@
-import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Maximize2, Minimize2, Moon, Pencil, Play, Plus, Printer, Scissors, Sparkles, Trash2, Users, Watch, X } from 'lucide-react'
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { ArrowLeftToLine, ArrowRightToLine, Check, ChevronDown, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Maximize2, Moon, Plus, Printer, Scissors, Sparkles, Trash2, Users, Watch } from 'lucide-react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan, raceProducts } from '../lib/nutrition'
+import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan, PRODUCT_TYPES, productType, raceProducts } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
@@ -15,7 +14,7 @@ import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { checkpointName, CHECKPOINT_LABELS, commonStop, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, setStops, waypointCheckpoints, withKind, type AutoSplitMethod } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
-import type { Athlete, CalcMode, Checkpoint, CheckpointKind, Race, RaceKind, SimResult, Track } from '../lib/types'
+import type { Athlete, CalcMode, Checkpoint, CheckpointKind, ProductType, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
@@ -89,7 +88,6 @@ export function RacePlan({
   athlete,
   onChange,
   onAthleteChange,
-  onLive,
   onRedraw,
   share,
   watch,
@@ -101,9 +99,8 @@ export function RacePlan({
   athlete: Athlete
   onChange: (r: Race) => void
   onAthleteChange: (a: Athlete) => void
-  onLive?: () => void
-  /** Ouvre le traceur pour modifier le parcours sur la carte. */
-  onRedraw?: () => void
+  /** Carte agrandie (traceur) : tracé, ou points de course. */
+  onRedraw?: (tool?: 'trace' | 'points') => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
   watch?: { available: boolean; active: boolean; activate: () => void }
   library?: { kind: RaceKind; addToLibrary: () => void }
@@ -144,65 +141,14 @@ export function RacePlan({
   })
   /** Clic sur le profil ou la carte : repère (parcours) ou point du type choisi (course). */
   const pickPoint = (d: number) => addPoint(d, isRoute ? 'split' : clickKind)
-  // Plein écran : le point ajouté s'ouvre dans la fenêtre (nom prérempli, assistance, dropbag).
-  const pickFull = (d: number) => setSelected(pickPoint(d))
-  // Point déplacé sur la carte : nouveau km, nom par défaut mis à jour.
-  const movePoint = (id: string, d: number) => {
-    const cp = race.checkpoints.find((c) => c.id === id)
-    if (cp) setCp(id, { dist: Math.round(d), ...withKind({ ...cp, dist: Math.round(d) }, cp.kind) })
-  }
   // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
   const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1399px)')
   const [editing, setEditing] = useState<string | null>(null)
   // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
   const [bulkStop, setBulkStop] = useState<Record<string, number>>({})
   const [showMap, setShowMap] = useState(true)
-  // Carte plein écran (pose des points) : point ouvert dans la fenêtre, part du profil en bas.
-  const [full, setFull] = useState(false)
-  const [selected, setSelected] = useState<string | null>(null)
-  const [profileFrac, setProfileFrac] = useState(0.25)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
-  const selectedCp = full && selected ? race.checkpoints.find((c) => c.id === selected) ?? null : null
-  const closeFull = () => {
-    setFull(false)
-    setSelected(null)
-    setPickAccess(null)
-  }
-  // Séparation carte / profil déplaçable (profil entre 12 et 70 % de la hauteur).
-  const shellRef = useRef<HTMLDivElement>(null)
-  const [splitDrag, setSplitDrag] = useState(false)
-  const onSplitDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId)
-    setSplitDrag(true)
-  }
-  const onSplitMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const box = shellRef.current?.getBoundingClientRect()
-    if (!splitDrag || !box) return
-    setProfileFrac(Math.max(0.12, Math.min(0.7, (box.bottom - e.clientY) / box.height)))
-  }
-  const onSplitUp = () => setSplitDrag(false)
-  const [viewH, setViewH] = useState(() => window.innerHeight)
-  useEffect(() => {
-    if (!full) return
-    const onResize = () => setViewH(window.innerHeight)
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !pickAccess) {
-        if (selected) setSelected(null)
-        else closeFull()
-      }
-    }
-    window.addEventListener('resize', onResize)
-    window.addEventListener('keydown', onKey)
-    document.body.classList.add('points-open')
-    return () => {
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('keydown', onKey)
-      document.body.classList.remove('points-open')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [full, pickAccess, selected])
-  const profileH = Math.max(110, Math.round(viewH * profileFrac) - 24)
   /** Case « dropbag » d'un ravito ou d'une base de vie (dropbag prévu par l'organisation). */
   const dropbagOf = (cp: Checkpoint, labels = false) =>
     isRavitoKind(cp.kind) ? (
@@ -426,12 +372,6 @@ export function RacePlan({
               {library && library.kind !== 'route' && (
                 <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement"><LibraryBig /> Ajouter à la bibliothèque</button>
               )}
-              {onRedraw && (
-                <button onClick={onRedraw} title={race.drawn ? 'Modifier le tracé sur la carte' : 'Rendre la trace modifiable sur la carte (découpée en points à déplacer)'}>
-                  <Pencil /> Modifier le tracé
-                </button>
-              )}
-              {onLive && <button className={library?.kind === 'route' ? '' : 'primary'} onClick={onLive}><Play /> Mode course</button>}
               {share && (
                 <button
                   onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
@@ -697,9 +637,11 @@ export function RacePlan({
           </div>
           {showMap && (
             <div id="race-map" className="map-wrap">
-              <button className="map-expand" onClick={() => setFull(true)} title="Carte plein écran : poser et déplacer les points" aria-label="Carte plein écran">
-                <Maximize2 />
-              </button>
+              {onRedraw && (
+                <button className="map-expand" onClick={() => onRedraw('points')} title="Carte agrandie : modifier le tracé, poser et déplacer les points" aria-label="Carte agrandie">
+                  <Maximize2 />
+                </button>
+              )}
               {pickAccess && (
                 <div className="banner info">
                   <span>
@@ -1187,26 +1129,41 @@ export function RacePlan({
           </div>
           <div className="field">
             <span className="field-label">Produits sur {isRoute ? 'ce parcours' : 'cette course'}</span>
-            <div className="row tight wrap">
-              {athlete.products.map((p) => (
-                <label key={p.id} className="assist-check">
-                  <input
-                    type="checkbox"
-                    checked={products.includes(p)}
-                    onChange={(e) => {
-                      const ids = new Set(products.map((x) => x.id))
-                      if (e.target.checked) ids.add(p.id)
-                      else ids.delete(p.id)
-                      set({ productIds: athlete.products.filter((x) => ids.has(x.id)).map((x) => x.id) })
-                    }}
-                  />
-                  <span>{p.name}{p.brand ? <span className="muted"> · {p.brand}</span> : null}</span>
-                </label>
-              ))}
-              {race.productIds && (
-                <button className="ghost" onClick={() => set({ productIds: undefined, ravitoBrand: undefined })}>Tous mes produits</button>
-              )}
-            </div>
+            <details className="multi-select">
+              <summary>
+                {products.length === athlete.products.length ? 'Tous mes produits' : products.length ? products.map((p) => p.name).join(', ') : 'Aucun produit'}
+                <ChevronDown className="inline" aria-hidden />
+              </summary>
+              <div className="multi-list">
+                {(Object.keys(PRODUCT_TYPES) as ProductType[]).map((t) => {
+                  const of = athlete.products.filter((p) => productType(p) === t)
+                  if (!of.length) return null
+                  return (
+                    <div key={t} className="multi-group">
+                      <span className="muted small">{PRODUCT_TYPES[t]}</span>
+                      {of.map((p) => (
+                        <label key={p.id} className="assist-check">
+                          <input
+                            type="checkbox"
+                            checked={products.includes(p)}
+                            onChange={(e) => {
+                              const ids = new Set(products.map((x) => x.id))
+                              if (e.target.checked) ids.add(p.id)
+                              else ids.delete(p.id)
+                              set({ productIds: athlete.products.filter((x) => ids.has(x.id)).map((x) => x.id) })
+                            }}
+                          />
+                          <span>{p.name}{p.brand ? <span className="muted"> · {p.brand}</span> : null}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )
+                })}
+                {race.productIds && (
+                  <button className="ghost" onClick={() => set({ productIds: undefined, ravitoBrand: undefined })}>Tous mes produits</button>
+                )}
+              </div>
+            </details>
           </div>
           <Hint>
             Tes produits (gels, barres, isotonique en flasque) et leur marque se règlent dans l’onglet <a href="#/nutrition">Nutrition</a>.
@@ -1276,105 +1233,6 @@ export function RacePlan({
       </div>
 
 
-      {full &&
-        createPortal(
-          <div className="points-shell" ref={shellRef}>
-            <div className="points-top">
-              <strong className="points-title">{race.name}</strong>
-              {!isRoute && (
-                <span className="click-mode" role="group" aria-label="Type du point ajouté">
-                  {(['ravito', 'base', 'split', 'chrono', 'cutoff'] as const).map((k) => (
-                    <button key={k} className={clickKind === k ? 'on' : ''} onClick={() => setClickKind(k)} aria-pressed={clickKind === k}>
-                      {KIND_LABELS[k]}
-                    </button>
-                  ))}
-                </span>
-              )}
-              <span className="muted small points-tip">Appuie sur le tracé, glisse et lâche : un point est posé là. Glisse un point pour le déplacer, touche-le pour l’ouvrir.</span>
-              <button className="primary" onClick={closeFull}><Minimize2 /> Fermer</button>
-            </div>
-            <div className="points-map" style={{ flex: `${1 - profileFrac} 1 0` }}>
-              {pickAccess && (
-                <div className="banner info points-banner">
-                  <span><MapPin className="inline" /> Touche la carte à l'endroit où ton assistance se gare pour « {sim.splits.find((x) => x.cp.id === pickAccess)?.cp.name} ».</span>
-                  <button className="ghost" onClick={() => setPickAccess(null)}>Annuler</button>
-                </div>
-              )}
-              <Suspense fallback={<div className="map map-loading">Chargement de la carte…</div>}>
-                <MapView
-                  className="fill"
-                  track={track}
-                  splits={sim.splits}
-                  timeZone={race.env.timeZone}
-                  hoverDist={hoverDist}
-                  edit={{ onAdd: pickFull, onMove: movePoint, onSelect: setSelected, selected }}
-                  accessPick={
-                    pickAccess
-                      ? (at) => {
-                          if (pickAccess === FINISH_ID) set({ finishAccess: at })
-                          else setCp(pickAccess, { access: at })
-                          setPickAccess(null)
-                        }
-                      : null
-                  }
-                  accesses={accessMarks}
-                />
-              </Suspense>
-              {selectedCp && (
-                <div className="draw-card points-card">
-                  <div className="draw-card-head">
-                    <strong>km {(selectedCp.dist / 1000).toFixed(1)}</strong>
-                    <span className="muted">
-                      {(() => {
-                        const s = sim.splits.find((x) => x.cp.id === selectedCp.id)
-                        return s ? `passage ${formatClock(s.arrivalClock, race.env.timeZone)} · ${formatDuration(s.arrival)}` : ''
-                      })()}
-                    </span>
-                    <button className="ghost" onClick={() => setSelected(null)} aria-label="Fermer"><X /></button>
-                  </div>
-                  <label className="field">
-                    <span className="field-label">Nom</span>
-                    <input type="text" value={selectedCp.name} autoFocus onFocus={(e) => e.target.select()} onChange={(e) => setCp(selectedCp.id, { name: e.target.value })} />
-                  </label>
-                  <div className="row tight">
-                    <label className="field">
-                      <span className="field-label">Type</span>
-                      <select value={selectedCp.kind} onChange={(e) => setCp(selectedCp.id, kindPatch(selectedCp, e.target.value as CheckpointKind))}>
-                        {kindOptions(selectedCp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
-                    </label>
-                    <Num label="Arrêt" value={selectedCp.stopMin} unit="min" min={0} width={56} onChange={(v) => setCp(selectedCp.id, { stopMin: v })} />
-                  </div>
-                  {!isRoute && isRavitoKind(selectedCp.kind) && (
-                    <div className="row tight">
-                      {assistOf(selectedCp, true)}
-                      {dropbagOf(selectedCp, true)}
-                    </div>
-                  )}
-                  <div className="row tight">
-                    <button className="primary" onClick={() => setSelected(null)}><Check /> OK</button>
-                    <button
-                      className="ghost danger"
-                      onClick={() => {
-                        set({ checkpoints: race.checkpoints.filter((c) => c.id !== selectedCp.id) })
-                        setSelected(null)
-                      }}
-                    >
-                      <Trash2 /> Supprimer
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="points-split" onPointerDown={onSplitDown} onPointerMove={onSplitMove} onPointerUp={onSplitUp} onPointerCancel={onSplitUp} role="separator" aria-label="Séparation carte / profil" title="Glisser pour agrandir la carte ou le profil">
-              <span />
-            </div>
-            <div className="points-profile" style={{ flex: `${profileFrac} 1 0` }}>
-              <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} height={profileH} onPick={pickFull} onHover={setHoverDist} />
-            </div>
-          </div>,
-          document.body,
-        )}
 
       {printFormat && (
         <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} windowOf={windowOf} legs={legs} onDone={() => setPrintFormat(null)} />

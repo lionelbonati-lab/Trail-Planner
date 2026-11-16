@@ -40,7 +40,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - Profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
   quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, base de vie, point
   intermédiaire, chrono ou barrière ; plus de repères, devenus points inter ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos ou à toutes les bases de vie (course), ou à tous les points (parcours).
-- **Carte plein écran** (flèche en haut à droite de la carte), comme le traceur : carte en haut, profil en bas (séparation déplaçable, profil au quart par défaut). Appuyer sur le tracé, glisser et lâcher pose un point du type choisi à l'endroit lâché ; un point se déplace en le glissant (recalé sur le tracé) ; la fenêtre du point s'ouvre à la pose ou au toucher : nom prérempli, type, arrêt, et pour un ravito ou une base de vie : assistance, accès assistance et dropbag.
+- **Carte agrandie** (bouton sous le zoom de la carte du plan) : ouvre le traceur avec un outil **Points de course** à côté de **Tracé**. Appuyer sur le tracé, glisser et lâcher pose un point à l'endroit lâché ; un point se déplace en le glissant (il suit le tracé si celui-ci est modifié) ; sa fenêtre s'ouvre à la pose ou au toucher : nom prérempli, type, arrêt, et pour un ravito ou une base de vie : assistance, accès assistance et dropbag. Plus de boutons « Modifier le tracé » ni « Mode course » dans l'en-tête.
 - **Profil** : bases de vie mises en évidence, dropbags annotés « DB », points où l'assistance est autorisée entourés en vert.
 - Cadres « Départ et calcul », « Environnement » et « Points automatiques » pliés à l'ouverture (dépliables d'un clic) ; bouton « Reporter eau et glucides sur les ravitos » mis en avant dans les temps de passage et le plan nutrition.
 - Export GPX : nom de chaque point = heure de passage prévue (temps depuis le départ en départ libre), nom du point en description, type Garmin (ravito et base de vie → Aid Station / Food, chrono → Checkpoint, barrière → Danger).
@@ -137,9 +137,9 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   (0,4 L → 1 iso ; 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2),
   quantité réelle toujours affichée ; glucides et sodium de l'isotonique déduits, gels et barres complètent ;
   alerte au-delà de 4 flasques (remplir en route).
-- Onglet **Nutrition** : tes produits (marque, glucides, sodium, flasque, part des glucides). Carte **Nutrition** de
+- Onglet **Nutrition** : tes produits avec leur **type** (solide, liquide = isotonique en flasque, gel, eau), marque, glucides, sodium et part des glucides. Carte **Nutrition** de
   chaque course : glucides, eau et sodium par heure, **marque présente aux ravitaillements** (coche ses produits)
-  et **produits retenus** pour la course (plan nutrition, dropbags et montre n'utilisent qu'eux).
+  et **produits retenus** pour la course (liste à choix, rangée par type) (plan nutrition, dropbags et montre n'utilisent qu'eux).
 - Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 
