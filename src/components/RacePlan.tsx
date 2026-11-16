@@ -1,4 +1,4 @@
-import { ArrowLeftToLine, ArrowRightToLine, Check, ChevronDown, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Moon, Pencil, Printer, Scissors, Trash2, Users, Watch } from 'lucide-react'
+import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Moon, Pencil, Plus, Printer, Scissors, Trash2, Users, Watch } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
@@ -318,6 +318,9 @@ export function RacePlan({
                   <Flag /> Vers une course
                 </button>
               )}
+              {onRedraw && (
+                <button onClick={() => onRedraw('points')} title="Modifier le tracé et les points de passage"><Pencil /> Modifier</button>
+              )}
               {library && library.kind !== 'route' && (
                 <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement"><LibraryBig /> Ajouter à la bibliothèque</button>
               )}
@@ -573,11 +576,6 @@ export function RacePlan({
           </div>
           {showMap && (
             <div id="race-map" className="map-wrap">
-              {onRedraw && (
-                <button className="map-expand" onClick={() => onRedraw('points')} title="Modifier le tracé et les points de passage">
-                  <Pencil /> Modifier
-                </button>
-              )}
               {pickAccess && (
                 <div className="banner info">
                   <span>
@@ -1030,45 +1028,48 @@ export function RacePlan({
           </div>
           <div className="field">
             <span className="field-label">Produits sur {isRoute ? 'ce parcours' : 'cette course'}</span>
-            <details className="multi-select">
-              <summary>
-                {products.length === athlete.products.length ? 'Tous mes produits' : products.length ? products.map((p) => p.name).join(', ') : 'Aucun produit'}
-                <ChevronDown className="inline" aria-hidden />
-              </summary>
-              <div className="multi-list">
-                {(Object.keys(PRODUCT_TYPES) as ProductType[]).map((t) => {
-                  const of = athlete.products.filter((p) => productType(p) === t)
-                  if (!of.length) return null
-                  return (
-                    <div key={t} className="multi-group">
-                      <span className="muted small">{PRODUCT_TYPES[t]}</span>
-                      {of.map((p) => (
-                        <label key={p.id} className="assist-check">
-                          <input
-                            type="checkbox"
-                            checked={products.includes(p)}
-                            onChange={(e) => {
-                              const ids = new Set(products.map((x) => x.id))
-                              if (e.target.checked) ids.add(p.id)
-                              else ids.delete(p.id)
-                              set({ productIds: athlete.products.filter((x) => ids.has(x.id)).map((x) => x.id) })
-                            }}
-                          />
-                          <span>{p.name}{p.brand ? <span className="muted"> · {p.brand}</span> : null}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )
-                })}
-                {race.productIds && (
-                  <button className="ghost" onClick={() => set({ productIds: undefined, ravitoBrand: undefined })}>Tous mes produits</button>
-                )}
-              </div>
-            </details>
+            <div className="product-rows">
+              {products.map((p) => {
+                const ids = products.map((x) => x.id)
+                const setIds = (next: string[]) => set({ productIds: athlete.products.filter((x) => next.includes(x.id)).map((x) => x.id) })
+                return (
+                  <div className="row tight" key={p.id}>
+                    <select
+                      value={p.id}
+                      onChange={(e) => setIds(ids.map((x) => (x === p.id ? e.target.value : x)))}
+                      aria-label="Produit"
+                    >
+                      {(Object.keys(PRODUCT_TYPES) as ProductType[]).map((t) => {
+                        const of = athlete.products.filter((x) => productType(x) === t && (x.id === p.id || !ids.includes(x.id)))
+                        return of.length ? (
+                          <optgroup key={t} label={PRODUCT_TYPES[t]}>
+                            {of.map((x) => <option key={x.id} value={x.id}>{x.name}{x.brand ? ` · ${x.brand}` : ''}</option>)}
+                          </optgroup>
+                        ) : null
+                      })}
+                    </select>
+                    <button className="ghost" onClick={() => setIds(ids.filter((x) => x !== p.id))} aria-label={`Retirer ${p.name}`}><Trash2 /></button>
+                  </div>
+                )
+              })}
+              {products.length < athlete.products.length && (
+                <button
+                  className="ghost"
+                  onClick={() => {
+                    const ids = products.map((x) => x.id)
+                    const next = athlete.products.find((x) => !ids.includes(x.id))
+                    if (next) set({ productIds: athlete.products.filter((x) => ids.includes(x.id) || x.id === next.id).map((x) => x.id) })
+                  }}
+                >
+                  <Plus /> Ajouter un produit
+                </button>
+              )}
+              {products.length === 0 && <span className="muted small">Aucun produit : l'eau seule est prévue.</span>}
+            </div>
           </div>
           <Hint>
             Tes produits (gels, barres, isotonique en flasque) et leur marque se règlent dans l’onglet <a href="#/nutrition">Nutrition</a>.
-            Choisir la marque présente aux ravitaillements coche ses produits. L'eau augmente de 4 % par °C au-dessus de 15 °C.
+            Choisir la marque présente aux ravitaillements retient ses produits ; « Ajouter un produit » en ajoute un à la liste. L'eau augmente de 4 % par °C au-dessus de 15 °C.
           </Hint>
         </Card>
 

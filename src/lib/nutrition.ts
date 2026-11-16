@@ -25,7 +25,7 @@ export interface Leg {
    * Flasques à emporter : d'eau et d'isotonique (produit `isoId`, compté aussi dans `products`) ; les
    * flasques d'eau sont remplies d'eau minérale salée (`waterId`, ex. St-Yorre) si la course en retient une.
    */
-  flasks: { water: number; iso: number; isoId: string | null; waterId?: string | null }
+  flasks: { water: number; iso: number; isoId: string | null; waterId?: string | null; mix?: number }
 }
 
 /** Produits retenus pour une course (tous si aucun choix n'a été fait). */
@@ -112,11 +112,15 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
       })
       counts[best]++
     }
-    const items = [
+    const base = [
       ...(iso && flasks.iso ? [{ product: iso, count: flasks.iso }] : []),
-      ...(mineral && flasks.water ? [{ product: mineral, count: flasks.water }] : []),
       ...usable.map((p, i) => ({ product: p, count: counts[i] })).filter((x) => x.count > 0),
     ]
+    // Eau minérale salée mélangée à l'eau : juste assez pour le sodium visé, jamais plus (part par
+    // dixièmes, arrondie vers le bas) ; rien si les autres produits suffisent déjà.
+    const otherSodium = base.reduce((a, x) => a + x.count * x.product.sodium, 0)
+    const mix = mineral && flasks.water ? Math.max(0, Math.min(1, Math.floor(((sodium - otherSodium) / (flasks.water * mineral.sodium)) * 10 + 1e-9) / 10)) : 0
+    const items = [...base, ...(mineral && mix > 0 ? [{ product: mineral, count: flasks.water }] : [])]
     legs.push({
       from: fromName,
       fromId,
@@ -128,8 +132,8 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
       carbs,
       sodium,
       products: items,
-      sodiumFromProducts: items.reduce((a, x) => a + x.count * x.product.sodium, 0),
-      flasks: { ...flasks, isoId: iso && flasks.iso ? iso.id : null, waterId: mineral && flasks.water ? mineral.id : null },
+      sodiumFromProducts: Math.round(otherSodium + (mineral ? mix * flasks.water * mineral.sodium : 0)),
+      flasks: { ...flasks, isoId: iso && flasks.iso ? iso.id : null, waterId: mineral && mix > 0 ? mineral.id : null, mix },
     })
     fromName = s.cp.name
     fromId = s.cp.id
@@ -153,7 +157,11 @@ export function flaskText(leg: Leg): string {
   if (!water && !iso) return ''
   const isoName = leg.products.find((x) => x.product.id === isoId)?.product.name ?? 'isotonique'
   const waterName = leg.products.find((x) => x.product.id === waterId)?.product.name
-  return [water ? `${flaskWord(water)} ${waterName ?? "d'eau"}` : '', iso ? `${flaskWord(iso)} ${isoName}` : ''].filter(Boolean).join(' + ')
+  // Mélange : part d'eau minérale par flasque (en ml), le reste d'eau plate.
+  const mix = leg.flasks.mix ?? 0
+  const ml = Math.round((mix * FLASK_L * 1000) / 50) * 50
+  const waterText = !waterName ? `${flaskWord(water)} d'eau` : mix >= 1 ? `${flaskWord(water)} ${waterName}` : `${flaskWord(water)} ${waterName} + eau (${ml} ml + ${FLASK_L * 1000 - ml} ml)`
+  return [water ? waterText : '', iso ? `${flaskWord(iso)} ${isoName}` : ''].filter(Boolean).join(' + ')
 }
 
 /** Plus de flasques que celles portées : alerte (remplir en route), sinon null. */
