@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { formatClock, formatDuration, formatPace, zonedToUtc } from '../lib/time'
 import type { Athlete, Race, SimResult, Track } from '../lib/types'
-import { bagText, dropbagPlan, dropbagText, type Leg } from '../lib/nutrition'
+import { bagText, dropbagPlan, dropbagText, legSupply, type Leg } from '../lib/nutrition'
 import { ProfileChart } from './ProfileChart'
 
 export type PrintFormat = 'a4' | 'strip' | 'crew'
@@ -111,9 +111,9 @@ export function PrintSheets({ format, race, track, sim, athlete, windowOf, legs,
                   <tr key={`${l.from}-${l.to}`}>
                     <td className="name">{l.from} → {l.to}</td>
                     <td>{formatDuration(l.duration)}</td>
-                    <td>{l.water} L</td>
-                    <td>{l.carbs} g</td>
-                    <td>{l.sodium} mg</td>
+                    <td>{l.water} L (prévu {legSupply(l).water})</td>
+                    <td>{l.carbs} g (prévu {legSupply(l).carbs})</td>
+                    <td>{l.sodium} mg (prévu {legSupply(l).sodium})</td>
                     <td className="notes">{bagText(l)}</td>
                   </tr>
                 ))}

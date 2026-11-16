@@ -149,3 +149,20 @@ describe('eau minérale décochée (case Flasque)', () => {
     expect(leg.sodiumFromProducts).toBe(sans.sodiumFromProducts)
   })
 })
+
+describe('quantités prévues à côté des requises', () => {
+  it('eau des flasques, glucides des produits, sodium des produits et du sel', async () => {
+    const { legSupply, shortOf, extraSodium } = await import('../nutrition')
+    const race = newRace('Prévu', gpx(30))
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const [leg] = nutritionPlan(race, plan.sim, DEFAULT_PRODUCTS)
+    const sup = legSupply(leg)
+    expect(sup.water).toBe((leg.flasks.water + leg.flasks.iso) * 0.5)
+    expect(sup.water).toBeGreaterThanOrEqual(leg.water)
+    expect(sup.carbs).toBe(Math.round(leg.products.reduce((a, x) => a + x.count * x.product.carbs, 0)))
+    expect(sup.carbs).toBeGreaterThanOrEqual(leg.carbs - 10)
+    expect(sup.sodium).toBe(Math.round(leg.sodiumFromProducts + extraSodium(leg)))
+    expect(shortOf(50, 78)).toBe(true)
+    expect(shortOf(75, 78)).toBe(false)
+  })
+})

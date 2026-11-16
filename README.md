@@ -128,7 +128,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - **D′** : relances en montée tant que le D′ le permet (bilan W′bal).
 - **Fourchette** bonne journée / prévu / journée difficile pour chaque point.
 - Points automatiques (distance, sommets, ruptures de pente, km-e, temps), barrières horaires (arrivée comprise),
-  **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits). Eau en
+  **plan nutrition** par tronçon (eau selon la chaleur, glucides, sodium, nombre de produits), avec les quantités **prévues** (flasques, produits, sel) à côté des quantités requises, en orange s'il manque plus de 10 %. Eau en
   **flasques de 500 ml** : une seule d'isotonique (produit coché « Flasque » dans le profil) si 500 ml suffisent,
   sinon une d'eau et une d'isotonique, puis une de plus par 500 ml commencés en alternant eau et isotonique
   (0,4 L → 1 iso ; 1,1 L → 2 eau + 1 iso ; 1,6 L → 2 + 2),
