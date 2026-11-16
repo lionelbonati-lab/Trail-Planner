@@ -100,7 +100,7 @@ export function RacePlan({
   onChange: (r: Race) => void
   onAthleteChange: (a: Athlete) => void
   /** Carte agrandie (traceur) : tracé, ou points de course. */
-  onRedraw?: (tool?: 'trace' | 'points') => void
+  onRedraw?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
   watch?: { available: boolean; active: boolean; activate: () => void }
   library?: { kind: RaceKind; addToLibrary: () => void }
@@ -319,7 +319,7 @@ export function RacePlan({
                 </button>
               )}
               {onRedraw && (
-                <button onClick={() => onRedraw('points')} title="Modifier le tracé et les points de passage"><Pencil /> Modifier</button>
+                <button onClick={() => onRedraw()} title="Modifier le tracé et les points de passage"><Pencil /> Modifier</button>
               )}
               {library && library.kind !== 'route' && (
                 <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement"><LibraryBig /> Ajouter à la bibliothèque</button>
@@ -815,7 +815,7 @@ export function RacePlan({
                   <Droplets /> Reporter eau et glucides sur les ravitos
                 </button>
               )}
-              {onRedraw && <button onClick={() => onRedraw('points')} title="Ajouter, déplacer, renommer ou supprimer des points dans l'éditeur"><Pencil /> Modifier les points</button>}
+              {onRedraw && <button onClick={() => onRedraw()} title="Ajouter, déplacer, renommer ou supprimer des points dans l'éditeur"><Pencil /> Modifier les points</button>}
             </>
           }
         >

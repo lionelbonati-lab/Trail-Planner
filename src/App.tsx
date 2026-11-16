@@ -574,7 +574,6 @@ export default function App() {
               athlete={athlete}
               race={current ?? null}
               onSave={(d) => saveDrawing(d, current ?? null)}
-              startTool={window.location.hash.endsWith('/points') ? 'points' : 'trace'}
               onBack={() => (current ? go(current.kind === 'route' ? 'parcours' : 'races', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
             />
           </Suspense>
@@ -626,9 +625,7 @@ export default function App() {
               watchStart={watchStart}
               onChange={updateRace}
               onAthleteChange={updateAthlete}
-              onRedraw={(tool) => {
-                window.location.hash = `/tracer/${current.id}${tool === 'points' ? '/points' : ''}`
-              }}
+              onRedraw={() => go('tracer', current.id)}
               library={{
                 kind: current.kind,
                 addToLibrary: () => addRaceCopy(toRoute(current)),

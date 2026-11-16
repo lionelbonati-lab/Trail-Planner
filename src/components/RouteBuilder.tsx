@@ -120,8 +120,6 @@ interface Props {
   onSave: (r: DrawResult) => void
   /** Sortie du traceur sans enregistrer (flèche de retour, sur téléphone où il couvre tout l'écran). */
   onBack: () => void
-  /** Outil à l'ouverture : tracé, ou points de course (carte agrandie d'une course). */
-  startTool?: 'trace' | 'points'
 }
 
 /** Segment calculé ; `offroad` : point hors du réseau de chemins, tracé en ligne droite. */
@@ -264,7 +262,7 @@ function ModeSeg({ value, onChange }: { value: SegMode; onChange: (m: SegMode) =
 }
 
 /** Traceur de parcours plein écran : toucher = point sur les chemins, appui long = point hors sentier. */
-export default function RouteBuilder({ athlete, race, onSave, onBack, startTool }: Props) {
+export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const init = useMemo(() => initialState(race, athlete), []) // eslint-disable-line react-hooks/exhaustive-deps
   const cache = useRef(init.cache)
   const [wps, setWps] = useState<Waypoint[]>(init.wps)
@@ -285,7 +283,6 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<Sel>(null)
   // Mode « Points de course » (course ou parcours existant) : points de passage posés et déplacés sur le tracé.
-  const [tool, setTool] = useState<'trace' | 'points'>(race && startTool === 'points' ? 'points' : 'trace')
   const [cps, setCps] = useState<PlacedCp[]>(() => initialCps(race))
   const [cpsDirty, setCpsDirty] = useState(false)
   const [selCp, setSelCp] = useState<string | null>(null)
@@ -538,12 +535,6 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
       }),
     )
   }
-  const switchTool = (t: 'trace' | 'points') => {
-    setTool(t)
-    setSel(null)
-    setSelCp(null)
-    setAccessFor(null)
-  }
 
   const act = {
     add: (lat: number, lon: number, m: SegMode = mode) => {
@@ -552,8 +543,9 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     },
     /** Ferme ce qui est ouvert ; renvoie true s'il y avait quelque chose. */
     dismiss: () => {
-      if (!sel && !menu && !places) return false
+      if (!sel && !menu && !places && !selCp) return false
       setSel(null)
+      setSelCp(null)
       setMenu(false)
       setPlaces(null)
       return true
@@ -561,14 +553,12 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     // Clic (souris) : ferme d'abord ce qui est ouvert, sinon ajoute un point (ou place le départ
     // de la boucle automatique).
     tap: (lat: number, lon: number) => {
-      if (tool === 'points') return
       if (act.dismiss()) return
       if (autoOpen) act.placeStart(lat, lon)
       else act.add(lat, lon)
     },
     // Appui maintenu (téléphone) : ajoute toujours un point (ou place le départ de la boucle).
     holdAdd: (lat: number, lon: number) => {
-      if (tool === 'points') return
       setMenu(false)
       setPlaces(null)
       if (autoOpen) act.placeStart(lat, lon)
@@ -645,14 +635,12 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     },
     addCp: (lat: number, lon: number) => addCp(lat, lon),
     moveCp: (id: string, lat: number, lon: number) => moveCp(id, lat, lon),
-    /** Mode points : toucher la carte place l'accès assistance attendu, sinon ferme la fenêtre du point. */
+    /** Accès assistance attendu : le toucher sur la carte le place. */
     pointsClick: (lat: number, lon: number): boolean => {
-      if (tool !== 'points') return false
-      if (accessFor) {
-        const at: GeoPoint = { lat, lon }
-        patchCp(accessFor, { access: at })
-        setAccessFor(null)
-      } else setSelCp(null)
+      if (!accessFor) return false
+      const at: GeoPoint = { lat, lon }
+      patchCp(accessFor, { access: at })
+      setAccessFor(null)
       return true
     },
     deleteSel: () => {
@@ -797,7 +785,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
         interactive: false,
       }).addTo(g)
       // Bande invisible plus large : facile à toucher au doigt (mode tracé seulement).
-      if (tool === 'points') return
+      if (race) return
       L.polyline(latlngs, { color: '#000', weight: 24, opacity: 0.01, bubblingMouseEvents: false })
         .on('click', (e: L.LeafletMouseEvent) => actRef.current.selectSeg(k, e.latlng.lat, e.latlng.lng))
         .addTo(g)
@@ -816,12 +804,9 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     }
     wps.forEach((_, k) => {
       if (loop && k === n - 1) return // arrivée = départ
-      // Mode points : seuls le départ et l'arrivée restent affichés, sans être déplaçables.
-      if (tool === 'points' && k > 0 && k < n - 1) return
       const picked = sel?.kind === 'wp' && sel.k === k
       L.marker(k === 0 && loop ? at(0) : at(k), {
-        draggable: tool !== 'points',
-        interactive: tool !== 'points',
+        draggable: true,
         // En boucle, l'arrivée est le départ (épingle) : aucun drapeau sur le dernier point posé.
         icon: wpIcon(k, n, picked, letters.get(k) ?? null),
         zIndexOffset: picked ? 2000 : k === 0 || k === n - 1 ? 1000 : 0,
@@ -835,22 +820,17 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
         .on('click', () => actRef.current.selectWp(k))
         .addTo(mk)
     })
-  }, [segs, wps, loop, sel, letters, tool])
+  }, [segs, wps, loop, sel, letters, race])
 
-  // Points de course : déplaçables en mode points (appui sur le tracé, glisser, lâcher pour en poser un),
-  // simples pastilles en mode tracé.
+  // Points de course (course ou parcours existant), sur la même carte que le tracé : toucher le tracé
+  // ouvre le tronçon (point de course, de repère ou de tracé) ; appuyer, glisser et lâcher pose un point
+  // de course à l'endroit lâché ; un point se déplace en le glissant.
   useEffect(() => {
     const g = cpLayer.current
     const m = map.current
     if (!g || !m) return
     g.clearLayers()
-    if (!track) return
-    if (tool !== 'points') {
-      for (const c of placed) {
-        L.circleMarker([c.lat, c.lon], { radius: isRavitoKind(c.kind) ? 6 : 4, color: '#ffffff', fillColor: isRavitoKind(c.kind) ? '#c0571b' : '#1f2420', fillOpacity: 1, weight: 2, interactive: false }).addTo(g)
-      }
-      return
-    }
+    if (!track || !race) return
     const latlngs = track.points.map((p) => [p.lat, p.lon] as [number, number])
     const hit = L.polyline(latlngs, { color: '#000', weight: 26, opacity: 0.001, className: 'edit-hit' }).addTo(g)
     const ghost = L.circleMarker(latlngs[0], { radius: 9, color: '#ffffff', fillColor: '#e0007a', fillOpacity: 1, weight: 3, interactive: false })
@@ -864,9 +844,15 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
         const ll = m.mouseEventToLatLng(x as unknown as MouseEvent)
         return track.points[nearestIndex(track.points, ll.lat, ll.lng)]
       }
-      const p0 = at(pe)
-      ghost.setLatLng([p0.lat, p0.lon]).addTo(g)
+      const x0 = pe.clientX
+      const y0 = pe.clientY
+      let dragging = false
       const move = (x: PointerEvent) => {
+        if (!dragging && Math.hypot(x.clientX - x0, x.clientY - y0) > 8) {
+          dragging = true
+          ghost.addTo(g)
+        }
+        if (!dragging) return
         const p = at(x)
         ghost.setLatLng([p.lat, p.lon])
       }
@@ -876,10 +862,12 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
         document.removeEventListener('pointercancel', up)
         m.dragging.enable()
         ghost.remove()
-        if (x.type === 'pointerup') {
-          const p = at(x)
-          actRef.current.addCp(p.lat, p.lon)
-        }
+        // Le clic qui suit ne doit pas poser de point de tracé.
+        held.current = Date.now()
+        if (x.type !== 'pointerup') return
+        const p = at(x)
+        if (dragging) actRef.current.addCp(p.lat, p.lon)
+        else actRef.current.pickDist(p.dist)
       }
       document.addEventListener('pointermove', move)
       document.addEventListener('pointerup', up)
@@ -901,7 +889,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
         actRef.current.moveCp(c.id, ll.lat, ll.lng)
       })
     }
-  }, [tool, placed, track, selCp, accessFor])
+  }, [race, placed, track, selCp, accessFor])
 
   // Bornes kilométriques.
   useEffect(() => {
@@ -1207,7 +1195,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     <MiniProfile
                   track={track}
                   onHover={setHover}
-                  onPick={tool === 'points' ? (mobile ? undefined : (d) => { const p = track.points[indexAt(track.points, d)]; addCp(p.lat, p.lon) }) : act.pickDist}
+                  onPick={act.pickDist}
                   marks={[
                     ...placed.map((c) => ({ d: c.dist, label: c.kind === 'base' ? 'BV' : c.kind === 'ravito' ? 'R' : c.kind === 'chrono' ? 'C' : c.kind === 'cutoff' ? 'B' : 'P' })),
                     ...(rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []),
@@ -1258,26 +1246,16 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
             )}
           </form>
         </div>
-        {race && (
-          <div className="draw-pill draw-tool" role="group" aria-label="Outil">
-            <button className={tool === 'trace' ? 'on' : ''} onClick={() => switchTool('trace')}><Route className="inline" /> Tracé</button>
-            <button className={tool === 'points' ? 'on' : ''} onClick={() => switchTool('points')}><Flag className="inline" /> Points de course</button>
-          </div>
-        )}
-        {tool === 'points' && !selCpObj && (
-          <div className="draw-banner points-hint">
-            {accessFor ? (
-              <div className="banner info">
-                <span><MapPin className="inline" /> Touche la carte à l'endroit où ton assistance se gare pour « {placed.find((c) => c.id === accessFor)?.name} ».</span>
-                <button className="ghost" onClick={() => setAccessFor(null)}>Annuler</button>
-              </div>
-            ) : (
-              <div className="draw-tip">Appuie sur le tracé, glisse et lâche : un point est posé là. Glisse un point pour le déplacer, touche-le pour l'ouvrir.</div>
-            )}
+        {accessFor && (
+          <div className="draw-banner">
+            <div className="banner info">
+              <span><MapPin className="inline" /> Touche la carte à l'endroit où ton assistance se gare pour « {placed.find((c) => c.id === accessFor)?.name} ».</span>
+              <button className="ghost" onClick={() => setAccessFor(null)}>Annuler</button>
+            </div>
           </div>
         )}
 
-        {tool === 'trace' && (pendingImport || notice || !wps.length) && (
+        {!accessFor && (pendingImport || notice || !wps.length) && (
           <div className="draw-banner">
             {pendingImport ? (
               <div className="banner info">
@@ -1696,7 +1674,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
                 </ol>
                 <p className="muted small">
                   {race
-                    ? 'Points de course (R ravito, BV base de vie, P point inter, C chrono, B barrière) et points de repère du tracé, dans l’ordre du parcours. Un point du tracé se change en point de course depuis sa fenêtre.'
+                    ? 'Points de course (R ravito, BV base de vie, P point inter, C chrono, B barrière) et repères du tracé, dans l’ordre du parcours. Sur la carte : toucher le tracé ouvre le tronçon (point de course ici, repère, point de tracé) ; appuyer, glisser et lâcher sur le tracé pose un point de course ; glisser un point le déplace ; un point du tracé devient un point de course depuis sa fenêtre.'
                     : 'Touche le tracé ou le profil pour ajouter un point de repère ; il devient un point de passage de la course.'}
                 </p>
               </>
