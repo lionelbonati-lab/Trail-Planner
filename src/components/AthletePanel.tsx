@@ -5,20 +5,16 @@ import { DEFAULT_ZONES } from '../lib/defaults'
 import { GARMIN_PCT, HR_METHODS, hrPctOf, withHrZones } from '../lib/hr'
 import { VAM_ZONE_COUNT, interpVam, vamRef, vamZonesFromCs, vamZonesOf } from '../lib/vam'
 import { colorForIndex } from '../lib/zones'
-import type { Athlete, DescentPoint, Durability, HrZone, Race, TrainingZone, VamPoint, VamZone } from '../lib/types'
+import type { Athlete, DescentPoint, Durability, HrZone, TrainingZone, VamPoint, VamZone } from '../lib/types'
 import { athleteKme, autoKme } from '../lib/endurancepro'
-import { LevelCard } from './LevelCard'
 import { Card, Hint, Num, PaceField, Toggle } from './ui'
 
 export function AthletePanel({
   athlete,
   onChange,
-  races = [],
 }: {
   athlete: Athlete
   onChange: (a: Athlete) => void
-  /** Courses et parcours : temps réalisé sur l'un d'eux pour estimer le niveau sans test VC. */
-  races?: Race[]
 }) {
   const set = <K extends keyof Athlete>(k: K, v: Athlete[K]) => onChange({ ...athlete, [k]: v })
   // Équivalences du km-effort : automatiques (VAM et descente) sauf si décochées.
@@ -32,7 +28,6 @@ export function AthletePanel({
 
   return (
     <div className="grid two">
-      <LevelCard athlete={athlete} races={races} onChange={onChange} />
       <Card title="Profil physiologique">
         <div className="fields">
           <label className="field">

@@ -461,7 +461,7 @@ export function RacePlan({
                 <strong>Profil par défaut</strong> (VC 4'15/km) : ces temps ne sont pas encore les tiens. Sans test VC, estime ton niveau
                 à partir d'une course ou d'un entraînement déjà fait.
               </span>
-              <a className="button primary" href="#/athlete"><Gauge /> Estimer mon niveau</a>
+              <a className="button primary" href="#/cs"><Gauge /> Estimer mon niveau</a>
             </div>
           )}
           {showWatch && (
