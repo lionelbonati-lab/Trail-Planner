@@ -629,3 +629,20 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 /* Base de vie : comme un ravito, teinte plus marquée. */
 .splits tr.kind-base { background: #fbe6d6; }
 .split-card.kind-base { background: #fbe6d6; border-color: #eec3a3; }
+
+/* Cadres de réglages secondaires : pliables aussi sur ordinateur. */
+.card.fold-desktop .card-fold { cursor: pointer; flex: 1; justify-content: space-between; min-height: 32px; }
+.card.fold-desktop .card-fold .fold-chevron { display: inline-block; width: 20px; height: 20px; color: var(--muted); transition: transform 0.15s; }
+.card.fold-desktop.folded .fold-chevron { transform: rotate(-90deg); }
+.card.fold-desktop.folded .card-body, .card.fold-desktop.folded .card-actions { display: none; }
+.card.fold-desktop.folded .card-head { margin-bottom: 0; }
+.card.fold-desktop.folded { padding-top: 12px; padding-bottom: 12px; align-self: start; }
+
+/* Profil : bases de vie, dropbags et points où l'assistance est autorisée. */
+.profile .cp-base line { stroke: var(--base, #c2410c); stroke-dasharray: none; stroke-width: 2; }
+.profile .cp-base circle { fill: var(--base, #c2410c); stroke: var(--base, #c2410c); }
+.profile .cp-base .cp-label { font-weight: 700; fill: var(--base, #c2410c); }
+.profile .cp-chrono circle { fill: #1d4ed8; stroke: #1d4ed8; }
+.profile .cp .assist-ring { fill: none; stroke: #16a34a; stroke-width: 1.6; }
+.profile .cp .dropbag-tag rect { fill: #7c3aed; }
+.profile .cp .dropbag-tag text { fill: #fff; font-size: 8px; font-weight: 700; }

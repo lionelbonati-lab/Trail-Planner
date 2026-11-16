@@ -39,7 +39,10 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   sauf ceux du départ, de l'arrivée ou à plus de 200 m de la trace ; bouton pour réimporter ceux supprimés.
 - Profil et **carte** (OpenTopoMap / OSM) synchronisés (zoom à la molette ; la carte suit le curseur
   quand on survole le profil), points d'un clic sur le profil ou la carte (course : type au choix, ravito, base de vie, point
-  intermédiaire ou barrière ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos ou à toutes les bases de vie (course), ou à tous les points (parcours).
+  intermédiaire, chrono ou barrière ; plus de repères, devenus points inter ; nom par défaut « Type km N », mis à jour si l'on change le type, un nom écrit à la main est gardé) ; même temps d'arrêt en une fois à tous les ravitos ou à toutes les bases de vie (course), ou à tous les points (parcours).
+- **Profil** : bases de vie mises en évidence, dropbags annotés « DB », points où l'assistance est autorisée entourés en vert.
+- Cadres « Départ et calcul », « Environnement » et « Points automatiques » pliés à l'ouverture (dépliables d'un clic) ; bouton « Reporter eau et glucides sur les ravitos » mis en avant dans les temps de passage et le plan nutrition.
+- Export GPX : nom de chaque point = heure de passage prévue (temps depuis le départ en départ libre), nom du point en description, type Garmin (ravito et base de vie → Aid Station / Food, chrono → Checkpoint, barrière → Danger).
 - **Bases de vie** (courses) : grand ravito, 20 min d'arrêt par défaut, traité comme un ravito partout
   (nutrition, assistance, montre, FIT/GPX). Case **Dropbag** sur les ravitos et bases de vie où
   l'organisation prévoit un sac (cochée d'office sur une base de vie) : le plan nutrition et la feuille A4

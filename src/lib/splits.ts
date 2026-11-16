@@ -223,6 +223,7 @@ export const CHECKPOINT_LABELS: Record<CheckpointKind, string> = {
   ravito: 'Ravito',
   base: 'Base de vie',
   split: 'Point inter',
+  chrono: 'Chrono',
   cutoff: 'Barrière',
   info: 'Repère',
 }
@@ -246,13 +247,14 @@ export function withKind(cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoi
 export const WAYPOINT_MAX_OFF = 200
 
 /**
- * Genre d'un waypoint GPX importé : repère sur un parcours ; sur une course, ravito ou barrière
+ * Genre d'un waypoint GPX importé : chrono d'après son nom ; point intermédiaire sur un parcours ; sur une course, ravito ou barrière
  * d'après son nom, son type ou son symbole (« Ravito », « Food », « Drinking Water », « Barrière »,
  * « BH »…), point intermédiaire sinon.
  */
 export function waypointKind(w: { name: string; tags?: string }, race: 'race' | 'route'): CheckpointKind {
-  if (race === 'route') return 'info'
   const text = `${w.name} ${w.tags ?? ''}`
+  if (/chrono|timing|pointage|contr[oô]le/i.test(text)) return 'chrono'
+  if (race === 'route') return 'split'
   if (/barri[eè]re|\bBH\b|cut[ -]?off|limite horaire|time limit/i.test(text)) return 'cutoff'
   if (/base de vie|\bBV\b|life ?base/i.test(text)) return 'base'
   if (/ravit|\bravi\b|aid ?station|food|drink|water|\beau\b|buvette|restaur|refresh/i.test(text)) return 'ravito'

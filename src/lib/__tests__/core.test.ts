@@ -123,7 +123,10 @@ describe('export Garmin', () => {
     const back = parseGpx(out)
     expect(back.totalDist).toBeCloseTo(track.totalDist, -1)
     expect(back.waypoints.length).toBe(2)
-    expect(back.waypoints[0].name).toContain('Ravito <A&B>')
+    // Nom = heure de passage prévue ; nom du point dans la description ; type Garmin du ravito.
+    expect(back.waypoints[0].name).toBe(sim.splits[0].arrivalClock.toLocaleTimeString('fr-FR', { timeZone: race.env.timeZone, hour: '2-digit', minute: '2-digit' }))
+    expect(out).toContain('<desc>Ravito &lt;A&amp;B&gt; · Km 7.0')
+    expect(out).toContain('<sym>Food</sym>\n    <type>Aid Station</type>')
     expect(out).toMatch(/<time>2026-06-06T04:00:00.000Z<\/time>/)
   })
 })

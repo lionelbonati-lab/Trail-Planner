@@ -1,26 +1,4 @@
-import {
-  ArrowLeftToLine,
-  ArrowRightToLine,
-  Check,
-  CloudSun,
-  Copy,
-  FileDown,
-  Gauge,
-  Flag,
-  LibraryBig,
-  Map as MapIcon,
-  MapPin,
-  Moon,
-  Pencil,
-  Play,
-  Plus,
-  Printer,
-  Scissors,
-  Sparkles,
-  Trash2,
-  Users,
-  Watch,
-} from 'lucide-react'
+import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Moon, Pencil, Play, Plus, Printer, Scissors, Sparkles, Trash2, Users, Watch } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
@@ -137,10 +115,10 @@ export function RacePlan({
   const [sending, setSending] = useState<{ target: string | null; name: string } | null>(null)
   const [sent, setSent] = useState<{ id: string; name: string; replaced: boolean } | null>(null)
   const isRoute = race.kind === 'route'
-  // Types proposés : un parcours n'a que des repères et points intermédiaires (le type actuel reste
-  // affiché s'il en a un autre, venu d'une course).
+  // Types proposés : un parcours n'a que des points intermédiaires et chronos (le type actuel reste
+  // affiché s'il en a un autre, venu d'une course) ; plus de repères (devenus points inter).
   const kindOptions = (current: CheckpointKind) =>
-    Object.entries(KIND_LABELS).filter(([k]) => !isRoute || k === 'info' || k === 'split' || k === current) as [CheckpointKind, string][]
+    Object.entries(KIND_LABELS).filter(([k]) => (k !== 'info' && (!isRoute || k === 'split' || k === 'chrono')) || k === current) as [CheckpointKind, string][]
   const [copied, setCopied] = useState(false)
   const [showWatch, setShowWatch] = useState(false)
   const [hoverDist, setHoverDist] = useState<number | null>(null)
@@ -150,7 +128,7 @@ export function RacePlan({
   // Clic sur le profil : fin de cycle (zones, parcours) ou ajout d'un point (repère / ravito).
   const [clickMode, setClickMode] = useState<'cycle' | 'point'>(race.kind === 'route' ? 'cycle' : 'point')
   // Course : type du point ajouté d'un clic sur le profil ou sur la carte.
-  const [clickKind, setClickKind] = useState<'ravito' | 'base' | 'split' | 'cutoff'>('ravito')
+  const [clickKind, setClickKind] = useState<'ravito' | 'base' | 'split' | 'chrono' | 'cutoff'>('ravito')
   /**
    * Changement de type : renommage (voir withKind) ; passage en base de vie : arrêt de 20 min et
    * dropbag prévus d'office s'ils n'étaient pas réglés ; retour d'une base de vie : arrêt par défaut
@@ -164,7 +142,7 @@ export function RacePlan({
     ...(cp.kind === 'base' && kind !== 'base' && cp.stopMin === defaultStop('base') ? { stopMin: defaultStop(kind) } : {}),
   })
   /** Clic sur le profil ou la carte : repère (parcours) ou point du type choisi (course). */
-  const pickPoint = (d: number) => addPoint(d, isRoute ? 'info' : clickKind)
+  const pickPoint = (d: number) => addPoint(d, isRoute ? 'split' : clickKind)
   // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
   const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1399px)')
   const [editing, setEditing] = useState<string | null>(null)
@@ -249,7 +227,7 @@ export function RacePlan({
     return <Card title={race.name} fold={false}><p className="warn">Impossible de lire le GPX de cette course.</p></Card>
   }
 
-  const addPoint = (dist: number, kind: CheckpointKind = race.kind === 'route' ? 'info' : 'ravito', name?: string) => {
+  const addPoint = (dist: number, kind: CheckpointKind = race.kind === 'route' ? 'split' : 'ravito', name?: string) => {
     const cp: Checkpoint = {
       id: crypto.randomUUID(),
       dist: Math.round(dist),
@@ -555,7 +533,7 @@ export function RacePlan({
             <div className="row profile-tools">
               <span className="muted small">Clic sur le profil ou la carte :</span>
               <span className="click-mode" role="group" aria-label="Type du point ajouté d'un clic">
-                {(['ravito', 'base', 'split', 'cutoff'] as const).map((k) => (
+                {(['ravito', 'base', 'split', 'chrono', 'cutoff'] as const).map((k) => (
                   <button key={k} className={clickKind === k ? 'on' : ''} onClick={() => setClickKind(k)} aria-pressed={clickKind === k}>
                     <Plus /> {KIND_LABELS[k]}
                   </button>
@@ -699,7 +677,7 @@ export function RacePlan({
         {isRoute && race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
         <div className="grid three">
-          <Card title={isRoute ? 'Calcul' : 'Départ et calcul'}>
+          <Card title={isRoute ? 'Calcul' : 'Départ et calcul'} foldDesktop>
             <div className="fields">
               {isRoute ? null : free ? (
                 <div className="field">
@@ -768,7 +746,7 @@ export function RacePlan({
             </div>
           </Card>
 
-          <Card title="Environnement">
+          <Card title="Environnement" foldDesktop>
             <Toggle label="Nuit (auto selon soleil)" checked={race.env.night.enabled} onChange={(v) => setEnv('night', { ...race.env.night, enabled: v })} />
             {race.env.night.enabled && (
               <div className="fields sub">
@@ -857,7 +835,7 @@ export function RacePlan({
             </Hint>
           </Card>
 
-          <Card title="Points automatiques">
+          <Card title="Points automatiques" foldDesktop>
             <div className="fields">
               <label className="field">
                 <span className="field-label">Méthode</span>
@@ -883,7 +861,6 @@ export function RacePlan({
               <Num label="Eau (à 15 °C)" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
               <Num label="Sodium" value={race.sodiumPerH} onChange={(v) => set({ sodiumPerH: v })} unit="mg/h" />
             </div>
-            {!isRoute && <button className="ghost" onClick={fillNutrition} disabled={ravitos.length === 0}>Reporter eau et glucides sur les ravitos</button>}
             <Hint>Tes produits (gels, boissons…) se règlent dans le profil athlète. L'eau augmente de 4 % par °C au-dessus de 15 °C.</Hint>
             <TechOverrides race={race} onChange={onChange} />
           </Card>
@@ -921,7 +898,16 @@ export function RacePlan({
 
         <Card
           title="Temps de passage"
-          actions={<button onClick={() => pickPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>}
+          actions={
+            <>
+              {!isRoute && ravitos.length > 0 && (
+                <button className="primary" onClick={fillNutrition} title="Eau et glucides du plan nutrition reportés sur chaque ravito (colonne Eau / Glu.)">
+                  <Droplets /> Reporter eau et glucides sur les ravitos
+                </button>
+              )}
+              <button onClick={() => pickPoint(track.totalDist / 2)}><Plus /> Ajouter un point</button>
+            </>
+          }
         >
           {stopGroups.map((g) => (
             <div className="row bulk-stop" key={g.key}>
@@ -1122,7 +1108,10 @@ export function RacePlan({
           )}
         </Card>
 
-        <Card title="Plan nutrition">
+        <Card
+          title="Plan nutrition"
+          actions={!isRoute && ravitos.length > 0 ? <button className="primary" onClick={fillNutrition}><Droplets /> Reporter eau et glucides sur les ravitos</button> : undefined}
+        >
           <div className="scroll">
             <table className="table">
               <thead>
