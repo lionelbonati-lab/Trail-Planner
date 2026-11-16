@@ -719,3 +719,6 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .wp-dot.cp-kind.kind-chrono { background: #1d4ed8; }
 .wp-dot.cp-kind.kind-cutoff { background: var(--danger); }
 .auto-points { margin-top: 8px; }
+
+.product-rows { display: grid; gap: 6px; }
+.product-rows select { min-width: 220px; }

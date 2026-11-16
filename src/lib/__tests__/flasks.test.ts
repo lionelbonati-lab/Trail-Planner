@@ -75,7 +75,7 @@ describe('flasques de 500 ml : eau et isotonique', () => {
     const plan = computePlan(race, DEFAULT_ATHLETE)!
     const gels = DEFAULT_PRODUCTS.filter((p) => p.id === 'gel')
     const [leg] = nutritionPlan(race, plan.sim, gels)
-    expect(leg.flasks).toEqual({ ...flaskSplit(leg.water, false), isoId: null, waterId: null })
+    expect(leg.flasks).toEqual({ ...flaskSplit(leg.water, false), isoId: null, waterId: null, mix: 0 })
     expect(bagText(leg)).toMatch(/^[\d.]+ L : \d flasques? d'eau, \d+ × Gel/)
   })
 })
@@ -109,8 +109,17 @@ describe('eau minérale salée (St-Yorre)', () => {
     const [avec] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, styorre])
     expect(avec.flasks.waterId).toBe('sy')
     expect(avec.products.find((x) => x.product.id === 'sy')?.count).toBe(avec.flasks.water)
-    expect(avec.sodiumFromProducts - sans.sodiumFromProducts).toBe(850 * avec.flasks.water)
-    expect(bagText(avec)).toContain(`${avec.flasks.water} flasques St-Yorre + `)
+    // Mélange : juste assez de St-Yorre pour le sodium visé, jamais plus.
+    const mix = avec.flasks.mix!
+    expect(mix).toBeGreaterThan(0)
+    expect(mix).toBeLessThanOrEqual(1)
+    expect(avec.sodiumFromProducts).toBeLessThanOrEqual(Math.max(avec.sodium, sans.sodiumFromProducts))
+    expect(avec.sodiumFromProducts - sans.sodiumFromProducts).toBe(Math.round(850 * avec.flasks.water * mix))
+    expect(bagText(avec)).toMatch(new RegExp(`${avec.flasks.water} flasques St-Yorre`))
+    if (mix < 1) expect(bagText(avec)).toMatch(/St-Yorre \+ eau \(\d+ ml \+ \d+ ml\)/)
     expect(bagText(avec)).not.toContain('× St-Yorre')
+    // Sodium déjà couvert : pas de St-Yorre.
+    const [rien] = nutritionPlan({ ...race, sodiumPerH: 0 }, plan.sim, [...DEFAULT_PRODUCTS, styorre])
+    expect(rien.flasks.waterId).toBeNull()
   })
 })
