@@ -6,8 +6,6 @@ import {
   CloudOff,
   Copy,
   Download,
-  FileDown,
-  FileUp,
   Flag,
   Gauge,
   LibraryBig,
@@ -16,9 +14,7 @@ import {
   Mail,
   Mountain,
   RefreshCw,
-  Spline,
   Trash2,
-  Upload,
   User as UserIcon,
   Watch,
   Wheat,
@@ -28,16 +24,13 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { ActivityPanel } from './components/ActivityPanel'
 import { AthletePanel } from './components/AthletePanel'
 import { NutritionPanel } from './components/NutritionPanel'
-import { ListLinkButtons } from './components/ListLinkButtons'
 import { WatchPanel } from './components/WatchPanel'
 import { LiveMode } from './components/LiveMode'
 import { computePlan, isFreeStart, scenarioWindows } from './lib/plan'
 import { buildSnapshot, shareUrl } from './lib/share'
 import { LibraryPanel } from './components/LibraryPanel'
 import { RacePlan } from './components/RacePlan'
-import { raceFromRoute, replaceRaceTrack, toRoute } from './lib/library'
 import { SessionsPanel } from './components/SessionsPanel'
-import { Card, Hint } from './components/ui'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete, normalizeRace } from './lib/defaults'
 import { download } from './lib/exportGpx'
 import { parseGpx } from './lib/gpx'
@@ -84,11 +77,9 @@ type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parc
 
 /** Onglets de la barre du haut. */
 const NAV: { tab: Tab; label: string; Icon: typeof Flag }[] = [
-  { tab: 'races', label: 'Courses', Icon: Flag },
+  { tab: 'parcours', label: 'Parcours', Icon: LibraryBig },
   { tab: 'athlete', label: 'Profil athlète', Icon: UserIcon },
   { tab: 'nutrition', label: 'Nutrition', Icon: Wheat },
-  { tab: 'parcours', label: 'Parcours', Icon: LibraryBig },
-  { tab: 'tracer', label: 'Tracer', Icon: Spline },
   { tab: 'cs', label: 'Test VC', Icon: Gauge },
   { tab: 'analyse', label: 'Analyse', Icon: ChartLine },
   { tab: 'montre', label: 'Montre', Icon: Watch },
@@ -99,7 +90,8 @@ function readHash(): { tab: Tab; raceId: string | null } {
   // Calculateur VC et Séances ne font plus qu'un onglet (Test VC) : les anciens liens y mènent.
   const tab = hashTab === 'seances' ? 'cs' : hashTab
   return {
-    tab: tab === 'athlete' || tab === 'nutrition' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'parcours' || tab === 'tracer' || tab === 'montre' ? tab : 'races',
+    // Courses et parcours ne font plus qu'une page (Parcours) : les anciens liens « courses » y mènent.
+    tab: tab === 'athlete' || tab === 'nutrition' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'tracer' || tab === 'montre' ? tab : 'parcours',
     raceId: (tab === 'races' || tab === 'live' || tab === 'tracer' || tab === 'parcours') && raceId ? raceId : null,
   }
 }
@@ -260,7 +252,7 @@ export default function App() {
         const r = { ...newRace(name, text), kind, checkpoints: waypointCheckpoints(t, kind) }
         setRaces((all) => [r, ...all])
         await store.saveRace(r)
-        go(kind === 'route' ? 'parcours' : 'races', r.id)
+        go('parcours', r.id)
       } catch (e) {
         setError(`${f.name} : ${(e as Error).message}`)
       }
@@ -271,18 +263,7 @@ export default function App() {
   const addRaceCopy = async (r: Race, open = true) => {
     setRaces((all) => [r, ...all])
     await store.saveRace(r).catch(report)
-    if (open) go(r.kind === 'route' ? 'parcours' : 'races', r.id)
-  }
-  /** Parcours envoyé vers une course : nouvelle course (copie), ou tracé d'une course existante remplacé. */
-  const sendRouteToRace = (routeRace: Race, target: string | null, name: string): string => {
-    const existing = target ? races.find((r) => r.id === target) : undefined
-    if (existing) {
-      updateRace(replaceRaceTrack(existing, routeRace))
-      return existing.id
-    }
-    const r = raceFromRoute(routeRace, name)
-    void addRaceCopy(r, false)
-    return r.id
+    if (open) go('parcours', r.id)
   }
   // Traceur : nouveau parcours, ou tracé modifié d'une course existante.
   const saveDrawing = async (d: DrawResult, edited: Race | null) => {
@@ -297,16 +278,13 @@ export default function App() {
       const base = d.checkpoints ?? next.checkpoints
       const checkpoints = [...base, ...markPoints(base)].sort((a, b) => a.dist - b.dist)
       updateRace({ ...next, checkpoints, ...(d.zones ? { zones: d.zones } : {}) })
-      go(edited.kind === 'route' ? 'parcours' : 'races', edited.id)
-    } else await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [], checkpoints: markPoints([]) })
+      go('parcours', edited.id)
+    } else {
+      const placed = d.checkpoints ?? []
+      await addRaceCopy({ ...newRace(d.name, d.gpxText), kind: d.kind, drawn: d.drawn, zones: d.zones ?? [], checkpoints: [...placed, ...markPoints(placed)].sort((a, b) => a.dist - b.dist) })
+    }
   }
   const removeRace = async (id: string) => {
-    setRaces((all) => all.filter((r) => r.id !== id))
-    await store.deleteRace(id).catch(report)
-  }
-
-  const deleteRace = async (id: string) => {
-    if (!confirm('Supprimer cette course ?')) return
     setRaces((all) => all.filter((r) => r.id !== id))
     await store.deleteRace(id).catch(report)
   }
@@ -529,6 +507,32 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, cloud, athlete.epSync, athlete.watchId, athlete.epCode])
 
+
+  // Page Parcours : courses et parcours d'entraînement dans une seule liste.
+  const libraryEl = (
+    <LibraryPanel
+      races={races}
+      athlete={athlete}
+      onOpen={(id) => go('parcours', id)}
+      onAdd={(f) => addGpx(f, 'route')}
+      onDraw={() => go('tracer')}
+      onUpdate={updateRace}
+      onDelete={removeRace}
+      onDuplicate={duplicateRace}
+      onWatchId={athlete.watchId ? athlete.watchRaceId ?? null : null}
+      onWatch={putOnWatch}
+      onShare={copyShareLink}
+      backup={{
+        onExport: exportBackup,
+        onImport: importBackup,
+        storeKind: store.kind,
+        localCount: store.kind === 'cloud' ? localCount : 0,
+        onPushLocal: pushLocalToCloud,
+        onDiscardLocal: discardLocal,
+      }}
+    />
+  )
+
   return (
     <div className="app">
       <header className="topbar no-print">
@@ -574,7 +578,7 @@ export default function App() {
               athlete={athlete}
               race={current ?? null}
               onSave={(d) => saveDrawing(d, current ?? null)}
-              onBack={() => (current ? go(current.kind === 'route' ? 'parcours' : 'races', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
+              onBack={() => (current ? go('parcours', current.id) : window.history.length > 1 ? window.history.back() : go('parcours'))}
             />
           </Suspense>
         ) : route.tab === 'athlete' ? (
@@ -587,36 +591,21 @@ export default function App() {
             onChange={updateAthlete}
             signedIn={!!user}
             onWatch={races.find((r) => r.id === athlete.watchRaceId) ?? null}
-            onOpen={(r) => go(r.kind === 'route' ? 'parcours' : 'races', r.id)}
+            onOpen={(r) => go('parcours', r.id)}
           />
         ) : route.tab === 'cs' ? (
           <SessionsPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'parcours' && !current ? (
-          <LibraryPanel
-            races={races}
-            athlete={athlete}
-            onOpen={(id) => go('parcours', id)}
-            onAdd={(f) => addGpx(f, 'route')}
-            onDraw={() => go('tracer')}
-            onUpdate={updateRace}
-            onDelete={removeRace}
-            onWatchId={athlete.watchId ? athlete.watchRaceId ?? null : null}
-            onWatch={putOnWatch}
-            onShare={copyShareLink}
-          />
+          libraryEl
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : route.tab === 'live' && current ? (
-          <LiveMode key={current.id} race={current} athlete={athlete} onChange={updateRace} onExit={() => go(current.kind === 'route' ? 'parcours' : 'races', current.id)} />
+          <LiveMode key={current.id} race={current} athlete={athlete} onChange={updateRace} onExit={() => go('parcours', current.id)} />
         ) : current ? (
           <>
             <div className="crumbs no-print">
-              {current.kind === 'race' ? (
-                <a href="#/races"><ArrowLeft className="inline" /> Toutes les courses</a>
-              ) : (
-                <a href="#/parcours"><ArrowLeft className="inline" /> Bibliothèque de parcours</a>
-              )}
-              {current.kind === 'route' && <span className="badge">Parcours</span>}
+              <a href="#/parcours"><ArrowLeft className="inline" /> Tous les parcours</a>
+              {current.kind === 'race' && <span className="badge">Course</span>}
             </div>
             <RacePlan
               key={current.id}
@@ -626,19 +615,6 @@ export default function App() {
               onChange={updateRace}
               onAthleteChange={updateAthlete}
               onRedraw={() => go('tracer', current.id)}
-              library={{
-                kind: current.kind,
-                addToLibrary: () => addRaceCopy(toRoute(current)),
-              }}
-              toRace={
-                current.kind === 'route'
-                  ? {
-                      races: races.filter((r) => r.kind === 'race').map((r) => ({ id: r.id, name: r.name })),
-                      send: (target, name) => sendRouteToRace(current, target, name),
-                      open: (id) => go('races', id),
-                    }
-                  : undefined
-              }
               share={{
                 available: !!user,
                 url: current.shareId ? shareUrl(current.shareId) : null,
@@ -655,156 +631,10 @@ export default function App() {
             />
           </>
         ) : (
-          <RaceList
-            races={races.filter((r) => r.kind === 'race')}
-            onWatchId={athlete.watchId ? athlete.watchRaceId ?? null : null}
-            onWatch={putOnWatch}
-            onShare={copyShareLink}
-            onOpen={(id) => go('races', id)}
-            onAdd={addGpx}
-            onDraw={() => go('tracer')}
-            onDelete={deleteRace}
-            onDuplicate={duplicateRace}
-            onExport={exportBackup}
-            onImport={importBackup}
-            storeKind={store.kind}
-            localCount={store.kind === 'cloud' ? localCount : 0}
-            onPushLocal={pushLocalToCloud}
-            onDiscardLocal={discardLocal}
-          />
+          libraryEl
         )}
       </main>
     </div>
-  )
-}
-
-function RaceList(props: {
-  races: Race[]
-  /** Course sur la montre (id), pour le bouton ⌚ actif. */
-  onWatchId: string | null
-  onWatch: (r: Race) => void
-  onShare: (r: Race) => void
-  onOpen: (id: string) => void
-  onAdd: (f: FileList | null) => void
-  onDraw: () => void
-  onDelete: (id: string) => void
-  onDuplicate: (r: Race) => void
-  onExport: () => void
-  onImport: (f: FileList | null) => void
-  storeKind: 'local' | 'cloud'
-  localCount: number
-  onPushLocal: () => void
-  onDiscardLocal: () => void
-}) {
-  const sorted = [...props.races].sort((a, b) => a.env.start.localeCompare(b.env.start))
-  return (
-    <div className="grid">
-      {props.localCount > 0 && (
-        <div className="banner info">
-          <span>
-            Ce navigateur contient {props.localCount} course{props.localCount > 1 ? 's' : ''} enregistrée
-            {props.localCount > 1 ? 's' : ''} sans compte.
-          </span>
-          <span className="row tight">
-            <button className="primary" onClick={props.onPushLocal}>Les ajouter à mon compte</button>
-            <button className="ghost" onClick={props.onDiscardLocal}>Les effacer</button>
-          </span>
-        </div>
-      )}
-      <Card
-        fold="open"
-        title="Mes courses"
-        actions={
-          <>
-            <button onClick={props.onDraw} title="Dessine le parcours sur la carte"><Spline /> Tracer sur la carte</button>
-            <label className="button primary">
-              <Upload /> Importer un GPX
-              <input type="file" accept=".gpx,application/gpx+xml" multiple hidden onChange={(e) => { props.onAdd(e.target.files); e.target.value = '' }} />
-            </label>
-          </>
-        }
-      >
-        {sorted.length === 0 ? (
-          <div className="empty">
-            <p>Importe le fichier .gpx d'une course, ou trace-la sur la carte, pour commencer ton plan.</p>
-            <Hint>Renseigne d'abord ton profil (VC, VAM, durabilité) : tous les temps en découlent.</Hint>
-          </div>
-        ) : (
-          <div className="scroll">
-            <table className="table list-table">
-              <thead>
-                <tr><th>Course</th><th className="hide-sm">Départ</th><th className="hide-sm">Distance</th><th className="hide-sm">D+</th><th className="hide-sm">Points</th><th /></tr>
-              </thead>
-              <tbody>
-                {sorted.map((r) => <RaceRow key={r.id} race={r} {...props} />)}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-      <Card title="Sauvegarde">
-        <p className="muted">
-          Données stockées {props.storeKind === 'cloud' ? 'dans ton compte (synchronisées)' : 'dans ce navigateur uniquement'}.
-        </p>
-        <div className="row">
-          <button onClick={props.onExport}><FileDown /> Exporter (JSON)</button>
-          <label className="button">
-            <FileUp /> Importer (JSON)
-            <input type="file" accept=".json,application/json" hidden onChange={(e) => { props.onImport(e.target.files); e.target.value = '' }} />
-          </label>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-function RaceRow({
-  race,
-  onWatchId,
-  onWatch,
-  onShare,
-  onOpen,
-  onDelete,
-  onDuplicate,
-}: {
-  race: Race
-  onWatchId: string | null
-  onWatch: (r: Race) => void
-  onShare: (r: Race) => void
-  onOpen: (id: string) => void
-  onDelete: (id: string) => void
-  onDuplicate: (r: Race) => void
-}) {
-  const info = useMemo(() => {
-    try {
-      const t = parseGpx(race.gpxText, race.smoothing)
-      return { dist: t.totalDist, dPlus: t.dPlus }
-    } catch {
-      return null
-    }
-  }, [race.gpxText, race.smoothing])
-  return (
-    <tr className="clickable" onClick={() => onOpen(race.id)}>
-      <td>
-        <strong>{race.name}</strong>
-        <div className="only-sm muted small">
-          {race.env.start.replace('T', ' ')}
-          {info && ` · ${(info.dist / 1000).toFixed(1)} km · ${Math.round(info.dPlus)} m D+`}
-          {race.checkpoints.length > 0 && ` · ${race.checkpoints.length} point${race.checkpoints.length > 1 ? 's' : ''}`}
-        </div>
-      </td>
-      <td className="hide-sm">{race.env.start.replace('T', ' ')}</td>
-      <td className="hide-sm">{info ? `${(info.dist / 1000).toFixed(1)} km` : '—'}</td>
-      <td className="hide-sm">{info ? `${Math.round(info.dPlus)} m` : '—'}</td>
-      <td className="hide-sm">{race.checkpoints.length}</td>
-      <td onClick={(e) => e.stopPropagation()}>
-        <span className="list-actions">
-          <ListLinkButtons race={race} onWatchId={onWatchId} onWatch={onWatch} onShare={onShare} />
-          <button className="ghost" onClick={() => onDuplicate(race)} title="Dupliquer (ex. tester une autre stratégie)" aria-label="Dupliquer"><Copy /></button>
-          <button className="ghost" onClick={() => onDelete(race.id)} title="Supprimer" aria-label="Supprimer"><Trash2 /></button>
-        </span>
-      </td>
-    </tr>
   )
 }
 

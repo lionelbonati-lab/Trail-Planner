@@ -1,4 +1,4 @@
-import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Moon, Pencil, Plus, Printer, Scissors, Trash2, Users, Watch } from 'lucide-react'
+import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, Map as MapIcon, MapPin, Moon, Pencil, Plus, Printer, Scissors, Trash2, Users, Watch } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
@@ -14,7 +14,7 @@ import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { CHECKPOINT_LABELS, commonStop, defaultStop, isRavitoKind, setStops, waypointCheckpoints, withKind } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
-import type { Athlete, CalcMode, Checkpoint, CheckpointKind, ProductType, Race, RaceKind, SimPoint, SimResult, Track } from '../lib/types'
+import type { Athlete, CalcMode, Checkpoint, CheckpointKind, ProductType, Race, SimPoint, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
@@ -92,27 +92,20 @@ export function RacePlan({
   onRedraw,
   share,
   watch,
-  library,
-  toRace,
   watchStart = null,
 }: {
   race: Race
   athlete: Athlete
   onChange: (r: Race) => void
   onAthleteChange: (a: Athlete) => void
-  /** Carte agrandie (traceur) : tracé, ou points de course. */
+  /** Éditeur (traceur) : tracé et points de course. */
   onRedraw?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
   watch?: { available: boolean; active: boolean; activate: () => void }
-  library?: { kind: RaceKind; addToLibrary: () => void }
-  /** Parcours : envoi vers une course (nouvelle course si `target` est null, sinon tracé remplacé). */
-  toRace?: { races: { id: string; name: string }[]; send: (target: string | null, name: string) => string; open: (id: string) => void }
   /** Départ libre : départ réel donné par la montre (ms), si l'activité est en cours. */
   watchStart?: number | null
 }) {
   // Parcours : panneau « Vers une course » (cible, nom) puis résultat.
-  const [sending, setSending] = useState<{ target: string | null; name: string } | null>(null)
-  const [sent, setSent] = useState<{ id: string; name: string; replaced: boolean } | null>(null)
   const isRoute = race.kind === 'route'
   // Types proposés au changement de type (temps de passage).
   const kindOptions = (current: CheckpointKind) =>
@@ -228,7 +221,7 @@ export function RacePlan({
     name: s.cp.name,
     kind: s.cp.kind,
     dist: s.to,
-    assist: !isRoute && assistAllowed(s.cp),
+    assist: assistAllowed(s.cp),
     dropbag: !!s.cp.dropbag && isRavitoKind(s.cp.kind),
     up: sim.splits.slice(0, i + 1).reduce((a, x) => a + x.dPlus, 0),
   }))
@@ -248,7 +241,7 @@ export function RacePlan({
   const legs = nutritionPlan(race, sim, products)
   const brands = brandsOf(athlete.products)
   // Dropbags prévus par l'organisation (course) : contenu jusqu'au suivant.
-  const dropbags = isRoute ? [] : dropbagPlan(legs, sim.splits.map((s) => s.cp))
+  const dropbags = dropbagPlan(legs, sim.splits.map((s) => s.cp))
   const parts = partition(race.zones, track.totalDist)
   // Reporte eau et glucides de chaque tronçon sur le point de départ correspondant.
   const fillNutrition = () => {
@@ -321,12 +314,12 @@ export function RacePlan({
     [sim.splits, race.finishAccess, track],
   )
   const ravitos = sim.splits.filter((s) => isRavitoKind(s.cp.kind))
-  // Arrêt commun : à chaque ravito et à chaque base de vie d'une course, à chaque point d'un parcours.
-  const stopGroups = (
-    isRoute
-      ? [{ kind: null, one: 'point', many: 'points' }]
-      : [{ kind: 'ravito', one: 'ravito', many: 'ravitos' }, { kind: 'base', one: 'base de vie', many: 'bases de vie' }]
-  ).flatMap(({ kind, one, many }) => {
+  // Arrêt commun : à chaque ravito et à chaque base de vie ; sur un parcours d'entraînement, aussi à chaque point.
+  const stopGroups = [
+    { kind: 'ravito', one: 'ravito', many: 'ravitos' },
+    { kind: 'base', one: 'base de vie', many: 'bases de vie' },
+    ...(isRoute ? [{ kind: null, one: 'point', many: 'points' }] : []),
+  ].flatMap(({ kind, one, many }) => {
     const k = kind as CheckpointKind | null
     const targets = race.checkpoints.filter((c) => k === null || c.kind === k)
     if (!targets.length) return []
@@ -346,23 +339,16 @@ export function RacePlan({
           }
           actions={
             <>
-              {isRoute && toRace && (
-                <button
-                  className="primary"
-                  onClick={() => {
-                    setSent(null)
-                    setSending(sending ? null : { target: null, name: race.name })
-                  }}
-                  title="Crée une course à partir de ce parcours, ou remplace le tracé d'une course (copie indépendante)"
-                >
-                  <Flag /> Vers une course
-                </button>
-              )}
+              <button
+                className={isRoute ? '' : 'on-watch'}
+                onClick={() => set({ kind: isRoute ? 'race' : 'route' })}
+                title={isRoute ? 'En faire une course : date et heure de départ dans « Départ et calcul », barrières horaires' : 'Course : revenir à un parcours d’entraînement (départ libre, zones d’allure)'}
+                aria-pressed={!isRoute}
+              >
+                <Flag /> Course{!isRoute && <> <Check /></>}
+              </button>
               {onRedraw && (
                 <button onClick={() => onRedraw()} title="Modifier le tracé et les points de passage"><Pencil /> Modifier</button>
-              )}
-              {library && library.kind !== 'route' && (
-                <button onClick={library.addToLibrary} title="Copie ce parcours dans ta bibliothèque d'entraînement"><LibraryBig /> Ajouter à la bibliothèque</button>
               )}
               {share && (
                 <button
@@ -420,57 +406,6 @@ export function RacePlan({
                 <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
                   Arrêter le partage
                 </button>
-              </span>
-            </div>
-          )}
-          {sending && toRace && (
-            <div className="banner info send-race">
-              <span className="row tight">
-                <label className="check"><input type="radio" checked={sending.target === null} onChange={() => setSending({ ...sending, target: null })} /> Nouvelle course</label>
-                {sending.target === null && (
-                  <input type="text" value={sending.name} onChange={(e) => setSending({ ...sending, name: e.target.value })} aria-label="Nom de la course" />
-                )}
-              </span>
-              {toRace.races.length > 0 && (
-                <span className="row tight">
-                  <label className="check">
-                    <input type="radio" checked={sending.target !== null} onChange={() => setSending({ ...sending, target: toRace.races[0].id })} /> Remplacer le tracé de
-                  </label>
-                  {sending.target !== null && (
-                    <select value={sending.target} onChange={(e) => setSending({ ...sending, target: e.target.value })} aria-label="Course dont le tracé est remplacé">
-                      {toRace.races.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                  )}
-                </span>
-              )}
-              <span className="muted small">
-                {sending.target === null
-                  ? 'La course reprend le tracé, les points de repère et les réglages, sans les zones d’allure. Copie indépendante : modifier le parcours ensuite ne la change pas.'
-                  : 'Le tracé de la course est remplacé ; ses ravitos et réglages sont gardés (les points au-delà de la nouvelle distance sont retirés).'}
-              </span>
-              <span className="row tight">
-                <button
-                  className="primary"
-                  onClick={() => {
-                    const name = sending.target === null ? sending.name : (toRace.races.find((r) => r.id === sending.target)?.name ?? '')
-                    if (sending.target !== null && !confirm(`Remplacer le tracé de « ${name} » par celui de ce parcours ?`)) return
-                    const id = toRace.send(sending.target, sending.name)
-                    setSent({ id, name: sending.target === null ? sending.name.trim() || race.name : name, replaced: sending.target !== null })
-                    setSending(null)
-                  }}
-                >
-                  <Flag /> Envoyer
-                </button>
-                <button className="ghost" onClick={() => setSending(null)}>Annuler</button>
-              </span>
-            </div>
-          )}
-          {sent && toRace && (
-            <div className="banner info">
-              <span>Course « {sent.name} » {sent.replaced ? 'mise à jour avec ce tracé' : 'créée'}.</span>
-              <span className="row tight">
-                <button className="primary" onClick={() => toRace.open(sent.id)}>Ouvrir la course</button>
-                <button className="ghost" onClick={() => setSent(null)} aria-label="Fermer">OK</button>
               </span>
             </div>
           )}
@@ -858,7 +793,7 @@ export function RacePlan({
           title="Temps de passage"
           actions={
             <>
-              {!isRoute && ravitos.length > 0 && (
+              {ravitos.length > 0 && (
                 <button className="primary" onClick={fillNutrition} title="Eau et glucides du plan nutrition reportés sur chaque ravito (colonne Eau / Glu.)">
                   <Droplets /> Reporter eau et glucides sur les ravitos
                 </button>
@@ -913,12 +848,10 @@ export function RacePlan({
                       </div>
                     )}
                     {cp.notes && !open && <div className="small">{cp.notes}</div>}
-                    {!isRoute && (
-                      <div className="row tight">
-                        {assistOf(cp, true)}
-                        {dropbagOf(cp, true)}
-                      </div>
-                    )}
+                    <div className="row tight">
+                      {assistOf(cp, true)}
+                      {dropbagOf(cp, true)}
+                    </div>
                     {(!isFinish || !isRoute) && (
                       <button className="ghost" onClick={() => setEditing(open ? null : cp.id)}>{open ? 'Fermer' : 'Modifier'}</button>
                     )}
@@ -940,15 +873,13 @@ export function RacePlan({
                         </label>
                         <Num label="Arrêt" value={cp.stopMin} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />
                         {!isRoute && (
-                          <>
-                            <label className="field">
-                              <span className="field-label">Barrière</span>
-                              <input type="datetime-local" value={cp.cutoff} onChange={(e) => setCp(cp.id, { cutoff: e.target.value })} />
-                            </label>
-                            <Num label="Eau" value={cp.water} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
-                            <Num label="Glucides" value={cp.carbs} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
-                          </>
+                          <label className="field">
+                            <span className="field-label">Barrière</span>
+                            <input type="datetime-local" value={cp.cutoff} onChange={(e) => setCp(cp.id, { cutoff: e.target.value })} />
+                          </label>
                         )}
+                        <Num label="Eau" value={cp.water} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
+                        <Num label="Glucides" value={cp.carbs} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
                         <label className="field">
                           <span className="field-label">Notes</span>
                           <input type="text" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />
@@ -975,9 +906,9 @@ export function RacePlan({
                   <th>Heure</th>
                   <th>Arrêt</th>
                   {!isRoute && <th>Barrière</th>}
-                  {!isRoute && <th>Eau / Glu.</th>}
-                  {!isRoute && <th title="Assistance autorisée à ce point, et son accès placé sur la carte">Assist.</th>}
-                  {!isRoute && <th title="Dropbag prévu par l'organisation à ce point (ravito ou base de vie)">Dropbag</th>}
+                  <th>Eau / Glu.</th>
+                  <th title="Assistance autorisée à ce point, et son accès placé sur la carte">Assist.</th>
+                  <th title="Dropbag prévu par l'organisation à ce point (ravito ou base de vie)">Dropbag</th>
                   <th>Notes</th>
                 </tr>
               </thead>
@@ -1028,18 +959,16 @@ export function RacePlan({
                           )}
                         </td>
                       )}
-                      {!isRoute && (
-                        <td>
-                          {!isFinish && (
-                            <div className="stack">
-                              <Num value={cp.water} width={48} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
-                              <Num value={cp.carbs} width={48} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
-                            </div>
-                          )}
-                        </td>
-                      )}
-                      {!isRoute && <td>{assistOf(cp)}</td>}
-                      {!isRoute && <td>{dropbagOf(cp)}</td>}
+                      <td>
+                        {!isFinish && (
+                          <div className="stack">
+                            <Num value={cp.water} width={48} unit="L" min={0} onChange={(v) => setCp(cp.id, { water: v })} />
+                            <Num value={cp.carbs} width={48} unit="g" min={0} onChange={(v) => setCp(cp.id, { carbs: v })} />
+                          </div>
+                        )}
+                      </td>
+                      <td>{assistOf(cp)}</td>
+                      <td>{dropbagOf(cp)}</td>
                       <td>{!isFinish && <input type="text" className="wide" value={cp.notes} placeholder="frontale, sac…" onChange={(e) => setCp(cp.id, { notes: e.target.value })} />}</td>
                     </tr>
                   )
@@ -1048,7 +977,7 @@ export function RacePlan({
             </table>
           </div>
           )}
-          {!isRoute && (
+          {(
             <Hint>
               Eau / glucides : quantités à emporter depuis ce point jusqu'au ravito suivant. Dropbag : coche les ravitos et bases de vie où l'organisation
               transporte ton sac (son contenu est dans le plan nutrition et sur la feuille A4). Assistance : coche les points où elle a le droit de
@@ -1063,7 +992,7 @@ export function RacePlan({
             <Num label="Glucides" value={race.carbsPerH} onChange={(v) => set({ carbsPerH: v })} unit="g/h" />
             <Num label="Eau (à 15 °C)" value={race.waterPerH} onChange={(v) => set({ waterPerH: v })} unit="L/h" />
             <Num label="Sodium" value={race.sodiumPerH} onChange={(v) => set({ sodiumPerH: v })} unit="mg/h" />
-            {!isRoute && (
+            {(
               <label className="field">
                 <span className="field-label">Marque aux ravitaillements</span>
                 <select
@@ -1133,7 +1062,7 @@ export function RacePlan({
 
         <Card
           title="Plan nutrition"
-          actions={!isRoute && ravitos.length > 0 ? <button className="primary" onClick={fillNutrition}><Droplets /> Reporter eau et glucides sur les ravitos</button> : undefined}
+          actions={ravitos.length > 0 ? <button className="primary" onClick={fillNutrition}><Droplets /> Reporter eau et glucides sur les ravitos</button> : undefined}
         >
           <div className="scroll">
             <table className="table">

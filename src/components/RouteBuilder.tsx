@@ -486,7 +486,8 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
       .sort((a, b) => a.dist - b.dist)
   }, [cps, track])
   const isRaceKind = (race?.kind ?? kind) === 'race'
-  const cpKinds: CheckpointKind[] = isRaceKind ? ['ravito', 'base', 'split', 'chrono', 'cutoff'] : ['split', 'chrono']
+  // Mêmes types de points pour les courses et les parcours d'entraînement.
+  const cpKinds: CheckpointKind[] = ['ravito', 'base', 'split', 'chrono', 'cutoff']
   const editCps = (next: PlacedCp[]) => {
     setCps(next)
     setCpsDirty(true)
@@ -784,7 +785,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
         interactive: false,
       }).addTo(g)
       // Bande invisible plus large : facile à toucher au doigt (mode tracé seulement).
-      if (race) return
+      if (track) return
       L.polyline(latlngs, { color: '#000', weight: 24, opacity: 0.01, bubblingMouseEvents: false })
         .on('click', (e: L.LeafletMouseEvent) => actRef.current.selectSeg(k, e.latlng.lat, e.latlng.lng))
         .addTo(g)
@@ -819,7 +820,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
         .on('click', () => actRef.current.selectWp(k))
         .addTo(mk)
     })
-  }, [segs, wps, loop, sel, letters, race])
+  }, [segs, wps, loop, sel, letters, track])
 
   // Points de course (course ou parcours existant), sur la même carte que le tracé : toucher le tracé
   // ouvre le tronçon (point de course, de repère ou de tracé) ; appuyer, glisser et lâcher pose un point
@@ -829,7 +830,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     const m = map.current
     if (!g || !m) return
     g.clearLayers()
-    if (!track || !race) return
+    if (!track) return
     const latlngs = track.points.map((p) => [p.lat, p.lon] as [number, number])
     const hit = L.polyline(latlngs, { color: '#000', weight: 26, opacity: 0.001, className: 'edit-hit' }).addTo(g)
     const ghost = L.circleMarker(latlngs[0], { radius: 9, color: '#ffffff', fillColor: '#e0007a', fillOpacity: 1, weight: 3, interactive: false })
@@ -1001,7 +1002,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
         waypoints: wps.map((w, k) => ({ lat: w.lat, lon: w.lon, mode: w.mode, i: joined.starts[k], ...(w.mark ? { mark: true } : {}), ...(w.name ? { name: w.name } : {}) })),
       },
       marks: rows ? [...letters].map(([k, letter]) => ({ name: wps[k].name || `Point inter ${letter}`, dist: Math.round(rows[k].d) })) : [],
-      ...(race && cpsDirty ? { checkpoints: placed.map(({ lat: _la, lon: _lo, ...c }) => c) } : {}),
+      ...(cpsDirty ? { checkpoints: placed.map(({ lat: _la, lon: _lo, ...c }) => c) } : {}),
       total: track.totalDist,
       // Zone du profil : tout le parcours dans cette zone ; allure de course : aucune zone. Course : zones
       // inchangées (elle les ignore).
@@ -1381,7 +1382,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
               </label>
               <Num label="Arrêt" value={selCpObj.stopMin} unit="min" min={0} width={56} onChange={(v) => patchCp(selCpObj.id, { stopMin: v })} />
             </div>
-            {isRaceKind && isRavitoKind(selCpObj.kind) && (
+            {isRavitoKind(selCpObj.kind) && (
               <div className="row tight">
                 <AssistControls
                   name={selCpObj.name}
@@ -1423,7 +1424,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                     <ModeSeg value={wps[sel.k].mode} onChange={(m) => setSegMode(sel.k, m)} />
                   </div>
                 )}
-                {race && sel.k > 0 && sel.k < wps.length - 1 && (
+                {sel.k > 0 && sel.k < wps.length - 1 && (
                   <label className="field">
                     <span className="field-label">Type de point</span>
                     <select
@@ -1447,7 +1448,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                     <button
                       onClick={() => {
                         const w = wps[sel.k]
-                        if (race && !w.mark) {
+                        if (!w.mark) {
                           // Le point du tracé devient un point de course (point inter), sa fenêtre s'ouvre.
                           setSel(null)
                           addCp(w.lat, w.lon, 'split', w.name)
@@ -1480,12 +1481,10 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                   <button
                     className="primary"
                     onClick={() => {
-                      // Course ou parcours existant : le repère est un point de course (point inter), sa fenêtre s'ouvre.
-                      if (race) {
-                        const at = sel
-                        setSel(null)
-                        addCp(at.lat, at.lon, 'split')
-                      } else act.insert(sel.k, sel.lat, sel.lon, true)
+                      // Le repère est un point de course (point inter) : sa fenêtre s'ouvre.
+                      const at = sel
+                      setSel(null)
+                      addCp(at.lat, at.lon, 'split')
                     }}
                   >
                     <Bookmark /> Point de repère ici
@@ -1725,7 +1724,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
 
         {menu && (
           <div className="draw-menu" role="menu">
-            {race && track && (
+            {track && (
               <div className="auto-points">
                 <span className="field-label">Points de course automatiques</span>
                 <div className="row tight">
