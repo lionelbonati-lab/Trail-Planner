@@ -6,17 +6,20 @@ import { download } from '../lib/exportGpx'
 import { progressSeries, type ProgressSeries } from '../lib/progress'
 import { csFromTrials, describeSteps, OFFERED_SESSIONS, SESSIONS_BY_KEY, type SessionKey, type SessionResult, type SessionVariant } from '../lib/sessions'
 import { formatDuration, formatPace } from '../lib/time'
-import type { Athlete, CsTrial } from '../lib/types'
+import type { Athlete, CsTrial, Race } from '../lib/types'
 import { buildWorkoutFit } from '../lib/workoutFit'
+import { LevelCard } from './LevelCard'
 import { Card, Hint, Num } from './ui'
 
 interface Props {
   athlete: Athlete
+  /** Courses et parcours : estimation du niveau sans test VC à partir d'un temps réalisé. */
+  races: Race[]
   onChange: (a: Athlete) => void
 }
 
 /** Onglet Test VC : séance de test (montre ou saisie), tests et évolution. */
-export function SessionsPanel({ athlete, onChange }: Props) {
+export function SessionsPanel({ athlete, races, onChange }: Props) {
   const [result, setResult] = useState<{ key: SessionKey; r: SessionResult } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -57,6 +60,7 @@ export function SessionsPanel({ athlete, onChange }: Props) {
         </p>
         {error && <p className="warn">{error}</p>}
       </Card>
+      <LevelCard athlete={athlete} races={races} onChange={onChange} />
 
       {result && (
         <Card title={`Résultat · ${SESSIONS_BY_KEY[result.key].title}`} className="result-card" fold="open">
@@ -198,7 +202,7 @@ function shortTime(seconds: number): string {
   return t < 3600 ? `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : formatDuration(t, true)
 }
 
-function CsTrials({ athlete, onChange }: Props) {
+function CsTrials({ athlete, onChange }: Pick<Props, 'athlete' | 'onChange'>) {
   const trials = [...athlete.csTrials].sort((a, b) => b.date.localeCompare(a.date))
   const fit = csFromTrials(trials)
   const set = (csTrials: CsTrial[]) => onChange({ ...athlete, csTrials })

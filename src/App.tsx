@@ -584,7 +584,7 @@ export default function App() {
             />
           </Suspense>
         ) : route.tab === 'athlete' ? (
-          <AthletePanel athlete={athlete} races={races} onChange={updateAthlete} />
+          <AthletePanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'nutrition' ? (
           <NutritionPanel athlete={athlete} onChange={updateAthlete} />
         ) : route.tab === 'montre' ? (
@@ -596,7 +596,7 @@ export default function App() {
             onOpen={(r) => go('parcours', r.id)}
           />
         ) : route.tab === 'cs' ? (
-          <SessionsPanel athlete={athlete} onChange={updateAthlete} />
+          <SessionsPanel athlete={athlete} races={races} onChange={updateAthlete} />
         ) : route.tab === 'parcours' && !current ? (
           libraryEl
         ) : route.tab === 'analyse' ? (
