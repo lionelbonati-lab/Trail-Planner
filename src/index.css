@@ -737,3 +737,6 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .race-badge { margin-left: 8px; vertical-align: 2px; }
 
 .lib-brands { flex-wrap: wrap; margin-bottom: 8px; }
+
+.ravito-tag { background: #fdf3ec; color: var(--ravito); border-color: var(--ravito); white-space: nowrap; }
+.ravito-line { color: var(--ravito); }

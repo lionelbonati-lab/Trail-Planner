@@ -31,7 +31,7 @@
 // Les champs ajoutés en fin de ligne S et les lignes E, P et F sont ignorés par les versions plus anciennes
 // du champ.
 import { indexAt } from './gpx'
-import { extraSodium, FLASK_L, intakeOrder, nutritionPlan, raceProducts, type Leg } from './nutrition'
+import { extraSodium, FLASK_L, intakeOrder, isAtRavito, type Leg, nutritionPlan, raceProducts } from './nutrition'
 import { isFreeStart } from './plan'
 import { simplifyRoute } from './routeGeo'
 import { zonedToUtc } from './time'
@@ -135,7 +135,8 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
   for (const leg of legs) {
     // L'eau minérale mélangée à l'eau des flasques n'est pas un produit à prendre : elle est dans le texte
     // de l'eau (sinon la montre rappelait « 1 St-Yorre » au lieu du mélange).
-    const taken = leg.products.filter((x) => x.product.id !== leg.flasks.waterId)
+    // Produits « sur ravito » : mangés au ravito, pas emportés ni rappelés pendant le tronçon.
+    const taken = leg.products.filter((x) => x.product.id !== leg.flasks.waterId && !isAtRavito(x.product))
     const order = intakeOrder(taken.map((x) => ({ product: x.product, count: x.count }))).map((p) => {
       if (!ids.includes(p.id)) {
         ids.push(p.id)

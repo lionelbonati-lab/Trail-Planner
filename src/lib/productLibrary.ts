@@ -93,6 +93,8 @@ export function libraryProduct(item: LibraryItem): Product {
     carbs: 0,
     sodium: 0,
     ...(item.type === 'liquid' ? { flask: !!item.flask } : {}),
+    // Aliments servis aux ravitos : mangés sur place (sauf l'eau des flasques).
+    ...(item.brand === RAVITO_BRAND && !item.flask ? { atRavito: true } : {}),
   }
   return withPer100(base, { carbs: item.carbs, sodium: item.sodium, weight: item.weight })
 }
