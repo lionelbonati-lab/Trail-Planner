@@ -19,10 +19,31 @@ interface Props {
   accessPick?: ((at: GeoPoint) => void) | null
   /** Accès assistance placés, reliés à leur point du parcours. */
   accesses?: { name: string; at: GeoPoint; trail: GeoPoint }[]
+  /**
+   * Édition des points (carte plein écran) : appuyer sur le tracé, glisser puis lâcher ajoute un point
+   * à l'endroit lâché ; un point se déplace en le glissant le long du tracé ; un toucher le sélectionne.
+   */
+  edit?: { onAdd: (dist: number) => void; onMove: (id: string, dist: number) => void; onSelect: (id: string) => void; selected: string | null }
+  className?: string
+}
+
+/** Point de la trace le plus proche d'une position (indice). */
+function nearestIndex(track: Track, lat: number, lon: number): number {
+  let best = 0
+  let bestD = Infinity
+  const k = Math.cos((lat * Math.PI) / 180)
+  track.points.forEach((p, i) => {
+    const d = (p.lat - lat) ** 2 + ((p.lon - lon) * k) ** 2
+    if (d < bestD) {
+      bestD = d
+      best = i
+    }
+  })
+  return best
 }
 
 /** Carte Leaflet du parcours (zoom à la molette), synchronisée avec le profil : elle suit le curseur survolé. */
-export default function MapView({ track, splits, timeZone, hoverDist, onPick, accessPick = null, accesses = [] }: Props) {
+export default function MapView({ track, splits, timeZone, hoverDist, onPick, accessPick = null, accesses = [], edit, className }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const marks = useRef<L.LayerGroup | null>(null)
@@ -34,6 +55,8 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     accessRef.current = accessPick
   }, [accessPick])
   const accessLayer = useRef<L.LayerGroup | null>(null)
+  const editRef = useRef(edit)
+  editRef.current = edit
 
   // Carte et trace (recréées si la trace change).
   useEffect(() => {
@@ -48,27 +71,57 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     // Pose d'un accès : n'importe où sur la carte (le clic sur le tracé remonte aussi ici).
     m.on('click', (e: L.LeafletMouseEvent) => accessRef.current?.({ lat: e.latlng.lat, lon: e.latlng.lng }))
     line.on('click', (e: L.LeafletMouseEvent) => {
-      if (accessRef.current) return
-      let best = 0
-      let bestD = Infinity
-      track.points.forEach((p, i) => {
-        const d = (p.lat - e.latlng.lat) ** 2 + ((p.lon - e.latlng.lng) * Math.cos((p.lat * Math.PI) / 180)) ** 2
-        if (d < bestD) {
-          bestD = d
-          best = i
-        }
-      })
-      pickRef.current?.(track.points[best].dist)
+      if (accessRef.current || editRef.current) return
+      pickRef.current?.(track.points[nearestIndex(track, e.latlng.lat, e.latlng.lng)].dist)
     })
+    // Édition : bande invisible large autour du tracé (facile à toucher) ; appui, glisser, lâcher → point
+    // ajouté là où le doigt ou la souris est lâché (calé sur le tracé).
+    if (editRef.current) {
+      const hit = L.polyline(latlngs, { color: '#000', weight: 24, opacity: 0.001, className: 'edit-hit' }).addTo(m)
+      const ghost = L.circleMarker(latlngs[0], { radius: 9, color: '#ffffff', fillColor: '#e0007a', fillOpacity: 1, weight: 3, interactive: false })
+      hit.getElement()?.addEventListener('pointerdown', (ev: Event) => {
+        const pe = ev as PointerEvent
+        if (accessRef.current || !editRef.current || pe.button > 0) return
+        pe.preventDefault()
+        pe.stopPropagation()
+        m.dragging.disable()
+        const at = (x: PointerEvent) => {
+          const ll = m.mouseEventToLatLng(x as unknown as MouseEvent)
+          return track.points[nearestIndex(track, ll.lat, ll.lng)]
+        }
+        const p0 = at(pe)
+        ghost.setLatLng([p0.lat, p0.lon]).addTo(m)
+        const move = (x: PointerEvent) => {
+          const p = at(x)
+          ghost.setLatLng([p.lat, p.lon])
+        }
+        const up = (x: PointerEvent) => {
+          document.removeEventListener('pointermove', move)
+          document.removeEventListener('pointerup', up)
+          document.removeEventListener('pointercancel', up)
+          m.dragging.enable()
+          ghost.remove()
+          if (x.type === 'pointerup') editRef.current?.onAdd(at(x).dist)
+        }
+        document.addEventListener('pointermove', move)
+        document.addEventListener('pointerup', up)
+        document.addEventListener('pointercancel', up)
+      })
+    }
     marks.current = L.layerGroup().addTo(m)
     accessLayer.current = L.layerGroup().addTo(m)
     cursor.current = L.circleMarker(latlngs[0], { radius: 7, color: '#1f2420', fillColor: '#f5c542', fillOpacity: 1, weight: 2 })
     map.current = m
+    // Carte redimensionnée (plein écran, séparation carte / profil déplacée) : tuiles recalées.
+    const ro = new ResizeObserver(() => m.invalidateSize())
+    ro.observe(el.current)
     return () => {
+      ro.disconnect()
       m.remove()
       map.current = null
     }
-  }, [track])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track, !!edit])
 
   // Points de passage.
   useEffect(() => {
@@ -78,6 +131,27 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     for (const s of splits) {
       const p = track.points[indexAt(track.points, s.to)]
       const ravito = isRavitoKind(s.cp.kind)
+      const tip = `${s.cp.name} · km ${(s.to / 1000).toFixed(1)} · ${formatClock(s.arrivalClock, timeZone)}`
+      if (edit && s.cp.id !== '__finish') {
+        // Point déplaçable : glissé puis recalé sur le tracé ; un toucher l'ouvre.
+        const size = s.cp.kind === 'base' ? 22 : ravito ? 18 : 14
+        const mk = L.marker([p.lat, p.lon], {
+          draggable: true,
+          icon: L.divIcon({
+            className: `edit-pt kind-${s.cp.kind}${edit.selected === s.cp.id ? ' sel' : ''}`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+          }),
+        })
+          .bindTooltip(tip)
+          .addTo(g)
+        mk.on('click', () => editRef.current?.onSelect(s.cp.id))
+        mk.on('dragend', () => {
+          const ll = mk.getLatLng()
+          editRef.current?.onMove(s.cp.id, track.points[nearestIndex(track, ll.lat, ll.lng)].dist)
+        })
+        continue
+      }
       L.circleMarker([p.lat, p.lon], {
         radius: ravito ? 7 : 4,
         color: ravito ? '#ffffff' : '#1f2420',
@@ -85,10 +159,11 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
         fillOpacity: 1,
         weight: 2,
       })
-        .bindTooltip(`${s.cp.name} · km ${(s.to / 1000).toFixed(1)} · ${formatClock(s.arrivalClock, timeZone)}`)
+        .bindTooltip(tip)
         .addTo(g)
     }
-  }, [splits, track, timeZone])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splits, track, timeZone, !!edit, edit?.selected])
 
   // Accès assistance : « P » relié en pointillés au point du parcours.
   useEffect(() => {
@@ -124,5 +199,5 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     m.panInside([p.lat, p.lon], { padding: [60, 60], animate: false })
   }, [hoverDist, track])
 
-  return <div ref={el} className="map" role="region" aria-label="Carte du parcours" />
+  return <div ref={el} className={`map ${className ?? ''}`} role="region" aria-label="Carte du parcours" />
 }
