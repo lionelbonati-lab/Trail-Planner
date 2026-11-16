@@ -283,11 +283,11 @@ export default function App() {
   }
   // Traceur : nouveau parcours, ou tracé modifié d'une course existante.
   const saveDrawing = async (d: DrawResult, edited: Race | null) => {
-    // Points de repère du tracé → points de passage (« Repère »), sauf s'il y en a déjà un à moins de 100 m.
+    // Points de repère du tracé → points de passage (« Point inter »), sauf s'il y en a déjà un à moins de 100 m.
     const markPoints = (existing: Checkpoint[]): Checkpoint[] =>
       d.marks
         .filter((m) => !existing.some((c) => Math.abs(c.dist - m.dist) < 100))
-        .map((m) => ({ id: crypto.randomUUID(), dist: m.dist, name: m.name, kind: 'info', stopMin: 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }))
+        .map((m) => ({ id: crypto.randomUUID(), dist: m.dist, name: m.name, kind: 'split', stopMin: 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }))
     if (edited) {
       const next = { ...withNewTrace(edited, d.gpxText, d.drawn, d.total), name: d.name }
       const checkpoints = [...next.checkpoints, ...markPoints(next.checkpoints)].sort((a, b) => a.dist - b.dist)

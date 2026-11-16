@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { assistAllowed } from '../assist'
-import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace, normalizeAthlete } from '../defaults'
+import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace, normalizeAthlete, normalizeRace } from '../defaults'
 import { dropbagPlan, dropbagText, nutritionPlan } from '../nutrition'
 import { computePlan } from '../plan'
 import { checkpointName, commonStop, defaultStop, isRavitoKind, setStops, waypointKind } from '../splits'
@@ -79,5 +79,13 @@ describe("barrière horaire à l'arrivée et arrêt commun des bases de vie", ()
     expect(commonStop(race.checkpoints, 'base', 20)).toBe(25)
     const cps = setStops(race.checkpoints, 40, 'base')
     expect(cps.map((c) => c.stopMin)).toEqual([3, 40, 40])
+  })
+})
+
+describe('repères devenus points inter', () => {
+  it('à la lecture d’une course enregistrée', () => {
+    const r = newRace('Old', gpx())
+    r.checkpoints = [cp('i', 5000, 'info', { name: 'Repère km 5.0' }), cp('j', 6000, 'info', { name: 'Pont' })]
+    expect(normalizeRace(r).checkpoints.map((c) => `${c.kind}:${c.name}`)).toEqual(['split:Point inter km 5.0', 'split:Pont'])
   })
 })

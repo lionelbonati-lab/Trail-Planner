@@ -171,6 +171,10 @@ export function normalizeRace(r: Race): Race {
     zones: r.zones ?? [],
     // Les séances datées (retirées) deviennent des parcours de la bibliothèque.
     kind: (r.kind as string) === 'session' ? 'route' : (r.kind ?? 'race'),
+    // Repères (type retiré) → points intermédiaires, nom par défaut mis à jour.
+    checkpoints: (r.checkpoints ?? []).map((c) =>
+      c.kind === 'info' ? { ...c, kind: 'split' as const, name: c.name.replace(/^Repère km /, 'Point inter km ') } : c,
+    ),
     tags: r.tags ?? [],
     templateId: r.templateId ?? null,
     weather: r.weather ?? null,

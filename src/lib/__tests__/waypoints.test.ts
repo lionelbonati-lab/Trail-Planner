@@ -30,7 +30,7 @@ describe('waypoints d’un GPX importé', () => {
     expect(cps[0].stopMin).toBe(3)
     expect(cps[2].stopMin).toBe(0)
     // Parcours : repères ; points déjà présents à moins de 100 m : pas de doublon.
-    expect(waypointCheckpoints(t, 'route').map((c) => c.kind)).toEqual(['info', 'info', 'info'])
+    expect(waypointCheckpoints(t, 'route').map((c) => c.kind)).toEqual(['split', 'split', 'split'])
     expect(waypointCheckpoints(t, 'race', cps)).toEqual([])
   })
 
@@ -39,7 +39,8 @@ describe('waypoints d’un GPX importé', () => {
     expect(waypointKind({ name: 'PC 3', tags: 'Drinking Water' }, 'race')).toBe('ravito')
     expect(waypointKind({ name: 'BH Champex' }, 'race')).toBe('cutoff')
     expect(waypointKind({ name: 'Sommet' }, 'race')).toBe('split')
-    expect(waypointKind({ name: 'Ravito' }, 'route')).toBe('info')
+    expect(waypointKind({ name: 'Ravito' }, 'route')).toBe('split')
+    expect(waypointKind({ name: 'Chrono Col' }, 'race')).toBe('chrono')
   })
 
   it('traceur : waypoints en points de repère nommés du tracé', () => {

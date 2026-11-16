@@ -65,7 +65,7 @@ export function simplify(pts: [number, number][], tol: number): [number, number]
 }
 
 // Base de vie : « r » comme un ravito (la montre la traite comme un ravito).
-const KIND: Record<string, string> = { ravito: 'r', base: 'r', split: 's', cutoff: 'c', info: 'i' }
+const KIND: Record<string, string> = { ravito: 'r', base: 'r', split: 's', chrono: 's', cutoff: 'c', info: 'i' }
 
 /** Nom sans séparateurs, tronqué pour l'écran de la montre. */
 function clean(name: string, max: number): string {

@@ -1,3 +1,4 @@
+import { assistAllowed } from '../lib/assist'
 import { isRavitoKind } from '../lib/splits'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatClock, formatDuration } from '../lib/time'
@@ -288,7 +289,15 @@ export function ProfileChart({ points, splits, timeZone, startMs, height = 260, 
         return (
           <g key={s.cp.id} className={`cp cp-${s.cp.kind}`}>
             <line x1={xx} x2={xx} y1={m.t - 4} y2={geo.y(ele)} />
-            <circle cx={xx} cy={geo.y(ele)} r={isRavitoKind(s.cp.kind) ? 4 : 2.5} />
+            {assistAllowed(s.cp) && <circle className="assist-ring" cx={xx} cy={geo.y(ele)} r={s.cp.kind === 'base' ? 9.5 : 8} />}
+            <circle cx={xx} cy={geo.y(ele)} r={s.cp.kind === 'base' ? 6 : isRavitoKind(s.cp.kind) ? 4 : 2.5} />
+            {s.cp.dropbag && isRavitoKind(s.cp.kind) && (
+              <g className="dropbag-tag" transform={`translate(${xx - 9} ${geo.y(ele) + 11})`}>
+                <title>Dropbag</title>
+                <rect width={18} height={11} rx={3} />
+                <text x={9} y={8.5} textAnchor="middle">DB</text>
+              </g>
+            )}
             {showLabel && (
               <text x={xx} y={m.t - 8} transform={`rotate(-40 ${xx} ${m.t - 8})`} className="cp-label">
                 {s.cp.name.slice(0, 18)} {formatClock(s.arrivalClock, timeZone)}

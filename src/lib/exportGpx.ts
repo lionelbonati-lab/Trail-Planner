@@ -1,4 +1,5 @@
 import { indexAt } from './gpx'
+import { isFreeStart } from './plan'
 import { formatClock, formatDuration, zonedToUtc } from './time'
 import type { Race, SimResult, Track } from './types'
 
@@ -6,17 +7,21 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function garminSymbol(kind: string): string {
+/**
+ * Type Garmin d'un point (symbole GPX et type de point de parcours) : Garmin Connect en tire l'icône
+ * du point de parcours sur la montre (ravito → poste de secours / ravitaillement).
+ */
+export function garminPoint(kind: string): { sym: string; type: string } {
   switch (kind) {
     case 'ravito':
     case 'base':
-      return 'Food'
+      return { sym: 'Food', type: 'Aid Station' }
     case 'cutoff':
-      return 'Danger Area'
-    case 'split':
-      return 'Summit'
+      return { sym: 'Danger Area', type: 'Danger' }
+    case 'chrono':
+      return { sym: 'Flag, Green', type: 'Checkpoint' }
     default:
-      return 'Flag, Blue'
+      return { sym: 'Flag, Blue', type: 'Generic' }
   }
 }
 
@@ -35,10 +40,15 @@ export function buildCourseGpx(race: Race, track: Track, sim: SimResult): string
   )
   lines.push(`  <metadata><name>${esc(race.name)}</name></metadata>`)
 
+  // Nom du point = temps de passage prévu (heure, ou temps depuis le départ en départ libre), lu sur la
+  // montre dans « À venir » ; le nom du point passe dans la description.
+  const free = isFreeStart(race)
   for (const row of sim.splits) {
     const p = track.points[indexAt(track.points, row.to)]
-    const label = `${row.cp.name} ${formatClock(row.arrivalClock, tz)}`.slice(0, 30)
+    const label = free ? formatDuration(row.arrival) : formatClock(row.arrivalClock, tz)
+    const { sym, type } = garminPoint(row.cp.kind)
     const desc = [
+      row.cp.name,
       `Km ${(row.to / 1000).toFixed(1)}`,
       `Passage ${formatClock(row.arrivalClock, tz)} (${formatDuration(row.arrival)})`,
       row.cp.stopMin ? `Arrêt ${row.cp.stopMin} min` : '',
@@ -50,7 +60,8 @@ export function buildCourseGpx(race: Race, track: Track, sim: SimResult): string
     lines.push(`    <ele>${p.ele.toFixed(1)}</ele>`)
     lines.push(`    <name>${esc(label)}</name>`)
     lines.push(`    <desc>${esc(desc)}</desc>`)
-    lines.push(`    <sym>${garminSymbol(row.cp.kind)}</sym>`)
+    lines.push(`    <sym>${sym}</sym>`)
+    lines.push(`    <type>${type}</type>`)
     lines.push('  </wpt>')
   }
 

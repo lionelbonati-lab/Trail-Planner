@@ -371,7 +371,8 @@ export interface KmeSettings {
 }
 
 /** Base de vie : grand ravito d'une course (arrêt long), traité comme un ravito partout. */
-export type CheckpointKind = 'ravito' | 'base' | 'split' | 'cutoff' | 'info'
+/** Chrono : point de chronométrage officiel. Repère (« info ») : ancien type, devenu point inter. */
+export type CheckpointKind = 'ravito' | 'base' | 'split' | 'chrono' | 'cutoff' | 'info'
 
 export interface Checkpoint {
   id: string

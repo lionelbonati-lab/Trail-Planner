@@ -109,19 +109,22 @@ export function Card({
   actions,
   className,
   fold = 'closed',
+  foldDesktop = false,
 }: {
   title?: ReactNode
   children: ReactNode
   actions?: ReactNode
   className?: string
   fold?: 'open' | 'closed' | false
+  /** Pliable aussi sur ordinateur (cadre de réglages secondaires), plié à l'ouverture. */
+  foldDesktop?: boolean
 }) {
   // Seul un cadre à titre texte se plie (titre éditable, cadre sans titre : toujours ouvert).
   const foldable = typeof title === 'string' && fold !== false
   const [folded, setFolded] = useState(foldable && fold === 'closed')
   const toggle = () => setFolded(!folded)
   return (
-    <section className={`card ${foldable ? 'foldable' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
+    <section className={`card ${foldable ? 'foldable' : ''} ${foldable && foldDesktop ? 'fold-desktop' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
       {(title || actions) && (
         <header className="card-head">
           {title &&
