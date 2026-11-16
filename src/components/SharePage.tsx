@@ -1,7 +1,7 @@
 import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
-import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
+import { Activity, Bell, Minus, Plus, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
-import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
@@ -442,7 +442,8 @@ export function ShareView({
           <AssistTrip rows={snap.rows} choices={choices} onCheck={setChoice} clock={(iso) => clock(iso, long)} live={!!snap.live || !!watch} />
         ) : (
         <>
-        <MiniProfile profile={snap.profile} rows={snap.rows} position={watch ? watch.dist : null} />
+        {/* Pointeur : position estimée entre deux relevés (sinon celle du dernier relevé). */}
+        <MiniProfile profile={snap.profile} rows={snap.rows} position={watch ? (estimate ?? watch.dist) : null} />
         {watch && report ? (
           <section className="live-hero">
             <div className="live-label">Montre · en course depuis</div>
@@ -624,6 +625,8 @@ function profileGain(profile: [number, number][], d: number): number {
 
 /** Échelle minimale du profil (px par km) : au-delà de la largeur de l'écran, il défile. */
 const PX_PER_KM = 12
+/** Zoom du profil : jusqu'à 16 fois l'échelle par défaut (≈ 200 px par km). */
+const ZOOM_MAX = 16
 /** Après un glissement à la main, le profil reprend le suivi du coureur au bout de ce délai. */
 const FOLLOW_RESUME_MS = 30000
 
@@ -644,9 +647,45 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
   // Course longue (UTMB…) : profil plus large que l'écran, à faire défiler.
   // Marge gauche : colonne fixe des altitudes, posée par-dessus le profil.
   const ML = 46
-  const W = Math.max(Wc, Math.round((total / 1000) * PX_PER_KM) + ML + 8)
+  // Zoom (boutons, pincement à deux doigts, Ctrl + molette) : échelle par défaut × zoom, au moins
+  // la largeur de l'écran.
+  const [zoom, setZoom] = useState(1)
+  const fitZoom = (Wc - ML - 8) / ((total / 1000) * PX_PER_KM)
+  const minZoom = Math.min(1, fitZoom)
+  const W = Math.max(Wc, Math.round((total / 1000) * PX_PER_KM * zoom) + ML + 8)
   const scrolls = W > Wc + 1
   const x = (d: number) => ML + (d / total) * (W - ML - 8)
+  // Point gardé sous le doigt (ou au centre) pendant le zoom : distance (m) et position à l'écran (px).
+  const anchor = useRef<{ dist: number; px: number } | null>(null)
+  const distAtScreen = (px: number) => {
+    const left = scroller.current?.scrollLeft ?? 0
+    return Math.max(0, Math.min(total, ((left + px - ML) / (W - ML - 8)) * total))
+  }
+  const zoomTo = (z: number, px = Wc / 2) => {
+    const nz = Math.max(minZoom, Math.min(ZOOM_MAX, z))
+    if (Math.abs(nz - zoom) < 1e-3) return
+    if (!anchor.current) anchor.current = { dist: distAtScreen(px), px }
+    setZoom(nz)
+  }
+  useLayoutEffect(() => {
+    const el = scroller.current
+    const a = anchor.current
+    if (!el || !a) return
+    el.scrollLeft = Math.max(0, x(a.dist) - a.px)
+    anchor.current = null
+  })
+  // Ctrl + molette (ou pincement du pavé tactile) : zoom du profil, pas de la page.
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const stop = (e: WheelEvent) => {
+      if (e.ctrlKey) e.preventDefault()
+    }
+    el.addEventListener('wheel', stop, { passive: false })
+    return () => el.removeEventListener('wheel', stop)
+  }, [])
+  const pinch = useRef<{ d0: number; z0: number; px: number } | null>(null)
+  const touchGap = (t: React.TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
   // Point suivi : position de la montre, sinon dernier point passé.
   const lastDone = [...rows].reverse().find((r) => r.actual)
   const follow = position ?? (lastDone ? lastDone.dist : null)
@@ -736,10 +775,34 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
     <div className="assist-profile" ref={wrap}>
       <div
         ref={scroller}
-        className={scrolls ? 'assist-profile-scroll' : undefined}
-        onTouchStart={grab}
+        className={`assist-profile-zoom ${scrolls ? 'assist-profile-scroll' : ''}`}
+        onTouchStart={(e) => {
+          grab()
+          if (e.touches.length === 2) {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const px = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left
+            pinch.current = { d0: touchGap(e.touches), z0: zoom, px }
+            anchor.current = { dist: distAtScreen(px), px }
+          }
+        }}
+        onTouchMove={(e) => {
+          const p = pinch.current
+          if (!p || e.touches.length !== 2) return
+          const nz = Math.max(minZoom, Math.min(ZOOM_MAX, (p.z0 * touchGap(e.touches)) / (p.d0 || 1)))
+          if (!anchor.current) anchor.current = { dist: distAtScreen(p.px), px: p.px }
+          setZoom(nz)
+        }}
+        onTouchEnd={(e) => {
+          if (e.touches.length < 2) pinch.current = null
+        }}
         onPointerDown={grab}
-        onWheel={grab}
+        onWheel={(e) => {
+          grab()
+          if (e.ctrlKey) {
+            const rect = e.currentTarget.getBoundingClientRect()
+            zoomTo(zoom * (e.deltaY < 0 ? 1.25 : 0.8), e.clientX - rect.left)
+          }
+        }}
       >
       <svg
         className="profile"
@@ -838,6 +901,14 @@ function MiniProfile({ profile, rows, position }: { profile: [number, number][];
           <text key={e} x={ML - 5} y={y(e) + 3.5} textAnchor="end" className="tick ele-tick">{e} m</text>
         ))}
       </svg>
+      <div className="zoom-btns" role="group" aria-label="Zoom du profil">
+        <button className="ghost small" onClick={() => { grab(); zoomTo(zoom / 2) }} disabled={zoom <= minZoom + 1e-3} aria-label="Dézoomer le profil" title="Dézoomer">
+          <Minus />
+        </button>
+        <button className="ghost small" onClick={() => { grab(); zoomTo(zoom * 2) }} disabled={zoom >= ZOOM_MAX - 1e-3} aria-label="Zoomer le profil" title="Zoomer">
+          <Plus />
+        </button>
+      </div>
       {scrolls && free && follow !== null && (
         <button className="ghost small follow-btn" onClick={() => setFree(false)}>
           <Navigation className="inline" /> Suivre le coureur
