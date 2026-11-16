@@ -18,7 +18,10 @@ ClimbPro et PacePro continuent de fonctionner) :
   quantité réelle et en flasques de 500 ml (« 1.1 L : 2 eau + 1 iso », l'isotonique n'étant alors plus
   répété dans les produits) ;
 - avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une **course** seulement
-  (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ;
+  (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ; **avec
+  quoi partir** (sac du premier tronçon : eau en flasques, produits, sel ; une seule ligne sur un petit champ) ;
+- **note du point** (« frontale, veste… », colonne Notes du plan) : sur l'écran du ravito, sous « À emporter » ;
+  à un point sans sac, écran du nom du point et de sa note au passage ;
 - **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton
   téléphone ; ils s'affichent sur le lien assistance de la course (position sur le profil, écart au plan,
   heures estimées recalculées).
@@ -64,10 +67,15 @@ Avant le premier passage, estimé = prévu. L'écart au plan (`+6'`), lui, suit 
 règle dans le mode course de l'app ; le lien assistance, lui, recalcule les estimations à chaque relevé de
 la montre (position et rythme réel) et ignore un passage noté à plus de 300 m devant ta position.
 
-**Bouton Lap.** Un tour valide le passage au point le plus proche pas encore validé, à moins de 300 m de ta
-position (500 m si le tracé GPS n'est pas calé ou si le plan n'a pas de tracé) ; un tour loin de tout point
-est ignoré. Un passage validé par un tour est annulé si le GPS, une fois calé sur le tracé, te place à plus de
-300 m avant le point : il sera détecté de nouveau en y arrivant.
+**Bouton Lap.** Un tour valide le passage au point le plus proche pas encore validé : avec le GPS calé sur le
+tracé, à 150 m au plus devant toi ou 300 m derrière (500 m dans les deux sens si le tracé n'est pas calé ou si
+le plan n'a pas de tracé) ; un tour loin de tout point est ignoré. Un passage (tour ou position) est annulé si
+le GPS calé te place ensuite à plus de 200 m avant le point : il sera détecté de nouveau en y arrivant.
+
+**Barrières horaires hors du jour de course.** Le plan donne aussi le départ prévu ; si l'activité démarre à
+plus de 6 h de lui (entraînement sur le parcours, départ libre, simulateur), les barrières sont décalées
+d'autant au lieu d'afficher un « Hors délai » de plusieurs centaines d'heures. Le jour de la course, elles
+restent aux heures fixées.
 **Désactive le tour automatique (Auto Lap)** de ton activité Trail, sinon un tour auto tombant près d'un
 point le validerait. Réglage « Tour = passage au point » sur la montre (appui long › Champs Connect IQ ›
 Trail Planner) pour couper cette fonction.

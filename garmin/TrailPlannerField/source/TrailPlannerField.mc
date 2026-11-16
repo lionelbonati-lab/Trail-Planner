@@ -37,7 +37,8 @@ class TrailPlannerField extends WatchUi.DataField {
     var foodAt = -1.0;        // distance de son rappel (m), -1 : à calculer
     var foodSync = true;      // rappels déjà dépassés sautés sans prévenir (nouvelle activité, plan changé)
     var foodMsg = -1;         // produit du rappel affiché, -1 : « Manger / boire » sans produit
-    var bagLeg = -1;          // tronçon dont le sac « À emporter » est affiché (arrivée au ravito)
+    var bagCp = -1;           // point dont l'écran de passage est affiché (sac du ravito, note du point)
+    var bagLeg = -1;          // tronçon dont le sac « À emporter » est affiché (-1 : note seule)
     var bagUntil = 0;         // s Unix : affichage du sac jusqu'à cet instant...
     var bagFrom = 0.0;        // ... et jusqu'à 300 m après ce ravito (m)
     var passes = {};          // indice du point -> instant de passage (s Unix)
@@ -80,6 +81,7 @@ class TrailPlannerField extends WatchUi.DataField {
             food = 0;
             foodAt = -1.0;
             foodSync = true;
+            bagCp = -1;
             bagLeg = -1;
             bagUntil = 0;
             if (running && old != null && plan != null) {
@@ -241,7 +243,10 @@ class TrailPlannerField extends WatchUi.DataField {
         var gps = plan.hasRoute() && matched >= 0;
         // Sans tracé calé, la distance peut dériver, mais une fenêtre trop large (8 % de la distance,
         // 2,4 km au km 30) faisait valider par un tour, manuel ou automatique, un point loin devant.
+        // Avec le GPS calé : un point devant à 150 m au plus (un tour 300 m avant la buvette la validait),
+        // un point derrière à 300 m au plus.
         var win = gps ? 300.0 : 500.0;
+        var ahead = gps ? 150.0 : 500.0;
         var best = -1;
         var bestGap = 0.0;
         for (var i = 0; i < plan.cpDist.size(); i++) {
@@ -249,6 +254,9 @@ class TrailPlannerField extends WatchUi.DataField {
                 continue;
             }
             var gap = plan.cpDist[i] - dist;
+            if (gap > ahead) {
+                continue;
+            }
             if (gap < 0) {
                 gap = -gap;
             }
@@ -280,14 +288,17 @@ class TrailPlannerField extends WatchUi.DataField {
         lastSaved = 0; // suivi envoyé au prochain calcul
     }
 
-    // Arrivée à un ravito : sac « À emporter » du tronçon qui en part (eau, produits, sel), affiché pendant
-    // l'arrêt prévu (1 à 10 min) et tant qu'on n'est pas 300 m plus loin.
+    // Arrivée à un ravito : sac « À emporter » du tronçon qui en part (eau, produits, sel) et note du point ;
+    // point sans sac mais avec une note : la note. Affiché pendant l'arrêt prévu (1 à 10 min) et tant qu'on
+    // n'est pas 300 m plus loin.
     function showBag(i as Number, now as Number) as Void {
         var l = plan.legFromCp(i);
-        if (l < 0 || l == bagLeg) {
+        var note = i < plan.cpNote.size() ? plan.cpNote[i] : "";
+        if ((l < 0 && note.length() == 0) || i == bagCp) {
             return;
         }
         var stop = plan.cpStop[i];
+        bagCp = i;
         bagLeg = l;
         bagUntil = now + (stop < 60 ? 60 : (stop > 600 ? 600 : stop));
         bagFrom = plan.cpDist[i].toFloat();
@@ -348,6 +359,7 @@ class TrailPlannerField extends WatchUi.DataField {
             food = 0;
             foodAt = -1.0;
             foodSync = true;
+            bagCp = -1;
             bagLeg = -1;
             bagUntil = 0;
         }
@@ -364,15 +376,18 @@ class TrailPlannerField extends WatchUi.DataField {
 
         // Passages aux points détectés par la position (un tour Lap les valide aussi, voir onTimerLap).
         var changed = false;
-        // Passage validé par un tour mais contredit par le GPS calé sur le tracé (coureur à plus de
-        // 300 m avant le point) : annulé, le point sera de nouveau détecté en y arrivant.
+        // Passage (tour Lap ou position) contredit par le GPS calé sur le tracé (coureur à plus de 200 m
+        // avant le point) : annulé, le point sera de nouveau détecté en y arrivant.
         if (plan.hasRoute() && matched >= 0) {
-            var lk = lapped.keys();
+            var lk = passes.keys();
             for (var k = 0; k < lk.size(); k++) {
                 var li = lk[k] as Number;
-                if (li < plan.cpDist.size() && passes.hasKey(li) && d < plan.cpDist[li] - 300) {
+                if (li < plan.cpDist.size() && d < plan.cpDist[li] - 200) {
                     passes.remove(li);
                     lapped.remove(li);
+                    if (bagCp == li) {
+                        bagCp = -1;
+                    }
                     changed = true;
                 }
             }
@@ -411,7 +426,7 @@ class TrailPlannerField extends WatchUi.DataField {
             for (var i = next; i < plan.cpCut.size(); i++) {
                 if (plan.cpCut[i] > 0) {
                     cutIdx = i;
-                    margin = plan.cpCut[i] - etas[i];
+                    margin = plan.cutAt(i, startUnix) - etas[i];
                     break;
                 }
             }
@@ -703,29 +718,29 @@ class TrailPlannerField extends WatchUi.DataField {
         }
     }
 
-    // Arrivée au ravito : distance, D+ et D- jusqu'au ravito suivant (ou l'arrivée), puis « À emporter »
-    // et le contenu du sac, un élément par ligne si la hauteur le permet, sinon deux voisins réunis.
-    function drawBag(dc as Graphics.Dc, fg) as Void {
-        var entries = plan.bag(bagLeg);
-        var from = plan.legFrom[bagLeg];
-        var to = plan.legTo[bagLeg];
-        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
-        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
-        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
-        var a = area(dc.getHeight());
-        var avail = a[1] - a[0] - dc.getFontHeight(Graphics.FONT_XTINY);
-        var font = Graphics.FONT_SMALL;
-        if (entries.size() * dc.getFontHeight(font) > avail) {
-            font = Graphics.FONT_XTINY;
+    // Note d'un point sur une ou deux lignes (coupée à un espace).
+    function wrapNote(text as String) as Array<String> {
+        var max = 22;
+        if (text.length() <= max) {
+            return [text] as Array<String>;
         }
-        var rows = avail / dc.getFontHeight(font);
-        if (rows < 1) {
-            rows = 1;
+        var cut = -1;
+        for (var k = 1; k < text.length() && k <= max; k++) {
+            if ((text.substring(k, k + 1) as String).equals(" ")) {
+                cut = k;
+            }
         }
-        // Trop d'éléments pour la hauteur : on réunit chaque fois les deux voisins dont la ligne commune est
-        // la plus courte (« 1.2 L d'eau · 3 Gel »), pour qu'aucune ligne ne soit tronquée si possible.
+        if (cut < 0) {
+            return [text] as Array<String>;
+        }
+        return [text.substring(0, cut) as String, text.substring(cut + 1, text.length()) as String] as Array<String>;
+    }
+
+    // Éléments du sac sur au plus `rows` lignes : on réunit chaque fois les deux voisins dont la ligne
+    // commune est la plus courte (« 1.2 L d'eau · 3 Gel »), pour qu'aucune ligne ne soit tronquée si possible.
+    function packItems(dc as Graphics.Dc, entries as Array<String>, font, rows as Number) as Array<String> {
         var items = entries;
-        while (items.size() > rows) {
+        while (items.size() > rows && items.size() > 1) {
             var best = 0;
             var bestW = -1;
             for (var i = 0; i + 1 < items.size(); i++) {
@@ -745,6 +760,45 @@ class TrailPlannerField extends WatchUi.DataField {
             }
             items = merged;
         }
+        return items;
+    }
+
+    // Passage à un point avec une note mais sans sac : nom du point et note.
+    function drawNote(dc as Graphics.Dc, fg) as Void {
+        var lines = [[bagCp < plan.cpName.size() ? plan.cpName[bagCp] : "Note", Graphics.FONT_XTINY, fg, 1]];
+        var note = wrapNote(plan.cpNote[bagCp]);
+        for (var i = 0; i < note.size(); i++) {
+            lines.add([note[i], Graphics.FONT_SMALL, fg, 0]);
+        }
+        drawLines(dc, lines);
+    }
+
+    // Arrivée au ravito : distance, D+ et D- jusqu'au ravito suivant (ou l'arrivée), puis « À emporter »
+    // et le contenu du sac, un élément par ligne si la hauteur le permet, sinon deux voisins réunis, et la
+    // note du point.
+    function drawBag(dc as Graphics.Dc, fg) as Void {
+        if (bagLeg < 0) {
+            drawNote(dc, fg);
+            return;
+        }
+        var entries = plan.bag(bagLeg);
+        var note = (bagCp >= 0 && bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) ? wrapNote(plan.cpNote[bagCp]) : [] as Array<String>;
+        var from = plan.legFrom[bagLeg];
+        var to = plan.legTo[bagLeg];
+        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
+        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
+        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
+        var a = area(dc.getHeight());
+        var avail = a[1] - a[0] - (1 + note.size()) * dc.getFontHeight(Graphics.FONT_XTINY);
+        var font = Graphics.FONT_SMALL;
+        if (entries.size() * dc.getFontHeight(font) > avail) {
+            font = Graphics.FONT_XTINY;
+        }
+        var rows = avail / dc.getFontHeight(font);
+        if (rows < 1) {
+            rows = 1;
+        }
+        var items = packItems(dc, entries, font, rows);
         var title = "À emporter";
         // Ravito suivant : son nom (ligne courte) au-dessus des chiffres.
         var leg = [
@@ -773,6 +827,10 @@ class TrailPlannerField extends WatchUi.DataField {
             }
         }
         var lines = [[from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, fg, 2]];
+        // Note du point (« frontale, veste… ») sous le titre, vers le centre où l'écran est large.
+        for (var i = 0; i < note.size(); i++) {
+            lines.add([note[i], Graphics.FONT_XTINY, fg, 0]);
+        }
         for (var i = 0; i < items.size(); i++) {
             lines.add([items[i], font, fg, 0]);
         }
@@ -817,6 +875,22 @@ class TrailPlannerField extends WatchUi.DataField {
             if (plan.isRace()) {
                 intro.add(plan.start > 0 ? ["Départ " + clock(plan.start), Graphics.FONT_SMALL, fg, 0] : ["Départ libre", Graphics.FONT_XTINY, fg, 3]);
             }
+            // Avec quoi partir : sac du premier tronçon (jusqu'au premier ravito ou à l'arrivée). Plein
+            // écran : un élément par ligne (4 lignes au plus) ; sinon une seule ligne.
+            var l0 = plan.legFromCp(-1);
+            if (l0 >= 0) {
+                var bag0 = plan.bag(l0);
+                if (size == 2) {
+                    intro.add(["Emporter au départ", Graphics.FONT_XTINY, fg, 3]);
+                    var rows0 = packItems(dc, bag0, Graphics.FONT_XTINY, 4);
+                    for (var i = 0; i < rows0.size(); i++) {
+                        intro.add([rows0[i], Graphics.FONT_XTINY, fg, 0]);
+                    }
+                } else if (bag0.size() > 0) {
+                    var one = packItems(dc, bag0, Graphics.FONT_XTINY, 1)[0];
+                    intro.add([["Emporter : " + one, one], Graphics.FONT_XTINY, fg, 1]);
+                }
+            }
             drawLines(dc, intro);
             return;
         }
@@ -843,7 +917,7 @@ class TrailPlannerField extends WatchUi.DataField {
             drawLines(dc, [["Passage", Graphics.FONT_XTINY, fg], [lapMsg, size > 0 ? Graphics.FONT_MEDIUM : Graphics.FONT_SMALL, green]]);
             return;
         }
-        if (bagLeg >= 0 && now < bagUntil && dist < bagFrom + 300) {
+        if (bagCp >= 0 && now < bagUntil && dist < bagFrom + 300) {
             drawBag(dc, fg);
             return;
         }

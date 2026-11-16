@@ -36,6 +36,7 @@ Ton plan de course au poignet :
 
 En course (captures simulées sur Enduro 3) :
 
+![Avant le départ](ecran-0-depart.png)
 ![Sur le parcours](ecran-1-sur-le-parcours.png)
 ![Entrée de ravito](ecran-2-entree-de-ravito.png)
 ![Passage validé](ecran-3-passage-valide.png)

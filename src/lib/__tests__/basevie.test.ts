@@ -33,7 +33,7 @@ describe('base de vie et dropbag', () => {
     expect(defaultStop('base')).toBe(20)
     expect(isRavitoKind('base') && isRavitoKind('ravito') && !isRavitoKind('split')).toBe(true)
     expect(assistAllowed(race.checkpoints[2])).toBe(true)
-    expect(watchPlan(race, A, plan.track, plan.sim).split('\n').find((l) => l.startsWith('C|20000'))).toMatch(/\|r\|BV km 20.0\|1200$/)
+    expect(watchPlan(race, A, plan.track, plan.sim).split('\n').find((l) => l.startsWith('C|20000'))).toMatch(/\|r\|BV km 20.0\|1200\|$/)
     const legs = nutritionPlan(race, plan.sim, A.products)
     expect(legs.map((l) => l.to)).toEqual(['Ravito km 8.0', 'Ravito km 16.0', 'Base de vie km 20.0', 'Ravito km 30.0', 'Arrivée'])
     expect(waypointKind({ name: 'Base de vie de Courmayeur' }, 'race')).toBe('base')

@@ -3,10 +3,12 @@
 //
 //   TP1
 //   N|<nom de la course>
-//   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>|<c = course, p = parcours>|<D+ m>|<D− m>
+//   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>|<c = course, p = parcours>|<D+ m>|<D− m>|<départ de référence>
+//                          départ de référence : départ prévu (s Unix) même en départ libre ; la montre y
+//                          rapporte les barrières quand l'activité part un autre jour (entraînement, simulateur)
 //   K|<d>:<t>,<d>:<t>,…    courbe distance (m) → temps de déplacement prévu (s, arrêts exclus),
 //                          simplifiée à ±45 s près (points là où l'allure change)
-//   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>   (un par point)
+//   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>|<note>   (un par point)
 //   P|<produit>|<produit>|…   noms des produits du plan nutrition (gels, barres…)
 //   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,…
 //                          un par tronçon entre ravitos (indices des lignes C, −1 = départ) : sac
@@ -86,7 +88,9 @@ export function fuelInterval(race: Race, athlete: Athlete): number {
 
 export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimResult): string {
   // Départ libre : 0 (la montre affiche « Départ libre » ; l'écart au plan part du vrai départ).
-  const start = isFreeStart(race) ? 0 : Math.round(zonedToUtc(race.env.start, race.env.timeZone).getTime() / 1000)
+  const planned = Math.round(zonedToUtc(race.env.start, race.env.timeZone).getTime() / 1000)
+  const ref = Number.isFinite(planned) ? planned : 0
+  const start = isFreeStart(race) ? 0 : ref
   // Arrêts cumulés avant une distance (un point situé exactement à d n'est pas compté).
   const stops = sim.splits.map((s) => ({ dist: s.to, stop: s.cp.stopMin * 60 }))
   const stopsBefore = (d: number) => stops.reduce((a, s) => a + (s.dist < d ? s.stop : 0), 0)
@@ -98,11 +102,11 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
   const lines = [
     'TP1',
     `N|${clean(race.name, 24)}`,
-    `S|${start}|${Math.round(track.totalDist)}|${fuelInterval(race, athlete)}|${kind}|${Math.round(track.dPlus)}|${Math.round(track.dMinus)}`,
+    `S|${start}|${Math.round(track.totalDist)}|${fuelInterval(race, athlete)}|${kind}|${Math.round(track.dPlus)}|${Math.round(track.dMinus)}|${ref}`,
     `K|${K}`,
     ...sim.splits.map((s) => {
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
-      return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}`
+      return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}|${clean((s.cp.notes ?? '').replace(/[|\s]+/g, ' '), 40)}`
     }),
     ...foodLines(nutritionPlan(race, sim, athlete.products), sim.splits),
   ]

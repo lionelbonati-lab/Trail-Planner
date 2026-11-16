@@ -9,7 +9,7 @@ const ROUTE_KY = 110540.0d;
 //   N|<nom>
 //   S|<départ prévu, s Unix>|<distance totale, m>|<rappel nutrition, min>|<c course / p parcours>|<D+ m>|<D- m>
 //   K|<d>:<t>,<d>:<t>,... courbe distance (m) -> temps de déplacement prévu (s, arrêts exclus)
-//   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>
+//   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>|<note>
 //   E|<dd>,<du>,<dn>,...  D+ et D- cumulés depuis le départ (m), écarts d'un sommet au suivant à partir
 //     de 0,0,0 ; un sommet à chaque point de passage (D+ / D- d'un point au suivant exacts)
 //   P|<produit>|<produit>|...  noms des produits du plan nutrition
@@ -29,6 +29,7 @@ class Plan {
     var kind as String = "";      // "c" course, "p" parcours d'entraînement, "" plan d'une ancienne version
     var dPlus as Number = -1;     // D+ / D- du parcours (m), -1 si inconnus
     var dMinus as Number = -1;
+    var refStart as Number = 0;   // départ prévu (s Unix), même en départ libre : référence des barrières
     var curveD as Array<Number> = [] as Array<Number>;
     var curveT as Array<Number> = [] as Array<Number>;
     var cpDist as Array<Number> = [] as Array<Number>;
@@ -37,6 +38,7 @@ class Plan {
     var cpKind as Array<String> = [] as Array<String>;
     var cpName as Array<String> = [] as Array<String>;
     var cpStop as Array<Number> = [] as Array<Number>;
+    var cpNote as Array<String> = [] as Array<String>;
     // Tracé simplifié (ligne G) : distance le long du parcours (m) et position de chaque sommet (m)
     // par rapport au premier (x vers l'est, y vers le nord).
     var routeD as Array<Number> = [] as Array<Number>;
@@ -65,6 +67,18 @@ class Plan {
     var isoP as Number = -1;
 
     function initialize() {
+    }
+
+    // Barrière horaire du point i (s Unix, 0 sans). Activité partie à plus de 6 h du départ prévu
+    // (entraînement sur le parcours, départ libre, simulateur) : barrière décalée d'autant, sinon elle
+    // tomberait un autre jour (« Hors délai -884h41 »). Le jour de la course, elle reste à l'heure fixe.
+    function cutAt(i as Number, actualStart as Number) as Number {
+        var cut = cpCut[i];
+        if (cut <= 0 || refStart <= 0) {
+            return cut;
+        }
+        var off = actualStart - refStart;
+        return (off > 21600 || off < -21600) ? cut + off : cut;
     }
 
     function hasFood() as Boolean {
@@ -494,6 +508,9 @@ function parsePlan(text as String) as Plan or Null {
                 p.dPlus = toNum(parts[5]);
                 p.dMinus = toNum(parts[6]);
             }
+            if (parts.size() >= 8) {
+                p.refStart = toNum(parts[7]);
+            }
         } else if (tag.equals("K") && parts.size() >= 2) {
             var values = splitText(parts[1], ",");
             for (var k = 0; k < values.size(); k++) {
@@ -510,6 +527,7 @@ function parsePlan(text as String) as Plan or Null {
             p.cpKind.add(parts[4]);
             p.cpName.add(parts[5]);
             p.cpStop.add(parts.size() >= 7 ? toNum(parts[6]) : 0);
+            p.cpNote.add(parts.size() >= 8 ? parts[7] : "");
         } else if (tag.equals("E") && parts.size() >= 2) {
             parseClimb(p, parts[1]);
         } else if (tag.equals("P")) {
