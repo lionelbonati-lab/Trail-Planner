@@ -2,9 +2,9 @@ import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
 import { Activity, Bell, Minus, Plus, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import type { ShareSnapshot } from '../lib/share'
+import { timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
-import { estimatedDist, parseWatchPlan, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
+import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
 import type { MapPoint, Runner } from './ShareMap'
 
@@ -407,6 +407,12 @@ export function ShareView({
   const planStartMs = Date.parse(snap.start)
   const startMs = watch && report ? report.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : planStartMs
   const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs)
+  // Toucher le tracé sur la carte : heure de passage à cet endroit (réelle si déjà passé, estimée sinon).
+  const runnerAt = watch ? (estimate ?? watch.dist) : lastDone ? lastDone.dist : null
+  const passageAt = (d: number) => {
+    const ms = timeAtDist(snap.rows, snap.start, startMs, d, plan ? (dd) => plannedAtWatch(plan, dd) : undefined)
+    return { when: formatClock(new Date(ms), tz, long), passed: runnerAt !== null && d <= runnerAt }
+  }
   const mapPoints: MapPoint[] = snap.rows.map((r) => ({
     dist: r.dist,
     kind: r.kind,
@@ -484,7 +490,7 @@ export function ShareView({
             </label>
             {showMap && (
               <Suspense fallback={<div className="share-map share-map-loading" />}>
-                <ShareMap route={snap.route} points={mapPoints} runner={runner} />
+                <ShareMap route={snap.route} points={mapPoints} runner={runner} passageAt={passageAt} />
               </Suspense>
             )}
           </>

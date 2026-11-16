@@ -4,8 +4,9 @@
 import { isRavitoKind } from '../lib/splits'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { LocateFixed, Maximize2 } from 'lucide-react'
+import { Expand, LocateFixed, Maximize2, Shrink } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { navUrl } from '../lib/assist'
 import { routePointAt, splitRouteAt, type RoutePoint } from '../lib/routeGeo'
 import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 
@@ -28,16 +29,26 @@ export interface Runner {
   estimate?: { dist: number; label: string } | null
 }
 
+/** Passage à une distance du parcours (toucher le tracé) : heure prévue ou estimée, déjà passé ou non. */
+export type PassageAt = (dist: number) => { when: string; passed: boolean }
+
+/** Distance max (px) entre le doigt et le tracé pour le « toucher ». */
+const TAP_PX = 28
+
 const DONE_COLOR = '#7d8580'
 const RUNNER_ZOOM = 14
 
-export default function ShareMap({ route, points, runner }: { route: RoutePoint[]; points: MapPoint[]; runner: Runner | null }) {
+export default function ShareMap({ route, points, runner, passageAt }: { route: RoutePoint[]; points: MapPoint[]; runner: Runner | null; passageAt?: PassageAt }) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const lines = useRef<L.LayerGroup | null>(null)
   const marks = useRef<L.LayerGroup | null>(null)
   const me = useRef<L.Marker | null>(null)
   const [follow, setFollow] = useState(true)
+  const [full, setFull] = useState(false)
+  // Dernière fonction de passage (change à chaque rendu), lue au toucher du tracé.
+  const passage = useRef(passageAt)
+  passage.current = passageAt
   // Chaque mise à jour du partage recrée les tableaux : on ne redessine que si le tracé change.
   const key = `${route.length}:${route[0]?.join()}:${route[route.length - 1]?.join()}`
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,6 +69,29 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
     m.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] })
     // Déplacer la carte à la main arrête de suivre le coureur.
     m.on('dragstart', () => setFollow(false))
+    // Toucher le tracé : km, heure de passage (estimée ou réelle) et lien GPS vers ce point.
+    m.on('click', (e: L.LeafletMouseEvent) => {
+      const at = m.latLngToContainerPoint(e.latlng)
+      let best = -1
+      let bestPx = Infinity
+      for (let i = 0; i < stable.length; i++) {
+        const q = m.latLngToContainerPoint([stable[i][1], stable[i][2]])
+        const px = Math.hypot(q.x - at.x, q.y - at.y)
+        if (px < bestPx) {
+          bestPx = px
+          best = i
+        }
+      }
+      if (best < 0 || bestPx > TAP_PX) return
+      const [dist, lat, lon] = stable[best]
+      const info = passage.current?.(dist)
+      const km = (dist / 1000).toFixed(1).replace('.', ',')
+      const html =
+        `<div class="tap-pop"><strong>km ${km}</strong>` +
+        (info ? `<div>${info.passed ? 'Passé vers' : 'Passage estimé vers'} <strong>${info.when}</strong></div>` : '') +
+        `<a href="${navUrl({ lat, lon })}" target="_blank" rel="noreferrer">Y aller</a></div>`
+      L.popup({ closeButton: true, autoPan: true }).setLatLng([lat, lon]).setContent(html).openOn(m)
+    })
     map.current = m
     return () => {
       m.remove()
@@ -155,6 +189,24 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
     }
   }, [lat, lon, label, follow, stable])
 
+  // Plein écran : la carte occupe tout l'écran (Échap ou le bouton pour revenir).
+  useEffect(() => {
+    const m = map.current
+    const t = setTimeout(() => m?.invalidateSize(), 60)
+    if (!full) return () => clearTimeout(t)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFull(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      clearTimeout(t)
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [full])
+
   const centerOnRunner = () => {
     setFollow(true)
     if (map.current && lat !== null && lon !== null) map.current.setView([lat, lon], Math.max(map.current.getZoom(), RUNNER_ZOOM))
@@ -165,7 +217,7 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
   }
 
   return (
-    <section className="share-map-wrap">
+    <section className={`share-map-wrap ${full ? 'full' : ''}`}>
       <div className="share-map-head">
         <h3>Carte en direct</h3>
         <span className="row tight">
@@ -175,9 +227,13 @@ export default function ShareMap({ route, points, runner }: { route: RoutePoint[
             </button>
           )}
           <button className="ghost" onClick={showAll}><Maximize2 /> Tout le parcours</button>
+          <button className="ghost" onClick={() => setFull(!full)} aria-pressed={full} title={full ? 'Quitter le plein écran' : 'Carte en plein écran'}>
+            {full ? <Shrink /> : <Expand />} {full ? 'Réduire' : 'Plein écran'}
+          </button>
         </span>
       </div>
       <div ref={el} className="share-map" role="region" aria-label="Carte du parcours et position du coureur" />
+      <p className="muted small map-tip">Touche le tracé : heure de passage estimée et itinéraire jusqu'à ce point.</p>
     </section>
   )
 }

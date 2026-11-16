@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ShareView } from '../../components/SharePage'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
 import { computePlan, scenarioWindows } from '../plan'
-import { buildSnapshot } from '../share'
+import { buildSnapshot, timeAtDist } from '../share'
 import { estimatedDist, ESTIMATE_MAX_S, plannedAtWatch, parseWatchPlan } from '../watchLive'
 
 function gpx(): string {
@@ -190,6 +190,23 @@ describe('page assistance', () => {
     expect(html).toMatch(/class="delay late ">\+1[12] min</)
     // Points suivants : retard estimé (en italique).
     expect(html).toMatch(/class="delay late est">\+\d+ min</)
+  })
+
+  it('heure de passage à une distance quelconque : entre les deux points qui l’encadrent', () => {
+    const start = '2026-07-01T06:00:00.000Z'
+    const t0 = Date.parse(start)
+    const rows = [
+      { dist: 10000, planned: '2026-07-01T07:00:00.000Z', actual: '2026-07-01T07:10:00.000Z', eta: '2026-07-01T07:10:00.000Z' },
+      { dist: 20000, planned: '2026-07-01T08:00:00.000Z', actual: null, eta: '2026-07-01T08:30:00.000Z' },
+    ]
+    // Mi-chemin entre départ et A (au prorata de la distance) : 06:35.
+    expect(timeAtDist(rows, start, t0, 5000)).toBe(t0 + 35 * 60000)
+    // Mi-chemin entre A (07:10 réel) et B (08:30 estimé) : 07:50.
+    expect(timeAtDist(rows, start, t0, 15000)).toBe(t0 + 110 * 60000)
+    // Courbe du plan : 3/4 du temps prévu entre A et B atteint au km 15 (montée).
+    expect(timeAtDist(rows, start, t0, 15000, () => 3600 + 2700)).toBe(t0 + 130 * 60000)
+    // Au-delà du dernier point : son heure.
+    expect(timeAtDist(rows, start, t0, 25000)).toBe(Date.parse(rows[1].eta))
   })
 
   it('relevé trop ancien : ignoré', () => {

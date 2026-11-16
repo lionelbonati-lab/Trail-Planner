@@ -138,3 +138,27 @@ function navTarget(access: { lat: number; lon: number } | undefined, track: Trac
 export function shareUrl(shareId: string): string {
   return `${window.location.origin}${window.location.pathname}#/share/${shareId}`
 }
+
+/**
+ * Heure de passage (ms) à une distance quelconque du parcours, pour la page assistance : entre les
+ * deux points qui l'encadrent (départ compris), au prorata du temps prévu (courbe du plan si on l'a,
+ * sinon de la distance), appliqué aux heures réelles ou estimées de ces deux points.
+ */
+export function timeAtDist(
+  rows: Pick<ShareRow, 'dist' | 'planned' | 'actual' | 'eta'>[],
+  plannedStart: string,
+  realStart: number,
+  d: number,
+  plannedAt?: (d: number) => number,
+): number {
+  const p0 = Date.parse(plannedStart)
+  const nodes = [{ dist: 0, plan: p0, real: realStart }, ...rows.map((r) => ({ dist: r.dist, plan: Date.parse(r.planned), real: Date.parse(r.actual ?? r.eta) }))]
+  let i = 0
+  while (i < nodes.length - 2 && nodes[i + 1].dist < d) i++
+  const a = nodes[i]
+  const b = nodes[Math.min(i + 1, nodes.length - 1)]
+  if (b === a || b.dist <= a.dist) return a.real
+  const raw = plannedAt && b.plan > a.plan ? (p0 + plannedAt(d) * 1000 - a.plan) / (b.plan - a.plan) : (d - a.dist) / (b.dist - a.dist)
+  const f = Math.max(0, Math.min(1, raw))
+  return a.real + f * (b.real - a.real)
+}

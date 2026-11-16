@@ -576,6 +576,12 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .share-map-head button.on { color: var(--accent); }
 .share-map { height: 380px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); margin-top: 8px; isolation: isolate; background: #e8ebe6; }
 @media (max-width: 600px) { .share-map { height: 320px; } }
+.share-map-wrap.full { position: fixed; inset: 0; z-index: 2000; margin: 0; background: var(--bg); padding: 8px 10px 10px; display: flex; flex-direction: column; }
+.share-map-wrap.full .share-map { flex: 1; height: auto; }
+.share-map-wrap.full .map-tip { display: none; }
+.map-tip { margin: 4px 2px 0; }
+.tap-pop { font-size: 13px; line-height: 1.5; }
+.tap-pop a { font-weight: 600; }
 .runner-icon { width: 18px; height: 18px; border-radius: 50%; background: #1d6fe0; border: 3px solid #fff; box-sizing: border-box; animation: runner-pulse 1.8s ease-out infinite; }
 @keyframes runner-pulse {
   0% { box-shadow: 0 0 0 0 rgba(29, 111, 224, 0.55); }
