@@ -1,5 +1,6 @@
-import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Moon, Pencil, Play, Plus, Printer, Scissors, Sparkles, Trash2, Users, Watch } from 'lucide-react'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, LibraryBig, Map as MapIcon, MapPin, Maximize2, Minimize2, Moon, Pencil, Play, Plus, Printer, Scissors, Sparkles, Trash2, Users, Watch, X } from 'lucide-react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
 import { bagText, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan } from '../lib/nutrition'
@@ -143,14 +144,65 @@ export function RacePlan({
   })
   /** Clic sur le profil ou la carte : repère (parcours) ou point du type choisi (course). */
   const pickPoint = (d: number) => addPoint(d, isRoute ? 'split' : clickKind)
+  // Plein écran : le point ajouté s'ouvre dans la fenêtre (nom prérempli, assistance, dropbag).
+  const pickFull = (d: number) => setSelected(pickPoint(d))
+  // Point déplacé sur la carte : nouveau km, nom par défaut mis à jour.
+  const movePoint = (id: string, d: number) => {
+    const cp = race.checkpoints.find((c) => c.id === id)
+    if (cp) setCp(id, { dist: Math.round(d), ...withKind({ ...cp, dist: Math.round(d) }, cp.kind) })
+  }
   // Le tableau complet demande ≈ 1 230 px (≈ 1 330 px pour une course, avec l'assistance) ; en dessous, vue en cartes.
   const narrow = useMediaQuery(race.kind === 'route' ? '(max-width: 1229px)' : '(max-width: 1399px)')
   const [editing, setEditing] = useState<string | null>(null)
   // Temps d'arrêt à appliquer à tous les ravitos (par défaut : le plus fréquent).
   const [bulkStop, setBulkStop] = useState<Record<string, number>>({})
   const [showMap, setShowMap] = useState(true)
+  // Carte plein écran (pose des points) : point ouvert dans la fenêtre, part du profil en bas.
+  const [full, setFull] = useState(false)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [profileFrac, setProfileFrac] = useState(0.25)
   // Pose sur la carte de l'accès assistance d'un point (identifiant du point), ou null.
   const [pickAccess, setPickAccess] = useState<string | null>(null)
+  const selectedCp = full && selected ? race.checkpoints.find((c) => c.id === selected) ?? null : null
+  const closeFull = () => {
+    setFull(false)
+    setSelected(null)
+    setPickAccess(null)
+  }
+  // Séparation carte / profil déplaçable (profil entre 12 et 70 % de la hauteur).
+  const shellRef = useRef<HTMLDivElement>(null)
+  const [splitDrag, setSplitDrag] = useState(false)
+  const onSplitDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setSplitDrag(true)
+  }
+  const onSplitMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = shellRef.current?.getBoundingClientRect()
+    if (!splitDrag || !box) return
+    setProfileFrac(Math.max(0.12, Math.min(0.7, (box.bottom - e.clientY) / box.height)))
+  }
+  const onSplitUp = () => setSplitDrag(false)
+  const [viewH, setViewH] = useState(() => window.innerHeight)
+  useEffect(() => {
+    if (!full) return
+    const onResize = () => setViewH(window.innerHeight)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !pickAccess) {
+        if (selected) setSelected(null)
+        else closeFull()
+      }
+    }
+    window.addEventListener('resize', onResize)
+    window.addEventListener('keydown', onKey)
+    document.body.classList.add('points-open')
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('keydown', onKey)
+      document.body.classList.remove('points-open')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [full, pickAccess, selected])
+  const profileH = Math.max(110, Math.round(viewH * profileFrac) - 24)
   /** Case « dropbag » d'un ravito ou d'une base de vie (dropbag prévu par l'organisation). */
   const dropbagOf = (cp: Checkpoint, labels = false) =>
     isRavitoKind(cp.kind) ? (
@@ -245,6 +297,7 @@ export function RacePlan({
     // Un point manuel remplace un point auto trop proche (moins de 300 m).
     const kept = race.checkpoints.filter((c) => !(c.auto && Math.abs(c.dist - cp.dist) < 300))
     set({ checkpoints: [...kept, cp].sort((a, b) => a.dist - b.dist) })
+    return cp.id
   }
 
   const generate = () => {
@@ -546,7 +599,7 @@ export function RacePlan({
               <span className="muted small">Clic sur le profil :</span>
               <span className="click-mode">
                 <button className={clickMode === 'cycle' ? 'on' : ''} onClick={() => setClickMode('cycle')} title="Le clic coupe la portion de zone : fin de cycle"><Scissors /> Fin de cycle</button>
-                <button className={clickMode === 'point' ? 'on' : ''} onClick={() => setClickMode('point')} title="Le clic ajoute un point de repère"><Plus /> Repère</button>
+                <button className={clickMode === 'point' ? 'on' : ''} onClick={() => setClickMode('point')} title="Le clic ajoute un point intermédiaire"><Plus /> Point inter</button>
               </span>
               <span className="muted small">Glisser : appliquer une zone à une portion.</span>
             </div>
@@ -627,8 +680,8 @@ export function RacePlan({
           {isRoute ? (
             <Hint>
               <strong>Fin de cycle</strong> : un clic coupe la portion ; glisse une limite (poignée sous le profil) pour la déplacer ; clique sur
-              une portion de la barre de zones pour changer sa zone (couleurs Garmin). <strong>Repère</strong> : un clic ajoute un point de
-              repère (aussi possible sur la carte). Bandes grises : nuit. Barre jaune → violet : technicité.
+              une portion de la barre de zones pour changer sa zone (couleurs Garmin). <strong>Point inter</strong> : un clic ajoute un point
+              intermédiaire (aussi possible sur la carte). Bandes grises : nuit. Barre jaune → violet : technicité.
             </Hint>
           ) : (
             <Hint>
@@ -641,7 +694,10 @@ export function RacePlan({
             <Toggle label="Carte" checked={showMap} onChange={setShowMap} />
           </div>
           {showMap && (
-            <div id="race-map">
+            <div id="race-map" className="map-wrap">
+              <button className="map-expand" onClick={() => setFull(true)} title="Carte plein écran : poser et déplacer les points" aria-label="Carte plein écran">
+                <Maximize2 />
+              </button>
               {pickAccess && (
                 <div className="banner info">
                   <span>
@@ -1168,6 +1224,107 @@ export function RacePlan({
           )}
         </Card>
       </div>
+
+
+      {full &&
+        createPortal(
+          <div className="points-shell" ref={shellRef}>
+            <div className="points-top">
+              <strong className="points-title">{race.name}</strong>
+              {!isRoute && (
+                <span className="click-mode" role="group" aria-label="Type du point ajouté">
+                  {(['ravito', 'base', 'split', 'chrono', 'cutoff'] as const).map((k) => (
+                    <button key={k} className={clickKind === k ? 'on' : ''} onClick={() => setClickKind(k)} aria-pressed={clickKind === k}>
+                      {KIND_LABELS[k]}
+                    </button>
+                  ))}
+                </span>
+              )}
+              <span className="muted small points-tip">Appuie sur le tracé, glisse et lâche : un point est posé là. Glisse un point pour le déplacer, touche-le pour l’ouvrir.</span>
+              <button className="primary" onClick={closeFull}><Minimize2 /> Fermer</button>
+            </div>
+            <div className="points-map" style={{ flex: `${1 - profileFrac} 1 0` }}>
+              {pickAccess && (
+                <div className="banner info points-banner">
+                  <span><MapPin className="inline" /> Touche la carte à l'endroit où ton assistance se gare pour « {sim.splits.find((x) => x.cp.id === pickAccess)?.cp.name} ».</span>
+                  <button className="ghost" onClick={() => setPickAccess(null)}>Annuler</button>
+                </div>
+              )}
+              <Suspense fallback={<div className="map map-loading">Chargement de la carte…</div>}>
+                <MapView
+                  className="fill"
+                  track={track}
+                  splits={sim.splits}
+                  timeZone={race.env.timeZone}
+                  hoverDist={hoverDist}
+                  edit={{ onAdd: pickFull, onMove: movePoint, onSelect: setSelected, selected }}
+                  accessPick={
+                    pickAccess
+                      ? (at) => {
+                          if (pickAccess === FINISH_ID) set({ finishAccess: at })
+                          else setCp(pickAccess, { access: at })
+                          setPickAccess(null)
+                        }
+                      : null
+                  }
+                  accesses={accessMarks}
+                />
+              </Suspense>
+              {selectedCp && (
+                <div className="draw-card points-card">
+                  <div className="draw-card-head">
+                    <strong>km {(selectedCp.dist / 1000).toFixed(1)}</strong>
+                    <span className="muted">
+                      {(() => {
+                        const s = sim.splits.find((x) => x.cp.id === selectedCp.id)
+                        return s ? `passage ${formatClock(s.arrivalClock, race.env.timeZone)} · ${formatDuration(s.arrival)}` : ''
+                      })()}
+                    </span>
+                    <button className="ghost" onClick={() => setSelected(null)} aria-label="Fermer"><X /></button>
+                  </div>
+                  <label className="field">
+                    <span className="field-label">Nom</span>
+                    <input type="text" value={selectedCp.name} autoFocus onFocus={(e) => e.target.select()} onChange={(e) => setCp(selectedCp.id, { name: e.target.value })} />
+                  </label>
+                  <div className="row tight">
+                    <label className="field">
+                      <span className="field-label">Type</span>
+                      <select value={selectedCp.kind} onChange={(e) => setCp(selectedCp.id, kindPatch(selectedCp, e.target.value as CheckpointKind))}>
+                        {kindOptions(selectedCp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </label>
+                    <Num label="Arrêt" value={selectedCp.stopMin} unit="min" min={0} width={56} onChange={(v) => setCp(selectedCp.id, { stopMin: v })} />
+                  </div>
+                  {!isRoute && isRavitoKind(selectedCp.kind) && (
+                    <div className="row tight">
+                      {assistOf(selectedCp, true)}
+                      {dropbagOf(selectedCp, true)}
+                    </div>
+                  )}
+                  <div className="row tight">
+                    <button className="primary" onClick={() => setSelected(null)}><Check /> OK</button>
+                    <button
+                      className="ghost danger"
+                      onClick={() => {
+                        set({ checkpoints: race.checkpoints.filter((c) => c.id !== selectedCp.id) })
+                        setSelected(null)
+                      }}
+                    >
+                      <Trash2 /> Supprimer
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="points-split" onPointerDown={onSplitDown} onPointerMove={onSplitMove} onPointerUp={onSplitUp} onPointerCancel={onSplitUp} role="separator" aria-label="Séparation carte / profil" title="Glisser pour agrandir la carte ou le profil">
+              <span />
+            </div>
+            <div className="points-profile" style={{ flex: `${profileFrac} 1 0` }}>
+              <ProfileChart points={sim.points} splits={sim.splits} timeZone={race.env.timeZone} startMs={startMs} height={profileH} onPick={pickFull} onHover={setHoverDist} />
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {printFormat && (
         <PrintSheets format={printFormat} race={race} track={track} sim={sim} athlete={athlete} windowOf={windowOf} legs={legs} onDone={() => setPrintFormat(null)} />

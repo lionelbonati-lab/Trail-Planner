@@ -657,3 +657,37 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .profile .cp .assist-ring { fill: none; stroke: #16a34a; stroke-width: 1.6; }
 .profile .cp .dropbag-tag rect { fill: #7c3aed; }
 .profile .cp .dropbag-tag text { fill: #fff; font-size: 8px; font-weight: 700; }
+
+/* Carte du plan : bouton plein écran. */
+.map-wrap { position: relative; }
+.map-expand { position: absolute; top: 18px; right: 10px; z-index: 500; width: 36px; height: 36px; padding: 0; border-radius: 8px; background: #fff; color: #1f2420; box-shadow: 0 1px 5px rgba(0,0,0,0.3); display: inline-flex; align-items: center; justify-content: center; }
+.map-wrap .banner ~ .map-expand { top: 70px; }
+
+/* Pose des points en plein écran : carte 3/4, profil 1/4, séparation déplaçable. */
+body.points-open { overflow: hidden; }
+.points-shell { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); }
+.points-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.points-title { font-size: 16px; }
+.points-tip { flex: 1; min-width: 200px; }
+.points-map { position: relative; min-height: 0; }
+.points-map .map.fill { position: absolute; inset: 0; height: auto; margin: 0; border: none; border-radius: 0; }
+.points-banner { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1001; width: min(560px, calc(100% - 20px)); margin: 0; }
+.points-card { top: 10px; }
+.points-card .field { margin: 0; }
+.points-split { flex: none; height: 14px; cursor: row-resize; touch-action: none; background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
+.points-split span { width: 48px; height: 4px; border-radius: 2px; background: var(--muted); opacity: 0.6; }
+.points-profile { min-height: 0; overflow: hidden; background: var(--surface); padding: 2px 8px 0; }
+.edit-pt { border-radius: 50%; background: #fff; border: 3px solid #1f2420; box-shadow: 0 1px 4px rgba(0,0,0,0.4); cursor: grab; }
+.edit-pt.kind-ravito { background: #c0571b; border-color: #fff; }
+.edit-pt.kind-base { background: #c2410c; border-color: #fff; outline: 2px solid #c2410c; }
+.edit-pt.kind-cutoff { background: var(--danger); border-color: #fff; }
+.edit-pt.kind-chrono { background: #1d4ed8; border-color: #fff; }
+.edit-pt.sel { outline: 3px solid #e0007a; outline-offset: 2px; }
+.points-map .edit-hit { cursor: copy; }
+@media (max-width: 720px) {
+  .points-top { padding: 6px 8px; gap: 6px; }
+  .points-title { flex: 1; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .points-tip { display: none; }
+  .points-top .click-mode { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .points-top .click-mode button { white-space: nowrap; }
+}
