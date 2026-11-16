@@ -75,7 +75,7 @@ describe('flasques de 500 ml : eau et isotonique', () => {
     const plan = computePlan(race, DEFAULT_ATHLETE)!
     const gels = DEFAULT_PRODUCTS.filter((p) => p.id === 'gel')
     const [leg] = nutritionPlan(race, plan.sim, gels)
-    expect(leg.flasks).toEqual({ ...flaskSplit(leg.water, false), isoId: null })
+    expect(leg.flasks).toEqual({ ...flaskSplit(leg.water, false), isoId: null, waterId: null })
     expect(bagText(leg)).toMatch(/^[\d.]+ L : \d flasques? d'eau, \d+ × Gel/)
   })
 })
@@ -96,5 +96,21 @@ describe('produits retenus pour une course', () => {
     const plan = computePlan(race, DEFAULT_ATHLETE)!
     const P = watchPlan(race, { ...DEFAULT_ATHLETE, products: ps }, plan.track, plan.sim).split('\n').find((l) => l.startsWith('P|'))
     expect(P).toBe('P|Gel')
+  })
+})
+
+describe('eau minérale salée (St-Yorre)', () => {
+  it('remplit les flasques d’eau ; son sodium est déduit du sel', () => {
+    const race = newRace('Sel', gpx(30))
+    race.waterPerH = 0.8
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const styorre: Product = { id: 'sy', name: 'St-Yorre', carbs: 0, sodium: 850, share: 0, type: 'water' }
+    const [sans] = nutritionPlan(race, plan.sim, DEFAULT_PRODUCTS)
+    const [avec] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, styorre])
+    expect(avec.flasks.waterId).toBe('sy')
+    expect(avec.products.find((x) => x.product.id === 'sy')?.count).toBe(avec.flasks.water)
+    expect(avec.sodiumFromProducts - sans.sodiumFromProducts).toBe(850 * avec.flasks.water)
+    expect(bagText(avec)).toContain(`${avec.flasks.water} flasques St-Yorre + `)
+    expect(bagText(avec)).not.toContain('× St-Yorre')
   })
 })

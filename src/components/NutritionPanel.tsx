@@ -16,7 +16,8 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
           isotonique en flasque (poudre pour 500 ml d'eau) : une seule flasque d'isotonique si 500 ml suffisent sur le tronçon,
           sinon une d'eau et une d'isotonique, puis une de plus par 500 ml d'eau commencés (en alternant eau et isotonique),
           ses glucides et son sodium déduits du plan ; au-delà de 4 flasques, le plan signale qu'il faut remplir en route.
-          <strong> Eau</strong> : sans glucides, pas comptée dans le plan. Dans chaque course, la carte « Nutrition » choisit les
+          <strong> Eau</strong> : par flasque de 500 ml ; une eau minérale salée (St-Yorre : environ 850 mg de sodium par
+          500 ml) remplit les flasques d'eau et son sodium est déduit du sel à ajouter ; une eau sans sodium n'est pas comptée. Dans chaque course, la carte « Nutrition » choisit les
           produits retenus ou la marque présente aux ravitaillements.
         </Hint>
         <datalist id="tp-brands">{brandsOf(products).map((b) => <option key={b} value={b} />)}</datalist>
