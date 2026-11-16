@@ -2,7 +2,7 @@ import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, Fil
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
-import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, nutritionPlan, PRODUCT_TYPES, productType, raceProducts } from '../lib/nutrition'
+import { bagText, brandsOf, dropbagPlan, dropbagText, flaskText, flaskWarning, legSupply, nutritionPlan, PRODUCT_TYPES, productType, raceProducts, shortOf } from '../lib/nutrition'
 import { applyRange, mergeInto, moveBoundary, partition, setTarget, splitAt, zone1Target, zoneColor, zoneShort, zoneText } from '../lib/zones'
 import { fetchOsmTech, osmSummary } from '../lib/osm'
 import { fetchRaceWeather, fetchWeatherSeries } from '../lib/weather'
@@ -1067,7 +1067,7 @@ export function RacePlan({
           <div className="scroll">
             <table className="table">
               <thead>
-                <tr><th>Tronçon</th><th>Durée</th><th>T° moy.</th><th>Eau</th><th>Glucides</th><th>Sodium</th><th>À emporter</th></tr>
+                <tr><th>Tronçon</th><th>Durée</th><th>T° moy.</th><th title="Requis, puis prévu">Eau</th><th title="Requis, puis prévu">Glucides</th><th title="Requis, puis prévu">Sodium</th><th>À emporter</th></tr>
               </thead>
               <tbody>
                 {legs.map((l) => (
@@ -1075,13 +1075,31 @@ export function RacePlan({
                     <td>{l.from} → {l.to}</td>
                     <td>{formatDuration(l.duration)}</td>
                     <td>{Math.round(l.temp)} °C</td>
-                    <td>
-                      {l.water} L
-                      {flaskText(l) && <div className="muted small">{flaskText(l)}</div>}
-                      {flaskWarning(l) && <div className="warn-text small">{flaskWarning(l)}</div>}
-                    </td>
-                    <td>{l.carbs} g</td>
-                    <td>{l.sodium} mg</td>
+                    {(() => {
+                      // Requis (besoin du tronçon) et prévu (ce qu'apportent flasques, produits et sel).
+                      const sup = legSupply(l)
+                      const planned = (v: number, req: number, unit: string, title: string) => (
+                        <div className={`small ${shortOf(v, req) ? 'warn-text' : 'muted'}`} title={title}>prévu {v} {unit}</div>
+                      )
+                      return (
+                        <>
+                          <td>
+                            {l.water} L
+                            {planned(sup.water, l.water, 'L', 'Eau des flasques emportées (500 ml chacune)')}
+                            {flaskText(l) && <div className="muted small">{flaskText(l)}</div>}
+                            {flaskWarning(l) && <div className="warn-text small">{flaskWarning(l)}</div>}
+                          </td>
+                          <td>
+                            {l.carbs} g
+                            {planned(sup.carbs, l.carbs, 'g', 'Glucides des produits emportés')}
+                          </td>
+                          <td>
+                            {l.sodium} mg
+                            {planned(sup.sodium, l.sodium, 'mg', 'Sodium des produits emportés et du sel à ajouter')}
+                          </td>
+                        </>
+                      )
+                    })()}
                     <td>{bagText(l)}</td>
                   </tr>
                 ))}
@@ -1089,7 +1107,8 @@ export function RacePlan({
             </table>
           </div>
           <Hint>
-            Calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant). Flasques de 500 ml :
+            Requis : besoin calculé sur la durée prévue de chaque tronçon (du départ d'un ravito à l'arrivée au suivant). Prévu : ce
+            qu'apportent les flasques emportées, les produits et le sel à ajouter (en orange s'il manque plus de 10 %). Flasques de 500 ml :
             une seule d'isotonique si 500 ml suffisent, sinon une d'eau et une d'isotonique, puis une de plus par 500 ml commencés
             en alternant eau et isotonique ;
             les glucides et le sodium de l'isotonique sont déduits, les autres produits complètent.

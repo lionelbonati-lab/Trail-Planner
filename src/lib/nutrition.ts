@@ -181,6 +181,23 @@ export function extraSodium(leg: Leg): number {
   return missing > 150 ? Math.round(missing) : 0
 }
 
+/**
+ * Quantités prévues d'un tronçon, à comparer aux quantités requises : eau des flasques emportées
+ * (500 ml chacune ; eau requise sans flasque), glucides des produits, sodium des produits et du sel à
+ * ajouter.
+ */
+export function legSupply(leg: Leg): { water: number; carbs: number; sodium: number } {
+  const flasks = leg.flasks.water + leg.flasks.iso
+  return {
+    water: flasks ? Math.round(flasks * FLASK_L * 10) / 10 : leg.water,
+    carbs: Math.round(leg.products.reduce((a, x) => a + x.count * x.product.carbs, 0)),
+    sodium: Math.round(leg.sodiumFromProducts + extraSodium(leg)),
+  }
+}
+
+/** Prévu nettement en dessous du requis (plus de 10 % de manque) : à signaler. */
+export const shortOf = (planned: number, required: number) => required > 0 && planned < required * 0.9
+
 const flaskWord = (n: number) => `${n} flasque${n > 1 ? 's' : ''}`
 
 /** Flasques d'un tronçon : « 2 flasques d'eau + 1 flasque Isotonique » (vide sans eau). */
