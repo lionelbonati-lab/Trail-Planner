@@ -725,3 +725,11 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 .cp-card { max-height: calc(100% - 80px); overflow: auto; }
 .draw-menu .auto-points { margin: 0 0 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+
+/* Profil du plan (comme la page assistance) : nuit, technicité, curseur. */
+.assist-profile .night-band { fill: #8a8f98; opacity: 0.12; }
+.assist-profile .hover-cursor line { stroke: var(--ink); stroke-width: 1; opacity: 0.6; }
+.assist-profile .hover-cursor circle { fill: #f5c542; stroke: #1f2420; stroke-width: 1.5; }
+.assist-profile .hover-text { font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.mp-legend .lg-tech { background: linear-gradient(90deg, #f5c542, #f08a24, #d9452b, #7a1f6b); border-radius: 2px; width: 18px; }
+.mp-legend .lg-night { background: #8a8f98; opacity: 0.4; border-radius: 2px; }

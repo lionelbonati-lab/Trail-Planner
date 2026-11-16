@@ -131,8 +131,8 @@ export default function MapView({ track, splits, timeZone, hoverDist, onPick, ac
     const p = track.points[indexAt(track.points, hoverDist)]
     c.setLatLng([p.lat, p.lon])
     if (!m.hasLayer(c)) c.addTo(m)
-    // Carte zoomée : elle suit le curseur, qui reste à plus de 60 px du bord.
-    m.panInside([p.lat, p.lon], { padding: [60, 60], animate: false })
+    // La carte suit le curseur, toujours au centre.
+    m.panTo([p.lat, p.lon], { animate: false })
   }, [hoverDist, track])
 
   return <div ref={el} className="map" role="region" aria-label="Carte du parcours" />

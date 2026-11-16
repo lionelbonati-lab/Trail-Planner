@@ -12,12 +12,13 @@ import { isDefaultLevel } from '../lib/level'
 import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
-import { CHECKPOINT_LABELS, commonStop, defaultStop, isRavitoKind, setStops, waypointCheckpoints } from '../lib/splits'
+import { CHECKPOINT_LABELS, commonStop, defaultStop, isRavitoKind, setStops, waypointCheckpoints, withKind } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
-import type { Athlete, CalcMode, Checkpoint, CheckpointKind, ProductType, Race, RaceKind, SimResult, Track } from '../lib/types'
+import type { Athlete, CalcMode, Checkpoint, CheckpointKind, ProductType, Race, RaceKind, SimPoint, SimResult, Track } from '../lib/types'
 import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
+import { CourseProfile } from './CourseProfile'
 import { ZonePicker, ZonesCard } from './Zones'
 import { Card, Hint, Kpi, Num, Toggle } from './ui'
 
@@ -113,6 +114,20 @@ export function RacePlan({
   const [sending, setSending] = useState<{ target: string | null; name: string } | null>(null)
   const [sent, setSent] = useState<{ id: string; name: string; replaced: boolean } | null>(null)
   const isRoute = race.kind === 'route'
+  // Types proposés au changement de type (temps de passage).
+  const kindOptions = (current: CheckpointKind) =>
+    (Object.entries(KIND_LABELS) as [CheckpointKind, string][]).filter(([k]) => k !== 'info' || k === current)
+  /**
+   * Changement de type : renommage (voir withKind) ; passage en base de vie : arrêt de 20 min et
+   * dropbag prévus d'office s'ils n'étaient pas réglés ; retour d'une base de vie : arrêt par défaut.
+   */
+  const kindPatch = (cp: Checkpoint, kind: CheckpointKind): Partial<Checkpoint> => ({
+    ...withKind(cp, kind),
+    ...(kind === 'base' && cp.kind !== 'base'
+      ? { ...(cp.stopMin <= defaultStop(cp.kind) ? { stopMin: defaultStop('base') } : {}), ...(cp.dropbag === undefined ? { dropbag: true } : {}) }
+      : {}),
+    ...(cp.kind === 'base' && kind !== 'base' && cp.stopMin === defaultStop('base') ? { stopMin: defaultStop(kind) } : {}),
+  })
   const [copied, setCopied] = useState(false)
   const [showWatch, setShowWatch] = useState(false)
   const [hoverDist, setHoverDist] = useState<number | null>(null)
@@ -205,6 +220,31 @@ export function RacePlan({
   const importWaypoints = () => set({ checkpoints: [...race.checkpoints, ...newWaypoints].sort((a, b) => a.dist - b.dist) })
 
   const products = raceProducts(race, athlete.products)
+  // Profil (comme la page assistance) : altitudes échantillonnées, points, technicité, nuit.
+  const profileStride = Math.max(1, Math.floor(sim.points.length / 1500))
+  const profilePts = sim.points.filter((_, i) => i % profileStride === 0 || i === sim.points.length - 1).map((p) => [p.dist, p.ele] as [number, number])
+  const profileRows = sim.splits.map((s, i) => ({
+    id: s.cp.id,
+    name: s.cp.name,
+    kind: s.cp.kind,
+    dist: s.to,
+    assist: !isRoute && assistAllowed(s.cp),
+    dropbag: !!s.cp.dropbag && isRavitoKind(s.cp.kind),
+    up: sim.splits.slice(0, i + 1).reduce((a, x) => a + x.dPlus, 0),
+  }))
+  const [techBands, nightBands] = (() => {
+    const bands = (f: (p: SimPoint) => number) => {
+      const out: { from: number; to: number; v: number }[] = []
+      for (const p of sim.points) {
+        const v = f(p)
+        const last = out[out.length - 1]
+        if (last && last.v === v) last.to = p.dist
+        else out.push({ from: last ? last.to : p.dist, to: p.dist, v })
+      }
+      return out
+    }
+    return [bands((p) => p.tech).filter((b) => b.v > 1), bands((p) => (p.night ? 1 : 0)).filter((b) => b.v === 1)]
+  })()
   const legs = nutritionPlan(race, sim, products)
   const brands = brandsOf(athlete.products)
   // Dropbags prévus par l'organisation (course) : contenu jusqu'au suivant.
@@ -476,101 +516,18 @@ export function RacePlan({
               />
             )}
           </div>
-          {isRoute && (
-            <div className="row profile-tools">
-              <span className="muted small">Clic sur le profil :</span>
-              <span className="click-mode">
-                <button className="on" title="Le clic coupe la portion de zone : fin de cycle"><Scissors /> Fin de cycle</button>
-              </span>
-              <span className="muted small">Glisser : appliquer une zone à une portion.</span>
-            </div>
-          )}
-          <ProfileChart
-            points={sim.points}
-            splits={sim.splits}
-            timeZone={race.env.timeZone}
-            startMs={startMs}
-            onPick={isRoute ? (d) => set({ zones: splitAt(race.zones, track.totalDist, d) }) : undefined}
-            onSelect={
-              isRoute
-                ? (from, to) => {
-                    setSegment(null)
-                    setSelection({ from, to })
-                  }
-                : undefined
-            }
-            zones={isRoute ? parts.map((z) => ({ from: z.from, to: z.to, label: zoneShort(z, athlete), color: zoneColor(z, athlete) })) : undefined}
-            onSegmentClick={
-              isRoute
-                ? (i) => {
-                    setSelection(null)
-                    setSegment(i)
-                  }
-                : undefined
-            }
-            onBoundaryMove={isRoute ? (i, d) => set({ zones: moveBoundary(parts, i, d) }) : undefined}
-            dPrime={race.push.enabled ? athlete.dPrime : undefined}
+          <CourseProfile
+            profile={profilePts}
+            rows={profileRows}
+            position={null}
+            tech={techBands}
+            night={nightBands}
             onHover={setHoverDist}
+            readout={(d) => {
+              const p = sim.points[indexAt(track.points, d)]
+              return p ? `km ${(d / 1000).toFixed(1)} · ${Math.round(p.ele)} m · ${formatDuration(p.t)} · ${formatClock(new Date(startMs + p.t * 1000), race.env.timeZone)}` : ''
+            }}
           />
-          {isRoute && selection && (
-            <ZonePicker
-              athlete={athlete}
-              title={
-                <>
-                  <strong>Portion km {(selection.from / 1000).toFixed(1)} → {(selection.to / 1000).toFixed(1)}</strong> ({((selection.to - selection.from) / 1000).toFixed(1)} km) :
-                  choisis sa zone.{race.zones.length === 0 && ' Avant et après, le parcours passe en zone 1 (modifiable).'}
-                </>
-              }
-              onApply={(t) => {
-                set({ zones: applyRange(race.zones, track.totalDist, selection.from, selection.to, t, zone1Target(athlete)) })
-                setSelection(null)
-              }}
-              onCancel={() => setSelection(null)}
-            />
-          )}
-          {isRoute && segment !== null && parts[segment] && (
-            <ZonePicker
-              athlete={athlete}
-              current={parts[segment]}
-              title={
-                <>
-                  <strong>
-                    Portion {segment + 1} : km {(parts[segment].from / 1000).toFixed(1)} → {(parts[segment].to / 1000).toFixed(1)}
-                  </strong>{' '}
-                  ({zoneText(parts[segment], athlete)})
-                </>
-              }
-              onApply={(t) => set({ zones: setTarget(parts, segment, t) })}
-              onCancel={() => setSegment(null)}
-              extra={
-                <>
-                  {segment > 0 && (
-                    <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, -1) }); setSegment(null) }} title="Supprime la fin de cycle précédente">
-                      <ArrowLeftToLine /> Fusionner avec la précédente
-                    </button>
-                  )}
-                  {segment < parts.length - 1 && (
-                    <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, 1) }); setSegment(null) }} title="Supprime la fin de cycle suivante">
-                      Fusionner avec la suivante <ArrowRightToLine />
-                    </button>
-                  )}
-                </>
-              }
-            />
-          )}
-          {isRoute ? (
-            <Hint>
-              <strong>Fin de cycle</strong> : un clic coupe la portion ; glisse une limite (poignée sous le profil) pour la déplacer ; clique sur
-              une portion de la barre de zones pour changer sa zone (couleurs Garmin). <strong>Point inter</strong> : un clic ajoute un point
-              intermédiaire (aussi possible sur la carte). Bandes grises : nuit. Barre jaune → violet : technicité.
-            </Hint>
-          ) : (
-            <Hint>
-              Un clic sur le profil (ou sur la carte) ajoute un point du type choisi : ravito, point intermédiaire ou barrière. Changer le
-              type d'un point le renomme (« Barrière km 20.1 ») s'il porte encore son nom par défaut ; un nom écrit à la main est gardé. Bandes grises : nuit. Barre jaune → violet : technicité. Une course se
-              calcule à ton intensité de course (durabilité), sans zones d'allure.
-            </Hint>
-          )}
           <div className="row">
             <Toggle label="Carte" checked={showMap} onChange={setShowMap} />
           </div>
@@ -606,6 +563,97 @@ export function RacePlan({
             </div>
           )}
         </Card>
+
+        {isRoute && (
+          <Card title="Zones d'allure sur le profil" foldDesktop>
+            {isRoute && (
+              <div className="row profile-tools">
+                <span className="muted small">Clic sur le profil :</span>
+                <span className="click-mode">
+                  <button className="on" title="Le clic coupe la portion de zone : fin de cycle"><Scissors /> Fin de cycle</button>
+                </span>
+                <span className="muted small">Glisser : appliquer une zone à une portion.</span>
+              </div>
+            )}
+            <ProfileChart
+              points={sim.points}
+              splits={sim.splits}
+              timeZone={race.env.timeZone}
+              startMs={startMs}
+              onPick={isRoute ? (d) => set({ zones: splitAt(race.zones, track.totalDist, d) }) : undefined}
+              onSelect={
+                isRoute
+                  ? (from, to) => {
+                      setSegment(null)
+                      setSelection({ from, to })
+                    }
+                  : undefined
+              }
+              zones={isRoute ? parts.map((z) => ({ from: z.from, to: z.to, label: zoneShort(z, athlete), color: zoneColor(z, athlete) })) : undefined}
+              onSegmentClick={
+                isRoute
+                  ? (i) => {
+                      setSelection(null)
+                      setSegment(i)
+                    }
+                  : undefined
+              }
+              onBoundaryMove={isRoute ? (i, d) => set({ zones: moveBoundary(parts, i, d) }) : undefined}
+              dPrime={race.push.enabled ? athlete.dPrime : undefined}
+              onHover={setHoverDist}
+            />
+            {isRoute && selection && (
+              <ZonePicker
+                athlete={athlete}
+                title={
+                  <>
+                    <strong>Portion km {(selection.from / 1000).toFixed(1)} → {(selection.to / 1000).toFixed(1)}</strong> ({((selection.to - selection.from) / 1000).toFixed(1)} km) :
+                    choisis sa zone.{race.zones.length === 0 && ' Avant et après, le parcours passe en zone 1 (modifiable).'}
+                  </>
+                }
+                onApply={(t) => {
+                  set({ zones: applyRange(race.zones, track.totalDist, selection.from, selection.to, t, zone1Target(athlete)) })
+                  setSelection(null)
+                }}
+                onCancel={() => setSelection(null)}
+              />
+            )}
+            {isRoute && segment !== null && parts[segment] && (
+              <ZonePicker
+                athlete={athlete}
+                current={parts[segment]}
+                title={
+                  <>
+                    <strong>
+                      Portion {segment + 1} : km {(parts[segment].from / 1000).toFixed(1)} → {(parts[segment].to / 1000).toFixed(1)}
+                    </strong>{' '}
+                    ({zoneText(parts[segment], athlete)})
+                  </>
+                }
+                onApply={(t) => set({ zones: setTarget(parts, segment, t) })}
+                onCancel={() => setSegment(null)}
+                extra={
+                  <>
+                    {segment > 0 && (
+                      <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, -1) }); setSegment(null) }} title="Supprime la fin de cycle précédente">
+                        <ArrowLeftToLine /> Fusionner avec la précédente
+                      </button>
+                    )}
+                    {segment < parts.length - 1 && (
+                      <button className="ghost" onClick={() => { set({ zones: mergeInto(parts, segment, 1) }); setSegment(null) }} title="Supprime la fin de cycle suivante">
+                        Fusionner avec la suivante <ArrowRightToLine />
+                      </button>
+                    )}
+                  </>
+                }
+              />
+            )}
+            <Hint>
+              <strong>Fin de cycle</strong> : un clic coupe la portion ; glisse une limite (poignée sous le profil) pour la déplacer ; clique sur
+              une portion de la barre de zones pour changer sa zone (couleurs Garmin). Bandes grises : nuit. Barre jaune → violet : technicité.
+            </Hint>
+          </Card>
+        )}
 
         {isRoute && race.zones.length > 0 && <ZonesCard race={race} athlete={athlete} track={track} sim={sim} onChange={onChange} />}
 
@@ -884,6 +932,12 @@ export function RacePlan({
                     )}
                     {open && !isFinish && (
                       <div className="fields">
+                        <label className="field">
+                          <span className="field-label">Type</span>
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, kindPatch(cp, e.target.value as CheckpointKind))}>
+                            {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        </label>
                         <Num label="Arrêt" value={cp.stopMin} unit="min" min={0} onChange={(v) => setCp(cp.id, { stopMin: v })} />
                         {!isRoute && (
                           <>
@@ -934,7 +988,11 @@ export function RacePlan({
                   return (
                     <tr key={cp.id} className={`${s.night ? 'is-night' : ''} kind-${cp.kind} ${cp.auto ? 'is-auto' : ''}`}>
                       <td>
-                        {isFinish ? 'Arrivée' : KIND_LABELS[cp.kind]}
+                        {isFinish ? 'Arrivée' : (
+                          <select value={cp.kind} onChange={(e) => setCp(cp.id, kindPatch(cp, e.target.value as CheckpointKind))} aria-label={`Type de ${cp.name}`}>
+                            {kindOptions(cp.kind).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td className="cp-name-cell">{cp.name}</td>
                       <td>{(s.to / 1000).toFixed(1)}</td>
