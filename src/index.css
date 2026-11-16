@@ -722,3 +722,6 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 .product-rows { display: grid; gap: 6px; }
 .product-rows select { min-width: 220px; }
+
+.cp-card { max-height: calc(100% - 80px); overflow: auto; }
+.draw-menu .auto-points { margin: 0 0 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }

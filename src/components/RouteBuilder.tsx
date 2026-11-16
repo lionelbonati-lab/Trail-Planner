@@ -1207,7 +1207,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
     <MiniProfile
                   track={track}
                   onHover={setHover}
-                  onPick={tool === 'points' ? (d) => { const p = track.points[indexAt(track.points, d)]; addCp(p.lat, p.lon) } : act.pickDist}
+                  onPick={tool === 'points' ? (mobile ? undefined : (d) => { const p = track.points[indexAt(track.points, d)]; addCp(p.lat, p.lon) }) : act.pickDist}
                   marks={[
                     ...placed.map((c) => ({ d: c.dist, label: c.kind === 'base' ? 'BV' : c.kind === 'ravito' ? 'R' : c.kind === 'chrono' ? 'C' : c.kind === 'cutoff' ? 'B' : 'P' })),
                     ...(rows ? [...letters].map(([k, letter]) => ({ d: rows[k].d, label: letter })) : []),
@@ -1379,7 +1379,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
             )}
           </div>
         ) : selCpObj ? (
-          <div className="draw-card cp-card" style={{ bottom: floatBottom + 26 }}>
+          <div className="draw-card cp-card" style={mobile ? { top: 64 } : { bottom: floatBottom + 26 }}>
             <div className="draw-card-head">
               <strong>km {km(selCpObj.dist)}</strong>
               <span className="muted">{CHECKPOINT_LABELS[selCpObj.kind]}</span>
@@ -1387,7 +1387,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
             </div>
             <label className="field">
               <span className="field-label">Nom</span>
-              <input type="text" value={selCpObj.name} autoFocus onFocus={(e) => e.target.select()} onChange={(e) => patchCp(selCpObj.id, { name: e.target.value })} />
+              <input type="text" value={selCpObj.name} autoFocus={!coarse} onFocus={(e) => e.target.select()} onChange={(e) => patchCp(selCpObj.id, { name: e.target.value })} />
             </label>
             <div className="row tight">
               <label className="field">
@@ -1575,22 +1575,6 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
             </div>
           )}
 
-          {race && tool === 'points' && track && (
-            <div className="auto-points">
-              <h3 className="draw-h">Points automatiques</h3>
-              <div className="row tight">
-                <select value={autoMethod} onChange={(e) => { const m = e.target.value as AutoSplitMethod; setAutoMethod(m); setAutoValue(METHOD_LABELS[m].def) }} aria-label="Méthode">
-                  {Object.entries(METHOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-                <Num value={autoValue} onChange={setAutoValue} unit={METHOD_LABELS[autoMethod].unit} min={1} width={60} />
-              </div>
-              <div className="row tight">
-                <button className="primary" onClick={generateAuto} disabled={!estimate}><WandSparkles /> Générer</button>
-                <button className="ghost" onClick={() => editCps(cps.filter((c) => !c.auto))} disabled={!cps.some((c) => c.auto)}>Effacer les auto</button>
-              </div>
-              <p className="muted small">Générer remplace les points auto précédents ; les points posés ou modifiés à la main restent.</p>
-            </div>
-          )}
           {mobile && track && <div className="draw-profile">{profileEl}</div>}
 
           <div className="draw-more">
@@ -1740,6 +1724,22 @@ export default function RouteBuilder({ athlete, race, onSave, onBack, startTool 
 
         {menu && (
           <div className="draw-menu" role="menu">
+            {race && track && (
+              <div className="auto-points">
+                <span className="field-label">Points de course automatiques</span>
+                <div className="row tight">
+                  <select value={autoMethod} onChange={(e) => { const m = e.target.value as AutoSplitMethod; setAutoMethod(m); setAutoValue(METHOD_LABELS[m].def) }} aria-label="Méthode">
+                    {Object.entries(METHOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                  <Num value={autoValue} onChange={setAutoValue} unit={METHOD_LABELS[autoMethod].unit} min={1} width={60} />
+                </div>
+                <div className="row tight">
+                  <button className="primary" onClick={generateAuto} disabled={!estimate}><WandSparkles /> Générer</button>
+                  <button className="ghost" onClick={() => editCps(cps.filter((c) => !c.auto))} disabled={!cps.some((c) => c.auto)}>Effacer les auto</button>
+                </div>
+                <p className="muted small">Générer remplace les points auto précédents ; les points posés ou modifiés à la main restent.</p>
+              </div>
+            )}
             <button onClick={openAuto}><WandSparkles /> Créer une boucle automatiquement</button>
             <span className="field-label">Nouveaux points (Sentiers : hors-route automatique)</span>
             <ModeSeg value={mode} onChange={pickMode} />
