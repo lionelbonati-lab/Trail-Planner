@@ -13,7 +13,6 @@ import {
   Eraser,
   FileDown,
   FileUp,
-  Flag,
   Footprints,
   LocateFixed,
   MapPin,
@@ -916,6 +915,8 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     const p = track.points[indexAt(track.points, hover)]
     c.setLatLng([p.lat, p.lon])
     if (!m.hasLayer(c)) c.addTo(m)
+    // La carte suit le curseur du profil, toujours au centre.
+    m.panTo([p.lat, p.lon], { animate: false })
   }, [hover, track])
 
   const fit = () => {
@@ -1191,6 +1192,10 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
 
   const profH = !mobile && track ? Math.round(wrapH * profFrac) : 0
   const floatBottom = (mobile ? sheetH : profH) + 12
+  // Carte raccourcie par le profil (ou la séparation déplacée) : Leaflet recalcule sa taille et son centre.
+  useEffect(() => {
+    map.current?.invalidateSize({ animate: false })
+  }, [profH])
   const profileEl = track ? (
     <MiniProfile
                   track={track}
@@ -1439,7 +1444,16 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                 )}
                 <div className="row tight">
                   {sel.k > 0 && sel.k < wps.length - 1 && (
-                    <button onClick={() => act.toggleMark(sel.k)}>
+                    <button
+                      onClick={() => {
+                        const w = wps[sel.k]
+                        if (race && !w.mark) {
+                          // Le point du tracé devient un point de course (point inter), sa fenêtre s'ouvre.
+                          setSel(null)
+                          addCp(w.lat, w.lon, 'split', w.name)
+                        } else act.toggleMark(sel.k)
+                      }}
+                    >
                       {wps[sel.k].mark ? <><BookmarkX /> Retirer le repère</> : <><Bookmark /> Point de repère</>}
                     </button>
                   )}
@@ -1463,11 +1477,20 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                   <span className="muted small">Hors du réseau de chemins : tracé en ligne droite.</span>
                 )}
                 <div className="row tight">
-                  <button className="primary" onClick={() => act.insert(sel.k, sel.lat, sel.lon, true)}><Bookmark /> Point de repère ici</button>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      // Course ou parcours existant : le repère est un point de course (point inter), sa fenêtre s'ouvre.
+                      if (race) {
+                        const at = sel
+                        setSel(null)
+                        addCp(at.lat, at.lon, 'split')
+                      } else act.insert(sel.k, sel.lat, sel.lon, true)
+                    }}
+                  >
+                    <Bookmark /> Point de repère ici
+                  </button>
                   <button onClick={() => act.insert(sel.k, sel.lat, sel.lon)}><Plus /> Point de tracé</button>
-                  {race && (
-                    <button onClick={() => { const at = sel; setSel(null); addCp(at.lat, at.lon) }}><Flag /> Point de course ici</button>
-                  )}
                 </div>
               </>
             ) : null}
