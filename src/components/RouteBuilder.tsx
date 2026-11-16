@@ -4,8 +4,6 @@ import {
   ArrowDownUp,
   ArrowLeft,
   ArrowLeftRight,
-  Bookmark,
-  BookmarkX,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -13,6 +11,7 @@ import {
   Eraser,
   FileDown,
   FileUp,
+  Flag,
   Footprints,
   LocateFixed,
   MapPin,
@@ -72,7 +71,7 @@ import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
 import { Num } from './ui'
 import { AssistControls } from './AssistControls'
 import { assistAllowed } from '../lib/assist'
-import { checkpointName, CHECKPOINT_LABELS, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, withKind, type AutoSplitMethod } from '../lib/splits'
+import { checkpointName, CHECKPOINT_LABELS, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, waypointKind, withKind, type AutoSplitMethod } from '../lib/splits'
 import { athleteKme } from '../lib/endurancepro'
 
 export interface DrawResult {
@@ -107,6 +106,26 @@ function initialCps(race: Race | null): PlacedCp[] {
   } catch {
     return []
   }
+}
+
+/** Point de tracé sans repère ni nom (il n'y a plus que des points de tracé et des points de parcours). */
+function plainWp(w: Waypoint): Waypoint {
+  return { lat: w.lat, lon: w.lon, mode: w.mode }
+}
+
+/**
+ * Anciens points de repère (lettres A, B…) et waypoints nommés d'un GPX importé : points de parcours
+ * (type deviné du nom), sauf s'il y en a déjà un à moins de 100 m.
+ */
+function marksAsCps(wps: Waypoint[], existing: { lat: number; lon: number }[], raceKind: RaceKind): PlacedCp[] {
+  const out: PlacedCp[] = []
+  wps.forEach((w, k) => {
+    if (!w.mark || k === 0 || k === wps.length - 1) return
+    if ([...existing, ...out].some((c) => haversine(c.lat, c.lon, w.lat, w.lon) < 100)) return
+    const kind = w.name ? waypointKind({ name: w.name }, raceKind) : 'split'
+    out.push({ id: crypto.randomUUID(), dist: 0, name: w.name || '', kind, stopMin: defaultStop(kind), cutoff: '', water: 0, carbs: 0, notes: '', auto: false, lat: w.lat, lon: w.lon, ...(kind === 'base' ? { dropbag: true } : {}) })
+  })
+  return out
 }
 
 /** Allure simulée : modèle de course, zones déjà placées sur le parcours, ou une zone du profil (indice). */
@@ -264,7 +283,8 @@ function ModeSeg({ value, onChange }: { value: SegMode; onChange: (m: SegMode) =
 export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const init = useMemo(() => initialState(race, athlete), []) // eslint-disable-line react-hooks/exhaustive-deps
   const cache = useRef(init.cache)
-  const [wps, setWps] = useState<Waypoint[]>(init.wps)
+  // Plus de points de repère : les anciens deviennent des points de parcours (voir marksAsCps).
+  const [wps, setWps] = useState<Waypoint[]>(() => init.wps.map(plainWp))
   const history = useRef<Waypoint[][]>([])
   const future = useRef<Waypoint[][]>([])
   const [mode, setMode] = useState<SegMode>(() => readJson<SegMode>(MODE_KEY) ?? 'trail')
@@ -282,7 +302,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const [dropping, setDropping] = useState(false)
   const [sel, setSel] = useState<Sel>(null)
   // Mode « Points de course » (course ou parcours existant) : points de passage posés et déplacés sur le tracé.
-  const [cps, setCps] = useState<PlacedCp[]>(() => initialCps(race))
+  const [cps, setCps] = useState<PlacedCp[]>(() => [...initialCps(race), ...marksAsCps(init.wps, initialCps(race), race?.kind ?? init.kind)])
   const [cpsDirty, setCpsDirty] = useState(false)
   const [selCp, setSelCp] = useState<string | null>(null)
   const [accessFor, setAccessFor] = useState<string | null>(null)
@@ -331,17 +351,10 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const errorAt = segs.findIndex((s) => s.status === 'error')
   const offroadCount = segs.filter((s) => s.status === 'ok' && s.offroad).length
   const loop = wps.length > 2 && same(wps[0], wps[wps.length - 1])
-  // Points listés : départ, repères, arrivée.
-  const listed = useMemo(() => wps.map((_, k) => k).filter((k) => k === 0 || k === wps.length - 1 || wps[k].mark), [wps])
-  // Points de repère (lettres A, B… dans l'ordre du parcours) ; les autres points ne servent qu'à former le tracé.
-  const letters = useMemo(() => {
-    const out = new Map<number, string>()
-    let n = 0
-    wps.forEach((w, k) => {
-      if (w.mark && k > 0 && k < wps.length - 1) out.set(k, String.fromCharCode(65 + (n++ % 26)))
-    })
-    return out
-  }, [wps])
+  // Points de tracé listés : départ et arrivée (les points de parcours sont mêlés à la liste).
+  const listed = useMemo(() => wps.map((_, k) => k).filter((k) => k === 0 || k === wps.length - 1), [wps])
+  // Plus de points de repère (lettres) : seulement des points de tracé et des points de parcours.
+  const letters = useMemo(() => new Map<number, string>(), [])
 
   const joined = useMemo(() => (ready ? joinSegments(segs.map((s) => (s as { points: RawPoint[] }).points)) : null), [segs, ready])
   const track = useMemo<Track | null>(() => {
@@ -481,7 +494,8 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     return cps
       .map((c) => {
         const i = nearestIndex(track.points, c.lat, c.lon)
-        return { ...c, dist: Math.round(track.points[i].dist) }
+        const dist = Math.round(track.points[i].dist)
+        return { ...c, dist, name: c.name || checkpointName(c.kind, dist) }
       })
       .sort((a, b) => a.dist - b.dist)
   }, [cps, track])
@@ -513,6 +527,30 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
     const c = cps.find((x) => x.id === id)
     if (!p || !c) return
     patchCp(id, { lat: p.lat, lon: p.lon, dist: Math.round(p.dist), ...withKind({ ...c, dist: p.dist }, c.kind) })
+  }
+  /**
+   * Point de tracé → point de parcours au même endroit : le point de tracé est retiré sans changer le
+   * tracé (ses deux tronçons sont réunis tels quels) ; le point de parcours glisse ensuite sur le tracé.
+   */
+  const wpToCp = (k: number, kind: CheckpointKind) => {
+    const a = segs[k - 1]
+    const b = segs[k]
+    const pos = a?.status === 'ok' ? a.points[a.points.length - 1] : wps[k]
+    if (a?.status === 'ok' && b?.status === 'ok') {
+      cache.current.set(segmentKey(wps[k - 1], wps[k + 1], wps[k + 1].mode), { status: 'ok', points: [...a.points, ...b.points.slice(1)], offroad: a.offroad || b.offroad })
+    }
+    setSel(null)
+    change(wps.filter((_, j) => j !== k))
+    addCp(pos.lat, pos.lon, kind, wps[k].name)
+  }
+  /** Point de parcours → point de tracé au même endroit (le tracé ne change pas). */
+  const cpToWp = (c: PlacedCp) => {
+    if (!rows) return
+    let k = 0
+    while (k < rows.length - 2 && rows[k + 1].d <= c.dist) k++
+    act.insert(k, c.lat, c.lon)
+    editCps(cps.filter((x) => x.id !== c.id))
+    setSelCp(null)
   }
   const setCpKind = (c: PlacedCp, k: CheckpointKind) =>
     patchCp(c.id, {
@@ -617,8 +655,6 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
       setWps(next)
       setSel(null)
     },
-    /** Point de repère ou simple point de tracé. */
-    toggleMark: (k: number) => change(wps.map((w, j) => (j === k ? (w.mark ? { lat: w.lat, lon: w.lon, mode: w.mode } : { ...w, mark: true }) : w))),
     /** Nom d'un point listé (sans historique : la saisie se fait lettre par lettre). */
     rename: (k: number, nm: string) =>
       setWps(wps.map((w, j) => (j === k ? (nm ? { ...w, name: nm } : { lat: w.lat, lon: w.lon, mode: w.mode, ...(w.mark ? { mark: true } : {}) }) : w))),
@@ -967,14 +1003,17 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   }
   const applyImport = (imp: { name: string; raw: RawPoint[]; marks?: TrackMark[] }, how: 'replace' | 'append') => {
     setPendingImport(null)
-    // Waypoints du fichier (GPX) : points de repère du tracé, à leur nom.
+    // Waypoints du fichier (GPX) : points de parcours à leur nom (type deviné du nom).
     const { idx, names } = drawnWithMarks(imp.raw, imp.marks ?? [])
-    const iw: Waypoint[] = idx.map((i) => ({
+    const named: Waypoint[] = idx.map((i) => ({
       lat: imp.raw[i].lat,
       lon: imp.raw[i].lon,
       mode: 'trail' as SegMode,
       ...(names.has(i) ? { mark: true, name: names.get(i) } : {}),
     }))
+    const added = marksAsCps(named, cps, race?.kind ?? kind)
+    if (added.length) editCps([...cps, ...added])
+    const iw = named.map(plainWp)
     splitByWaypoints(imp.raw, idx).forEach((points, k) => {
       cache.current.set(segmentKey(iw[k], iw[k + 1], iw[k + 1].mode), { status: 'ok', points })
     })
@@ -1212,7 +1251,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
   const paceColor = typeof pace === 'number' ? colorForIndex(pace, athlete) : MODEL_COLOR
   const wpName = (k: number) =>
     wps[k]?.name ||
-    (k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === wps.length - 1 ? 'Arrivée' : letters.has(k) ? `Repère ${letters.get(k)}` : 'Point du tracé')
+    (k === 0 ? (loop ? 'Départ et arrivée' : 'Départ') : k === wps.length - 1 ? 'Arrivée' : 'Point de tracé')
 
   return (
     <div className="draw-shell" style={{ ['--sheet-h' as string]: `${mobile ? sheetH : 0}px`, top: topOffset }}>
@@ -1376,8 +1415,9 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
             <div className="row tight">
               <label className="field">
                 <span className="field-label">Type</span>
-                <select value={selCpObj.kind} onChange={(e) => setCpKind(selCpObj, e.target.value as CheckpointKind)}>
+                <select value={selCpObj.kind} onChange={(e) => (e.target.value === 'trace' ? cpToWp(selCpObj) : setCpKind(selCpObj, e.target.value as CheckpointKind))}>
                   {[...new Set([...cpKinds, selCpObj.kind])].map((k) => <option key={k} value={k}>{CHECKPOINT_LABELS[k]}</option>)}
+                  <option value="trace">Point de tracé</option>
                 </select>
               </label>
               <Num label="Arrêt" value={selCpObj.stopMin} unit="min" min={0} width={56} onChange={(v) => patchCp(selCpObj.id, { stopMin: v })} />
@@ -1427,37 +1467,13 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                 {sel.k > 0 && sel.k < wps.length - 1 && (
                   <label className="field">
                     <span className="field-label">Type de point</span>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const k = e.target.value as CheckpointKind
-                        const w = wps[sel.k]
-                        // Le point du tracé devient un point de course (il garde son nom) ; il n'est plus repère.
-                        if (w.mark) act.toggleMark(sel.k)
-                        setSel(null)
-                        addCp(w.lat, w.lon, k, w.name)
-                      }}
-                    >
-                      <option value="">Point du tracé{wps[sel.k].mark ? ' (repère)' : ''}</option>
-                      {cpKinds.map((k) => <option key={k} value={k}>{CHECKPOINT_LABELS[k]}</option>)}
+                    <select value="" onChange={(e) => e.target.value && wpToCp(sel.k, e.target.value as CheckpointKind)}>
+                      <option value="">Point de tracé</option>
+                      {cpKinds.map((k) => <option key={k} value={k}>Point de parcours : {CHECKPOINT_LABELS[k]}</option>)}
                     </select>
                   </label>
                 )}
                 <div className="row tight">
-                  {sel.k > 0 && sel.k < wps.length - 1 && (
-                    <button
-                      onClick={() => {
-                        const w = wps[sel.k]
-                        if (!w.mark) {
-                          // Le point du tracé devient un point de course (point inter), sa fenêtre s'ouvre.
-                          setSel(null)
-                          addCp(w.lat, w.lon, 'split', w.name)
-                        } else act.toggleMark(sel.k)
-                      }}
-                    >
-                      {wps[sel.k].mark ? <><BookmarkX /> Retirer le repère</> : <><Bookmark /> Point de repère</>}
-                    </button>
-                  )}
                   <button className="danger-btn" onClick={() => act.remove(sel.k)}>{loop && sel.k === 0 ? <><Repeat2 /> Ouvrir la boucle</> : <><Trash2 /> Supprimer le point</>}</button>
                   <span className="muted small">Glisse le point pour le déplacer</span>
                 </div>
@@ -1481,13 +1497,13 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                   <button
                     className="primary"
                     onClick={() => {
-                      // Le repère est un point de course (point inter) : sa fenêtre s'ouvre.
+                      // Point de parcours posé sur le tracé : sa fenêtre s'ouvre (nom, type…).
                       const at = sel
                       setSel(null)
-                      addCp(at.lat, at.lon, 'split')
+                      addCp(at.lat, at.lon)
                     }}
                   >
-                    <Bookmark /> Point de repère ici
+                    <Flag /> Point de parcours ici
                   </button>
                   <button onClick={() => act.insert(sel.k, sel.lat, sel.lon)}><Plus /> Point de tracé</button>
                 </div>
@@ -1612,10 +1628,10 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
             )}
             {wps.length > 0 && (
               <>
-                <h3 className="draw-h">{race ? 'Points du parcours' : 'Points de repère'}</h3>
+                <h3 className="draw-h">Points du parcours</h3>
                 <ol className="wp-list">
                   {(() => {
-                    // Départ, points de repère du tracé et points de course mêlés dans l'ordre du parcours, arrivée.
+                    // Départ, points de parcours dans l'ordre du parcours, arrivée.
                     type Entry = { key: string; d: number; wp?: number; cp?: PlacedCp }
                     const entries: Entry[] = [
                       ...listed.map((k): Entry => ({ key: `w${k}`, d: rows?.[k]?.d ?? (k === 0 ? 0 : Infinity), wp: k })),
@@ -1695,9 +1711,10 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                   })()}
                 </ol>
                 <p className="muted small">
-                  {race
-                    ? 'Points de course (R ravito, BV base de vie, P point inter, C chrono, B barrière) et repères du tracé, dans l’ordre du parcours. Sur la carte : toucher le tracé ouvre le tronçon (point de course ici, repère, point de tracé) ; appuyer, glisser et lâcher sur le tracé pose un point de course ; glisser un point le déplace ; un point du tracé devient un point de course depuis sa fenêtre.'
-                    : 'Touche le tracé ou le profil pour ajouter un point de repère ; il devient un point de passage de la course.'}
+                  Points de parcours (R ravito, BV base de vie, P point inter, C chrono, B barrière) dans l’ordre du parcours. Sur la carte :
+                  toucher le tracé ouvre le tronçon (point de parcours ou point de tracé ici) ; appuyer, glisser et lâcher sur le tracé pose un
+                  point de parcours ; un point de parcours glisse le long du tracé sans le changer ; un point de tracé devient un point de
+                  parcours au même endroit (et inversement) depuis sa fenêtre.
                 </p>
               </>
             )}
@@ -1714,8 +1731,8 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
             <p className="muted small draw-help">
               Pour poser un point : appui maintenu un instant sur la carte (clic sur ordinateur) ; un toucher bref ne pose rien, pour
               déplacer la carte librement. Sur un chemin, le tracé le suit ; hors d'un chemin, il passe automatiquement en ligne droite.
-              Touche un point ou un tronçon pour le supprimer, en faire un point de repère, ajouter un point ou forcer son mode ; glisse un
-              point pour le déplacer. Seuls le départ, les points de repère et l'arrivée figurent dans la liste.
+              Touche un point ou un tronçon pour le supprimer, en faire un point de parcours, ajouter un point ou forcer son mode ; glisse un
+              point pour le déplacer. La liste montre le départ, les points de parcours et l'arrivée.
               Itinéraires : routeur public BRouter (OpenStreetMap).
               {race && ' Les points de passage au-delà de la nouvelle arrivée sont retirés ; la technicité OSM est à recharger.'}
             </p>

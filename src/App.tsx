@@ -14,6 +14,7 @@ import {
   Mail,
   Mountain,
   RefreshCw,
+  Spline,
   Trash2,
   User as UserIcon,
   Watch,
@@ -78,6 +79,7 @@ type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parc
 /** Onglets de la barre du haut. */
 const NAV: { tab: Tab; label: string; Icon: typeof Flag }[] = [
   { tab: 'parcours', label: 'Parcours', Icon: LibraryBig },
+  { tab: 'tracer', label: 'Tracer', Icon: Spline },
   { tab: 'athlete', label: 'Profil athlète', Icon: UserIcon },
   { tab: 'nutrition', label: 'Nutrition', Icon: Wheat },
   { tab: 'cs', label: 'Test VC', Icon: Gauge },

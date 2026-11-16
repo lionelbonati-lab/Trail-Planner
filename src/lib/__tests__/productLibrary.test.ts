@@ -40,3 +40,18 @@ describe('bibliothèque de base', () => {
     expect(bouillon.sodium).toBe(700)
   })
 })
+
+describe('ajouts : barres Decathlon, boissons Näak et TA Energy, eau en flasque', () => {
+  it('nouveaux articles', () => {
+    for (const id of ['dkt-barre-clak', 'dkt-barre-amande', 'naak-drink', 'ta-drink']) expect(PRODUCT_LIBRARY.some((p) => p.id === id)).toBe(true)
+    expect(isFlask(libraryProduct(PRODUCT_LIBRARY.find((p) => p.id === 'naak-drink')!))).toBe(true)
+  })
+  it('eau : case flasque cochée par défaut ; décochée, ignorée', async () => {
+    const { isFlaskWater } = await import('../nutrition')
+    const sy: Product = { id: 'sy', name: 'St-Yorre', type: 'water', carbs: 0, sodium: 850, share: 0 }
+    expect(isFlaskWater(sy)).toBe(true)
+    expect(isFlaskWater({ ...sy, flask: false })).toBe(false)
+    // L'eau n'est jamais prise pour l'isotonique.
+    expect(isFlask(sy)).toBe(false)
+  })
+})
