@@ -411,6 +411,5 @@ class CompanionMapView extends WatchUi.MapView {
         drawHeader(dc, run, top + 12, true);
         drawFooter(dc, run, bottom - 32, true);
         ep.drawBands(dc);
-        drawStateRing(dc, run);
     }
 }

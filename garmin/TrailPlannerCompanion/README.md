@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.8, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.9, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -44,7 +44,7 @@ bandeaux d'EP l'entourent en haut et en bas.*
    écrans EndurancePro et Carte seulement, Haut / Bas passent de l'un à l'autre) et **Réglages**.
 2. **Fiche** du parcours choisi : le parcours entier sur la **carte Garmin** (tracé seul sur les montres
    sans cartes), nom, distance, D+. START : démarrer ; appui long sur Haut : réglages ; BACK : liste.
-3. **Écrans de course**, en attente du GPS (anneau rouge, puis vert) ; START pour partir. Avant le départ,
+3. **Écrans de course**, en attente du GPS (« GPS... » en rouge, puis « START : départ » en vert) ; START pour partir. Avant le départ,
    BACK ramène à la liste.
 
 La liste et le plan du parcours choisi sont téléchargés via le téléphone (au lancement puis toutes les
@@ -128,8 +128,10 @@ au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
 
 **Thème** : celui d'EndurancePro (réglage *Mode sombre*, dossier Affichage), sur tous les écrans.
 
-**Anneau d'état** au bord de l'écran, avant le départ et en pause : rouge = GPS en recherche, vert =
-prêt (START), orange = pause.
+**Avant le départ** : en bas de chaque écran (à la place du chrono sur EndurancePro, de la dernière ligne
+sur Trail Planner), « GPS... » en rouge tant que le GPS cherche, puis « START : départ » en vert. **En
+pause** : chrono d'EndurancePro en orange, « START : reprendre » en orange sur le profil et la carte. Pas
+d'anneau au bord de l'écran (celui de la FC d'EndurancePro reste).
 
 ## Boutons
 
@@ -253,7 +255,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.5.8 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.5.9 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
@@ -265,6 +267,9 @@ Comme le champ (voir `garmin/README.md`, sections 2 et 3) :
 3. Copie-le dans `GARMIN/APPS/` (montre branchée en USB). L'appli apparaît dans la liste des activités et
    applis.
 4. Saisis le code montre dans le menu de l'appli (appui long sur Haut › Propriétés › Code Trail Planner).
+
+**Simulateur** : le GPS n'y est capté qu'avec une position simulée (menu Simulation › Activity Data, en
+lecture d'un fichier FIT ou GPX, ou Set Position) ; sans elle, « GPS... » reste affiché en rouge.
 
 **Montres** (API Connect IQ 3.4 au moins, comme EndurancePro), chacune avec la mise en page EndurancePro
 de sa résolution (`monkey.jungle`) :

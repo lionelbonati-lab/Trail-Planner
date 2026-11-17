@@ -68,8 +68,6 @@ class MainView extends WatchUi.View {
             drawFooter(dc, run, bottom - 32, true);
             ep.drawBands(dc);
         }
-        // Avant le départ et en pause : anneau d'état par-dessus l'anneau de FC d'EP.
-        drawStateRing(dc, run);
     }
 
     // --- Écran du profil -------------------------------------------------------------------------------

@@ -917,7 +917,9 @@ class TrailPlannerScreen {
         // Place du chrono : hors parcours ; passage ou départ (5 s) ; note du point ; sinon prochain point,
         // en alternance (5 s) avec la marge sur la prochaine barrière horaire.
         if (!running) {
-            bottomLine(dc, l, plan.name, fg);
+            // Avant START : « GPS... » en rouge puis « START : départ » en vert (pas d'anneau d'état).
+            var hint = startHint(getRun());
+            bottomLine(dc, l, hint[0] as String, hint[1]);
         } else if (offRoute) {
             bottomLine(dc, l, "Hors parcours · " + offBy + " m", red);
         } else if (now < lapMsgUntil) {

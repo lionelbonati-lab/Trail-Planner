@@ -10,6 +10,7 @@
 // - bandeaux d'EP sur tous les écrans (drawBands : FC, anneau, 2e métrique, tour, barre FC ; autonomie,
 //   mode d'allure, heure, trait FC), colonne centrale (drawCenterColumn), mise en page et polices
 //   d'icônes (lay, iconFonts) pour l'écran Trail Planner, popup des rappels Trail Planner (showPopup) ;
+// - avant START, « GPS... » / « START : départ » à la place du chrono ; chrono orange en pause ;
 // - pas de lecture de l'étape d'entraînement Garmin (Activity.getCurrentWorkoutStep, réservé aux champs) ;
 // - distance restante (bas d'écran) : sans parcours Garmin suivi, celle du plan Trail Planner (prochain
 //   point, arrivée) ; le réglage « prochain point » / « fin de parcours » / « alternance » est respecté
@@ -2029,6 +2030,18 @@ private function drawBottomSection(dc, info, txtColor) as Void {
             dc.drawText(sX, yD, layout.fontSecondary, dist, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
             dc.drawText(sX + dW + gapUnit, yD, fLabel, "km", Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
         }
+    }
+
+    // Appli : avant START, à la place du chrono, « GPS... » en rouge puis « START : départ » en vert (pas
+    // d'anneau d'état) ; en pause, chrono en orange.
+    var run = getRun();
+    if (run.state == READY) {
+        var hint = startHint(run);
+        drawFitted(dc, yTimer, hint[0] as String, hint[1], Graphics.FONT_MEDIUM, false);
+        return;
+    }
+    if (run.state == PAUSED) {
+        dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
     }
 
     // Temps écoulé

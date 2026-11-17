@@ -12,31 +12,13 @@ function isRound() as Boolean {
     return System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_ROUND;
 }
 
-// Anneau d'état au bord de l'écran : rouge = GPS en recherche, vert = prêt (START), orange = pause.
-function drawStateRing(dc as Graphics.Dc, run as Run) as Void {
-    var color;
-    if (run.state == READY) {
-        color = run.gpsOk ? Graphics.COLOR_GREEN : Graphics.COLOR_RED;
-    } else if (run.state == PAUSED) {
-        color = Graphics.COLOR_ORANGE;
-    } else {
-        return;
+// Avant START, en bas de chaque écran (pas d'anneau d'état) : « GPS... » en rouge tant que le GPS n'est
+// pas prêt, puis « START : départ » en vert. [texte, couleur].
+function startHint(run as Run) as Array {
+    if (run.gpsOk) {
+        return [tpText(Rez.Strings.tp_start), darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN];
     }
-    var w = dc.getWidth();
-    var h = dc.getHeight();
-    var pen = w > 300 ? 8 : 5;
-    dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-    if (dc has :setPenWidth) {
-        dc.setPenWidth(pen);
-    }
-    if (isRound()) {
-        dc.drawCircle(w / 2, h / 2, w / 2 - pen / 2);
-    } else {
-        dc.drawRectangle(pen / 2, pen / 2, w - pen, h - pen);
-    }
-    if (dc has :setPenWidth) {
-        dc.setPenWidth(1);
-    }
+    return ["GPS...", Graphics.COLOR_RED];
 }
 
 // En haut : nom de la course avant le départ ; « Pause » ; « Hors parcours · N m » ; passage, départ ou
@@ -69,13 +51,10 @@ function drawHeader(dc as Graphics.Dc, run as Run, y as Number, boxed as Boolean
 // En bas : touche à presser avant le départ ou en pause.
 function drawFooter(dc as Graphics.Dc, run as Run, y as Number, boxed as Boolean) as Void {
     if (run.state == READY) {
-        if (run.gpsOk) {
-            drawFitted(dc, y, tpText(Rez.Strings.tp_start), darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN, Graphics.FONT_XTINY, boxed);
-        } else {
-            drawFitted(dc, y, "GPS...", themeDim(), Graphics.FONT_XTINY, boxed);
-        }
+        var hint = startHint(run);
+        drawFitted(dc, y, hint[0] as String, hint[1], Graphics.FONT_XTINY, boxed);
     } else if (run.state == PAUSED) {
-        drawFitted(dc, y, tpText(Rez.Strings.tp_resume_hint), themeDim(), Graphics.FONT_XTINY, boxed);
+        drawFitted(dc, y, tpText(Rez.Strings.tp_resume_hint), Graphics.COLOR_ORANGE, Graphics.FONT_XTINY, boxed);
     }
 }
 
