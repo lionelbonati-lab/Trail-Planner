@@ -6,8 +6,8 @@ const ROUTE_KY = 110540.0d;
 
 // Plan.mc — repris du champ de données Trail Planner (garmin/TrailPlannerField/source/Plan.mc) pour
 // l'appli Trail Planner Companion. Ajouts propres à l'appli, signalés « Appli : » : profil fin (champ
-// wp : profD, profA, altAt…), parsePlan(text, profile), interp, readGroups et parseProfile. Le reste est
-// identique au champ : une évolution du champ se reporte ici à la main.
+// wp : profD, profA, altAt…, lu en plusieurs fois par GroupReader et startProfile), interp, planName. Le
+// reste est identique au champ (parsePlan sans le profil) : une évolution du champ se reporte ici à la main.
 //
 // Plan compact envoyé par l'app web (format « TP1 », voir src/lib/watch.ts) :
 //   TP1
@@ -535,7 +535,7 @@ function parseClimb(p as Plan, data as String) as Void {
 }
 
 // Lit le texte du plan (et, appli : le profil fin, ou null) ; renvoie null s'il n'est pas reconnu.
-function parsePlan(text as String, profile as String or Null) as Plan or Null {
+function parsePlan(text as String) as Plan or Null {
     var lines = splitText(text, "\n");
     if (lines.size() < 4 || !lines[0].equals("TP1")) {
         return null;
@@ -606,10 +606,21 @@ function parsePlan(text as String, profile as String or Null) as Plan or Null {
     if (p.curveD.size() < 2 || p.total <= 0) {
         return null;
     }
-    if (profile != null) {
-        parseProfile(p, profile);
-    }
     return p;
+}
+
+// Appli : nom de la course d'un plan (ligne N), sans lire tout le plan (écran de démarrage).
+function planName(text as String) as String or Null {
+    if (text.find("TP1") != 0) {
+        return null;
+    }
+    var i = text.find("\nN|");
+    if (i == null) {
+        return null;
+    }
+    var rest = text.substring(i + 3, text.length()) as String;
+    var j = rest.find("\n");
+    return j != null ? rest.substring(0, j) as String : rest;
 }
 
 // Appli : valeur de ys à l'abscisse x, interpolée entre deux sommets (xs croissants), bornée aux
@@ -638,57 +649,96 @@ function interp(xs as Array<Number>, ys as Array<Number>, x as Float) as Float {
     return ys[lo] + f * (ys[hi] - ys[lo]);
 }
 
-// Appli : suite de nombres « a,b,c,... » lue par groupes de `size` (écarts d'un sommet au suivant),
-// ajoutés aux cumuls `acc` puis passés à `sink` (champ wp, tracé de la carte). Lecture au fil de la
-// chaîne, comme parseRoute.
-function readGroups(data as String, size as Number, acc as Array<Number>, sink as Method) as Void {
-    if (data.length() == 0) {
-        return;
-    }
+// Appli : suite d'entiers « a,b,c,... » lue par groupes de `size` (écarts d'un sommet au suivant, ajoutés
+// aux cumuls `acc` puis passés à `sink` : profil fin, tracé de la carte), en plusieurs fois : step(max)
+// lit au plus `max` nombres et renvoie true une fois tout lu. Lecture octet par octet, sans recopier le
+// reste du texte à chaque nombre : un long tracé lu d'un coup (substring répété) déclenchait le chien de
+// garde de la montre (« Code Executed Too Long »). Run.onTick en lit une tranche par seconde.
+class GroupReader {
+    var bytes as Array<Number>;
+    var pos = 0;
+    var size as Number;
+    var acc as Array<Number>;
+    var sink as Method;
     var k = 0;
-    var rest = data;
-    var i = rest.find(",");
-    while (true) {
-        acc[k] = acc[k] + toNum(i != null ? rest.substring(0, i) as String : rest);
-        k++;
-        if (k == size) {
-            sink.invoke(acc);
-            k = 0;
+    var done = false;
+
+    function initialize(data as String, n as Number, first as Array<Number>, s as Method) {
+        bytes = data.toUtf8Array();
+        size = n;
+        acc = first;
+        sink = s;
+        done = bytes.size() == 0;
+    }
+
+    function step(max as Number) as Boolean {
+        var n = bytes.size();
+        var count = 0;
+        while (!done && count < max) {
+            var neg = false;
+            var v = 0;
+            if (pos < n && bytes[pos] == 45) {
+                neg = true;
+                pos++;
+            }
+            while (pos < n) {
+                var c = bytes[pos];
+                if (c < 48 || c > 57) {
+                    break;
+                }
+                v = v * 10 + c - 48;
+                pos++;
+            }
+            acc[k] = acc[k] + (neg ? -v : v);
+            k++;
+            if (k == size) {
+                sink.invoke(acc);
+                k = 0;
+            }
+            // Séparateur (virgule) ; fin du texte : tout est lu.
+            pos++;
+            if (pos >= n) {
+                done = true;
+            }
+            count++;
         }
-        if (i == null) {
-            break;
-        }
-        rest = rest.substring(i + 1, rest.length()) as String;
-        i = rest.find(",");
+        return done;
     }
 }
 
-// Appli : champ wp « TPP1|<tolérance>|<d0>:<alt0>|<dd>,<dz>,... » (écarts d'un sommet au suivant).
-function parseProfile(p as Plan, text as String) as Void {
+// Appli : champ wp « TPP1|<tolérance>|<d0>:<alt0>|<dd>,<dz>,... » (écarts d'un sommet au suivant), lu en
+// plusieurs fois : [ProfileReader, GroupReader], ou null s'il n'est pas reconnu. Une fois le GroupReader
+// terminé, ProfileReader.finish(plan) donne le profil au plan.
+function startProfile(text as String) as Array or Null {
     var parts = splitText(text, "|");
     if (parts.size() < 4 || !parts[0].equals("TPP1")) {
-        return;
+        return null;
     }
     var o = splitText(parts[2], ":");
     if (o.size() != 2) {
-        return;
+        return null;
     }
-    var reader = new ProfileReader(p);
+    var reader = new ProfileReader();
     var first = [toNum(o[0]), toNum(o[1])] as Array<Number>;
     reader.point(first);
-    readGroups(parts[3], 2, first, reader.method(:point));
+    return [reader, new GroupReader(parts[3], 2, first, reader.method(:point))];
 }
 
-// Appli : sommets du profil ajoutés au plan.
+// Appli : sommets du profil, donnés au plan une fois tous lus (jamais un profil à moitié lu).
 class ProfileReader {
-    var plan as Plan;
+    var d as Array<Number> = [] as Array<Number>;
+    var a as Array<Number> = [] as Array<Number>;
 
-    function initialize(p as Plan) {
-        plan = p;
+    function initialize() {
     }
 
     function point(v as Array<Number>) as Void {
-        plan.profD.add(v[0]);
-        plan.profA.add(v[1]);
+        d.add(v[0]);
+        a.add(v[1]);
+    }
+
+    function finish(plan as Plan) as Void {
+        plan.profD = d;
+        plan.profA = a;
     }
 }

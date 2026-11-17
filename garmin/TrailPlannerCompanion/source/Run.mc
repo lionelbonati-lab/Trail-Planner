@@ -28,6 +28,7 @@ const DONE = 3;     // enregistrée ou supprimée : BACK pour quitter
 //   Carte (champ wr) dans une requête à part, quand le plan change.
 class Run {
     const PROJECT = "trail-planner-814f6";
+    const LOAD_STEP = 600;    // nombres lus par seconde dans le profil fin ou le tracé fin (chien de garde)
 
     var ep as EnduranceProView;   // écran et calculs EndurancePro
     var tp as TrailPlannerScreen; // écran et calculs Trail Planner (suivi de la course)
@@ -59,6 +60,12 @@ class Run {
     var routeText = null;     // texte du champ wr chargé (null : tracé tiré du plan)
     var routePlan = null;     // plan dont le tracé de repli est tiré
     var routeFor = null;      // parcours de la dernière demande de tracé
+    // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
+    var profLoad = null;      // [ProfileReader, GroupReader] ou null...
+    var profLoadPlan = null;  // ... pour ce plan
+    var routeLoad = null;     // [MapRoute, GroupReader] ou null...
+    var routeLoadText = null; // ... pour ce champ wr...
+    var routeLoadCourse = null; // ... de ce parcours
     var courseId = null;      // parcours choisi à l'écran de démarrage (id, "" course envoyée, null libre)
 
     function initialize() {
@@ -100,6 +107,7 @@ class Run {
 
     function onTick() as Void {
         ticks++;
+        stepLoads();
         var now = Time.now().value();
         var info = Activity.getActivityInfo();
         if (info != null) {
@@ -426,13 +434,46 @@ class Run {
         }
     }
 
-    // Tracé de la carte : champ wr du parcours choisi s'il est là, sinon ligne G du plan (relu seulement
-    // s'il a changé).
+    // Une tranche du profil fin, sinon du tracé fin, à chaque seconde ; une fois lu, il remplace la
+    // version tirée du plan (s'il concerne toujours le plan et le parcours affichés).
+    function stepLoads() as Void {
+        if (profLoad != null) {
+            if (((profLoad as Array)[1] as GroupReader).step(LOAD_STEP)) {
+                if (plan != null && profLoadPlan == plan) {
+                    ((profLoad as Array)[0] as ProfileReader).finish(plan as Plan);
+                    WatchUi.requestUpdate();
+                }
+                profLoad = null;
+                profLoadPlan = null;
+            }
+            return;
+        }
+        if (routeLoad != null) {
+            if (((routeLoad as Array)[1] as GroupReader).step(LOAD_STEP)) {
+                var r = (routeLoad as Array)[0] as MapRoute;
+                if (plan != null && r.size() >= 2 && sameText(routeLoadCourse, courseId)) {
+                    route = r;
+                    routeText = routeLoadText;
+                    routePlan = plan;
+                    WatchUi.requestUpdate();
+                }
+                routeLoad = null;
+                routeLoadText = null;
+                routeLoadCourse = null;
+            }
+        }
+    }
+
+    // Tracé de la carte : champ wr du parcours choisi s'il est là (lu en quelques secondes, stepLoads),
+    // sinon, et en attendant, ligne G du plan (relu seulement s'il a changé).
     function loadRoute() as Void {
         if (plan == null) {
             route = null;
             routeText = null;
             routePlan = null;
+            routeLoad = null;
+            routeLoadText = null;
+            routeLoadCourse = null;
             return;
         }
         var text = Application.Storage.getValue("route");
@@ -443,13 +484,15 @@ class Run {
             if (routeText != null && (text as String).equals(routeText)) {
                 return;
             }
-            var r = parseMapRoute(text as String);
-            if (r != null) {
-                route = r;
-                routeText = text;
-                routePlan = plan;
-                return;
+            if (routeLoad == null || !sameText(text, routeLoadText) || !sameText(routeLoadCourse, courseId)) {
+                routeLoad = startMapRoute(text as String);
+                routeLoadText = routeLoad != null ? text : null;
+                routeLoadCourse = routeLoad != null ? courseId : null;
             }
+        } else {
+            routeLoad = null;
+            routeLoadText = null;
+            routeLoadCourse = null;
         }
         if (routeText != null || routePlan != plan) {
             route = mapRouteFromPlan(plan);
@@ -503,8 +546,7 @@ class Run {
         if (!(text instanceof String) || !sameText(Application.Storage.getValue("planCode"), lastCode)) {
             return null;
         }
-        var p = parsePlan(text as String, null);
-        return p != null ? p.name : null;
+        return planName(text as String);
     }
 
     // Relit le plan du parcours choisi s'il a changé et le donne à Trail Planner (qui recale la position
@@ -528,10 +570,20 @@ class Run {
             plan = null;
             planText = null;
             profText = null;
-        } else if (planText == null || !text.equals(planText) || !sameText(prof, profText)) {
-            plan = parsePlan(text as String, prof as String or Null);
-            planText = plan != null ? text : null;
-            profText = plan != null ? prof : null;
+            profLoad = null;
+            profLoadPlan = null;
+        } else {
+            if (planText == null || !text.equals(planText)) {
+                plan = parsePlan(text as String);
+                planText = plan != null ? text : null;
+                profText = null;
+            }
+            // Profil fin lu en quelques secondes (stepLoads) ; en attendant, celui tiré du plan.
+            if (plan != null && !sameText(prof, profText)) {
+                profText = prof;
+                profLoad = prof != null ? startProfile(prof as String) : null;
+                profLoadPlan = profLoad != null ? plan : null;
+            }
         }
         tp.setPlan(plan);
         loadRoute();

@@ -47,8 +47,9 @@ class MapRoute {
     }
 }
 
-// Champ wr ; null s'il n'est pas reconnu.
-function parseMapRoute(text as String) as MapRoute or Null {
+// Champ wr, lu en plusieurs fois (voir GroupReader) : [MapRoute, GroupReader], ou null s'il n'est pas
+// reconnu. Le tracé est complet une fois le GroupReader terminé (Run.stepLoads).
+function startMapRoute(text as String) as Array or Null {
     var parts = splitText(text, "|");
     if (parts.size() < 4 || !parts[0].equals("TPR1")) {
         return null;
@@ -60,8 +61,7 @@ function parseMapRoute(text as String) as MapRoute or Null {
     var r = new MapRoute();
     var first = [toNum(o[0]), toNum(o[1]), toNum(o[2])] as Array<Number>;
     r.point(first);
-    readGroups(parts[3], 3, first, r.method(:point));
-    return r.size() >= 2 ? r : null;
+    return [r, new GroupReader(parts[3], 3, first, r.method(:point))];
 }
 
 // Repli : tracé de la ligne G du plan (positions en mètres autour du premier point).
