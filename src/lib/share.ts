@@ -63,6 +63,8 @@ export interface ShareSnapshot {
   liveRefShort?: string | null
   /** Réglages du datafield EndurancePro (document du code montre seulement, voir endurancepro.ts). */
   ep?: string
+  /** Profil fin pour l'appli montre Trail Planner Companion (document du code montre seulement, voir watchProfile). */
+  wp?: string
   /** Envoi de cette course à la montre (ISO) : un relevé antérieur vient d'une autre activité. */
   watchSince?: string
   /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */

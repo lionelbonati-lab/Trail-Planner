@@ -310,6 +310,48 @@ export function routeLine(points: { dist: number; lat: number; lon: number }[], 
   return null
 }
 
+/**
+ * Place maximale du profil de l'appli montre (caractères, champ `wp`). L'appli lit le document au
+ * premier plan, sans la limite de 8 Ko de la tâche de fond du champ de données.
+ */
+export const PROFILE_MAX = 6000
+
+/** Tolérances essayées pour simplifier le profil (m) : la plus fine qui tient dans sa place. */
+const PROFILE_TOLS = [2, 3, 5, 8, 12, 20, 30, 50, 80]
+
+/**
+ * Profil pour l'appli montre Trail Planner Companion (champ `wp` du document du code montre) :
+ *
+ *   TPP1|<tolérance m>|<d0>:<alt0>|<dd>,<dz>,<dd>,<dz>,…
+ *
+ * altitude (m) le long du parcours, simplifiée à ± tolérance près (la plus fine qui tient dans `budget`
+ * caractères) : premier point (distance m : altitude m), puis écarts de distance et d'altitude d'un
+ * point au suivant. À part du plan `w`, où le dénivelé (ligne E) laisse la place au tracé GPS sur les
+ * ultras : le profil zoomable de l'appli garde ainsi ses bosses. null si même la plus grosse
+ * tolérance ne tient pas.
+ */
+export function watchProfile(points: { dist: number; ele: number }[], budget = PROFILE_MAX): string | null {
+  if (points.length < 2) return null
+  const curve = points.map((p) => [p.dist, p.ele] as [number, number])
+  for (const tol of PROFILE_TOLS) {
+    const keep = simplify(curve, tol)
+    let d0 = Math.round(keep[0][0])
+    let a0 = Math.round(keep[0][1])
+    const head = `TPP1|${tol}|${d0}:${a0}|`
+    const parts: number[] = []
+    for (const [d, a] of keep.slice(1)) {
+      const dd = Math.round(d)
+      const aa = Math.round(a)
+      parts.push(dd - d0, aa - a0)
+      d0 = dd
+      a0 = aa
+    }
+    const line = head + parts.join(',')
+    if (line.length <= budget) return line
+  }
+  return null
+}
+
 /** URL lue par la montre : seul le champ `w` du lien assistance (réponse de quelques Ko). */
 export function watchUrl(projectId: string, shareId: string): string {
   return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/%28default%29/documents/shares/${shareId}?mask.fieldPaths=w`

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace } from '../defaults'
 import { computePlan } from '../plan'
 import { extraSodium, intakeOrder, nutritionPlan } from '../nutrition'
-import { climbLine, fuelInterval, routeLine, WATCH_PLAN_MAX, watchPlan, watchUrl } from '../watch'
+import { climbLine, fuelInterval, PROFILE_MAX, routeLine, WATCH_PLAN_MAX, watchPlan, watchProfile, watchUrl } from '../watch'
 import { parseWatchPlan, plannedAtWatch } from '../watchLive'
 
 function gpx(): string {
@@ -158,6 +158,37 @@ describe('dénivelé sur la montre (ligne E)', () => {
     const route = { ...race, kind: 'route' as const }
     const p2 = computePlan(route, DEFAULT_ATHLETE)!
     expect(watchPlan(route, DEFAULT_ATHLETE, p2.track, p2.sim).split('\n')[2].split('|')[4]).toBe('p')
+  })
+})
+
+describe('profil de l\'appli montre (champ wp)', () => {
+  it('altitudes le long du parcours à la tolérance près, premier et dernier point exacts', () => {
+    const plan = computePlan(newRace('Bosses', bumps()), DEFAULT_ATHLETE)!
+    const pts = plan.track.points
+    const wp = watchProfile(pts)!
+    expect(wp.length).toBeLessThanOrEqual(PROFILE_MAX)
+    const [tag, tol] = wp.split('|')
+    expect(tag).toBe('TPP1')
+    // 10 km de bosses : tient à la tolérance la plus fine.
+    expect(Number(tol)).toBe(2)
+    const prof = decodeProfile(wp)
+    expect(prof[0]).toEqual([0, Math.round(pts[0].ele)])
+    expect(prof[prof.length - 1]).toEqual([Math.round(plan.track.totalDist), Math.round(pts[pts.length - 1].ele)])
+    expect(prof.every(([d], i) => i === 0 || d >= prof[i - 1][0])).toBe(true)
+    // Simplifié : bien moins de points que le tracé, chaque point du tracé à ± tolérance (+ arrondis).
+    expect(prof.length).toBeLessThan(pts.length / 2)
+    for (const p of pts) expect(Math.abs(profileAt(prof, p.dist) - p.ele)).toBeLessThanOrEqual(Number(tol) + 1.5)
+  })
+
+  it('place réduite : tolérance plus grosse, null si rien ne tient', () => {
+    const pts = computePlan(newRace('Bosses', bumps()), DEFAULT_ATHLETE)!.track.points
+    const small = watchProfile(pts, 300)!
+    expect(small.length).toBeLessThanOrEqual(300)
+    const tol = Number(small.split('|')[1])
+    expect(tol).toBeGreaterThan(2)
+    for (const p of pts) expect(Math.abs(profileAt(decodeProfile(small), p.dist) - p.ele)).toBeLessThanOrEqual(tol + 1.5)
+    expect(watchProfile(pts, 10)).toBeNull()
+    expect(watchProfile(pts.slice(0, 1))).toBeNull()
   })
 })
 
@@ -317,4 +348,30 @@ function zigzag(): string {
     pts.push(`<trkpt lat="${lat}" lon="${lon}"><ele>${660}</ele></trkpt>`)
   }
   return `<gpx><trk><trkseg>${pts.join('')}</trkseg></trk></gpx>`
+}
+
+/** Champ wp décodé comme sur l'appli montre : [distance (m), altitude (m)] de chaque point. */
+function decodeProfile(wp: string): [number, number][] {
+  const [, , origin, data] = wp.split('|')
+  let [d, a] = origin.split(':').map(Number)
+  const out: [number, number][] = [[d, a]]
+  const v = data ? data.split(',').map(Number) : []
+  for (let i = 0; i + 1 < v.length; i += 2) {
+    d += v[i]
+    a += v[i + 1]
+    out.push([d, a])
+  }
+  return out
+}
+
+/** Altitude du profil décodé à la distance d (interpolée). */
+function profileAt(prof: [number, number][], d: number): number {
+  for (let i = 1; i < prof.length; i++) {
+    if (prof[i][0] >= d) {
+      const [d0, a0] = prof[i - 1]
+      const [d1, a1] = prof[i]
+      return d1 > d0 ? a0 + ((d - d0) / (d1 - d0)) * (a1 - a0) : a1
+    }
+  }
+  return prof[prof.length - 1][1]
 }

@@ -1,0 +1,8 @@
+<properties>
+    <!-- Code montre : le même que pour le champ de données Trail Planner (onglet Montre de l'app web). -->
+    <property id="code" type="string"></property>
+    <!-- Zoom du profil : 0 parcours entier, 1 = 20 km, 2 = 10 km, 3 = 5 km, 4 = 2 km autour du coureur. -->
+    <property id="zoom" type="number">2</property>
+    <!-- Profil coloré selon la pente (désactivé par défaut). -->
+    <property id="slopes" type="boolean">false</property>
+</properties>

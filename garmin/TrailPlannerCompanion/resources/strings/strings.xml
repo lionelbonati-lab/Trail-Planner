@@ -1,0 +1,21 @@
+<strings>
+    <string id="AppName">Trail Planner Companion</string>
+    <string id="CodeTitle">Code montre</string>
+    <string id="CodePrompt">Code affiché par l'app web (onglet Montre) : le code long ici, ou le code à 8 chiffres sur la montre. Le même que pour le champ Trail Planner.</string>
+    <string id="ZoomTitle">Zoom du profil</string>
+    <string id="ZoomAll">Parcours entier</string>
+    <string id="Zoom20">20 km</string>
+    <string id="Zoom10">10 km</string>
+    <string id="Zoom5">5 km</string>
+    <string id="Zoom2">2 km</string>
+    <string id="SlopesTitle">Couleurs des pentes</string>
+    <string id="SlopesSub">Vert, jaune, orange, rouge</string>
+    <string id="SlopesPrompt">Profil coloré selon la pente : montée vert &lt; 5 %, jaune 5-10 %, orange 10-15 %, rouge 15-25 %, violet 25 % et plus ; descente bleu clair jusqu'à -15 %, bleu foncé au-delà</string>
+    <string id="ReloadTitle">Recharger le plan</string>
+    <string id="Resume">Reprendre</string>
+    <string id="Save">Enregistrer</string>
+    <string id="Discard">Supprimer</string>
+    <string id="DiscardAsk">Supprimer la sortie ?</string>
+    <string id="No">Non</string>
+    <string id="Yes">Oui, supprimer</string>
+</strings>
