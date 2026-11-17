@@ -4,6 +4,7 @@ import { ShareView } from '../../components/SharePage'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
 import { computePlan, scenarioWindows } from '../plan'
 import { buildSnapshot, timeAtDist } from '../share'
+import { formatDuration } from '../time'
 import { estimatedDist, ESTIMATE_MAX_S, plannedAtWatch, parseWatchPlan } from '../watchLive'
 
 function gpx(): string {
@@ -21,12 +22,14 @@ describe('page assistance', () => {
   const athlete = normalizeAthlete({ ...DEFAULT_ATHLETE, name: 'Lionel', watchId: 'abcdef0123456789', watchRaceId: race.id })
   const plan = computePlan(race, athlete)!
   const snap = buildSnapshot('uid', race, athlete, plan.track, plan.sim, scenarioWindows(plan.track, athlete, plan.opts))
+  // Page ouverte peu avant le départ (sinon le lien est déjà arrêté : course de test passée).
+  const pre = Date.parse(snap.start) - 600000
 
   it('sans relevé de montre : plan seul', () => {
     expect(snap.liveRef).toBe('abcdef0123456789')
     // Tracé simplifié pour la carte : la ligne droite du parcours de test tient en deux points.
     expect(snap.route).toEqual([[0, 45, 6], [Math.round(plan.track.totalDist), expect.closeTo(45.17986, 4), 6]])
-    const html = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
+    const html = renderToStaticMarkup(<ShareView snap={snap} report={null} nowMs={pre} />)
     expect(html).toContain('Le suivi en direct apparaîtra ici')
     expect(html).toContain('Ravito A')
   })
@@ -59,7 +62,7 @@ describe('page assistance', () => {
     const s2 = buildSnapshot('uid', r2, athlete, p2.track, p2.sim, scenarioWindows(p2.track, athlete, p2.opts))
     expect(s2.rows[0].dropbag).toBe(true)
     expect(s2.rows[1].dropbag).toBeUndefined()
-    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} />)
+    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} nowMs={pre} />)
     const svg = html.slice(html.indexOf('assist-profile'), html.indexOf('mp-legend'))
     for (const r of s2.rows) expect(svg).toContain(`>${r.name}</text>`)
     expect(svg.match(/class="assist-ring"/g)).toHaveLength(s2.rows.filter((r) => r.assist).length)
@@ -68,16 +71,16 @@ describe('page assistance', () => {
     expect(html).toContain('Dropbag')
     // Base de vie : carré rouge sur le point, et dans la légende.
     const base = { ...s2, rows: s2.rows.map((r, i) => (i === 0 ? { ...r, kind: 'base' } : r)) }
-    const hb = renderToStaticMarkup(<ShareView snap={base} report={null} />)
+    const hb = renderToStaticMarkup(<ShareView snap={base} report={null} nowMs={pre} />)
     expect(hb.match(/class="base-mark"/g)).toHaveLength(1)
     expect(hb).toContain('Base de vie')
   })
 
   it('profil : défile sur une course longue, pas sur une courte', () => {
-    const short = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
+    const short = renderToStaticMarkup(<ShareView snap={snap} report={null} nowMs={pre} />)
     expect(short).not.toContain('assist-profile-scroll')
     const long = { ...snap, profile: snap.profile.map(([d, e]) => [d * 20, e] as [number, number]), rows: snap.rows.map((r) => ({ ...r, dist: r.dist * 20 })) }
-    const html = renderToStaticMarkup(<ShareView snap={long} report={null} />)
+    const html = renderToStaticMarkup(<ShareView snap={long} report={null} nowMs={pre} />)
     expect(html).toContain('assist-profile-scroll')
   })
 
@@ -91,13 +94,13 @@ describe('page assistance', () => {
     expect(b.lat).toBeCloseTo(45 + 10000 / 111195, 4)
     expect(finish).toMatchObject({ name: 'Arrivée', assist: true })
     // Onglet Suivi (par défaut) : liens par point, carte fermée (case à cocher), pas de trajets.
-    const suivi = renderToStaticMarkup(<ShareView snap={s2} report={null} />)
+    const suivi = renderToStaticMarkup(<ShareView snap={s2} report={null} nowMs={pre} />)
     expect(suivi).toContain('Y aller (accès assistance)')
     expect(suivi).toContain('Carte en direct')
     expect(suivi).not.toContain('share-map-loading')
     expect(suivi).not.toContain('Trajet de l&#x27;assistance')
     // Onglet Trajets : tous les points cochables ; ceux d'assistance cochés d'office.
-    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} initialTab="trajets" />)
+    const html = renderToStaticMarkup(<ShareView snap={s2} report={null} nowMs={pre} initialTab="trajets" />)
     expect(html).toContain('Trajet de l&#x27;assistance')
     expect(html).toContain('Sommet B')
     expect(html).toContain('assistance non autorisée')
@@ -134,7 +137,7 @@ describe('page assistance', () => {
     const [a, b] = snap.rows
     expect(a.up).toBeCloseTo(250, -1)
     expect(b.up).toBeCloseTo(500, -1)
-    const html = renderToStaticMarkup(<ShareView snap={snap} report={null} />)
+    const html = renderToStaticMarkup(<ShareView snap={snap} report={null} nowMs={pre} />)
     expect(html).not.toContain('<th>Tronçon</th>')
     const svg = html.slice(html.indexOf('assist-profile'), html.indexOf('mp-legend'))
     expect(svg.match(/<g class="leg-band ?"/g)).toHaveLength(1)
@@ -260,5 +263,54 @@ describe('page assistance', () => {
     const s = Math.round(Date.parse(snap.start) / 1000)
     const html = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 600, s, d: 2000 }} nowMs={(s + 600 + 4 * 3600) * 1000} />)
     expect(html).not.toContain('Montre · en course depuis')
+  })
+
+  it('lien arrêté 1 h après l’arrivée relevée par la montre (même relevé ancien)', () => {
+    const w = parseWatchPlan(snap.w)!
+    const s = Math.round(Date.parse(snap.start) / 1000)
+    const fin = w.cps.length - 1
+    const arr = s + Math.round(w.cps[fin].planned * 0.9)
+    const report = { t: arr + 60, s, d: snap.totalDist, p: `0:${s + 1500},1:${s + 3000},${fin}:${arr}` }
+    const open = renderToStaticMarkup(<ShareView snap={snap} report={report} nowMs={(arr + 50 * 60) * 1000} />)
+    expect(open).not.toContain('Suivi terminé')
+    expect(open).toContain('Montre · en course depuis')
+    const closed = renderToStaticMarkup(<ShareView snap={snap} report={report} nowMs={(arr + 61 * 60) * 1000} />)
+    expect(closed).toContain('Suivi terminé')
+    expect(closed).toContain('Lionel : arrivée à')
+    expect(closed).toContain(`en ${formatDuration(arr - s)}`)
+    expect(closed).toMatch(/1 h après l(&#x27;|')arrivée/)
+    // Plus de position ni de carte, de profil ou de temps de passage.
+    expect(closed).not.toContain('assist-profile')
+    expect(closed).not.toContain('Ravito A')
+    // Relevé devenu ancien (plus de suivi en direct) : toujours arrêté.
+    expect(renderToStaticMarkup(<ShareView snap={snap} report={report} nowMs={(arr + 5 * 3600) * 1000} />)).toContain('Suivi terminé')
+  })
+
+  it('lien arrêté 1 h après l’arrivée notée en mode course', () => {
+    const startedAt = snap.start
+    const arr = new Date(Date.parse(startedAt) + 2 * 3600000).toISOString()
+    const live = {
+      ...snap,
+      live: { startedAt, lastUpdate: arr },
+      rows: snap.rows.map((r, i) => (i === snap.rows.length - 1 ? { ...r, actual: arr } : r)),
+    }
+    expect(renderToStaticMarkup(<ShareView snap={live} report={null} nowMs={Date.parse(arr) + 30 * 60000} />)).not.toContain('Suivi terminé')
+    const closed = renderToStaticMarkup(<ShareView snap={live} report={null} nowMs={Date.parse(arr) + 61 * 60000} />)
+    expect(closed).toContain('Suivi terminé')
+    expect(closed).toContain('en 2h00')
+  })
+
+  it('sans arrivée connue : arrêté 1 h après la fin prévue (barrière de l’arrivée comprise)', () => {
+    const fin = snap.rows[snap.rows.length - 1]
+    const end = Math.max(Date.parse(fin.eta), fin.late ? Date.parse(fin.late) : 0)
+    expect(renderToStaticMarkup(<ShareView snap={snap} report={null} nowMs={end + 59 * 60000} />)).not.toContain('Suivi terminé')
+    const closed = renderToStaticMarkup(<ShareView snap={snap} report={null} nowMs={end + 61 * 60000} />)
+    expect(closed).toContain('Suivi terminé')
+    expect(closed).toContain('1 h après la fin prévue de la course')
+    // Barrière horaire de l'arrivée plus tardive : le lien reste ouvert jusqu'à elle + 1 h.
+    const cut = new Date(end + 3 * 3600000).toISOString()
+    const withCut = { ...snap, rows: snap.rows.map((r, i) => (i === snap.rows.length - 1 ? { ...r, cutoff: cut } : r)) }
+    expect(renderToStaticMarkup(<ShareView snap={withCut} report={null} nowMs={end + 2 * 3600000} />)).not.toContain('Suivi terminé')
+    expect(renderToStaticMarkup(<ShareView snap={withCut} report={null} nowMs={end + 4 * 3600000 + 60000} />)).toContain('Suivi terminé')
   })
 })

@@ -253,6 +253,8 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .share-banner a { word-break: break-all; }
 .share h1 { font-size: 22px; margin-bottom: 4px; }
 .share .live-hero { margin: 12px 0; }
+.share-closed { margin-top: 12px; }
+.share-closed h2 { font-size: 18px; margin: 0 0 8px; }
 .table tr.done td:first-child::before { content: '✓ '; color: var(--ok); }
 .profile .done-dot { fill: var(--ok); }
 .profile .ravito-dot { fill: var(--ravito); }
