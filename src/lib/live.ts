@@ -81,6 +81,17 @@ export function locate(track: Track, lat: number, lon: number, fromDist: number)
 }
 
 /** Temps prévu (s) à une distance donnée, d'après la simulation. */
+/** Distance après un ravito (m) au-delà de laquelle le coureur en est reparti : 300 m pour une base de vie. */
+export const awayFrom = (kind: string) => (kind === 'base' ? 300 : 150)
+
+/**
+ * Départ d'un ravito déduit d'une position plus loin (« Reparti » oublié) : maintenant moins le temps
+ * de déplacement prévu depuis le ravito (`planMove`, s) au rythme du coureur, entre l'arrivée et maintenant.
+ */
+export function inferredDeparture(arrivalMs: number, planMove: number, ratio: number, nowMs: number): number {
+  return Math.min(nowMs, Math.max(arrivalMs, nowMs - Math.max(0, planMove) * ratio * 1000))
+}
+
 export function plannedAt(sim: SimResult, dist: number): number {
   const pts = sim.points
   let lo = 0

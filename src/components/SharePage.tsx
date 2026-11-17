@@ -2,6 +2,7 @@ import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { awayFrom } from '../lib/live'
 import { shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
@@ -25,8 +26,6 @@ function KindIcon({ kind, finish }: { kind: string; finish?: boolean }) {
   )
 }
 
-/** Au-delà de cette distance après un ravito (m), le coureur en est reparti : 300 m pour une base de vie. */
-const awayM = (kind: string) => (kind === 'base' ? 300 : 150)
 
 /** Durée (ms) en « 42 min » ou « 1 h 05 ». */
 function minText(ms: number): string {
@@ -464,7 +463,7 @@ export function ShareView({
   // Coureur au ravito : arrivé (passage noté), pas encore reparti. Montre : position à moins de 150 m
   // après le point (300 m après une base de vie). Mode course : dernier passage saisi, sans « Reparti ».
   const atRavito = watch
-    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayM(r.kind) && watch.dist > r.dist - 2 * awayM(r.kind))
+    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayFrom(r.kind) && watch.dist > r.dist - 2 * awayFrom(r.kind))
     : snap.live && lastDone && isRavitoKind(lastDone.kind) && !lastDone.left
       ? lastDone
       : undefined

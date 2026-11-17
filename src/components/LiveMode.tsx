@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, LocateFixed, LogOut, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { liveStatus, locate, plannedAt } from '../lib/live'
+import { awayFrom, inferredDeparture, liveStatus, locate, plannedAt } from '../lib/live'
 import { isFreeStart } from '../lib/plan'
 import { isRavitoKind } from '../lib/splits'
 import { formatClock, formatDuration, pastClockToMs, zonedToUtc } from '../lib/time'
@@ -163,9 +163,18 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
         const d = locate(track, pos.coords.latitude, pos.coords.longitude, from)
         const delta = status.elapsed - plannedAt(sim, d)
         const nxt = status.rows.find((r) => r.split.to > d && r.actual === null)
+        // « Reparti » oublié : position au-delà du ravito (150 m, 300 m après une base de vie) → départ noté,
+        // à l'heure déduite du chemin fait depuis, au rythme du coureur (corrigeable au crayon).
+        let leftTxt = ''
+        const cp = lastRow?.split.cp
+        if (lastRow && cp && race.live && lastRow.actual !== null && isRavitoKind(cp.kind) && !race.live.departures?.[cp.id] && d > lastRow.split.to + awayFrom(cp.kind)) {
+          const ms = inferredDeparture(t0 + lastRow.actual * 1000, plannedAt(sim, d) - lastRow.split.departure, status.ratio, Date.now())
+          setLive({ ...race.live, departures: { ...race.live.departures, [cp.id]: new Date(ms).toISOString() } })
+          leftTxt = ` · départ de ${cp.name} noté vers ${formatClock(new Date(ms), tz)}`
+        }
         setGps({
           busy: false,
-          text: `km ${(d / 1000).toFixed(1)} · ${signed(delta)} sur le plan${nxt ? ` · ${nxt.split.cp.name} dans ${((nxt.split.to - d) / 1000).toFixed(1)} km` : ''} (précision ${Math.round(pos.coords.accuracy)} m)`,
+          text: `km ${(d / 1000).toFixed(1)} · ${signed(delta)} sur le plan${nxt ? ` · ${nxt.split.cp.name} dans ${((nxt.split.to - d) / 1000).toFixed(1)} km` : ''}${leftTxt} (précision ${Math.round(pos.coords.accuracy)} m)`,
         })
       },
       (e) => setGps({ busy: false, text: `Position indisponible : ${e.message}` }),

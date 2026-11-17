@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace } from '../defaults'
-import { liveStatus, locate, plannedAt } from '../live'
+import { awayFrom, inferredDeparture, liveStatus, locate, plannedAt } from '../live'
 import { computePlan, scenarioWindows } from '../plan'
 
 function gpx(): string {
@@ -54,6 +54,18 @@ describe('suivi en direct', () => {
     // 2 min prévues, 12 min sur place : 10 min de plus sur la suite.
     const over = liveStatus(live, plan.sim, t0 + (planA + 720) * 1000, () => null)
     expect(over.rows[1].eta - inStop.rows[1].eta).toBeCloseTo(600, 0)
+  })
+
+  it('« Reparti » oublié : départ déduit de la position (chemin fait depuis, au rythme du coureur)', () => {
+    const arr = t0 + 3600000
+    const now = arr + 30 * 60000
+    // 10 min de chemin prévu depuis le ravito, rythme 1,2 : parti 12 min avant maintenant.
+    expect(inferredDeparture(arr, 600, 1.2, now)).toBe(now - 720000)
+    // Jamais avant l'arrivée ni après maintenant.
+    expect(inferredDeparture(arr, 7200, 1, now)).toBe(arr)
+    expect(inferredDeparture(arr, -50, 1, now)).toBe(now)
+    expect(awayFrom('base')).toBe(300)
+    expect(awayFrom('ravito')).toBe(150)
   })
 
   it('position GPS projetée et temps prévu à cette distance', () => {
