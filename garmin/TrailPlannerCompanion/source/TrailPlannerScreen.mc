@@ -809,6 +809,26 @@ class TrailPlannerScreen {
         return -1;
     }
 
+    // Distance restante (m) pour le bas de l'écran EndurancePro : jusqu'au prochain point du plan, ou
+    // jusqu'à l'arrivée ; -1 sans plan.
+    function remainingTo(finish as Boolean) as Float {
+        if (plan == null) {
+            return -1.0;
+        }
+        var nx = finish ? -1 : nextPoint();
+        var target = nx >= 0 ? plan.cpDist[nx].toFloat() : plan.total.toFloat();
+        var r = target - (running ? dist : 0.0);
+        return r > 0 ? r : 0.0;
+    }
+
+    function nextIsRavito() as Boolean {
+        if (plan == null) {
+            return false;
+        }
+        var nx = nextPoint();
+        return nx >= 0 && plan.cpKind[nx].equals("r");
+    }
+
     function drawMain(dc as Graphics.Dc, l, fg, red, green) as Void {
         var now = Time.now().value();
         var ep = getRun().ep;

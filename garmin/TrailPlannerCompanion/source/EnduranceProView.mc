@@ -9,7 +9,10 @@
 // - drawAlarmPopup() public : le popup d'alarme s'affiche aussi sur les autres écrans ;
 // - bandeaux d'EP sur tous les écrans (drawBands : FC, anneau, 2e métrique, tour, barre FC ; autonomie,
 //   mode d'allure, heure, trait FC), colonne centrale (drawCenterColumn), mise en page et polices
-//   d'icônes (lay, iconFonts) pour l'écran Trail Planner, popup des rappels Trail Planner (showPopup).
+//   d'icônes (lay, iconFonts) pour l'écran Trail Planner, popup des rappels Trail Planner (showPopup) ;
+// - distance restante (bas d'écran) : sans parcours Garmin suivi, celle du plan Trail Planner (prochain
+//   point, arrivée) ; le réglage « prochain point » / « fin de parcours » / « alternance » est respecté
+//   (distPhase).
 import Toybox.ActivityRecording;
 import Toybox.WatchUi;
 import Toybox.Graphics;
@@ -1929,6 +1932,14 @@ private function drawVamValue(dc, txtColor) as Void {
 // ============================================================
 // 6. Bas d'écran : Distance + Temps
 // ============================================================
+// Distance restante affichée : 0 = prochain point, 1 = fin de parcours, selon le réglage (alternance
+// toutes les 5 s).
+private function distPhase() as Number {
+    if (distToType == 1) { return 0; }
+    if (distToType == 2) { return 1; }
+    return clockDiv5 % 2;
+}
+
 private function drawBottomSection(dc, info, txtColor) as Void {
     var fLabel = layout.fontSmall;
     var w = screenW;
@@ -1946,7 +1957,7 @@ private function drawBottomSection(dc, info, txtColor) as Void {
         hasRoute = true;
         var dDestM = info.distanceToDestination;
         // Droite : phase 0 = dist prochain WP (waypoint), phase 1 = dist fin de parcours
-        if (clockDiv5 % 2 == 0) {
+        if (distPhase() == 0) {
             // Icône selon le type du prochain point de passage
             routeIcon = ICON_WAYPOINT;
             if ((info has :nextCoursePoint) && info.nextCoursePoint != null) {
@@ -1962,6 +1973,17 @@ private function drawBottomSection(dc, info, txtColor) as Void {
         } else {
             routeIcon = ICON_FLAG;
             distRest = (dDestM / 1000.0f).format("%.2f");
+        }
+    } else if (distToType != 0) {
+        // Trail Planner Companion : sans parcours Garmin suivi, distance restante du plan Trail Planner
+        // (prochain point du plan, arrivée), recalée sur le tracé comme l'écran Trail Planner.
+        var tp = getRun().tp;
+        var toFinish = distPhase() == 1;
+        var rest = tp.remainingTo(toFinish);
+        if (rest >= 0) {
+            hasRoute = true;
+            routeIcon = toFinish ? ICON_FLAG : (tp.nextIsRavito() ? ICON_FOOD : ICON_WAYPOINT);
+            distRest = (rest / 1000.0f).format("%.2f");
         }
     }
 

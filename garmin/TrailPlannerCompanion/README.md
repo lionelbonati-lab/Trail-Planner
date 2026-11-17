@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.1, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -58,7 +58,8 @@ La liste et le plan du parcours choisi sont téléchargés via le téléphone (a
 mode d'allure et l'heure. Le popup d'alarme d'EndurancePro (et celui des rappels Trail Planner)
 s'affiche par-dessus, quel que soit l'écran.
 
-**1. EndurancePro** : l'écran du champ EndurancePro 2.7.3, sans changement. FC dans un cercle et sa
+**1. EndurancePro** : l'écran du champ EndurancePro 2.7.3, sans changement sauf la distance restante, qui
+vient du plan Trail Planner (prochain point, arrivée). FC dans un cercle et sa
 barre de zones, D+, D- et altitude, VAM, allure effort instantanée et moyenne colorées par zone, sac,
 météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (popup ou notification).
 
@@ -198,8 +199,10 @@ l'enregistrement. Le lien assistance et le debrief de la course les lisent comme
 - **Pas de guidage (virages), de ClimbPro ni de PacePro** de Garmin pendant cette activité : la carte de
   l'appli montre le parcours et ta position, et « Hors parcours » prévient d'un écart, mais le parcours
   n'est pas importé dans les parcours Garmin de la montre (pour la navigation Garmin, export FIT du plan
-  à importer dans Garmin Connect, comme avant). La **distance restante** d'EndurancePro (prochain point, fin du
-  parcours) vient de la navigation Garmin : elle reste vide dans l'appli.
+  à importer dans Garmin Connect, comme avant). La **distance restante** d'EndurancePro (en bas, à droite)
+  vient donc du plan Trail Planner, recalée sur le tracé : jusqu'au prochain point du plan (icône ravito
+  si c'en est un) ou jusqu'à l'arrivée (drapeau), selon le réglage « Distance restante » (prochain point,
+  fin de parcours ou alternance toutes les 5 s). Vide en sortie libre.
 - Le champ Trail Planner lui-même ne s'affiche pas dans une appli Connect IQ : son écran et ses calculs y
   sont repris (écran 2). Ses notifications de rappel sont remplacées par la bascule automatique.
 
@@ -224,7 +227,9 @@ de fichier :
 - les champs FIT sont créés sur la session d'enregistrement (`createFitFields`, au départ) ;
 - la synchro passe par le téléchargement du plan (pas de tâche de fond) ;
 - le menu a le dossier Trail Planner ; un nouveau code relance le téléchargement du plan ;
-- `AppName` et `app_version` (« 0.2.0 (EndurancePro 2.7.3) ») propres à l'appli.
+- distance restante du plan Trail Planner (sans parcours Garmin suivi), réglage « Distance restante »
+  respecté ;
+- `AppName` et `app_version` (« 0.5.1 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
