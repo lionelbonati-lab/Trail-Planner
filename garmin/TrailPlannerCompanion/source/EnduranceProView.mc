@@ -10,6 +10,7 @@
 // - bandeaux d'EP sur tous les écrans (drawBands : FC, anneau, 2e métrique, tour, barre FC ; autonomie,
 //   mode d'allure, heure, trait FC), colonne centrale (drawCenterColumn), mise en page et polices
 //   d'icônes (lay, iconFonts) pour l'écran Trail Planner, popup des rappels Trail Planner (showPopup) ;
+// - pas de lecture de l'étape d'entraînement Garmin (Activity.getCurrentWorkoutStep, réservé aux champs) ;
 // - distance restante (bas d'écran) : sans parcours Garmin suivi, celle du plan Trail Planner (prochain
 //   point, arrivée) ; le réglage « prochain point » / « fin de parcours » / « alternance » est respecté
 //   (distPhase).
@@ -1186,10 +1187,10 @@ if (diffDist > 0.5f) {
 
         // v2.2.11 : entraînement structuré en cours (paliers programmés sur la montre)
         // → alarmes EnduranceApp coupées, Garmin gère déjà ses propres alertes de palier.
+        // Appli : Activity.getCurrentWorkoutStep() est réservé aux champs de données (plantage « only
+        // allowed be called from a datafield ») ; l'appli enregistre elle-même la sortie, sans
+        // entraînement Garmin en cours : alarmes toujours actives.
         var workoutStepActive = false;
-        if ((Activity has :getCurrentWorkoutStep) && (Activity.getCurrentWorkoutStep() != null)) {
-            workoutStepActive = true;
-        }
 
         if (!workoutStepActive) {
             // VAM : au-dessus de la zone cible (borne haute de Z1-Z4 ; Z5 n'a pas de borne haute,
