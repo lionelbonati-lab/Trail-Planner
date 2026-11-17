@@ -231,6 +231,31 @@ describe('page assistance', () => {
     expect(old).toContain('Arrêt prévu 3 min')
   })
 
+  it('mode course sans montre : au ravito jusqu’au bouton « Reparti », puis temps réel', () => {
+    const passA = Date.parse(snap.rows[0].planned)
+    const live = { startedAt: snap.start, lastUpdate: null }
+    const at = { ...snap, live, rows: snap.rows.map((r, i) => (i === 0 ? { ...r, actual: new Date(passA).toISOString() } : r)) }
+    const html = renderToStaticMarkup(<ShareView snap={at} report={null} nowMs={passA + 5 * 60000} />)
+    expect(html).toMatch(/class="[^"]*at-ravito/)
+    // 5 min sur place pour 3 min prévues : chrono en orange.
+    expect(html).toMatch(/class="stop-info at over">Au ravito depuis 5 min · arrêt prévu 3 min/)
+    // Reparti (snapshot du mode course) : temps réel passé.
+    const left = { ...at, rows: at.rows.map((r, i) => (i === 0 ? { ...r, left: new Date(passA + 4 * 60000).toISOString() } : r)) }
+    const h2 = renderToStaticMarkup(<ShareView snap={left} report={null} nowMs={passA + 10 * 60000} />)
+    expect(h2).not.toMatch(/class="[^"]*at-ravito/)
+    expect(h2).toMatch(/Arrêt 4 min<span class="late"> \(prévu 3 min, \+1\)/)
+  })
+
+  it('base de vie : reparti à 300 m (montre), 150 m pour un ravito', () => {
+    const base = { ...snap, rows: snap.rows.map((r, i) => (i === 0 ? { ...r, kind: 'base' } : r)) }
+    const s = Math.round(Date.parse(snap.start) / 1000)
+    const w = parseWatchPlan(snap.w)!
+    const passA = s + w.cps[0].planned
+    const report = { t: passA + 300, s, d: w.cps[0].dist + 220, p: `0:${passA}` }
+    expect(renderToStaticMarkup(<ShareView snap={base} report={report} nowMs={(passA + 300) * 1000} />)).toMatch(/class="[^"]*at-ravito/)
+    expect(renderToStaticMarkup(<ShareView snap={snap} report={report} nowMs={(passA + 300) * 1000} />)).not.toMatch(/class="[^"]*at-ravito/)
+  })
+
   it('relevé trop ancien : ignoré', () => {
     const s = Math.round(Date.parse(snap.start) / 1000)
     const html = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 600, s, d: 2000 }} nowMs={(s + 600 + 4 * 3600) * 1000} />)

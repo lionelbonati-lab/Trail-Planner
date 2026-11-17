@@ -21,7 +21,8 @@ export interface WatchReport {
 export interface WatchPlan {
   total: number
   curve: [number, number][]
-  cps: { dist: number; planned: number; stop: number; name: string }[]
+  /** base : base de vie (9e champ « b »), départ noté plus loin qu'à un ravito. */
+  cps: { dist: number; planned: number; stop: number; name: string; base?: boolean }[]
 }
 
 export function parseWatchPlan(text: string): WatchPlan | null {
@@ -32,7 +33,7 @@ export function parseWatchPlan(text: string): WatchPlan | null {
     const p = line.split('|')
     if (p[0] === 'S') plan.total = Number(p[2])
     else if (p[0] === 'K') plan.curve = p[1].split(',').map((x) => x.split(':').map(Number) as [number, number])
-    else if (p[0] === 'C') plan.cps.push({ dist: Number(p[1]), planned: Number(p[2]), stop: Number(p[6] ?? 0), name: p[5] })
+    else if (p[0] === 'C') plan.cps.push({ dist: Number(p[1]), planned: Number(p[2]), stop: Number(p[6] ?? 0), name: p[5], ...(p[8] === 'b' ? { base: true } : {}) })
   }
   return plan.curve.length >= 2 ? plan : null
 }

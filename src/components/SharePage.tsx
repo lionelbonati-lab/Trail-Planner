@@ -25,15 +25,15 @@ function KindIcon({ kind, finish }: { kind: string; finish?: boolean }) {
   )
 }
 
-/** Au-delà de cette distance après un ravito (m), le coureur en est reparti. */
-const AT_RAVITO_M = 150
+/** Au-delà de cette distance après un ravito (m), le coureur en est reparti : 300 m pour une base de vie. */
+const awayM = (kind: string) => (kind === 'base' ? 300 : 150)
 
 /** Temps au ravito : arrêt prévu, et réel une fois reparti (ou en cours, s'il y est). */
 function StopInfo({ row, at, sinceMin }: { row: ShareSnapshot['rows'][number]; at: boolean; sinceMin: number }) {
   const planned = Math.round(row.stopMin)
   if (at) {
     return (
-      <div className="stop-info at">
+      <div className={`stop-info at ${planned > 0 && sinceMin > planned ? 'over' : ''}`}>
         Au ravito depuis {sinceMin} min{planned > 0 ? ` · arrêt prévu ${planned} min` : ''}
       </div>
     )
@@ -406,7 +406,7 @@ export function ShareView({
       rows: snap.rows.map((r, i) => ({
         ...r,
         actual: watch.passed.has(i) ? new Date(watch.passed.get(i)! * 1000).toISOString() : r.actual,
-        left: watch.departed.has(i) ? new Date(watch.departed.get(i)! * 1000).toISOString() : null,
+        left: watch.departed.has(i) ? new Date(watch.departed.get(i)! * 1000).toISOString() : (r.left ?? null),
         eta: new Date(watch.etas[i] * 1000).toISOString(),
       })),
     }
@@ -420,11 +420,13 @@ export function ShareView({
   const long = Date.parse(snap.rows[snap.rows.length - 1]?.planned ?? snap.start) - Date.parse(snap.start) > 20 * 3600000
   const lastDone = [...snap.rows].reverse().find((r) => r.actual)
   const next = snap.rows.find((r) => !r.actual)
-  // Coureur au ravito : arrivé (passage noté), pas encore reparti, position de la montre à moins de
-  // 150 m après le point.
+  // Coureur au ravito : arrivé (passage noté), pas encore reparti. Montre : position à moins de 150 m
+  // après le point (300 m après une base de vie). Mode course : dernier passage saisi, sans « Reparti ».
   const atRavito = watch
-    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + AT_RAVITO_M && watch.dist > r.dist - 2 * AT_RAVITO_M)
-    : undefined
+    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayM(r.kind) && watch.dist > r.dist - 2 * awayM(r.kind))
+    : snap.live && lastDone && isRavitoKind(lastDone.kind) && !lastDone.left
+      ? lastDone
+      : undefined
   const atSinceMin = atRavito ? Math.max(0, Math.round((nowMs - Date.parse(atRavito.actual!)) / 60000)) : 0
   const elapsed = snap.live ? (nowMs - Date.parse(snap.live.startedAt)) / 1000 : null
   // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
@@ -499,7 +501,7 @@ export function ShareView({
               <div className="live-sub">≈ km {km(estimate)} maintenant (estimé d'après son rythme, entre deux relevés)</div>
             )}
             {atRavito && (
-              <div className="live-sub at-ravito-banner">
+              <div className={`live-sub at-ravito-banner ${atRavito.stopMin > 0 && atSinceMin > Math.round(atRavito.stopMin) ? 'over' : ''}`}>
                 <KindIcon kind={atRavito.kind} /> Au ravito : <strong>{atRavito.name}</strong> depuis {atSinceMin} min
                 {atRavito.stopMin > 0 ? ` (arrêt prévu ${Math.round(atRavito.stopMin)} min)` : ''}
               </div>

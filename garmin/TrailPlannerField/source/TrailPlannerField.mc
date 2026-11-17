@@ -451,10 +451,11 @@ class TrailPlannerField extends WatchUi.DataField {
                 last = i;
             }
         }
-        // Départ d'un ravito noté tout seul à 150 m après le point (sans attendre un 2e tour Lap) :
-        // temps passé au ravito envoyé à l'assistance.
+        // Départ d'un ravito noté tout seul à 150 m après le point, 300 m après une base de vie (sans
+        // attendre un 2e tour Lap) : temps passé au ravito envoyé à l'assistance.
         for (var i = 0; i < plan.cpDist.size(); i++) {
-            if (plan.cpKind[i].equals("r") && passes.hasKey(i) && !departs.hasKey(i) && d > plan.cpDist[i] + 150) {
+            var away = i < plan.cpBase.size() && plan.cpBase[i] ? 300 : 150;
+            if (plan.cpKind[i].equals("r") && passes.hasKey(i) && !departs.hasKey(i) && d > plan.cpDist[i] + away) {
                 departs.put(i, now);
                 changed = true;
             }

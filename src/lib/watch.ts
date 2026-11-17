@@ -107,7 +107,7 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
     `K|${K}`,
     ...sim.splits.map((s) => {
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
-      return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}|${clean((s.cp.notes ?? '').replace(/[|\s]+/g, ' '), 40)}`
+      return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}|${clean((s.cp.notes ?? '').replace(/[|\s]+/g, ' '), 40)}${s.cp.kind === 'base' ? '|b' : ''}`
     }),
     ...foodLines(nutritionPlan(race, sim, raceProducts(race, athlete.products)), sim.splits),
   ]

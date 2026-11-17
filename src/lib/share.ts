@@ -34,7 +34,7 @@ export interface ShareRow {
   dropbag?: boolean
   /** D+ cumulé depuis le départ jusqu'à ce point (m), absent des anciens partages. */
   up?: number
-  /** Départ du ravito (ISO), donné par la montre sur la page assistance (pas dans le partage). */
+  /** Départ du ravito (ISO) : bouton « Reparti » du mode course, ou montre (page assistance). */
   left?: string | null
 }
 
@@ -119,6 +119,7 @@ export function buildSnapshot(
         late: w ? iso(w.late) : null,
         cutoff: cutoff(s.cp.cutoff),
         actual: race.live?.passages[s.cp.id] ?? null,
+        ...(race.live?.departures?.[s.cp.id] ? { left: race.live.departures[s.cp.id] } : {}),
         eta: iso(row?.eta ?? s.arrival),
         ...navTarget(s.cp.access ?? (s.cp.id === FINISH_ID ? race.finishAccess : undefined), track, s.to),
         assist: assistAllowed(s.cp),

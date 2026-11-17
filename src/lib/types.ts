@@ -374,6 +374,8 @@ export interface LiveState {
   startedAt: string
   /** Passages réels : id du point → instant ISO UTC. */
   passages: Record<string, string>
+  /** Départs des ravitos (bouton « Reparti ») : id du point → instant ISO UTC. */
+  departures?: Record<string, string>
 }
 
 export type CalcMode = 'physio' | 'kme' | 'gap'

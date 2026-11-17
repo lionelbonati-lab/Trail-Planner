@@ -37,6 +37,16 @@ describe('suivi en direct', () => {
     expect(st.finishEta).toBeGreaterThan(plan.sim.totalTime)
   })
 
+  it('« Reparti » du ravito : la suite part du départ réel, pas de l’arrivée + arrêt prévu', () => {
+    const planA = plan.sim.splits[0].arrival
+    const arrive = new Date(t0 + planA * 1000).toISOString()
+    const base = liveStatus({ startedAt: new Date(t0).toISOString(), passages: { a: arrive } }, plan.sim, t0 + planA * 1000, () => null)
+    // Reparti 10 min après l'arrivée (2 min prévues) : 8 min de plus sur la suite.
+    const left = new Date(t0 + (planA + 600) * 1000).toISOString()
+    const st = liveStatus({ startedAt: new Date(t0).toISOString(), passages: { a: arrive }, departures: { a: left } }, plan.sim, t0 + (planA + 600) * 1000, () => null)
+    expect(st.rows[1].eta - base.rows[1].eta).toBeCloseTo(480, 0)
+  })
+
   it('position GPS projetée et temps prévu à cette distance', () => {
     const d = locate(plan.track, 45 + 7000 / 111195, 6.0001, 5000)
     expect(Math.abs(d - 7000)).toBeLessThan(40)

@@ -244,6 +244,8 @@ button.danger { color: var(--danger); }
 .live-delta.early { color: var(--ok); }
 .live-sub { color: var(--muted); margin-top: 4px; }
 .live-next-name { font-size: 22px; font-weight: 700; margin: 2px 0; }
+.live-at { border: 2px solid var(--series-1); }
+.live-at .live-sub { margin-bottom: 10px; }
 .live-times { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin: 8px 0 12px; }
 .live-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center; }
 button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 100%; justify-content: center; }
@@ -285,6 +287,7 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .share-points tr.at-ravito td:last-child { border-right: 2px solid var(--series-1); }
 .live-hero .at-ravito-banner { color: var(--series-1); font-weight: 600; }
 .live-hero .at-ravito-banner .kind-icon { color: var(--series-1); }
+.share-points .stop-info.at.over, .live-hero .at-ravito-banner.over, .live-hero .at-ravito-banner.over .kind-icon { color: var(--warn); }
 .assist-profile .at-halo { fill: var(--series-1); opacity: 0.25; animation: at-pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes at-pulse { 0%, 100% { opacity: 0.15; transform: scale(0.8); } 50% { opacity: 0.35; transform: scale(1.15); } }
 @media (prefers-reduced-motion: reduce) { .assist-profile .at-halo { animation: none; } }

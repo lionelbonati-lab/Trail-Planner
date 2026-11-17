@@ -39,6 +39,7 @@ class Plan {
     var cpKind as Array<String> = [] as Array<String>;
     var cpName as Array<String> = [] as Array<String>;
     var cpStop as Array<Number> = [] as Array<Number>;
+    var cpBase as Array<Boolean> = [] as Array<Boolean>; // base de vie (9e champ « b ») : départ noté à 300 m
     var cpNote as Array<String> = [] as Array<String>;
     // Tracé simplifié (ligne G) : distance le long du parcours (m) et position de chaque sommet (m)
     // par rapport au premier (x vers l'est, y vers le nord).
@@ -544,6 +545,7 @@ function parsePlan(text as String) as Plan or Null {
             p.cpName.add(parts[5]);
             p.cpStop.add(parts.size() >= 7 ? toNum(parts[6]) : 0);
             p.cpNote.add(parts.size() >= 8 ? parts[7] : "");
+            p.cpBase.add(parts.size() >= 9 && parts[8].equals("b"));
         } else if (tag.equals("E") && parts.size() >= 2) {
             parseClimb(p, parts[1]);
         } else if (tag.equals("P")) {

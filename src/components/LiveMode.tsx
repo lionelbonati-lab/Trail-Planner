@@ -1,7 +1,8 @@
-import { ArrowLeft, Check, LocateFixed, Pencil } from 'lucide-react'
+import { ArrowLeft, Check, LocateFixed, LogOut, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { liveStatus, locate, plannedAt } from '../lib/live'
 import { isFreeStart } from '../lib/plan'
+import { isRavitoKind } from '../lib/splits'
 import { formatClock, formatDuration, pastClockToMs, zonedToUtc } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { useRaceComputation } from './RacePlan'
@@ -172,6 +173,29 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
         )}
         <div className="live-sub">Arrivée estimée {clock(status.finishEta)} ({formatDuration(status.finishEta)})</div>
       </section>
+
+      {/* Au ravito (dernier passage noté, pas encore reparti) : temps sur place et bouton « Reparti »,
+          envoyé à l'assistance (temps réellement passé au ravito). */}
+      {lastRow && race.live && isRavitoKind(lastRow.split.cp.kind) && lastRow.actual !== null && !race.live.departures?.[lastRow.split.cp.id] && (() => {
+        const arrived = race.live.passages[lastRow.split.cp.id]
+        const sinceMin = Math.max(0, Math.round((now - Date.parse(arrived)) / 60000))
+        const planned = Math.round(lastRow.split.cp.stopMin)
+        return (
+          <section className="live-next live-at">
+            <div className="live-label">Au ravito</div>
+            <div className="live-next-name">{lastRow.split.cp.name}</div>
+            <div className={`live-sub ${planned > 0 && sinceMin > planned ? 'warn-text' : ''}`}>
+              Depuis {sinceMin} min{planned > 0 ? ` · arrêt prévu ${planned} min` : ''}
+            </div>
+            <button
+              className="primary big"
+              onClick={() => setLive({ ...race.live!, departures: { ...race.live!.departures, [lastRow.split.cp.id]: new Date().toISOString() } })}
+            >
+              <LogOut /> Reparti de {lastRow.split.cp.name}
+            </button>
+          </section>
+        )
+      })()}
 
       {next && (
         <section className="live-next">

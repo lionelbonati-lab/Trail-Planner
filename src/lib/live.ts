@@ -41,6 +41,9 @@ export function liveStatus(live: LiveState, sim: SimResult, nowMs: number, cutof
   const last = lastIdx >= 0 ? rows[lastIdx] : null
   const lastActual = last ? (Date.parse(live.passages[last.cp.id]) - t0) / 1000 : 0
   const lastPlanned = last ? last.arrival : 0
+  // Départ du dernier point : réel s'il est noté (« Reparti »), sinon arrivée + arrêt prévu.
+  const leftIso = last ? live.departures?.[last.cp.id] : undefined
+  const lastLeft = leftIso ? (Date.parse(leftIso) - t0) / 1000 : lastActual + (last ? last.cp.stopMin * 60 : 0)
   // Borné : un passage saisi par erreur ne doit pas rendre l'estimation absurde.
   const raw = last && lastPlanned > 60 ? Math.min(1.6, Math.max(0.7, lastActual / lastPlanned)) : 1
   const ratio = 1 + DAMPING * (raw - 1)
@@ -50,7 +53,7 @@ export function liveStatus(live: LiveState, sim: SimResult, nowMs: number, cutof
     const actual = iso ? (Date.parse(iso) - t0) / 1000 : null
     let eta: number
     if (actual !== null) eta = actual
-    else if (i > lastIdx) eta = lastActual + (lastIdx >= 0 ? rows[lastIdx].cp.stopMin * 60 : 0) + Math.max(0, split.arrival - (last ? last.departure : 0)) * ratio
+    else if (i > lastIdx) eta = lastLeft + Math.max(0, split.arrival - (last ? last.departure : 0)) * ratio
     else eta = split.arrival
     const cut = cutoffMs(split)
     return { split, planned: split.arrival, actual, eta, cutoffMargin: cut === null ? null : (cut - (t0 + eta * 1000)) / 1000 }
