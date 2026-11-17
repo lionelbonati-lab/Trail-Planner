@@ -24,7 +24,8 @@ const DONE = 3;     // enregistrée ou supprimée : BACK pour quitter
 // - passages aux points (position, ou bouton Lap = passage au point le plus proche, 2e Lap au ravito =
 //   départ) et suivi envoyé à l'assistance (document live/{code}, même format que le champ) ;
 // - plan de la course, profil et réglages EndurancePro (champs w, wp et ep du document du code
-//   montre), téléchargés via le téléphone au lancement puis toutes les 5 minutes.
+//   montre), téléchargés via le téléphone au lancement puis toutes les 5 minutes ; tracé fin de l'écran
+//   Carte (champ wr) dans une requête à part, quand le plan change.
 class Run {
     const PROJECT = "trail-planner-814f6";
 
@@ -61,6 +62,11 @@ class Run {
     var ticks = 0;
     var lastCode = null;      // code montre en vigueur (réglages)
     var fetchCode = null;     // code de la dernière demande de plan
+    var lastLoc = null;       // dernière position GPS (Position.Location), pour la carte
+    var heading = 0.0;        // cap GPS (radians, 0 = nord), flèche de la carte
+    var route = null;         // tracé de la carte (MapRoute) : champ wr, sinon ligne G du plan
+    var routeText = null;     // texte du champ wr chargé (null : tracé tiré du plan)
+    var routePlan = null;     // plan dont le tracé de repli est tiré
 
     function initialize() {
         ep = new EnduranceProView();
@@ -90,6 +96,12 @@ class Run {
     function onPosition(info as Position.Info) as Void {
         var q = info.accuracy;
         gpsOk = q != null && q >= Position.QUALITY_USABLE;
+        if (info.position != null && q != null && q >= Position.QUALITY_POOR) {
+            lastLoc = info.position;
+        }
+        if (info.heading != null) {
+            heading = info.heading.toFloat();
+        }
     }
 
     function onTick() as Void {
@@ -104,6 +116,10 @@ class Run {
         }
         if (ticks % 300 == 0) {
             fetch();
+        }
+        // « Explorer la carte » choisi dans le menu, maintenant fermé.
+        if (getApp().pendingExplore) {
+            getApp().startExplore();
         }
         WatchUi.requestUpdate();
     }
@@ -432,6 +448,7 @@ class Run {
     }
 
     function onPlan(responseCode as Number, data as Dictionary or String or Null) as Void {
+        var needRoute = false;
         if (responseCode == 200 && data instanceof Dictionary) {
             var fields = data["fields"];
             var w = null;
@@ -446,9 +463,14 @@ class Run {
             noCourse = true;
             if (w != null && w.length() > 4) {
                 noCourse = false;
+                // Nouveau plan (ou nouveau code) : tracé de la carte à retélécharger.
+                if (!sameText(Application.Storage.getValue("plan"), w) || !sameText(Application.Storage.getValue("planCode"), fetchCode)) {
+                    Application.Storage.setValue("route", null);
+                }
                 Application.Storage.setValue("plan", w);
                 Application.Storage.setValue("profile", wp);
                 Application.Storage.setValue("planCode", fetchCode);
+                needRoute = Application.Storage.getValue("route") == null;
             }
             Application.Storage.setValue("fetchError", null);
             // Réglages EndurancePro (VC, zones, équivalences, zone de la séance), comme la synchro du champ.
@@ -460,7 +482,69 @@ class Run {
             applyTrailSync(responseCode);
         }
         load();
+        if (needRoute) {
+            fetchRoute();
+        }
         WatchUi.requestUpdate();
+    }
+
+    // Tracé fin de l'écran Carte (champ wr, jusqu'à 10 000 caractères) : requête à part, la réponse du
+    // plan restant de taille raisonnable pour la montre.
+    function fetchRoute() as Void {
+        var code = codeSetting();
+        if (code == null) {
+            return;
+        }
+        Communications.makeWebRequest(
+            "https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/%28default%29/documents/shares/" +
+                code + "?mask.fieldPaths=wr",
+            null,
+            {
+                :method => Communications.HTTP_REQUEST_METHOD_GET,
+                :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON
+            },
+            method(:onRoute)
+        );
+    }
+
+    // Sans champ wr (site d'une ancienne version) : "" (téléchargé, rien), le tracé est tiré du plan.
+    // En cas d'échec : nouvel essai avec le plan suivant (5 min).
+    function onRoute(responseCode as Number, data as Dictionary or String or Null) as Void {
+        if (responseCode == 200 && data instanceof Dictionary) {
+            var fields = data["fields"];
+            var wr = fields instanceof Dictionary ? textOf(fields["wr"]) : null;
+            Application.Storage.setValue("route", wr != null ? wr : "");
+            loadRoute();
+            WatchUi.requestUpdate();
+        }
+    }
+
+    // Tracé de la carte : champ wr s'il est là, sinon ligne G du plan (relu seulement s'il a changé).
+    function loadRoute() as Void {
+        if (plan == null) {
+            route = null;
+            routeText = null;
+            routePlan = null;
+            return;
+        }
+        var text = Application.Storage.getValue("route");
+        if (text instanceof String && (text as String).length() > 4) {
+            if (routeText != null && (text as String).equals(routeText)) {
+                return;
+            }
+            var r = parseMapRoute(text as String);
+            if (r != null) {
+                route = r;
+                routeText = text;
+                routePlan = plan;
+                return;
+            }
+        }
+        if (routeText != null || routePlan != plan) {
+            route = mapRouteFromPlan(plan);
+            routeText = null;
+            routePlan = plan;
+        }
     }
 
     function textOf(field) as String or Null {
@@ -500,6 +584,7 @@ class Run {
                 lapped = remap(lapped, old, plan);
             }
         }
+        loadRoute();
         refreshStatus();
     }
 

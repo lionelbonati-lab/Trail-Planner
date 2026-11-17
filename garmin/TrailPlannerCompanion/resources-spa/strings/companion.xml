@@ -39,4 +39,7 @@
     <string id="tp_no_course">Ninguna carrera enviada</string>
     <string id="tp_waiting">Plan en espera...</string>
     <string id="tp_no_profile">Sin perfil</string>
+    <string id="tp_map_scale">Escala del mapa</string>
+    <string id="tp_explore">Explorar el mapa</string>
+    <string id="tp_no_route">Sin trazado</string>
 </strings>

@@ -289,12 +289,20 @@ const ROUTE_TOLS = [8, 12, 18, 25, 35, 50, 70, 85, 100, 115, 130, 150, 200]
 
 /** Ligne G : tracé simplifié, écarts d'un point au suivant ; null s'il ne tient pas dans `budget` caractères. */
 export function routeLine(points: { dist: number; lat: number; lon: number }[], budget: number): string | null {
+  return encodeRoute(points, budget, ROUTE_TOLS, 'G')
+}
+
+/**
+ * Tracé `<tag>|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,…` (lat / lon en 1e-5 degré, puis
+ * écarts d'un point au suivant), à la plus fine des tolérances `tols` qui tient dans `budget` caractères.
+ */
+function encodeRoute(points: { dist: number; lat: number; lon: number }[], budget: number, tols: number[], tag: string): string | null {
   if (points.length < 2 || budget < 100) return null
   const e5 = (x: number) => Math.round(x * 1e5)
-  for (const tol of ROUTE_TOLS) {
+  for (const tol of tols) {
     const r = simplifyRoute(points, tol, Infinity)
     let [d0, la, lo] = [r[0][0], e5(r[0][1]), e5(r[0][2])]
-    const head = `G|${tol}|${d0}:${la}:${lo}|`
+    const head = `${tag}|${tol}|${d0}:${la}:${lo}|`
     const parts: number[] = []
     for (const [d, lat, lon] of r.slice(1)) {
       const a = e5(lat)
@@ -308,6 +316,25 @@ export function routeLine(points: { dist: number; lat: number; lon: number }[], 
     if (line.length <= budget) return line
   }
   return null
+}
+
+/**
+ * Place maximale du tracé de la carte de l'appli montre (caractères, champ `wr`), lu au premier plan
+ * dans une requête à part (réponses de taille raisonnable pour la montre).
+ */
+export const MAP_ROUTE_MAX = 10000
+
+/** Tolérances essayées pour le tracé de la carte (m) : la plus fine qui tient dans sa place. */
+const MAP_ROUTE_TOLS = [3, 5, 8, 12, 18, 25, 35, 50, 70, 100]
+
+/**
+ * Tracé pour l'écran Carte de l'appli montre Trail Planner Companion (champ `wr` du document du code
+ * montre) : même codage que la ligne G du plan (`TPR1|<tolérance>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,…`),
+ * mais à part et plus fin (3 m sur une course normale) : sur un ultra, la ligne G, faite pour caler le
+ * GPS dans 8 Ko, coupe les lacets. null si même la plus grosse tolérance ne tient pas.
+ */
+export function watchRoute(points: { dist: number; lat: number; lon: number }[], budget = MAP_ROUTE_MAX): string | null {
+  return encodeRoute(points, budget, MAP_ROUTE_TOLS, 'TPR1')
 }
 
 /**

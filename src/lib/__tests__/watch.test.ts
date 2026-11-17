@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace } from '../defaults'
 import { computePlan } from '../plan'
 import { extraSodium, intakeOrder, nutritionPlan } from '../nutrition'
-import { climbLine, fuelInterval, PROFILE_MAX, routeLine, WATCH_PLAN_MAX, watchPlan, watchProfile, watchUrl } from '../watch'
+import { climbLine, fuelInterval, MAP_ROUTE_MAX, PROFILE_MAX, routeLine, WATCH_PLAN_MAX, watchPlan, watchProfile, watchRoute, watchUrl } from '../watch'
 import { parseWatchPlan, plannedAtWatch } from '../watchLive'
 
 function gpx(): string {
@@ -192,6 +192,37 @@ describe('profil de l\'appli montre (champ wp)', () => {
   })
 })
 
+describe('tracé de la carte de l\'appli montre (champ wr)', () => {
+  it('lacets gardés à quelques mètres près, premier et dernier point exacts, place bornée', () => {
+    const plan = computePlan(newRace('Lacets', zigzag()), DEFAULT_ATHLETE)!
+    const pts = plan.track.points
+    const wr = watchRoute(pts)!
+    expect(wr.startsWith('TPR1|')).toBe(true)
+    expect(wr.length).toBeLessThanOrEqual(MAP_ROUTE_MAX)
+    const tol = Number(wr.split('|')[1])
+    expect(tol).toBe(3)
+    const r = decodeRoute(wr)
+    expect(r[0].d).toBe(Math.round(pts[0].dist))
+    expect(r[0].lat).toBeCloseTo(pts[0].lat, 5)
+    expect(r[r.length - 1].d).toBe(Math.round(plan.track.totalDist))
+    // Chaque point du tracé à moins de la tolérance (+ arrondi au 1e-5 degré) du tracé simplifié.
+    for (const p of pts) expect(offRoute(r, p)).toBeLessThanOrEqual(tol + 2)
+    // Bien plus fin que la ligne G du plan sur les mêmes lacets quand la place manque au plan.
+    const g = routeLine(pts, 400)
+    expect(g === null || decodeRoute(g).length <= r.length).toBe(true)
+  })
+
+  it('place réduite : tolérance plus grosse, null si rien ne tient', () => {
+    const pts = computePlan(newRace('Bosses', bumps()), DEFAULT_ATHLETE)!.track.points
+    const half = Math.floor(watchRoute(pts)!.length / 2)
+    const small = watchRoute(pts, half)
+    expect(small).not.toBeNull()
+    expect(small!.length).toBeLessThanOrEqual(half)
+    expect(Number(small!.split('|')[1])).toBeGreaterThan(3)
+    expect(watchRoute(pts, 50)).toBeNull()
+  })
+})
+
 describe('nutrition sur la montre (lignes P et F)', () => {
   const athlete = { ...DEFAULT_ATHLETE, products: DEFAULT_PRODUCTS.map((p) => ({ ...p })) }
   const cp = (id: string, dist: number, kind: 'ravito' | 'info') =>
@@ -374,4 +405,21 @@ function profileAt(prof: [number, number][], d: number): number {
     }
   }
   return prof[prof.length - 1][1]
+}
+
+/** Distance (m) d'un point au tracé décodé (segments en projection locale). */
+function offRoute(r: { d: number; lat: number; lon: number }[], p: { lat: number; lon: number }): number {
+  const ky = 111195
+  const kx = 111195 * Math.cos((p.lat * Math.PI) / 180)
+  let best = Infinity
+  for (let i = 1; i < r.length; i++) {
+    const ax = (r[i - 1].lon - p.lon) * kx
+    const ay = (r[i - 1].lat - p.lat) * ky
+    const bx = (r[i].lon - p.lon) * kx - ax
+    const by = (r[i].lat - p.lat) * ky - ay
+    const len = bx * bx + by * by
+    const t = len > 0 ? Math.max(0, Math.min(1, -(ax * bx + ay * by) / len)) : 0
+    best = Math.min(best, Math.hypot(ax + t * bx, ay + t * by))
+  }
+  return best
 }

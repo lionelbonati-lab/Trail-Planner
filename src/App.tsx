@@ -38,7 +38,7 @@ import { parseGpx } from './lib/gpx'
 import { waypointCheckpoints } from './lib/splits'
 import { withNewTrace } from './lib/routing'
 import { epPayload } from './lib/endurancepro'
-import { watchProfile } from './lib/watch'
+import { watchProfile, watchRoute } from './lib/watch'
 import type { DrawResult } from './components/RouteBuilder'
 import { clearLocalData, hasLocalAthlete, localRaceCount, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
 
@@ -465,11 +465,13 @@ export default function App() {
       if (!plan) return
       const snap = buildSnapshot(user.uid, race, a, plan.track, plan.sim, scenarioWindows(plan.track, a, plan.opts))
       // Document du code montre : réglages EndurancePro en plus du plan (si la synchro est active), et
-      // profil fin pour l'appli montre Trail Planner Companion.
+      // profil et tracé fins pour l'appli montre Trail Planner Companion.
       if (shareId === a.watchId || shareId === a.epCode) {
         if (a.epSync) snap.ep = epPayload(a, race)
         const wp = watchProfile(plan.track.points)
         if (wp) snap.wp = wp
+        const wr = watchRoute(plan.track.points)
+        if (wr) snap.wr = wr
       }
       const key = JSON.stringify({ ...snap, updatedAt: '' })
       if (lastShared.current.get(shareId) === key) return

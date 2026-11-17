@@ -5,19 +5,25 @@ Trail** avec :
 - l'**écran et les calculs d'EndurancePro 2.7.3**, à l'identique (allure effort, VAM, zones, alarmes,
   données FIT, menu de réglages, 6 langues, thèmes clair et sombre) ;
 - le **profil de la course qui te suit**, zoomable, avec l'écart au plan ;
+- la **carte** : ton parcours Trail Planner sur le fond de carte Garmin de la montre, centrée sur toi ;
 - le **suivi pour l'assistance** (passages, position, batterie), comme le champ Trail Planner.
 
 Elle complète le champ de données Trail Planner (`garmin/TrailPlannerField`), qui continue de s'utiliser
 dans l'activité Trail de Garmin. Pendant une activité, Garmin n'affiche que des champs de données, et un
 champ ne réagit pas aux boutons : pour avoir le profil zoomable, il faut lancer la sortie depuis cette appli.
 
-**État :** version 0.2.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.3.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran du profil sur Enduro 3 (écran rond 280 px)](apercu-profil.png)
 
 *Aperçu approximatif de l'écran du profil (polices Garmin simulées), dessiné à partir d'une course de
 42 km et du même calcul que l'appli. L'écran EndurancePro est celui du champ.*
+
+![Aperçu approximatif de l'écran Carte, tracé seul](apercu-carte.png)
+
+*Écran Carte en tracé seul (montres sans cartes) ; sur les montres à cartes, le même tracé et les mêmes
+repères sont posés sur le fond de carte Garmin, qui ne peut pas être simulé ici.*
 
 ## Écrans (Haut / Bas pour passer de l'un à l'autre)
 
@@ -45,6 +51,18 @@ rouge 15–25 %, violet 25 % et plus. Descente : bleu clair de −5 à −15 %, 
 5 % : vert. La pente est une moyenne sur 1/20 au moins de la portion affichée (100 m au zoom 2 km, 500 m
 au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
 
+**3. Carte** : carte orientée nord, centrée sur toi (flèche bleue = cap GPS) :
+- **ton parcours Trail Planner** en magenta (tracé fin envoyé par l'app web, à 3 m près sur une course
+  normale), les ravitos, bases de vie et l'arrivée en repères ;
+- **fond de carte Garmin** de la montre (chemins, relief, noms) sur les montres à cartes ; sur les autres
+  (Forerunner 255 et 265), **tracé seul** sur le fond du thème, partie faite en gris, ravito rond orange,
+  base de vie carré rouge ;
+- **échelle** choisie dans le menu (largeur de l'écran : 200 m, 500 m, 1 km par défaut, 2 km, 5 km),
+  rappelée en bas ;
+- **Explorer la carte** (menu, montres à cartes) : la carte passe en mode exploration Garmin pour la
+  déplacer et zoomer avec les boutons ; BACK revient au suivi ;
+- en haut, comme sur le profil : écart au plan, passages, « Hors parcours ».
+
 **Thème** : celui d'EndurancePro (réglage *Mode sombre*, dossier Affichage), sur tous les écrans.
 
 **Anneau d'état** au bord de l'écran, avant le départ et en pause : rouge = GPS en recherche, vert =
@@ -56,7 +74,7 @@ prêt (START), orange = pause.
 |---|---|---|---|
 | START | Démarrer | Pause (menu Reprendre / Enregistrer / Supprimer) | Reprendre |
 | BACK (Lap) | Quitter l'appli | Nouveau tour et passage au point | Menu de pause |
-| Haut / Bas | Écran suivant | Écran suivant | Écran suivant |
+| Haut / Bas | Écran suivant (EP, profil, carte) | Écran suivant | Écran suivant |
 | Appui long sur Haut | Menu | Menu | Menu |
 
 Écran tactile : balayages pour changer d'écran. Un balayage « retour » ne coupe pas la sortie, et un tap
@@ -77,16 +95,18 @@ Le menu d'EndurancePro, réglable en course comme dans le champ, avec en tête l
 - **Zoom du profil** ;
 - **Couleurs des pentes** ;
 - **Tour = passage au point** ;
+- **Échelle de la carte** ;
+- **Explorer la carte** (montres à cartes) ;
 - **Code Trail Planner** : le code montre à 8 chiffres, le même que pour EndurancePro et le champ ;
 - **Recharger le plan** (nom de la course chargée, ou message d'erreur).
 
 Dans Garmin Connect (appli installée depuis le Store) : les réglages d'EndurancePro (code, référence
-d'allure, zones VC, données FIT), plus le zoom, les couleurs des pentes et le tour = passage.
+d'allure, zones VC, données FIT), plus le zoom, les couleurs des pentes, le tour = passage et l'échelle de la carte.
 
 ## Plan de la course et réglages EndurancePro
 
 L'appli lit le **document du code montre** (onglet Montre de l'app web), via le téléphone, au lancement
-puis toutes les 5 minutes. Envoie une course à la montre avec la touche ⌚. Trois champs :
+puis toutes les 5 minutes. Envoie une course à la montre avec la touche ⌚. Quatre champs :
 - `w`, le plan compact du champ (format TP1, `src/lib/watch.ts`) : nom, points de passage, temps prévus,
   tracé pour caler le GPS ;
 - `wp`, le **profil fin** de l'appli (format TPP1, `watchProfile`) : altitudes le long du parcours à 2 m
@@ -94,6 +114,10 @@ puis toutes les 5 minutes. Envoie une course à la montre avec la touche ⌚. Tr
   700 points, contre 50 à 150 sommets pour la ligne de dénivelé du plan du champ (qui laisse la place au
   tracé GPS). Ajouté la première fois que tu ouvres l'app web après sa mise à jour ; avant, le profil est
   tiré du plan seul (plus grossier, sans altitudes affichées) ;
+- `wr`, le **tracé de la carte** (format TPR1, `watchRoute`, même codage que la ligne G du plan) : à
+  3 m près sur une course normale, jusqu'à 10 000 caractères. Lu dans une requête à part, seulement
+  quand le plan change. Sans lui (avant l'ouverture de l'app web mise à jour), la carte prend le tracé du
+  plan, plus grossier sur les ultras ;
 - `ep`, les **réglages EndurancePro** (VC, zones VC et VAM, équivalences montée / descente, zone de la
   séance envoyée), comme la synchro du champ EndurancePro : à activer dans l'onglet Montre (synchro
   EndurancePro). Le menu affiche l'heure de la dernière synchro (dossier Allure › Trail Planner).
@@ -109,8 +133,10 @@ l'enregistrement. Le lien assistance et le debrief de la course les lisent comme
 
 - La sortie est enregistrée en **course à pied / trail** (fichier FIT avec GPS, cardio, tours et les
   champs d'EndurancePro), envoyée à Garmin Connect et à Strava comme une activité Trail.
-- **Pas de carte, de guidage, de ClimbPro ni de PacePro** de Garmin pendant cette activité. Le tracé du
-  plan sert seulement à caler ta position. La **distance restante** d'EndurancePro (prochain point, fin du
+- **Pas de guidage (virages), de ClimbPro ni de PacePro** de Garmin pendant cette activité : la carte de
+  l'appli montre le parcours et ta position, et « Hors parcours » prévient d'un écart, mais le parcours
+  n'est pas importé dans les parcours Garmin de la montre (pour la navigation Garmin, export FIT du plan
+  à importer dans Garmin Connect, comme avant). La **distance restante** d'EndurancePro (prochain point, fin du
   parcours) vient de la navigation Garmin : elle reste vide dans l'appli.
 - **Le champ Trail Planner ne s'affiche pas** dans une appli Connect IQ. Sa nutrition, ses barrières
   horaires, son prochain point et l'écran du ravito ne sont pas encore dans l'appli (prévu ensuite).
@@ -151,6 +177,11 @@ Retirées par rapport au champ Trail Planner : fēnix 5 Plus (API 3.3), fēnix 9
 EndurancePro) ; et Venu 3 / Venu 4 d'EndurancePro (deux boutons seulement : START, BACK, Haut et Bas
 n'y existent pas).
 
+**Carte :** le fond de carte Garmin (`WatchUi.MapView`) est compilé pour toutes les montres sauf les
+Forerunner 255 et 265 (`excludeAnnotations = map` dans `monkey.jungle`), qui ont l'écran Carte en tracé
+seul. Si la compilation d'une autre montre échoue sur `MapView` (modèle sans cartes), lui ajouter la même
+ligne.
+
 **À vérifier à la première compilation :**
 - sport de l'activité (`Activity.SPORT_RUNNING` / `Activity.SUB_SPORT_TRAIL` dans `Run.mc`) ; si le
   compilateur ne les trouve pas, remplacer par `ActivityRecording.SPORT_RUNNING` et
@@ -158,4 +189,8 @@ n'y existent pas).
 - mémoire avec EndurancePro et le plan d'un ultra (simulateur : *File › View Memory*) ;
 - champs FIT d'EndurancePro dans l'activité enregistrée (Garmin Connect) ;
 - au simulateur, charge un parcours (*Simulation › Activity Data*) et démarre la sortie avec START :
-  le profil doit défiler avec toi, l'écran EndurancePro se remplir comme dans le champ.
+  le profil doit défiler avec toi, l'écran EndurancePro se remplir comme dans le champ ;
+- écran Carte : tracé et repères posés sur le fond Garmin, carte recentrée sur toi, échelle respectée ;
+  « Explorer la carte » : boutons de la carte Garmin pour déplacer et zoomer, BACK pour revenir (la
+  répartition exacte des boutons en exploration dépend de la montre) ; mémoire avec la carte et le
+  tracé d'un ultra.

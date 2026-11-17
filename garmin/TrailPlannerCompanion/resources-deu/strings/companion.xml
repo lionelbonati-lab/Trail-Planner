@@ -39,4 +39,7 @@
     <string id="tp_no_course">Kein Rennen gesendet</string>
     <string id="tp_waiting">Plan wird geladen...</string>
     <string id="tp_no_profile">Kein Profil</string>
+    <string id="tp_map_scale">Kartenmaßstab</string>
+    <string id="tp_explore">Karte erkunden</string>
+    <string id="tp_no_route">Keine Strecke</string>
 </strings>

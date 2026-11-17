@@ -8,22 +8,29 @@ import Toybox.WatchUi;
 // - BACK (Lap) : nouveau tour pendant l'enregistrement (et passage au point le plus proche, 2e tour au
 //   ravito = départ), menu de pause en pause, sortie de l'appli avant le départ ou une fois la sortie
 //   enregistrée ;
-// - Haut / Bas : écran suivant (EndurancePro, profil) ;
+// - Haut / Bas : écran suivant (EndurancePro, profil, carte) ;
 // - appui long sur Haut (Menu) : réglages d'EndurancePro, avec le dossier « Trail Planner » en tête.
+// Carte en exploration (menu « Explorer la carte ») : les boutons vont à la carte Garmin (déplacer,
+// zoomer), sauf BACK qui revient au suivi du coureur.
 // Écran tactile : balayages pour changer d'écran ; un balayage « retour » ne coupe pas la sortie et le tap
 // ne fait rien (START et BACK restent sur les boutons).
 class MainDelegate extends WatchUi.BehaviorDelegate {
     var run as Run;
-    var view as MainView;
 
-    function initialize(r as Run, v as MainView) {
+    function initialize(r as Run) {
         BehaviorDelegate.initialize();
         run = r;
-        view = v;
     }
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
         var key = evt.getKey();
+        if (getApp().exploring()) {
+            if (key == WatchUi.KEY_ESC || key == WatchUi.KEY_LAP) {
+                getApp().stopExplore();
+                return true;
+            }
+            return false;
+        }
         if (key == WatchUi.KEY_ENTER) {
             if (run.state == READY) {
                 run.start();
@@ -53,27 +60,40 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
         return BehaviorDelegate.onKey(evt);
     }
 
-    // Balayage « retour » (écran tactile) : ignoré pendant la sortie.
+    // Balayage « retour » (écran tactile) : ignoré pendant la sortie ; en exploration, retour au suivi.
     function onBack() as Boolean {
+        if (getApp().exploring()) {
+            getApp().stopExplore();
+            return true;
+        }
         return run.state == RUNNING || run.state == PAUSED;
     }
 
     function onSelect() as Boolean {
-        return true;
+        return !getApp().exploring();
     }
 
     function onNextPage() as Boolean {
-        view.nextPage(1);
+        if (getApp().exploring()) {
+            return false;
+        }
+        getApp().nextPage(1);
         return true;
     }
 
     function onPreviousPage() as Boolean {
-        view.nextPage(-1);
+        if (getApp().exploring()) {
+            return false;
+        }
+        getApp().nextPage(-1);
         return true;
     }
 
     // Menu d'EndurancePro (réglables en course, comme dans le champ).
     function onMenu() as Boolean {
+        if (getApp().exploring()) {
+            return false;
+        }
         if (run.state != DONE) {
             WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_UP);
         }
@@ -149,6 +169,7 @@ class TrailPlannerMenu extends WatchUi.Menu2 {
     private var _zoomItem as WatchUi.MenuItem;
     private var _codeItem as WatchUi.MenuItem;
     private var _planItem as WatchUi.MenuItem;
+    private var _scaleItem as WatchUi.MenuItem;
 
     function initialize() {
         Menu2.initialize({ :title => "Trail Planner" });
@@ -159,6 +180,12 @@ class TrailPlannerMenu extends WatchUi.Menu2 {
             Application.Properties.getValue("lapPass") != false, {}));
         _codeItem = new WatchUi.MenuItem(tpText(Rez.Strings.set_trail_code), null, :code, {});
         addItem(_codeItem);
+        _scaleItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_map_scale), null, :mapScale, {});
+        addItem(_scaleItem);
+        // Exploration : seulement avec le fond de carte Garmin.
+        if (getApp().hasMap()) {
+            addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_explore), null, :explore, {}));
+        }
         _planItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_reload), null, :reload, {});
         addItem(_planItem);
         onShow();
@@ -166,6 +193,7 @@ class TrailPlannerMenu extends WatchUi.Menu2 {
 
     function onShow() as Void {
         _zoomItem.setSubLabel(zoomLabel(zoomLevel()));
+        _scaleItem.setSubLabel(mapScaleLabel(mapScaleLevel()));
         var code = Application.Properties.getValue("trail_code_prop");
         var text = "-";
         if (code instanceof String && (code as String).length() > 0) {
@@ -192,6 +220,19 @@ class TrailPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
             }
             menu.setFocus(zoomLevel());
             WatchUi.pushView(menu, new ZoomDelegate(), WatchUi.SLIDE_LEFT);
+        } else if (id == :mapScale) {
+            var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_map_scale) });
+            for (var z = 0; z < MAP_SCALES.size(); z++) {
+                menu.addItem(new WatchUi.MenuItem(mapScaleLabel(z), null, z, {}));
+            }
+            menu.setFocus(mapScaleLevel());
+            WatchUi.pushView(menu, new MapScaleDelegate(), WatchUi.SLIDE_LEFT);
+        } else if (id == :explore) {
+            // Lancée une fois le menu fermé (dossier Trail Planner et menu principal), au tour suivant
+            // de Run.onTick : la carte remplace alors l'écran affiché.
+            getApp().pendingExplore = true;
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
         } else if (id == :slopes) {
             Application.Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id == :lapPass) {
@@ -213,6 +254,17 @@ class ZoomDelegate extends WatchUi.Menu2InputDelegate {
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         Application.Properties.setValue("zoom", item.getId() as Number);
+        WatchUi.popView(WatchUi.SLIDE_RIGHT);
+    }
+}
+
+class MapScaleDelegate extends WatchUi.Menu2InputDelegate {
+    function initialize() {
+        Menu2InputDelegate.initialize();
+    }
+
+    function onSelect(item as WatchUi.MenuItem) as Void {
+        Application.Properties.setValue("mapScale", item.getId() as Number);
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 }

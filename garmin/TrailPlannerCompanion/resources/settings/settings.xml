@@ -91,5 +91,15 @@
             <settingConfig type="boolean" />
         </setting>
 
+        <setting propertyKey="@Properties.mapScale" title="@Strings.tp_map_scale">
+            <settingConfig type="list">
+                <listEntry value="0">200 m</listEntry>
+                <listEntry value="1">500 m</listEntry>
+                <listEntry value="2">1 km</listEntry>
+                <listEntry value="3">2 km</listEntry>
+                <listEntry value="4">5 km</listEntry>
+            </settingConfig>
+        </setting>
+
     </settings>
 </resources>

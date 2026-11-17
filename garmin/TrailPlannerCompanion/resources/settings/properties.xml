@@ -118,5 +118,7 @@
         <property id="slopes" type="boolean">false</property>
         <!-- Bouton Lap = passage au point le plus proche (désactiver si le tour automatique est utilisé). -->
         <property id="lapPass" type="boolean">true</property>
+        <!-- Échelle de l'écran Carte (largeur de l'écran) : 0 = 200 m, 1 = 500 m, 2 = 1 km, 3 = 2 km, 4 = 5 km. -->
+        <property id="mapScale" type="number">2</property>
     </properties>
 </resources>

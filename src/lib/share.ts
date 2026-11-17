@@ -65,6 +65,8 @@ export interface ShareSnapshot {
   ep?: string
   /** Profil fin pour l'appli montre Trail Planner Companion (document du code montre seulement, voir watchProfile). */
   wp?: string
+  /** Tracé fin pour l'écran Carte de l'appli montre (document du code montre seulement, voir watchRoute). */
+  wr?: string
   /** Envoi de cette course à la montre (ISO) : un relevé antérieur vient d'une autre activité. */
   watchSince?: string
   /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */

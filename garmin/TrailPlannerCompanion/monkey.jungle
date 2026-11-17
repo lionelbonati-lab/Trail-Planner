@@ -6,6 +6,13 @@ project.manifest = manifest.xml
 base.sourcePath = source
 base.resourcePath = resources
 
+# Écran Carte : fond de carte Garmin (WatchUi.MapView, code annoté (:map)) sur les montres à cartes ;
+# tracé seul (code (:nomap)) sur les autres. Si la compilation d'une montre échoue sur MapView, lui
+# ajouter une ligne « <montre>.excludeAnnotations = map » comme ci-dessous.
+base.excludeAnnotations = nomap
+fr255.excludeAnnotations = map
+fr265.excludeAnnotations = map
+
 # ── 240×240 MIP ───────────────────────────────────────────────────────────────────────────
 fenix6spro.resourcePath         = resources;resources-240x240
 fenix6spro.sourcePath           = source;layouts/Layout_240x240.mc

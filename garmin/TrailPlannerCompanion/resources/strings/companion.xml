@@ -39,4 +39,7 @@
     <string id="tp_no_course">No race sent</string>
     <string id="tp_waiting">Waiting for plan...</string>
     <string id="tp_no_profile">No profile</string>
+    <string id="tp_map_scale">Map scale</string>
+    <string id="tp_explore">Explore map</string>
+    <string id="tp_no_route">No route</string>
 </strings>
