@@ -199,8 +199,9 @@ acceptent `v` de tout type, rien à redéployer). Le site range ainsi le suivi d
 - ce parcours devient la course « sur la montre » dès son premier relevé (départ réel, debrief), sauf si
   une autre course a été envoyée à la montre depuis ;
 - son lien assistance affiche le direct, et le **lien d'assistance permanent** du coureur
-  (`#/suivi/<code montre>`, onglet Montre du site) le suit tout seul : la course enregistrée, et entre
-  deux sorties la prochaine course ;
+  (`#/suivi/<code montre>`, onglet Montre du site) le suit tout seul : la course enregistrée (bandeau
+  « En course »), et entre deux sorties la prochaine course, sinon la dernière course avec son résultat ;
+  un parcours d'entraînement n'y apparaît que pendant qu'il est couru ;
 - rien n'est envoyé en sortie libre.
 
 ## Ce qui change par rapport à l'activité Trail de Garmin

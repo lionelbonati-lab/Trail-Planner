@@ -185,12 +185,12 @@ export function RunnerPage({ code }: { code: string }) {
   if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
   if (base === undefined || (docId && course.snap === undefined && !course.error)) return <main><p className="muted">Chargement…</p></main>
   if (base === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
-  // Parcours introuvable (synchronisation de l'appli coupée) : la course envoyée à la montre, s'il y en a une.
+  // Course montrée : celle du document du code montre (course envoyée à la montre) ou son document <code>-<id>.
   const full = (s: ShareSnapshot | null | undefined) => (s && Array.isArray(s.rows) && s.rows.length ? s : null)
-  const snap = (docId ? full(course.snap) : null) ?? full(base)
-  if (!snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
+  const snap = target ? (docId ? full(course.snap) : full(base)) : null
+  if (!target || !snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
 
-  const banner = runnerBanner(target?.mode ?? 'watch', snap, reportFor(snap, report, nowMs), nowMs)
+  const banner = runnerBanner(target.mode, snap, reportFor(snap, report, nowMs), nowMs)
   return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} />
 }
 
@@ -549,10 +549,14 @@ export function ShareView({
                 {finishedAt > runStart ? ` en ${formatDuration((finishedAt - runStart) / 1000)}` : ''}.
               </p>
             )}
-            <p className="muted">
-              Ce lien assistance s'est arrêté automatiquement 1 h après {finishedAt !== null ? "l'arrivée" : 'la fin prévue de la course'} : plus de
-              position ni de suivi en direct.
-            </p>
+            {banner ? (
+              <p className="muted">Lien permanent : la prochaine course{snap.athleteName ? ` de ${snap.athleteName}` : ''} s'affichera ici, avec son suivi en direct.</p>
+            ) : (
+              <p className="muted">
+                Ce lien assistance s'est arrêté automatiquement 1 h après {finishedAt !== null ? "l'arrivée" : 'la fin prévue de la course'} : plus de
+                position ni de suivi en direct.
+              </p>
+            )}
           </section>
         </main>
       </div>

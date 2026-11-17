@@ -28,7 +28,7 @@ import { NutritionPanel } from './components/NutritionPanel'
 import { WatchPanel } from './components/WatchPanel'
 import { LiveMode } from './components/LiveMode'
 import { computePlan, isFreeStart, scenarioWindows } from './lib/plan'
-import { buildSnapshot, shareUrl } from './lib/share'
+import { buildSnapshot, lastRace, shareUrl, snapshotWithResult } from './lib/share'
 import { LibraryPanel } from './components/LibraryPanel'
 import { RacePlan } from './components/RacePlan'
 import { SessionsPanel } from './components/SessionsPanel'
@@ -74,7 +74,7 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { reportCourse, watchStartMs, type WatchReport } from './lib/watchLive'
-import { debriefPoints, debriefReport, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
+import { debriefPoints, debriefReport, debriefStart, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
 import { debriefNotifyOn, notifiedDebriefs, rememberNotified, showNotice } from './lib/notify'
 import { formatClock, formatDuration, zonedToUtc } from './lib/time'
 import { DebriefPage } from './components/DebriefPage'
@@ -479,14 +479,16 @@ export default function App() {
   const appWlRef = useRef('')
   appWlRef.current = appWl
   const publish = useCallback(
-    async (race: Race, a: Athlete, shareId: string) => {
+    async (race: Race, a: Athlete, shareId: string, last?: string) => {
       if (!user || !cloud) return
       const plan = computePlan(race, a)
       if (!plan) return
       const snap = buildSnapshot(user.uid, race, a, plan.track, plan.sim, scenarioWindows(plan.track, a, plan.opts))
-      // Document du code montre : réglages EndurancePro en plus du plan (si la synchro est active), et
-      // profil et tracé fins pour l'appli montre Trail Planner Companion.
+      // Document du code montre : réglages EndurancePro en plus du plan (si la synchro est active),
+      // profil et tracé fins pour l'appli montre Trail Planner Companion, dernière course passée pour le
+      // lien permanent du coureur.
       if (shareId === a.watchId || shareId === a.epCode) {
+        if (last) snap.last = last
         if (a.epSync) snap.ep = epPayload(a, race)
         const wp = watchProfile(plan.track.points)
         if (wp) snap.wp = wp
@@ -567,15 +569,18 @@ export default function App() {
       const onWatch = races.find((r) => r.id === athlete.watchRaceId)
       // Liste des parcours de l'appli montre, si sa synchronisation est active.
       const wl = athlete.appSync && appWl ? appWl : undefined
-      if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId).catch(() => undefined)
-      else if ((athlete.epSync || wl) && athlete.watchId && cloud) {
-        // Pas de course sur la montre : seulement les réglages EndurancePro (et la liste de l'appli).
+      // Dernière course passée, pour le lien permanent du coureur (document du code montre long).
+      const last = athlete.watchId ? lastRace(races, new Date().toLocaleDateString('sv'))?.id : undefined
+      if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId, last).catch(() => undefined)
+      else if ((athlete.epSync || wl || last) && athlete.watchId && cloud) {
+        // Pas de course sur la montre : seulement les réglages EndurancePro (et la liste de l'appli, la
+        // dernière course).
         const ep = athlete.epSync ? epPayload(athlete, null) : ''
-        const key = `ep:${ep}|wl:${wl ?? ''}|${athlete.epCode ?? ''}`
+        const key = `ep:${ep}|wl:${wl ?? ''}|${athlete.epCode ?? ''}|${last ?? ''}`
         if (lastShared.current.get(athlete.watchId) !== key) {
           const watchId = athlete.watchId
           cloud
-            .publishWatchProfile(watchId, user.uid, ep, wl, athlete.epCode)
+            .publishWatchProfile(watchId, user.uid, { ep, wl, liveRefShort: athlete.epCode, last })
             .then(() => lastShared.current.set(watchId, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
@@ -589,7 +594,7 @@ export default function App() {
         const code = athlete.epCode
         if (lastShared.current.get(code) !== key) {
           cloud
-            .publishWatchProfile(code, user.uid, ep, wl)
+            .publishWatchProfile(code, user.uid, { ep, wl })
             .then(() => lastShared.current.set(code, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
@@ -597,6 +602,25 @@ export default function App() {
     }, 5000)
     return () => clearTimeout(id)
   }, [races, athlete, user, publish, cloud, appWl])
+  // Lien permanent du coureur : dernière course passée, avec son résultat (debrief le plus récent), dans
+  // le document <code montre>-<id> (montré quand rien n'est en cours ni à venir).
+  const lastPublished = useRef<{ race: Race; athlete: Athlete } | null>(null)
+  useEffect(() => {
+    if (!user || !cloud || !athlete.watchId) return
+    const id = setTimeout(() => {
+      const r = lastRace(races, new Date().toLocaleDateString('sv'))
+      if (!r || (lastPublished.current?.race === r && lastPublished.current.athlete === athlete)) return
+      const plan = computePlan(r, athlete)
+      if (!plan) return
+      const latest = [...(r.debriefs ?? [])].sort((a, b) => debriefStart(b) - debriefStart(a))[0]
+      const snap = buildSnapshot(user.uid, r, athlete, plan.track, plan.sim, scenarioWindows(plan.track, athlete, plan.opts))
+      lastPublished.current = { race: r, athlete }
+      cloud.publishShare(appDocId(athlete.watchId!, r.id), snapshotWithResult(snap, latest ? debriefReport(latest) : null)).catch(() => {
+        lastPublished.current = null
+      })
+    }, 5000)
+    return () => clearTimeout(id)
+  }, [races, athlete, user, cloud])
   // Appli montre Trail Planner Companion (bêta) : plan de chaque course à venir et de chaque parcours de
   // la bibliothèque (documents <code>-<id> : lien assistance complet, lu par le lien permanent du
   // coureur, avec le profil et le tracé fins pour la montre), et leur liste pour l'écran de démarrage

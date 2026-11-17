@@ -96,7 +96,7 @@ export function WatchPanel({
           <div className="runner-link">
             <p className="small">
               <strong>Lien d’assistance permanent</strong>, à donner une seule fois à ton assistance : il montre la course que ta montre
-              enregistre (champ Trail Planner, ou parcours choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course.
+              enregistre (champ Trail Planner, ou parcours choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
             </p>
             <div className="row">
               <button className="ghost" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
