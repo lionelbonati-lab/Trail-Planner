@@ -17,6 +17,8 @@ dans Firebase (Firestore) : on ne touche pas au projet Supabase.
   - **Ignorer** : garde la copie telle quelle jusqu'à la prochaine modification de l'original.
 - **Mise à jour à tout moment** : en plus du bandeau, un bouton « Mettre à jour depuis l'original » reste
   disponible sur la copie, que l'original ait changé ou non (tant qu'il est encore public).
+- **Original supprimé** (ou retiré du public) : les copies ne sont **pas** supprimées. La copie indique que
+  l'original n'est plus disponible, et le bouton de mise à jour disparaît.
 
 ## Ce qui est publié
 
