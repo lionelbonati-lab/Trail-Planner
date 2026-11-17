@@ -73,7 +73,9 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { watchStartMs, type WatchReport } from './lib/watchLive'
-import { debriefPoints, upsertLive, upsertWatch } from './lib/debrief'
+import { debriefPoints, debriefReport, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
+import { debriefNotifyOn, notifiedDebriefs, rememberNotified, showNotice } from './lib/notify'
+import { formatClock, formatDuration } from './lib/time'
 import { DebriefPage } from './components/DebriefPage'
 
 type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre' | 'debrief'
@@ -417,6 +419,29 @@ export default function App() {
       ? watchStartMs(watchReport, Math.max(nowSec, watchReport?.t ?? 0))
       : null
 
+  // Debrief prêt : sortie terminée proposée en haut de l'appli (quel que soit l'onglet) et, à
+  // l'arrivée, notification du téléphone si elle est activée (une fois par sortie et par appareil).
+  const [clockMs, setClockMs] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setClockMs(Date.now()), 60000)
+    return () => clearInterval(id)
+  }, [])
+  const announced = debriefsToAnnounce(races, clockMs)[0]
+  const announcedRace = announced ? races.find((r) => r.id === announced.raceId) : undefined
+  useEffect(() => {
+    if (!loaded) return
+    const due = debriefsToNotify(races, notifiedDebriefs(), clockMs)
+    if (!due.length) return
+    rememberNotified(due.map((x) => x.debrief.id))
+    if (!debriefNotifyOn()) return
+    for (const { raceId, debrief, report } of due) {
+      const race = races.find((r) => r.id === raceId)
+      if (!race || report.finish === null || report.total === null) continue
+      const body = `Arrivée à ${formatClock(new Date(report.finish), race.env.timeZone)} en ${formatDuration(report.total)} (${signedGap(report.total - report.plannedTotal)} sur le plan). Touche pour voir le debrief.`
+      void showNotice(`Debrief prêt · ${race.name}`, body, `tp-debrief-${debrief.id}`, `${location.origin}${location.pathname}#/debrief/${raceId}/${debrief.id}`)
+    }
+  }, [races, clockMs, loaded])
+
   // Debrief : passages relevés par la montre copiés dans la sortie (un relevé n'est traité qu'une fois).
   const debriefDone = useRef('')
   useEffect(() => {
@@ -602,6 +627,27 @@ export default function App() {
             {error} <button className="ghost" onClick={() => setError(null)} aria-label="Fermer"><X /></button>
           </div>
         )}
+        {announced && announcedRace && route.tab !== 'debrief' && !(route.tab === 'parcours' && current?.id === announcedRace.id) && (() => {
+          const rep = debriefReport(announced.debrief)
+          const day = new Intl.DateTimeFormat('fr-FR', { timeZone: announcedRace.env.timeZone, weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(rep.start))
+          return (
+            <div className="banner info no-print debrief-banner-global" role="status">
+              <span>
+                <Flag className="inline" /> <strong>{announcedRace.name}</strong> : sortie du {day} terminée
+                {rep.total !== null ? ` en ${formatDuration(rep.total)} (${signedGap(rep.total - rep.plannedTotal)} sur le plan)` : ''}. Ton debrief est prêt.
+              </span>
+              <span className="row tight">
+                <button className="primary" onClick={() => go('debrief', `${announcedRace.id}/${announced.debrief.id}`)}><Flag /> Voir le debrief</button>
+                <button
+                  className="ghost"
+                  onClick={() => updateRace({ ...announcedRace, debriefs: (announcedRace.debriefs ?? []).map((d) => (d.id === announced.debrief.id ? { ...d, seen: true } : d)) })}
+                >
+                  Ignorer
+                </button>
+              </span>
+            </div>
+          )
+        })()}
         {notice && (
           <div className="banner info notice no-print" role="status">
             <span>
