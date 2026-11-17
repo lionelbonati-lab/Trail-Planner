@@ -60,17 +60,16 @@ function drawRunnerArrow(dc as Graphics.Dc, x as Number, y as Number, heading as
     dc.fillPolygon(pts);
 }
 
-// Échelle en bas de l'écran (« 1 km » = largeur de l'écran).
-function drawScale(dc as Graphics.Dc, boxed as Boolean) as Void {
-    var h = dc.getHeight();
-    drawFitted(dc, (h * 0.93).toNumber(), mapScaleLabel(mapScaleLevel()), themeDim(), Graphics.FONT_XTINY, boxed);
+// Échelle au bas de la carte, au-dessus du bandeau d'EP (« 1 km » = largeur de l'écran).
+function drawScale(dc as Graphics.Dc, y as Number, boxed as Boolean) as Void {
+    drawFitted(dc, y, mapScaleLabel(mapScaleLevel()), themeDim(), Graphics.FONT_XTINY, boxed);
 }
 
 // --- Tracé seul (montres sans cartes) ------------------------------------------------------------------
 
 // Parcours autour du coureur, nord en haut : partie faite en gris, à venir en magenta, points de
 // passage (ravito rond orange, base de vie carré rouge, arrivée), flèche du coureur au centre.
-function drawTrace(dc as Graphics.Dc, run as Run) as Void {
+function drawTrace(dc as Graphics.Dc, run as Run, cy as Number) as Void {
     var w = dc.getWidth();
     var h = dc.getHeight();
     var route = run.route;
@@ -90,7 +89,6 @@ function drawTrace(dc as Graphics.Dc, run as Run) as Void {
     var la0 = cLat * 100000.0;
     var lo0 = cLon * 100000.0;
     var cx = w / 2;
-    var cy = h / 2;
     var done = run.state == READY ? -1.0 : run.dist;
     if (dc has :setPenWidth) {
         dc.setPenWidth(w > 300 ? 5 : 3);
@@ -296,13 +294,19 @@ class CompanionMapView extends WatchUi.MapView {
         MapView.onUpdate(dc);
         var w = dc.getWidth();
         var h = dc.getHeight();
+        var ep = run.ep;
+        var top = ep.contentTop();
+        var bottom = ep.contentBottom();
+        // Bandeaux d'EP sur un fond uni, la carte entre les deux.
+        dc.setColor(themeBg(), themeBg());
+        dc.fillRectangle(0, 0, w, top);
         if (!exploring) {
             drawRunnerArrow(dc, w / 2, h / 2, run.heading, w > 300 ? 13 : 9);
-            drawScale(dc, true);
+            drawScale(dc, bottom - 10, true);
         }
-        drawHeader(dc, run, (h * 0.12).toNumber(), true);
-        drawFooter(dc, run, (h * 0.84).toNumber(), true);
-        run.ep.drawAlarmPopup(dc);
+        drawHeader(dc, run, top + 12, true);
+        drawFooter(dc, run, bottom - 32, true);
+        ep.drawBands(dc);
         drawStateRing(dc, run);
     }
 }

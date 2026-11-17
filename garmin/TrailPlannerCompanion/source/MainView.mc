@@ -44,39 +44,47 @@ class MainView extends WatchUi.View {
             return;
         }
         var h = dc.getHeight();
+        var ep = run.ep;
+        var top = ep.contentTop();
+        var bottom = ep.contentBottom();
         if (page == 0) {
             run.ep.onUpdate(dc);
         } else if (page == 1) {
+            // Écran Trail Planner (bandeaux d'EP compris).
             run.tp.onUpdate(dc);
-            run.ep.drawAlarmPopup(dc);
         } else if (page == 2) {
             dc.setColor(themeFg(), themeBg());
             dc.clear();
-            drawProfilePage(dc);
-            // Alarme EndurancePro (popup) visible aussi sur le profil.
-            run.ep.drawAlarmPopup(dc);
+            drawProfilePage(dc, top, bottom);
+            ep.drawBands(dc);
         } else {
             dc.setColor(themeFg(), themeBg());
             dc.clear();
-            drawTrace(dc, run);
-            drawScale(dc, true);
-            drawHeader(dc, run, (h * 0.12).toNumber(), true);
-            drawFooter(dc, run, (h * 0.84).toNumber(), true);
-            run.ep.drawAlarmPopup(dc);
+            drawTrace(dc, run, (top + bottom) / 2);
+            // Bandeaux d'EP sur un fond uni, le tracé passant dessous.
+            dc.setColor(themeBg(), themeBg());
+            dc.fillRectangle(0, 0, dc.getWidth(), top);
+            drawScale(dc, bottom - 10, true);
+            drawHeader(dc, run, top + 12, true);
+            drawFooter(dc, run, bottom - 32, true);
+            ep.drawBands(dc);
         }
+        // Avant le départ et en pause : anneau d'état par-dessus l'anneau de FC d'EP.
         drawStateRing(dc, run);
     }
 
     // --- Écran du profil -------------------------------------------------------------------------------
 
-    function drawProfilePage(dc as Graphics.Dc) as Void {
+    // Profil entre les bandeaux d'EP (de top à bottom) : écart au plan en haut, profil, touche à presser
+    // en bas avant le départ et en pause.
+    function drawProfilePage(dc as Graphics.Dc, top as Number, bottom as Number) as Void {
         var w = dc.getWidth();
         var h = dc.getHeight();
         var plan = run.plan;
         if (plan != null && plan.hasProfile()) {
             // Cadre du profil : il tient dans un écran rond (coins sur le cercle).
             var side = isRound() ? (w * 0.11).toNumber() : (w * 0.04).toNumber();
-            var box = [side, (h * 0.22).toNumber(), w - side, (h * 0.72).toNumber()] as Array<Number>;
+            var box = [side, top + 30, w - side, bottom - (run.state == RUNNING ? 16 : 30)] as Array<Number>;
             var pos = run.state == READY ? 0.0 : run.dist;
             drawProfile(dc, plan, pos, zoomSpan(plan.total), slopesOn(), box);
         } else {
@@ -84,8 +92,8 @@ class MainView extends WatchUi.View {
             dc.setColor(themeDim(), Graphics.COLOR_TRANSPARENT);
             dc.drawText(w / 2, h / 2, Graphics.FONT_SMALL, text, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
         }
-        drawHeader(dc, run, (h * 0.14).toNumber(), false);
-        drawFooter(dc, run, (h * 0.86).toNumber(), false);
+        drawHeader(dc, run, top + 14, false);
+        drawFooter(dc, run, bottom - 9, false);
     }
 
     // --- Fin de la sortie ------------------------------------------------------------------------------

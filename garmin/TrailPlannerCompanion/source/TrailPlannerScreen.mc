@@ -15,9 +15,11 @@ import Toybox.WatchUi;
 // profil, la carte et l'envoi à l'assistance lisent ses données. Adaptations, signalées « Appli : » :
 // - classe simple (plus de WatchUi.DataField) : Run appelle compute() chaque seconde et onTimerLap() au
 //   bouton Lap, MainView appelle onUpdate() ; le plan est donné par Run (setPlan) ;
-// - plein écran et thème d'EndurancePro (getObscurityFlags, getBackgroundColor) ;
-// - rappels nutrition, arrivée au ravito et alerte de barrière : l'appli bascule sur cet écran
-//   (focusKey) au lieu de l'alerte de champ de données ;
+// - écran redessiné au style d'EndurancePro (onUpdate, entre ses bandeaux) : colonnes prochain point /
+//   arrivée, colonne centrale d'EP, barre de progression entre ravitos, écart réel / prévu ; au ravito,
+//   « À consommer » / « À prendre », temps passé et tronçon suivant ; thème d'EP ;
+// - rappels nutrition et alerte de barrière : popup d'EP (sur tous les écrans) ; arrivée au ravito :
+//   l'appli bascule sur cet écran (focusKey) ;
 // - suivi gardé dans `progress` et envoyé par Run (au lieu de la tâche de fond du champ).
 // Une évolution du champ se reporte ici à la main.
 //
@@ -77,6 +79,7 @@ class TrailPlannerScreen {
     var cutUntil = 0;
     var progress = null;      // dernier relevé (Dictionary : t, s, d, p, lat, lon, bat)
     var progressDirty = false; // passages changés depuis le dernier envoi
+    var paceRatio = 1.0;      // rythme réel / prévu au dernier passage (durée du tronçon suivant au ravito)
 
     function initialize() {
     }
@@ -118,33 +121,19 @@ class TrailPlannerScreen {
         }
     }
 
-    // Appli : plein écran (le champ est prévu pour un écran de données à lui seul).
-    function getObscurityFlags() as Number {
-        return OBSCURE_TOP | OBSCURE_BOTTOM | OBSCURE_LEFT | OBSCURE_RIGHT;
-    }
-
     // Appli : fond du thème d'EndurancePro (réglage Mode sombre).
     function getBackgroundColor() as Number {
         return themeBg();
     }
 
-    // Appli : événement qui fait basculer l'appli sur cet écran (null : aucun) — rappel nutrition
-    // (30 s), arrivée à un ravito ou à un point avec une note (jusqu'au départ), alerte de barrière
-    // horaire (10 s). Une même clé ne fait basculer qu'une fois.
+    // Appli : événement qui fait basculer l'appli sur cet écran (null : aucun) — arrivée à un ravito,
+    // jusqu'au départ (les rappels et la barrière passent par le popup d'EP, sur tous les écrans). Une
+    // même clé ne fait basculer qu'une fois.
     function focusKey(now as Number) as String or Null {
-        if (plan == null || !running) {
+        if (plan == null || !running || bagLeg < 0 || !ravitoShown(now)) {
             return null;
         }
-        if (now < fuelUntil) {
-            return "f" + fuelUntil;
-        }
-        if (ravitoShown(now)) {
-            return "r" + bagCp;
-        }
-        if (now < cutUntil) {
-            return "c" + cutIdx;
-        }
-        return null;
+        return "r" + bagCp;
     }
 
     // Points notés (passages, alertes) d'un plan à l'autre : même point à moins de 100 m près.
@@ -249,6 +238,7 @@ class TrailPlannerScreen {
                 }
                 ratio = 1.0 + DAMPING * (raw - 1.0);
             }
+            paceRatio = ratio;
             // Départ réel du ravito (2e tour Lap) s'il est connu, sinon arrivée + arrêt prévu.
             t0 = departs.hasKey(ref) ? departs[ref] as Number : passes[ref] + plan.cpStop[ref];
             base = planned + plan.cpStop[ref];
@@ -376,9 +366,18 @@ class TrailPlannerScreen {
         return plan != null ? plan.fuelMin : 0;
     }
 
-    // Appli : pas d'alerte de champ de données ; l'appli bascule sur cet écran, qui montre le rappel
-    // pendant 30 s (fuelUntil, focusKey).
+    // Appli : rappel « Manger / boire » en popup d'EndurancePro, sur tous les écrans, 30 s : produit
+    // prévu et eau à boire d'ici le rappel suivant (« Gel · 0.2 L »).
     function notifyFood(k as Number) as Void {
+        var text = "Manger / boire";
+        if (plan != null && k >= 0 && k < plan.foodP.size()) {
+            text = plan.foodLabel(k);
+            var water = plan.foodWater(k);
+            if (water >= 0.05) {
+                text += " · " + water.format("%.1f") + " L";
+            }
+        }
+        getRun().ep.showPopup(false, ICON_FOOD, text, 30);
     }
 
     function vibrate(strong as Boolean) as Void {
@@ -509,6 +508,8 @@ class TrailPlannerScreen {
             alerted.put(cutIdx, true);
             vibrate(true);
             cutUntil = now + 10;
+            // Appli : popup d'EndurancePro, 10 s.
+            getRun().ep.showPopup(true, ICON_ALARM, (margin >= 0 ? "BH " : "Hors délai ") + signedMinutes(margin), 10);
         }
 
         if (changed || now - lastSaved >= 60) {
@@ -600,15 +601,6 @@ class TrailPlannerScreen {
         return (t.hour as Number).format("%02d") + ":" + (t.min as Number).format("%02d");
     }
 
-    // Durée : « 3h12 », « 45 min ».
-    function duration(sec as Number) as String {
-        var m = (sec + 30) / 60;
-        if (m < 60) {
-            return m + " min";
-        }
-        return (m / 60) + "h" + (m % 60).format("%02d");
-    }
-
     // « +6' », « −3' », « +1h05 ».
     function signedMinutes(sec as Float or Number) as String {
         var s = sec.toFloat();
@@ -621,33 +613,6 @@ class TrailPlannerScreen {
         return sign + (total / 60) + "h" + (total % 60).format("%02d");
     }
 
-    // Distance, D+ et D- de la distance `from` à la distance `to` (m), du texte le plus complet au plus
-    // court : « 4.2 km · D+245 · D-30 ». Plan sans profil de dénivelé (ancienne version) : distance seule.
-    function remaining(from as Float, to as Float) as Array<String> {
-        var m = to - from;
-        var km = ((m > 0 ? m : 0.0) / 1000.0).format("%.1f");
-        if (!plan.hasClimb()) {
-            return [km + " km"] as Array<String>;
-        }
-        var c = plan.climbBetween(from, to);
-        var up = "D+" + c[0];
-        var dn = "D-" + c[1];
-        return [km + " km · " + up + " · " + dn, km + " km " + up + " " + dn, km + " " + up + " " + dn] as Array<String>;
-    }
-
-    // Avant le départ : distance et D+ du parcours, « 23.4 km · D+1245 ».
-    function courseStats() as Array<String> {
-        var km = (plan.total / 1000.0).format("%.1f");
-        var up = plan.dPlus;
-        if (up < 0 && plan.hasClimb()) {
-            up = plan.climbUp[plan.climbUp.size() - 1];
-        }
-        if (up < 0) {
-            return [km + " km"] as Array<String>;
-        }
-        return [km + " km · D+" + up, km + " km D+" + up] as Array<String>;
-    }
-
     // Raccourcit un texte pour qu'il tienne dans maxW pixels.
     function fit(dc as Graphics.Dc, text as String, font, maxW as Number) as String {
         var t = text;
@@ -655,160 +620,6 @@ class TrailPlannerScreen {
             t = t.substring(0, t.length() - 1) as String;
         }
         return t;
-    }
-
-    // Texte, ou variantes de la plus complète à la plus courte : la première qui tient dans maxW pixels
-    // (la dernière est raccourcie au besoin).
-    function pick(dc as Graphics.Dc, text, font, maxW as Number) as String {
-        var opts = text instanceof Array ? text as Array : [text];
-        var last = opts.size() - 1;
-        for (var k = 0; k < last; k++) {
-            if (dc.getTextWidthInPixels(opts[k] as String, font) <= maxW) {
-                return opts[k] as String;
-            }
-        }
-        return fit(dc, opts[last] as String, font, maxW);
-    }
-
-    // Largeur utilisable à la hauteur y du champ : sur écran rond (Enduro 3, Fenix…),
-    // c'est la corde du cercle à cette hauteur, déduite de la position du champ.
-    function usableWidth(y as Number, h as Number, w as Number) as Number {
-        var ds = System.getDeviceSettings();
-        if (ds.screenShape != System.SCREEN_SHAPE_ROUND) {
-            return w - 6;
-        }
-        var flags = getObscurityFlags();
-        var sh = ds.screenHeight;
-        var fieldTop = (sh - h) / 2;
-        var topEdge = (flags & OBSCURE_TOP) != 0;
-        var bottomEdge = (flags & OBSCURE_BOTTOM) != 0;
-        if (topEdge && !bottomEdge) {
-            fieldTop = 0;
-        } else if (bottomEdge && !topEdge) {
-            fieldTop = sh - h;
-        }
-        var r = ds.screenWidth / 2.0;
-        var dy = fieldTop + y - sh / 2.0;
-        var c2 = r * r - dy * dy;
-        if (c2 <= 0) {
-            return 0;
-        }
-        var chord = (2 * Math.sqrt(c2)).toNumber() - 12;
-        return chord < w - 6 ? chord : w - 6;
-    }
-
-    // Taille d'une police système, de 0 (XTINY) à 4 (LARGE).
-    function fontRank(font) as Number {
-        if (font == Graphics.FONT_LARGE) {
-            return 4;
-        }
-        if (font == Graphics.FONT_MEDIUM) {
-            return 3;
-        }
-        if (font == Graphics.FONT_SMALL) {
-            return 2;
-        }
-        if (font == Graphics.FONT_TINY) {
-            return 1;
-        }
-        return 0;
-    }
-
-    function linesHeight(dc as Graphics.Dc, lines as Array) as Number {
-        var total = 0;
-        for (var i = 0; i < lines.size(); i++) {
-            total += dc.getFontHeight(lines[i][1]);
-        }
-        return total;
-    }
-
-    // Hauteur utilisable du champ [haut, bas] : marge du côté des bords arrondis.
-    function area(h as Number) as Array<Number> {
-        var flags = getObscurityFlags();
-        var top = (flags & OBSCURE_TOP) != 0 ? (h * 0.10).toNumber() : 2;
-        var bottom = (flags & OBSCURE_BOTTOM) != 0 ? h - (h * 0.10).toNumber() : h - 2;
-        return [top, bottom] as Array<Number>;
-    }
-
-    // Dessine des lignes [texte, police, couleur, rang] centrées dans le champ, en évitant les bords
-    // arrondis. Texte : chaîne ou variantes (voir pick). Si tout ne tient pas en hauteur : grand chiffre
-    // ramené à la police moyenne, puis lignes facultatives retirées, la moins utile (rang le plus élevé)
-    // d'abord (rang 0 ou absent : toujours affichée), puis polices réduites, les plus grandes d'abord.
-    function drawLines(dc as Graphics.Dc, all as Array) as Void {
-        var lines = all;
-        var w = dc.getWidth();
-        var h = dc.getHeight();
-        var a = area(h);
-        var top = a[0];
-        var bottom = a[1];
-        var fonts = [Graphics.FONT_XTINY, Graphics.FONT_TINY, Graphics.FONT_SMALL, Graphics.FONT_MEDIUM];
-        var total = linesHeight(dc, lines);
-        while (total > bottom - top) {
-            var big = -1;
-            var bigRank = 0;
-            var drop = -1;
-            var dropRank = 0;
-            for (var i = 0; i < lines.size(); i++) {
-                var fr = fontRank(lines[i][1]);
-                if (fr > bigRank) {
-                    big = i;
-                    bigRank = fr;
-                }
-                var r = lines[i].size() > 3 ? lines[i][3] as Number : 0;
-                if (r > dropRank) {
-                    drop = i;
-                    dropRank = r;
-                }
-            }
-            if (bigRank == 4 || (drop < 0 && big >= 0)) {
-                for (var i = 0; i < lines.size(); i++) {
-                    if (fontRank(lines[i][1]) == bigRank) {
-                        lines[i][1] = fonts[bigRank - 1];
-                    }
-                }
-            } else if (drop >= 0) {
-                var kept = [];
-                for (var i = 0; i < lines.size(); i++) {
-                    if (i != drop) {
-                        kept.add(lines[i]);
-                    }
-                }
-                lines = kept;
-            } else {
-                break;
-            }
-            total = linesHeight(dc, lines);
-        }
-        var y = top + (bottom - top - total) / 2;
-        for (var i = 0; i < lines.size(); i++) {
-            var font = lines[i][1];
-            var fh = dc.getFontHeight(font);
-            dc.setColor(lines[i][2], Graphics.COLOR_TRANSPARENT);
-            if (lines[i][0] == :bar) {
-                drawBar(dc, y, fh, usableWidth(y + fh / 2, h, w), lines[i][2]);
-            } else {
-                dc.drawText(w / 2, y, font, pick(dc, lines[i][0], font, usableWidth(y + fh / 2, h, w)), Graphics.TEXT_JUSTIFY_CENTER);
-            }
-            y += fh;
-        }
-    }
-
-    // Note d'un point sur une ou deux lignes (coupée à un espace).
-    function wrapNote(text as String) as Array<String> {
-        var max = 22;
-        if (text.length() <= max) {
-            return [text] as Array<String>;
-        }
-        var cut = -1;
-        for (var k = 1; k < text.length() && k <= max; k++) {
-            if ((text.substring(k, k + 1) as String).equals(" ")) {
-                cut = k;
-            }
-        }
-        if (cut < 0) {
-            return [text] as Array<String>;
-        }
-        return [text.substring(0, cut) as String, text.substring(cut + 1, text.length()) as String] as Array<String>;
     }
 
     // Éléments du sac sur au plus `rows` lignes : on réunit chaque fois les deux voisins dont la ligne
@@ -838,16 +649,6 @@ class TrailPlannerScreen {
         return items;
     }
 
-    // Passage à un point avec une note mais sans sac : nom du point et note.
-    function drawNote(dc as Graphics.Dc, fg) as Void {
-        var lines = [[bagCp < plan.cpName.size() ? plan.cpName[bagCp] : "Note", Graphics.FONT_XTINY, fg, 1]];
-        var note = wrapNote(plan.cpNote[bagCp]);
-        for (var i = 0; i < note.size(); i++) {
-            lines.add([note[i], Graphics.FONT_SMALL, fg, 0]);
-        }
-        drawLines(dc, lines);
-    }
-
     // Durée en minutes et secondes : « 4:05 », « 1:02:30 ».
     function mmss(sec as Number) as String {
         var s0 = sec > 0 ? sec : 0;
@@ -857,79 +658,93 @@ class TrailPlannerScreen {
         return h0 > 0 ? h0 + ":" + m0.format("%02d") + ":" + r0 : m0 + ":" + r0;
     }
 
-    // Écran du ravito, jusqu'au départ (2e tour Lap) : pause en cours / prévue (rouge une fois dépassée),
-    // ravito suivant (distance, D+, D-), à manger sur place, puis « À emporter » : note du point et contenu
-    // du sac, un élément par ligne si la hauteur le permet, sinon deux voisins réunis.
-    function drawBag(dc as Graphics.Dc, fg, red) as Void {
-        if (bagLeg < 0) {
-            drawNote(dc, fg);
-            return;
-        }
-        var now = Time.now().value();
-        var entries = plan.bag(bagLeg);
-        var site = plan.site(bagLeg);
-        var note = (bagCp >= 0 && bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) ? wrapNote(plan.cpNote[bagCp]) : [] as Array<String>;
-        var from = plan.legFrom[bagLeg];
-        var to = plan.legTo[bagLeg];
-        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
-        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
-        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
-        // Pause : depuis l'arrivée au ravito (passage noté), comparée à l'arrêt prévu.
-        var arrived = passes.hasKey(bagCp) ? passes[bagCp] as Number : now;
-        var stop = plan.cpStop[bagCp];
-        var paused = now - arrived;
-        var pause = "Pause " + mmss(paused) + (stop > 0 ? " / " + mmss(stop) : "");
-        var lines = [
-            [pause, Graphics.FONT_SMALL, stop > 0 && paused > stop ? red : fg, 0],
-            [toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, Graphics.FONT_XTINY, fg, 2],
-            [remaining(d0, d1), Graphics.FONT_XTINY, fg, 0]
-        ];
-        // À manger ou boire ici (produits « sur ravito » du plan).
-        if (site.size() > 0) {
-            lines.add(["Manger ici", Graphics.FONT_XTINY, fg, 0]);
-            var siteRows = packItems(dc, site, Graphics.FONT_XTINY, 2);
-            for (var i = 0; i < siteRows.size(); i++) {
-                lines.add([siteRows[i], Graphics.FONT_XTINY, fg, 0]);
-            }
-        }
-        var title = "À emporter";
-        lines.add([from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, fg, 1]);
-        // Note du point (« frontale, veste… ») sous le titre, vers le centre où l'écran est large.
-        for (var i = 0; i < note.size(); i++) {
-            lines.add([note[i], Graphics.FONT_XTINY, fg, 0]);
-        }
-        // Place restante pour le sac : SMALL si chaque élément tient sur sa ligne, sinon XTINY et voisins réunis.
-        // (« Vers… », facultatif, non compté : retiré d'abord s'il le faut).
-        var a = area(dc.getHeight());
-        var avail = a[1] - a[0];
-        for (var i = 0; i < lines.size(); i++) {
-            if (lines[i][3] < 2) {
-                avail -= dc.getFontHeight(lines[i][1]);
-            }
-        }
-        // Grande police seulement si tout tient, titres compris ; sinon petite police.
-        var font = Graphics.FONT_SMALL;
-        if (entries.size() * dc.getFontHeight(font) > a[1] - a[0] - linesHeight(dc, lines)) {
-            font = Graphics.FONT_XTINY;
-        }
-        var rows = avail / dc.getFontHeight(font);
-        if (rows < 1) {
-            rows = 1;
-        }
-        var items = packItems(dc, entries, font, rows);
-        for (var i = 0; i < items.size(); i++) {
-            lines.add([items[i], font, fg, 0]);
-        }
-        drawLines(dc, lines);
+    // --- Appli : écran au style d'EndurancePro ------------------------------------------------------
+    // Mêmes éléments graphiques qu'EP, entre ses bandeaux (FC, tour, 2e métrique, barre FC en haut ;
+    // autonomie, mode d'allure, heure en bas) : colonne gauche = vers le prochain point (km, D+, D-),
+    // colonne centrale d'EP, colonne droite = vers l'arrivée (km, D+, D-) ; à la place de la batterie,
+    // la progression d'un ravito au suivant ; dessous, écart réel / prévu et heure estimée au prochain
+    // point ; à la place du chrono, le prochain point (ou passage, hors parcours, marge sur la barrière en
+    // alternance). Au ravito : « À consommer » / « À prendre » en alternance, tronçon suivant, temps passé
+    // sur l'arrêt prévu, durée prévue du tronçon suivant.
+
+    // Icônes d'EP (polices iconsMed et paramIcons).
+    const ICON_WAYPOINT = "";
+    const ICON_FOOD = "";
+    const ICON_FLAG = "";
+    const ICON_DOWN_R = "";
+    const ICON_UP_R = "";
+    const ICON_ALARM = "";
+
+    // Demi-largeur de l'écran rond à la hauteur y.
+    function halfChord(y as Number, w as Number, h as Number) as Number {
+        var r = w / 2.0;
+        var dy = y - h / 2.0;
+        var c2 = r * r - dy * dy;
+        return c2 > 0 ? Math.sqrt(c2).toNumber() : 0;
     }
 
-    // Barre de progression du tronçon en cours (d'un ravito au suivant, départ et arrivée compris), au
-    // centre de l'écran : partie faite pleine, un trait par point de passage, un point par produit à
-    // prendre (gris une fois rappelé), un triangle à la position.
-    function drawBar(dc as Graphics.Dc, y as Number, h as Number, maxW as Number, fg) as Void {
+    // Valeur centrée sur l'axe x avec son icône à gauche, comme les colonnes d'EP.
+    function iconValue(dc as Graphics.Dc, l, x as Number, y as Number, icon as String, value as String, color, fg) as Void {
+        var font = l.fontSecondary;
+        var vx = x - dc.getTextWidthInPixels(value, font) / 2;
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(vx, y, font, value, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(vx - 5, y + l.iconSmallOffsetY, getRun().ep.iconFonts()[0], icon, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // Colonne « km, D+, D- » de la distance `from` à la distance `to` (m), sur l'axe x.
+    function legColumn(dc as Graphics.Dc, l, x as Number, from as Float, to as Float, icon as String, fg) as Void {
+        var m = to - from;
+        iconValue(dc, l, x, l.dataRowTopY, icon, ((m > 0 ? m : 0.0) / 1000.0).format("%.1f"), fg, fg);
+        var up = "--";
+        var dn = "--";
+        if (plan.hasClimb()) {
+            var c = plan.climbBetween(from, to);
+            up = c[0].toString();
+            dn = c[1].toString();
+        }
+        iconValue(dc, l, x, l.dataRowMidY, ICON_UP_R, up, fg, fg);
+        iconValue(dc, l, x, l.dataRowBotY, ICON_DOWN_R, dn, fg, fg);
+    }
+
+    // Durée courte : « 45' », « 2h15 ».
+    function shortDuration(sec as Number) as String {
+        var m = (sec + 30) / 60;
+        return m < 60 ? m + "'" : (m / 60) + "h" + (m % 60).format("%02d");
+    }
+
+    // Ligne du bas (place du chrono d'EP), raccourcie à la largeur de l'écran rond.
+    function bottomLine(dc as Graphics.Dc, l, text as String, color) as Void {
+        var w = dc.getWidth();
+        var y = l.TimerY;
+        var font = Graphics.FONT_MEDIUM;
+        var fh = dc.getFontHeight(font);
+        var lo = halfChord(y - fh / 2, w, dc.getHeight());
+        var hi = halfChord(y + fh / 2, w, dc.getHeight());
+        dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(w / 2, y, font, fit(dc, text, font, 2 * (lo < hi ? lo : hi) - 10), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // Barre à la place de la batterie d'EP : remplie de la fraction f (0 à 1), icône repas à gauche.
+    function barFrame(dc as Graphics.Dc, l, f as Float, color, fg) as Void {
+        var fw = (l.batBarW * (f < 0 ? 0.0 : (f > 1 ? 1.0 : f))).toNumber();
+        if (fw > 2 * l.batBarR) {
+            dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+            dc.fillRoundedRectangle(l.batBarX, l.batteryBarY, fw, l.batBarH, l.batBarR);
+        }
+        dc.setPenWidth(1);
+        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+        dc.drawRoundedRectangle(l.batBarX, l.batteryBarY, l.batBarW, l.batBarH, l.batBarR);
+        dc.drawText(l.battIconX, l.battIconY + l.iconSmallOffsetY, getRun().ep.iconFonts()[0], ICON_FOOD, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // Progression du tronçon en cours, du dernier ravito passé (ou du départ) au suivant (ou à
+    // l'arrivée) : partie faite pleine, un trait par point de passage, un point par produit à prendre
+    // (orange à venir, gris déjà rappelé). Sans triangle de position.
+    function drawBar(dc as Graphics.Dc, l, fg) as Void {
         var dark = getBackgroundColor() == Graphics.COLOR_BLACK;
         var gray = dark ? Graphics.COLOR_DK_GRAY : Graphics.COLOR_LT_GRAY;
-        // Bornes : dernier ravito passé (ou départ), ravito suivant (ou arrivée).
         var d0 = 0.0;
         var d1 = plan.total.toFloat();
         var from = -1;
@@ -953,52 +768,162 @@ class TrailPlannerScreen {
             barFrom = from;
             barDots = [] as Array<Float>;
             barFirst = 0;
-            var l = plan.legFromCp(from);
-            if (l >= 0) {
-                barFirst = plan.legFirst[l];
-                var n = plan.legCount(l);
+            var lg = plan.legFromCp(from);
+            if (lg >= 0) {
+                barFirst = plan.legFirst[lg];
+                var n = plan.legCount(lg);
                 for (var k = 0; k < n; k++) {
                     barDots.add(plan.foodDist(barFirst + k));
                 }
             }
         }
-        var bw = maxW - 16;
-        var x0 = (dc.getWidth() - bw) / 2;
-        var cy = y + h / 2;
         var span = d1 - d0;
-        var xp = x0 + (((dist - d0) / span) * bw).toNumber();
-        if (xp < x0) {
-            xp = x0;
-        } else if (xp > x0 + bw) {
-            xp = x0 + bw;
-        }
-        dc.setColor(gray, Graphics.COLOR_TRANSPARENT);
-        dc.fillRoundedRectangle(x0, cy - 3, bw, 6, 3);
+        barFrame(dc, l, running ? (dist - d0) / span : 0.0, fg, fg);
+        var x0 = l.batBarX;
+        var bw = l.batBarW;
+        var y = l.batteryBarY;
+        var bh = l.batBarH;
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        if (xp - x0 >= 6) {
-            dc.fillRoundedRectangle(x0, cy - 3, xp - x0, 6, 3);
-        }
-        // Ravitos aux deux bouts.
-        dc.fillCircle(x0, cy, 4);
-        dc.fillCircle(x0 + bw, cy, 4);
-        // Points de passage : traits.
         for (var i = 0; i < plan.cpDist.size(); i++) {
             var cd = plan.cpDist[i].toFloat();
             if (cd > d0 && cd < d1 && !plan.cpKind[i].equals("r")) {
-                var x = x0 + (((cd - d0) / span) * bw).toNumber();
-                dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-                dc.fillRectangle(x - 1, cy - 7, 2, 14);
+                dc.fillRectangle(x0 + (((cd - d0) / span) * bw).toNumber() - 1, y - 3, 2, bh + 6);
             }
         }
-        // Produits à prendre : points (orange à venir, gris déjà rappelés).
         for (var k = 0; k < barDots.size(); k++) {
-            var x = x0 + (((barDots[k] - d0) / span) * bw).toNumber();
             dc.setColor(barFirst + k < food ? gray : Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(x, cy, 4);
+            dc.fillCircle(x0 + (((barDots[k] - d0) / span) * bw).toNumber(), y + bh / 2, 3);
         }
-        // Position : triangle au-dessus de la barre.
+    }
+
+    // Prochain point vu d'ici (avant le départ : le premier après le départ).
+    function nextPoint() as Number {
+        if (running) {
+            return next;
+        }
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (plan.cpDist[i] > 50) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    function drawMain(dc as Graphics.Dc, l, fg, red, green) as Void {
+        var now = Time.now().value();
+        var ep = getRun().ep;
+        ep.drawCenterColumn(dc);
+        var here = running ? dist : 0.0;
+        var nx = nextPoint();
+        var target = nx >= 0 ? plan.cpDist[nx].toFloat() : plan.total.toFloat();
+        legColumn(dc, l, l.axisLeftX, here, target, ICON_WAYPOINT, fg);
+        legColumn(dc, l, l.axisRightX, here, plan.total.toFloat(), ICON_FLAG, fg);
+        drawBar(dc, l, fg);
+
+        // Sous la barre : écart réel / prévu à gauche, heure estimée au prochain point à droite. Avant le
+        // départ : temps prévu du parcours.
+        var font = l.fontSecondary;
+        if (running) {
+            var gap = dist > 200 ? signedMinutes(delta) : "0'";
+            dc.setColor(delta > 60 ? red : (delta < -60 ? green : fg), Graphics.COLOR_TRANSPARENT);
+            dc.drawText(l.axisLeftX, l.DistY, font, gap, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+            var eta = clock(nx >= 0 && nx < etas.size() ? etas[nx] : finishEta);
+            var ex = l.axisRightX - dc.getTextWidthInPixels(eta, font) / 2;
+            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(ex, l.DistY, font, eta, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(ex - 5, l.DistY, Graphics.FONT_XTINY, "E", Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+        } else {
+            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(dc.getWidth() / 2, l.DistY, font, shortDuration(plan.finishTime()), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        }
+
+        // Place du chrono : hors parcours ; passage ou départ (5 s) ; note du point ; sinon prochain point,
+        // en alternance (5 s) avec la marge sur la prochaine barrière horaire.
+        if (!running) {
+            bottomLine(dc, l, plan.name, fg);
+        } else if (offRoute) {
+            bottomLine(dc, l, "Hors parcours · " + offBy + " m", red);
+        } else if (now < lapMsgUntil) {
+            bottomLine(dc, l, lapTitle + " · " + lapMsg, green);
+        } else if (bagCp >= 0 && bagLeg < 0 && ravitoShown(now)) {
+            bottomLine(dc, l, plan.cpNote[bagCp], fg);
+        } else if (cutIdx >= 0 && (now / 5) % 2 == 1) {
+            bottomLine(dc, l, (margin >= 0 ? "Marge BH " : "Hors délai ") + signedMinutes(margin), margin < CUTOFF_WARN ? red : fg);
+        } else {
+            bottomLine(dc, l, nx >= 0 ? plan.cpName[nx] : "Arrivée", fg);
+        }
+    }
+
+    // Au ravito, jusqu'au départ : à gauche « À consommer » (produits sur ravito) puis « À prendre » (sac,
+    // note du point), 5 s chacun ; à droite le tronçon suivant ; barre = temps passé sur l'arrêt prévu.
+    function drawRavito(dc as Graphics.Dc, l, fg, red, green) as Void {
+        var now = Time.now().value();
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var xr = l.PiconX2;
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        dc.fillPolygon([[xp - 5, cy - 12], [xp + 5, cy - 12], [xp, cy - 5]]);
+        dc.drawLine(xr, l.ParamBarY1, xr, l.ParamBarY2);
+
+        // Gauche : liste en alternance.
+        var site = plan.site(bagLeg);
+        var bagItems = [] as Array<String>;
+        if (bagCp >= 0 && bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) {
+            bagItems.add(plan.cpNote[bagCp]);
+        }
+        var entries = plan.bag(bagLeg);
+        for (var i = 0; i < entries.size(); i++) {
+            bagItems.add(entries[i]);
+        }
+        var eat = site.size() > 0 && (now / 5) % 2 == 0;
+        var title = eat ? "À consommer" : "À prendre";
+        var items = eat ? site : bagItems;
+        var tf = Graphics.FONT_XTINY;
+        var lf = Graphics.FONT_SMALL;
+        var y = l.ParamBarY1 + dc.getFontHeight(tf) / 2 + 2;
+        dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(xr - 6, y, tf, title, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+        var lh = dc.getFontHeight(lf);
+        y += dc.getFontHeight(tf) / 2 + lh / 2 + 2;
+        var rows = packItems(dc, items, lf, 3);
+        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+        for (var i = 0; i < rows.size() && i < 3; i++) {
+            var maxW = xr - 6 - (w / 2 - halfChord(y, w, h)) - 4;
+            dc.drawText(xr - 6, y, lf, fit(dc, rows[i], lf, maxW), Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+            y += lh;
+        }
+
+        // Droite : tronçon suivant, jusqu'au prochain ravito (ou à l'arrivée).
+        var from = plan.legFrom[bagLeg];
+        var to = plan.legTo[bagLeg];
+        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
+        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
+        legColumn(dc, l, l.axisRightX, d0, d1, to >= 0 ? ICON_WAYPOINT : ICON_FLAG, fg);
+
+        // Barre : temps passé au ravito sur l'arrêt prévu (rouge une fois dépassé).
+        var arrived = passes.hasKey(bagCp) ? passes[bagCp] as Number : now;
+        var stop = plan.cpStop[bagCp];
+        var paused = now - arrived;
+        var over = stop > 0 && paused > stop;
+        barFrame(dc, l, stop > 0 ? paused.toFloat() / stop : 1.0, over ? red : green, fg);
+
+        // Sous la barre : pause réelle / prévue à gauche ; durée prévue du tronçon suivant (corrigée du
+        // rythme du moment) à droite.
+        var pf = Graphics.FONT_MEDIUM;
+        dc.setColor(over ? red : fg, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(l.axisLeftX, l.DistY, pf, mmss(paused) + (stop > 0 ? "/" + mmss(stop) : ""), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        var dep = (from >= 0 && from < plan.cpPlan.size()) ? plan.cpPlan[from] + plan.cpStop[from] : 0;
+        var arr = (to >= 0 && to < plan.cpPlan.size()) ? plan.cpPlan[to] : plan.finishTime();
+        var legTime = shortDuration(((arr - dep > 0 ? arr - dep : 0) * paceRatio).toNumber());
+        var font = l.fontSecondary;
+        var lx = l.axisRightX - dc.getTextWidthInPixels(legTime, font) / 2;
+        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(lx, l.DistY, font, legTime, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(lx - 5, l.DistY + l.iconSmallOffsetY, getRun().ep.iconFonts()[0], ICON_FOOD, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+
+        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
+        bottomLine(dc, l, toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, fg);
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -1007,107 +932,19 @@ class TrailPlannerScreen {
         var fg = dark ? Graphics.COLOR_WHITE : Graphics.COLOR_BLACK;
         var red = dark ? Graphics.COLOR_RED : Graphics.COLOR_DK_RED;
         var green = dark ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
+        var ep = getRun().ep;
+        var l = ep.lay();
         dc.setColor(fg, bg);
         dc.clear();
-
         if (plan == null) {
-            drawLines(dc, [[status, Graphics.FONT_XTINY, fg]]);
-            return;
+            dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_SMALL, status, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        } else if (running && bagLeg >= 0 && ravitoShown(Time.now().value())) {
+            drawRavito(dc, l, fg, red, green);
+        } else {
+            drawMain(dc, l, fg, red, green);
         }
-        if (!running) {
-            // Avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une course seulement ;
-            // avec quoi partir (sac du premier tronçon, 4 lignes au plus).
-            var dur = duration(plan.finishTime());
-            var intro = [
-                [plan.name, Graphics.FONT_XTINY, fg, 1],
-                [courseStats(), Graphics.FONT_SMALL, fg, 0],
-                [["Temps prévu " + dur, "Prévu " + dur, dur], Graphics.FONT_XTINY, fg, 2]
-            ];
-            if (plan.isRace()) {
-                intro.add(plan.start > 0 ? ["Départ " + clock(plan.start), Graphics.FONT_SMALL, fg, 0] : ["Départ libre", Graphics.FONT_XTINY, fg, 3]);
-            }
-            var l0 = plan.legFromCp(-1);
-            if (l0 >= 0) {
-                var rows0 = packItems(dc, plan.bag(l0), Graphics.FONT_XTINY, 4);
-                if (rows0.size() > 0) {
-                    intro.add(["Emporter au départ", Graphics.FONT_XTINY, fg, 3]);
-                }
-                for (var i = 0; i < rows0.size(); i++) {
-                    intro.add([rows0[i], Graphics.FONT_XTINY, fg, 0]);
-                }
-            }
-            drawLines(dc, intro);
-            return;
-        }
-        var now = Time.now().value();
-        if (now < fuelUntil) {
-            // Rappel nutrition : produit prévu et eau à boire d'ici le rappel suivant.
-            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_ORANGE);
-            dc.clear();
-            if (foodMsg < 0 || foodMsg >= plan.foodP.size()) {
-                drawLines(dc, [["Manger / boire", Graphics.FONT_MEDIUM, Graphics.COLOR_WHITE]]);
-                return;
-            }
-            var meal = [["Manger / boire", Graphics.FONT_XTINY, Graphics.COLOR_WHITE, 2], [plan.foodLabel(foodMsg), Graphics.FONT_MEDIUM, Graphics.COLOR_WHITE, 0]];
-            var water = plan.foodWater(foodMsg);
-            if (water >= 0.05) {
-                meal.add(["Boire " + water.format("%.1f") + " L", Graphics.FONT_XTINY, Graphics.COLOR_WHITE, 1]);
-            }
-            drawLines(dc, meal);
-            return;
-        }
-        if (now < lapMsgUntil) {
-            // Tour validé : passage noté (ou départ du ravito), estimations recalculées.
-            drawLines(dc, [[lapTitle, Graphics.FONT_XTINY, fg], [lapMsg, Graphics.FONT_MEDIUM, green]]);
-            return;
-        }
-        if (ravitoShown(now)) {
-            drawBag(dc, fg, red);
-            return;
-        }
-
-        var deltaColor = delta > 60 ? red : (delta < -60 ? green : fg);
-        // Polices texte (et non chiffres) : « ' », « + » et « h » y sont toujours disponibles.
-        var deltaText = signedMinutes(delta);
-        var nextName = next >= 0 ? plan.cpName[next] : "Arrivée";
-        var target = next >= 0 ? plan.cpDist[next].toFloat() : plan.total.toFloat();
-        // Distance, D+ et D- restants jusqu'au prochain point (« Hors parcours » quand on s'en écarte).
-        var toNext = remaining(dist, target);
-        var toNextColor = fg;
-        if (offRoute) {
-            toNext = ["Hors parcours · " + offBy + " m"] as Array<String>;
-            toNextColor = red;
-        }
-        var cutText = null;
-        var cutColor = fg;
-        var cutWarn = cutIdx >= 0 && margin < CUTOFF_WARN;
-        if (cutIdx >= 0) {
-            cutText = margin >= 0 ? "Marge BH " + signedMinutes(margin) : "Hors délai " + signedMinutes(margin);
-            cutColor = cutWarn ? red : fg;
-        }
-
-        // Plein écran (le champ est prévu pour un écran à lui seul) : prochain point, ce qui reste jusqu'à
-        // lui, écart, barre du tronçon au centre, heures prévue et estimée, [jusqu'à l'arrivée], barrière
-        // horaire ou heure d'arrivée estimée.
-        var lines = [
-            [nextName, Graphics.FONT_XTINY, fg, 2],
-            [toNext, Graphics.FONT_XTINY, toNextColor, 0],
-            [deltaText, Graphics.FONT_LARGE, deltaColor, 0],
-            [:bar, Graphics.FONT_XTINY, fg, 0]
-        ];
-        if (next >= 0) {
-            lines.add([["Prévu " + clock(startUnix + plan.cpPlan[next]) + " · Est. " + clock(nextEta), "Est. " + clock(nextEta)], Graphics.FONT_XTINY, fg, 3]);
-        }
-        // Jusqu'à l'arrivée (réglage sur la montre), sauf si le prochain point est l'arrivée.
-        if (Application.Properties.getValue("finishStats") == true && next >= 0 && target < plan.total - 50) {
-            var r = remaining(dist, plan.total.toFloat());
-            var f = ["Arrivée · " + r[0]];
-            for (var k = 0; k < r.size(); k++) {
-                f.add("Arr. " + r[k]);
-            }
-            lines.add([f, Graphics.FONT_XTINY, fg, 1]);
-        }
-        lines.add(cutText != null ? [cutText, Graphics.FONT_XTINY, cutColor, cutWarn ? 0 : 3] : ["Arrivée " + clock(finishEta), Graphics.FONT_XTINY, fg, 3]);
-        drawLines(dc, lines);
+        // Bandeaux d'EP par-dessus (et popup d'alarme ou de rappel).
+        ep.drawBands(dc);
     }
 }

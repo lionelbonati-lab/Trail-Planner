@@ -103,6 +103,7 @@ class Run {
         if (info != null) {
             // Comme pour des champs de données : calcul chaque seconde, chrono arrêté ou non.
             ep.compute(info);
+            ep.tickPopup();
             tp.compute(info);
             dist = tp.dist;
             offRoute = tp.offRoute;

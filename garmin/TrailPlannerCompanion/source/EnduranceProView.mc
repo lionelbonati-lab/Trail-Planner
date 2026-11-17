@@ -6,7 +6,10 @@
 //   départ, aux tours et à la fin de la sortie (Run) ;
 // - champs FIT créés sur la session d'enregistrement (createFitFields, appelé par Run au départ) au
 //   lieu de DataField.createField() dans initialize() ;
-// - drawAlarmPopup() public : le popup d'alarme s'affiche aussi sur l'écran du profil.
+// - drawAlarmPopup() public : le popup d'alarme s'affiche aussi sur les autres écrans ;
+// - bandeaux d'EP sur tous les écrans (drawBands : FC, anneau, 2e métrique, tour, barre FC ; autonomie,
+//   mode d'allure, heure, trait FC), colonne centrale (drawCenterColumn), mise en page et polices
+//   d'icônes (lay, iconFonts) pour l'écran Trail Planner, popup des rappels Trail Planner (showPopup).
 import Toybox.ActivityRecording;
 import Toybox.WatchUi;
 import Toybox.Graphics;
@@ -207,6 +210,10 @@ class EnduranceProView {
     private var alarmPopupValue       as String = "";
     private var alarmPopupTicks       as Number = 0;   // secondes restantes d'affichage
     private var alarmPopupDurationSec as Number = 0;   // durée configurée (0/3/5/10s), = alarm_popup_duration_prop
+    // Appli : popup des rappels Trail Planner (police de l'icône, police du texte, durée propre).
+    private var alarmPopupFont = null;                  // null : notifIcons (alarmes d'EP)
+    private var alarmPopupValueFont = Graphics.FONT_NUMBER_MILD;
+    private var popupOwnTicks as Number = 0;
     private var alarmDisplayType      as Number = 0;   // 0=Popup (dessiné par l'app), 1=Notification (showToast)
     // v1.9.21 : Booleans alarme pré-calculés (OPT 7)
     private var vamAlarmEnabled  as Boolean = false;
@@ -1355,6 +1362,79 @@ if (diffDist > 0.5f) {
 
 
 
+
+    // Appli : horloge et phases d'alternance de la trame (début d'onUpdate d'EP, partagé avec drawBands).
+    function prepareFrame() as Void {
+        // Horloge + phase alternance (1 seul appel système par frame)
+        var clockNow = System.getClockTime();
+        clockSec = clockNow.sec;
+        clockDiv5 = clockSec / 5;
+        if (clockNow.min != cachedClockMin) {
+            cachedClockMin = clockNow.min;
+            cachedClockStr = clockNow.hour.format("%02d") + ":" + clockNow.min.format("%02d");
+        }
+        showLapMode = lapPressed && showCurLapPace && lapCount >= 2
+                   && clockDiv5 % 2 == 1;
+        showLapDPlusMoins = showLapMode && showCircuitDPlusMoins;
+        showLapPaceAvg    = showLapMode && showCircuitAllure;
+        showLapDist       = showLapMode && showCircuitDistance;
+        showLapChrono     = showLapMode && showCircuitChrono;
+    }
+
+    // Appli : bandeaux d'EP gardés sur les autres écrans de l'appli (Trail Planner, profil, carte) : en
+    // haut FC (valeur et anneau), 2e métrique, tour et barre de zone FC ; en bas trait coloré FC,
+    // autonomie, mode d'allure et heure ; popup d'alarme par-dessus. À dessiner après le contenu.
+    function drawBands(dc as Graphics.Dc) as Void {
+        var info = Activity.getActivityInfo();
+        var bgColor = isDarkMode ? Graphics.COLOR_BLACK : Graphics.COLOR_WHITE;
+        var txtColor = isDarkMode ? Graphics.COLOR_WHITE : Graphics.COLOR_BLACK;
+        prepareFrame();
+        var hrData = drawHRSection(dc, info, bgColor, txtColor);
+        drawHRCircle(dc, hrData[1], bgColor);
+        drawSecondMetric(dc, info, txtColor);
+        drawHRZoneBar(dc, hrData, txtColor);
+        drawClockTab(dc, bgColor, txtColor, hrData[1]);
+    }
+
+    // Appli : colonne centrale d'EP (alarme, sac, soleil, température, humidité), pour l'écran Trail Planner.
+    function drawCenterColumn(dc as Graphics.Dc) as Void {
+        drawParamIcons(dc, isDarkMode ? Graphics.COLOR_WHITE : Graphics.COLOR_BLACK);
+    }
+
+    // Appli : mise en page de la montre (positions d'EP) et polices d'icônes [icônes, paramètres].
+    function lay() as LayoutManager {
+        return layout;
+    }
+
+    function iconFonts() as Array {
+        return [iconsMed, paramIcons];
+    }
+
+    // Appli : zone libre entre les bandeaux (y du haut et du bas).
+    function contentTop() as Number {
+        return layout.hrZoneBarY + layout.hrZoneBarTickH + 3;
+    }
+
+    function contentBottom() as Number {
+        return layout.clocktabY - 2;
+    }
+
+    // Appli : popup d'EP pour un rappel Trail Planner (icône de iconsMed, ou de paramIcons si param),
+    // texte en police texte, pendant `secs` secondes (décompté par tickPopup, même sans alarmes d'EP).
+    function showPopup(param as Boolean, icon as String, text as String, secs as Number) as Void {
+        alarmPopupFont = param ? paramIcons : iconsMed;
+        alarmPopupValueFont = Graphics.FONT_MEDIUM;
+        alarmPopupLabel = icon;
+        alarmPopupValue = text;
+        popupOwnTicks = secs;
+    }
+
+    function tickPopup() as Void {
+        if (popupOwnTicks > 0) {
+            popupOwnTicks--;
+        }
+    }
+
         function onUpdate(dc as Graphics.Dc) as Void {
     var info = Activity.getActivityInfo();
 
@@ -1368,20 +1448,7 @@ if (diffDist > 0.5f) {
         dc.drawBitmap(0, 0, bgIcon);
     }
 
-    // Horloge + phase alternance (1 seul appel système par frame)
-    var clockNow = System.getClockTime();
-    clockSec = clockNow.sec;
-    clockDiv5 = clockSec / 5;
-    if (clockNow.min != cachedClockMin) {
-        cachedClockMin = clockNow.min;
-        cachedClockStr = clockNow.hour.format("%02d") + ":" + clockNow.min.format("%02d");
-    }
-    showLapMode = lapPressed && showCurLapPace && lapCount >= 2
-               && clockDiv5 % 2 == 1;
-    showLapDPlusMoins = showLapMode && showCircuitDPlusMoins;
-    showLapPaceAvg    = showLapMode && showCircuitAllure;
-    showLapDist       = showLapMode && showCircuitDistance;
-    showLapChrono     = showLapMode && showCircuitChrono;
+    prepareFrame();
     var hrData = drawHRSection(dc, info, bgColor, txtColor);
     drawBattery(dc, txtColor);
     drawParamIcons(dc, txtColor);
@@ -1987,6 +2054,8 @@ private function drawBottomSection(dc, info, txtColor) as Void {
             alarmPopupLabel = iconLabel;
             alarmPopupValue = value;
             alarmPopupTicks = alarmPopupDurationSec;
+            alarmPopupFont = null;
+            alarmPopupValueFont = Graphics.FONT_NUMBER_MILD;
         }
     }
 
@@ -2006,14 +2075,16 @@ private function drawBottomSection(dc, info, txtColor) as Void {
     // WatchUi.showToast dont la durée n'est pas garantie (voir showAlarmVisual). Se ferme seul
     // dès que alarmPopupTicks retombe à 0 (décrémenté 1×/s dans compute()), sans interaction.
     function drawAlarmPopup(dc as Graphics.Dc) as Void {
-        if (alarmPopupTicks <= 0) { return; }
+        if (alarmPopupTicks <= 0 && popupOwnTicks <= 0) { return; }
+        var lf = alarmPopupFont != null ? alarmPopupFont : notifIcons;
+        var vf = alarmPopupValueFont;
 
-        var iconW  = dc.getTextWidthInPixels(alarmPopupLabel, notifIcons);
-        var valW   = dc.getTextWidthInPixels(alarmPopupValue, Graphics.FONT_NUMBER_MILD);
+        var iconW  = dc.getTextWidthInPixels(alarmPopupLabel, lf);
+        var valW   = dc.getTextWidthInPixels(alarmPopupValue, vf);
         var gap    = 8;
         var padX   = 16;
         var popW   = iconW + gap + valW + (padX * 2);
-        var popH   = dc.getFontHeight(Graphics.FONT_NUMBER_MILD) + 12;
+        var popH   = dc.getFontHeight(vf) + 12;
         var popX   = centerX - popW / 2;
         var popY   = centerY - popH / 2;
         var radius = 10;
@@ -2028,8 +2099,8 @@ private function drawBottomSection(dc, info, txtColor) as Void {
         dc.drawRoundedRectangle(popX, popY, popW, popH, radius);
 
         var startX = centerX - (iconW + gap + valW) / 2;
-        dc.drawText(startX, centerY, notifIcons, alarmPopupLabel, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.drawText(startX + iconW + gap, centerY, Graphics.FONT_NUMBER_MILD, alarmPopupValue, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(startX, centerY, lf, alarmPopupLabel, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(startX + iconW + gap, centerY, vf, alarmPopupValue, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
     function formatPace(sec as Float) as String {
