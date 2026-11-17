@@ -2,9 +2,10 @@ import Toybox.Application;
 import Toybox.Graphics;
 import Toybox.Lang;
 
-// Paliers de zoom du profil (m de parcours affichés, 0 = parcours entier), choisis dans le menu
-// (appui long sur Haut › Zoom du profil) ou dans Garmin Connect.
-const ZOOM_SPANS = [0, 20000, 10000, 5000, 2000] as Array<Number>;
+// Paliers de zoom du profil (m de parcours affichés, 0 = parcours entier ; -1 = tronçon en cours, d'un
+// point de passage au suivant ; -2 = d'un ravito à l'autre), choisis dans le menu (appui long sur Haut
+// depuis le profil, ou Affichage › Zoom du profil) ou dans Garmin Connect.
+const ZOOM_SPANS = [0, 20000, 10000, 5000, 2000, -1, -2] as Array<Number>;
 
 // Repères des points de passage : ravito (rond), base de vie (carré).
 const RAVITO_COLOR = 0xFF5500;
@@ -16,10 +17,42 @@ function zoomLevel() as Number {
     return (z instanceof Number && z >= 0 && z < ZOOM_SPANS.size()) ? z as Number : 2;
 }
 
-// Portion du parcours affichée (m) : celle du palier, au plus le parcours entier.
-function zoomSpan(total as Number) as Float {
+// Portion du parcours affichée, [début, longueur] (m) : palier en km, le coureur au premier tiers ;
+// tronçon en cours (point de passage précédent → suivant) ; d'un ravito (ou base de vie) à l'autre. Le
+// départ et l'arrivée bornent les tronçons ; 500 m au moins.
+function profileWindow(plan as Plan, pos as Float) as Array<Float> {
+    var total = plan.total.toFloat();
     var s = ZOOM_SPANS[zoomLevel()];
-    return (s <= 0 || s > total) ? total.toFloat() : s.toFloat();
+    if (s < 0) {
+        var a = 0.0;
+        var b = total;
+        for (var c = 0; c < plan.cpDist.size(); c++) {
+            if (s == -2 && !plan.cpBase[c] && !plan.cpKind[c].equals("r")) {
+                continue;
+            }
+            var d = plan.cpDist[c].toFloat();
+            if (d <= pos) {
+                a = d;
+            } else {
+                b = d;
+                break;
+            }
+        }
+        if (b - a < 500.0) {
+            b = a + 500.0 < total ? a + 500.0 : total;
+            a = b - 500.0 > 0.0 ? b - 500.0 : 0.0;
+        }
+        return [a, b - a] as Array<Float>;
+    }
+    var span = (s <= 0 || s > total) ? total : s.toFloat();
+    var start = pos - span / 3.0;
+    if (start > total - span) {
+        start = total - span;
+    }
+    if (start < 0.0) {
+        start = 0.0;
+    }
+    return [start, span] as Array<Float>;
 }
 
 function slopesOn() as Boolean {
@@ -82,7 +115,7 @@ function altY(e as Float, lo as Float, hi as Float, top as Number, bottom as Num
 // gris (foncé sur fond noir, clair sur fond blanc) ; devant, l'autre gris ou couleur de la pente. Points de passage sans nom (ravito : rond
 // orange, base de vie : carré rouge, autres : petit rond), grisés une fois passés ; altitudes la plus
 // haute et la plus basse de la portion à gauche (altitudes réelles seulement). Ni km ni nom de point.
-function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, span as Float, slopes as Boolean, box as Array<Number>) as Void {
+function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, a as Float, span as Float, slopes as Boolean, box as Array<Number>) as Void {
     // Couleurs selon le thème : partie faite, partie à venir, contours, fond, texte.
     var dark = darkTheme();
     var doneFill = dark ? 0x555555 : 0xAAAAAA;
@@ -99,13 +132,6 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, span as Floa
         pos = 0.0;
     } else if (pos > total) {
         pos = total;
-    }
-    var a = pos - span / 3.0;
-    if (a > total - span) {
-        a = total - span;
-    }
-    if (a < 0.0) {
-        a = 0.0;
     }
     var width = right - left;
     // Une colonne tous les 2 px (3 px sur les grands écrans AMOLED).
@@ -175,18 +201,18 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, span as Floa
     dc.setColor(doneFill, Graphics.COLOR_TRANSPARENT);
     dc.drawLine(left, bottom, right, bottom);
 
-    // Altitudes la plus haute et la plus basse de la portion, à gauche dans le cadre (côté partie faite),
-    // sous la ligne de la plus haute et au-dessus de celle de la plus basse ; points et coureur par-dessus.
+    // Altitudes la plus haute et la plus basse de la portion, hors du profil : la plus haute juste au-dessus
+    // de sa ligne, la plus basse sous la ligne de base ; du côté opposé au coureur (pas sur son repère).
     if (plan.realAltitude()) {
         var font = Graphics.FONT_XTINY;
         var fh = dc.getFontHeight(font);
         var yMax = altY(maxE, lo, hi, top, bottom);
-        var yMin = altY(minE, lo, hi, top, bottom);
-        dc.setColor(fg, bg);
-        dc.drawText(left + 2, yMax + 1, font, maxE.toNumber().toString(), Graphics.TEXT_JUSTIFY_LEFT);
-        if (yMin - fh > yMax + fh) {
-            dc.drawText(left + 2, yMin - fh, font, minE.toNumber().toString(), Graphics.TEXT_JUSTIFY_LEFT);
-        }
+        var runnerLeft = pos - a < span / 2.0;
+        var lx = runnerLeft ? right - 2 : left + 2;
+        var just = runnerLeft ? Graphics.TEXT_JUSTIFY_RIGHT : Graphics.TEXT_JUSTIFY_LEFT;
+        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(lx, yMax - fh - 1, font, maxE.toNumber().toString(), just);
+        dc.drawText(lx, bottom + 1, font, minE.toNumber().toString(), just);
     }
 
     // Points de passage de la portion (sans nom).

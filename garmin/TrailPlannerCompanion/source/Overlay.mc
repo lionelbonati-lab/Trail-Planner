@@ -21,13 +21,13 @@ function startHint(run as Run) as Array {
     return ["GPS...", Graphics.COLOR_RED];
 }
 
-// En haut : nom de la course avant le départ ; « Pause » ; « Hors parcours · N m » ; passage, départ ou
-// tour pendant 5 s ; sinon écart au plan (+6' en rouge = 6 min de retard, avance en vert).
-// `boxed` : texte sur un fond (par-dessus la carte).
+// En haut (profil, carte) : rien avant le départ (pas de titre) ; « Pause » ; « Hors parcours · N m » ;
+// passage, départ ou tour pendant 5 s ; sinon écart au plan (+6' en rouge = 6 min de retard, avance en
+// vert). `boxed` : texte sur un fond (par-dessus la carte).
 function drawHeader(dc as Graphics.Dc, run as Run, y as Number, boxed as Boolean) as Void {
     var now = Time.now().value();
     if (run.state == READY) {
-        drawFitted(dc, y, run.plan != null ? run.plan.name : "Trail Planner", themeFg(), Graphics.FONT_XTINY, boxed);
+        return;
     } else if (run.state == PAUSED) {
         drawFitted(dc, y, tpText(Rez.Strings.tp_paused), Graphics.COLOR_ORANGE, Graphics.FONT_XTINY, boxed);
     } else if (run.offRoute) {

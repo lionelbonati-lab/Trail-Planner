@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.9, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -78,7 +78,10 @@ météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (pop
   (jusqu'à la plus petite, plutôt que de couper) ; à droite le tronçon suivant ; la barre se
   remplit avec le **temps passé sur l'arrêt prévu** (rouge une fois dépassé), « 3:25/5:00 » dessous, et à
   droite la **durée prévue du tronçon suivant**, corrigée de ton rythme ;
-- avant le départ : vers le premier point et vers l'arrivée, temps prévu du parcours, nom de la course ;
+- avant le départ : vers le premier point et vers l'arrivée, temps prévu du parcours, « GPS... » puis
+  « START : départ » en dernière ligne ;
+- l'**heure d'arrivée estimée** (à droite sous la barre) est calée sur le bord de l'écran rond ; pas
+  d'icône à côté de la barre ;
 - **rappels nutrition** (« Gel · 0.2 L », 30 s) et **alerte de barrière** (sous 30 min, 10 s) en popup
   d'EndurancePro, sur tous les écrans, avec vibration.
 
@@ -96,11 +99,14 @@ ni pendant l'exploration de la carte ; changer d'écran à la main annule le ret
 **3. Profil de la course** (sans km ni nom de point) :
 - en haut, l'**écart au plan** à l'endroit où tu es (`+6'` = 6 min de retard, en rouge ; avance en
   vert). À la place, pendant 5 s : « Passage · nom », « Départ · nom » ou « Tour N » après un tour ;
-  « Hors parcours · N m » si tu t'écartes du tracé ; « Pause » ; le nom de la course avant le départ ;
-- la portion de parcours du **zoom choisi** (parcours entier, 20, 10, 5 ou 2 km), toi au **tiers gauche**
-  comme sur la page assistance : tu vois surtout ce qui t'attend ;
+  « Hors parcours · N m » si tu t'écartes du tracé ; « Pause » ; rien avant le départ (pas de titre) ;
+- la portion de parcours du **zoom choisi** (parcours entier, 20, 10, 5 ou 2 km, toi au **tiers gauche**
+  comme sur la page assistance : tu vois surtout ce qui t'attend), ou le **tronçon en cours** (du point de
+  passage précédent au suivant), ou **d'un ravito à l'autre** (ravitos et bases de vie) ; **appui long sur
+  Haut** depuis le profil : choix du zoom ;
 - **altitudes ajustées à la portion affichée** (100 m d'écart au moins, pour ne pas grossir le plat), avec
-  la plus haute et la plus basse à gauche ;
+  la plus haute **au-dessus de sa ligne** et la plus basse **sous la ligne de base**, hors du profil, du côté
+  opposé à toi ;
 - partie faite et partie à venir en deux gris, ou à venir en **couleurs des pentes** (option) ;
 - points de passage sans nom : ravito (rond orange), base de vie (carré rouge), autres (petit rond),
   grisés une fois passés ;
@@ -119,8 +125,9 @@ au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
 - **fond de carte Garmin** de la montre (chemins, relief, noms) sur les montres à cartes ; sur les autres
   (Forerunner 255 et 265), **tracé seul** sur le fond du thème, partie faite en gris, ravito rond orange,
   base de vie carré rouge ;
-- **échelle** choisie dans le menu (largeur de l'écran : 200 m, 500 m, 1 km par défaut, 2 km, 5 km),
-  rappelée en bas ;
+- **échelle** choisie par **appui long sur Haut** depuis la carte (ou dans le menu : largeur de l'écran,
+  200 m, 500 m, 1 km par défaut, 2 km, 5 km), rappelée en bas ; pas de titre en haut ; à chaque retour sur
+  la carte, elle se pose tout de suite sur toi ;
 - **Explorer la carte** (menu, montres à cartes) : la carte passe en mode exploration Garmin pour la
   déplacer et zoomer avec les boutons ; BACK revient au suivi. Aussi sur la **fiche d'un parcours**
   (écran de démarrage) : BACK revient à la vue d'ensemble ;
@@ -138,9 +145,9 @@ d'anneau au bord de l'écran (celui de la FC d'EndurancePro reste).
 | Bouton | Avant le départ | Pendant la sortie | En pause |
 |---|---|---|---|
 | START | Démarrer | Pause (menu Reprendre / Enregistrer / Supprimer) | Reprendre |
-| BACK (Lap) | Quitter l'appli | Nouveau tour et passage au point | Menu de pause |
+| BACK (Lap) | Retour à la liste des parcours | Nouveau tour et passage au point | Menu de pause |
 | Haut / Bas | Écran suivant (EP, Trail Planner, profil, carte) | Écran suivant | Écran suivant |
-| Appui long sur Haut | Menu | Menu | Menu |
+| Appui long sur Haut | Menu ; zoom depuis le profil, échelle depuis la carte | Idem | Idem |
 
 Écran tactile : balayages pour changer d'écran. Un balayage « retour » ne coupe pas la sortie, et un tap
 ne fait rien : START et BACK restent sur les boutons. « Supprimer » demande une confirmation.
@@ -159,8 +166,8 @@ Le menu d'EndurancePro, réglable en course comme dans le champ : l'appli ne fai
 rangés dans les dossiers d'EndurancePro (pas de dossier à part) :
 - en tête, **Explorer la carte** (montres à cartes ; seulement avec une carte à l'écran : écrans de course
   ou fiche d'un parcours, pas depuis la liste) ;
-- **Affichage** : en plus des réglages d'EndurancePro, **Zoom du profil**, **Jusqu'à l'arrivée** (distance,
-  D+ et D- restants jusqu'à l'arrivée sur l'écran Trail Planner), **Échelle de la carte** ;
+- **Affichage** : en plus des réglages d'EndurancePro, **Zoom du profil** et **Échelle de la carte** (aussi
+  par appui long sur Haut depuis le profil ou la carte) ;
 - **Colorisation** : **Couleurs des pentes** (profil) ;
 - **Circuit** : **Tour = passage au point** ;
 - **Alarmes** : **Rappels nutrition** (selon le plan, désactivés, ou toutes les 15 à 60 min) et
@@ -255,7 +262,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.5.9 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.0 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

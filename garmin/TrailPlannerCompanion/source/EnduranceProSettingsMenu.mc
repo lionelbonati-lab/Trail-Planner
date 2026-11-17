@@ -1,7 +1,7 @@
 // EnduranceProSettingsMenu.mc — repris d'EndurancePro 2.7.3 dans l'appli Trail Planner Companion :
 // c'est le menu de l'appli (appui long sur Haut). Ajouts de l'appli, rangés dans les dossiers
 // d'EndurancePro (pas de dossier à part) : « Explorer la carte » en tête du menu (seulement avec une carte
-// à l'écran) ; Affichage : zoom du profil, « Jusqu'à l'arrivée », échelle de la carte ; Colorisation :
+// à l'écran) ; Affichage : zoom du profil, échelle de la carte ; Colorisation :
 // couleurs des pentes ; Circuit : tour = passage au point ; Alarmes : rappels nutrition, vibrations des
 // rappels ; Propriétés : code Trail Planner (déplacé d'Allure) et rechargement du plan. Un nouveau code
 // montre relance le téléchargement du plan (Run.settingsChanged) au lieu de la tâche de fond.
@@ -957,11 +957,9 @@ class AffichageSettingsMenu extends WatchUi.Menu2 {
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_clock_metric_folder) as String, null, :clockMetricEnabled, clockMetricEnabled == true, {}));
         var showClock = Properties.getValue("show_clock_prop");
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_show_clock) as String, null, :showClock, showClock == true, {}));
-        // Appli : écran Profil, écran Trail Planner, écran Carte.
+        // Appli : écran Profil, écran Carte.
         _zoomItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_zoom) as String, null, :tpZoom, {});
         addItem(_zoomItem);
-        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.tp_finish) as String,
-            WatchUi.loadResource(Rez.Strings.tp_finish_sub) as String, :finishStats, Properties.getValue("finishStats") == true, {}));
         _mapScaleItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_map_scale) as String, null, :mapScale, {});
         addItem(_mapScaleItem);
         onShow();
@@ -1365,24 +1363,10 @@ class EnduranceProSettingsDelegate extends WatchUi.Menu2InputDelegate {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
 
         } else if (id == :tpZoom) {
-            var zm = new WatchUi.Menu2({:title => WatchUi.loadResource(Rez.Strings.tp_zoom) as String});
-            for (var z = 0; z < ZOOM_SPANS.size(); z++) {
-                zm.addItem(new WatchUi.MenuItem(zoomLabel(z), null, z, {}));
-            }
-            zm.setFocus(zoomLevel());
-            WatchUi.pushView(zm, new ZoomDelegate(), WatchUi.SLIDE_LEFT);
+            pushZoomMenu();
 
         } else if (id == :mapScale) {
-            var sm = new WatchUi.Menu2({:title => WatchUi.loadResource(Rez.Strings.tp_map_scale) as String});
-            for (var z = 0; z < MAP_SCALES.size(); z++) {
-                sm.addItem(new WatchUi.MenuItem(mapScaleLabel(z), null, z, {}));
-            }
-            sm.setFocus(mapScaleLevel());
-            WatchUi.pushView(sm, new MapScaleDelegate(), WatchUi.SLIDE_LEFT);
-
-        } else if (id == :finishStats) {
-            Properties.setValue("finishStats", (item as WatchUi.ToggleMenuItem).isEnabled());
-            getApp().refreshViewSettings();
+            pushMapScaleMenu();
 
         } else if (id == :slopes) {
             Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());

@@ -10,6 +10,8 @@
     <string id="tp_zoom_10">10 km</string>
     <string id="tp_zoom_5">5 km</string>
     <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Tronçon en cours</string>
+    <string id="tp_zoom_ravito">D'un ravito à l'autre</string>
     <string id="tp_slopes">Couleurs des pentes</string>
     <string id="tp_slopes_sub">Vert à violet</string>
     <string id="tp_slopes_prompt">Profil coloré selon la pente : montée vert &lt; 5 %, jaune 5-10 %, orange 10-15 %, rouge 15-25 %, violet 25 % et plus ; descente bleu clair jusqu'à -15 %, bleu foncé au-delà</string>
@@ -43,9 +45,6 @@
     <string id="tp_map_scale">Échelle de la carte</string>
     <string id="tp_explore">Explorer la carte</string>
     <string id="tp_no_route">Pas de tracé</string>
-    <string id="tp_finish">Jusqu'à l'arrivée</string>
-    <string id="tp_finish_sub">Distance, D+ et D-</string>
-    <string id="tp_finish_prompt">Écran Trail Planner : afficher aussi la distance, le D+ et le D- restant jusqu'à l'arrivée</string>
     <string id="tp_fuel_prompt">Rappel nutrition (min) : -1 = produits du plan répartis entre les ravitos, 0 = désactivé</string>
     <string id="tp_vibrate">Vibrations des rappels</string>
     <string id="tp_free_run">Sortie libre</string>

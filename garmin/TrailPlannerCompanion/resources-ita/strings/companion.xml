@@ -10,6 +10,8 @@
     <string id="tp_zoom_10">10 km</string>
     <string id="tp_zoom_5">5 km</string>
     <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Tratto in corso</string>
+    <string id="tp_zoom_ravito">Da ristoro a ristoro</string>
     <string id="tp_slopes">Colori delle pendenze</string>
     <string id="tp_slopes_sub">Dal verde al viola</string>
     <string id="tp_slopes_prompt">Profilo colorato secondo la pendenza: salita verde &lt; 5 %, giallo 5-10 %, arancione 10-15 %, rosso 15-25 %, viola 25 % e oltre; discesa azzurro fino a -15 %, blu scuro oltre</string>
@@ -43,9 +45,6 @@
     <string id="tp_map_scale">Scala della mappa</string>
     <string id="tp_explore">Esplora la mappa</string>
     <string id="tp_no_route">Nessun tracciato</string>
-    <string id="tp_finish">Fino all'arrivo</string>
-    <string id="tp_finish_sub">Distanza, D+ e D-</string>
-    <string id="tp_finish_prompt">Schermata Trail Planner: mostra anche distanza, D+ e D- fino all'arrivo</string>
     <string id="tp_fuel_prompt">Promemoria nutrizione (min): -1 = prodotti del piano distribuiti tra i ristori, 0 = disattivato</string>
     <string id="tp_vibrate">Vibrazioni dei promemoria</string>
     <string id="tp_free_run">Uscita libera</string>

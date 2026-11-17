@@ -10,6 +10,8 @@
     <string id="tp_zoom_10">10 km</string>
     <string id="tp_zoom_5">5 km</string>
     <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Troço atual</string>
+    <string id="tp_zoom_ravito">De abastecimento a abastecimento</string>
     <string id="tp_slopes">Cores das inclinações</string>
     <string id="tp_slopes_sub">Do verde ao violeta</string>
     <string id="tp_slopes_prompt">Perfil colorido conforme a inclinação: subida verde &lt; 5 %, amarelo 5-10 %, laranja 10-15 %, vermelho 15-25 %, violeta 25 % ou mais; descida azul claro até -15 %, azul escuro além</string>
@@ -43,9 +45,6 @@
     <string id="tp_map_scale">Escala do mapa</string>
     <string id="tp_explore">Explorar o mapa</string>
     <string id="tp_no_route">Sem traçado</string>
-    <string id="tp_finish">Até à chegada</string>
-    <string id="tp_finish_sub">Distância, D+ e D-</string>
-    <string id="tp_finish_prompt">Ecrã Trail Planner: mostrar também a distância, o D+ e o D- até à chegada</string>
     <string id="tp_fuel_prompt">Lembrete de nutrição (min): -1 = produtos do plano repartidos entre abastecimentos, 0 = desativado</string>
     <string id="tp_vibrate">Vibrações dos lembretes</string>
     <string id="tp_free_run">Saída livre</string>

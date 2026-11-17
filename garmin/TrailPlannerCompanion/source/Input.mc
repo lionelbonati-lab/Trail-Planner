@@ -10,7 +10,8 @@ import Toybox.WatchUi;
 //   ravito = départ), menu de pause en pause, sortie de l'appli avant le départ ou une fois la sortie
 //   enregistrée ;
 // - Haut / Bas : écran suivant (EndurancePro, profil, carte) ;
-// - appui long sur Haut (Menu) : réglages d'EndurancePro, avec le dossier « Trail Planner » en tête.
+// - appui long sur Haut (Menu) : zoom du profil depuis le profil, échelle depuis la carte ; ailleurs,
+//   réglages d'EndurancePro (avec ceux de l'appli dans ses dossiers).
 // Carte en exploration (menu « Explorer la carte ») : les boutons vont à la carte Garmin (déplacer,
 // zoomer), sauf BACK qui revient au suivi du coureur.
 // Écran tactile : balayages pour changer d'écran ; un balayage « retour » ne coupe pas la sortie et le tap
@@ -98,12 +99,13 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
-    // Menu d'EndurancePro (réglables en course, comme dans le champ).
+    // Appui long sur Haut : zoom du profil depuis le profil, échelle depuis la carte ; ailleurs, menu
+    // d'EndurancePro (réglables en course, comme dans le champ).
     function onMenu() as Boolean {
         if (getApp().exploring()) {
             return false;
         }
-        if (run.state != DONE) {
+        if (run.state != DONE && !getApp().quickMenu()) {
             WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_UP);
         }
         return true;
@@ -171,7 +173,28 @@ class DiscardDelegate extends WatchUi.Menu2InputDelegate {
 // --- Réglages de l'appli rangés dans les dossiers d'EndurancePro (voir EnduranceProSettingsMenu.mc) -------
 
 function zoomLabel(z as Number) as String {
-    return tpText([Rez.Strings.tp_zoom_all, Rez.Strings.tp_zoom_20, Rez.Strings.tp_zoom_10, Rez.Strings.tp_zoom_5, Rez.Strings.tp_zoom_2][z]);
+    return tpText([Rez.Strings.tp_zoom_all, Rez.Strings.tp_zoom_20, Rez.Strings.tp_zoom_10, Rez.Strings.tp_zoom_5, Rez.Strings.tp_zoom_2,
+        Rez.Strings.tp_zoom_leg, Rez.Strings.tp_zoom_ravito][z]);
+}
+
+// Choix du zoom du profil (appui long sur Haut depuis le profil, ou Affichage › Zoom du profil).
+function pushZoomMenu() as Void {
+    var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_zoom) });
+    for (var z = 0; z < ZOOM_SPANS.size(); z++) {
+        menu.addItem(new WatchUi.MenuItem(zoomLabel(z), null, z, {}));
+    }
+    menu.setFocus(zoomLevel());
+    WatchUi.pushView(menu, new ZoomDelegate(), WatchUi.SLIDE_UP);
+}
+
+// Choix de l'échelle de la carte (appui long sur Haut depuis la carte, ou Affichage › Échelle de la carte).
+function pushMapScaleMenu() as Void {
+    var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_map_scale) });
+    for (var z = 0; z < MAP_SCALES.size(); z++) {
+        menu.addItem(new WatchUi.MenuItem(mapScaleLabel(z), null, z, {}));
+    }
+    menu.setFocus(mapScaleLevel());
+    WatchUi.pushView(menu, new MapScaleDelegate(), WatchUi.SLIDE_UP);
 }
 
 class ZoomDelegate extends WatchUi.Menu2InputDelegate {

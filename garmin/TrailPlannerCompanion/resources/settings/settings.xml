@@ -15,7 +15,7 @@
 <resources>
     <settings>
 
-        <!-- Affichage (dossier Affichage de la montre) : écrans Profil, Trail Planner et Carte de l'appli -->
+        <!-- Affichage (dossier Affichage de la montre) : écrans Profil et Carte de l'appli -->
         <setting propertyKey="@Properties.zoom" title="@Strings.tp_zoom">
             <settingConfig type="list">
                 <listEntry value="0">@Strings.tp_zoom_all</listEntry>
@@ -23,11 +23,9 @@
                 <listEntry value="2">@Strings.tp_zoom_10</listEntry>
                 <listEntry value="3">@Strings.tp_zoom_5</listEntry>
                 <listEntry value="4">@Strings.tp_zoom_2</listEntry>
+                <listEntry value="5">@Strings.tp_zoom_leg</listEntry>
+                <listEntry value="6">@Strings.tp_zoom_ravito</listEntry>
             </settingConfig>
-        </setting>
-
-        <setting propertyKey="@Properties.finishStats" title="@Strings.tp_finish_prompt">
-            <settingConfig type="boolean" />
         </setting>
 
         <setting propertyKey="@Properties.mapScale" title="@Strings.tp_map_scale">

@@ -10,6 +10,8 @@
     <string id="tp_zoom_10">10 km</string>
     <string id="tp_zoom_5">5 km</string>
     <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Tramo actual</string>
+    <string id="tp_zoom_ravito">De avituallamiento a avituallamiento</string>
     <string id="tp_slopes">Colores de pendiente</string>
     <string id="tp_slopes_sub">De verde a violeta</string>
     <string id="tp_slopes_prompt">Perfil coloreado según la pendiente: subida verde &lt; 5 %, amarillo 5-10 %, naranja 10-15 %, rojo 15-25 %, violeta 25 % o más; bajada azul claro hasta -15 %, azul oscuro más allá</string>
@@ -43,9 +45,6 @@
     <string id="tp_map_scale">Escala del mapa</string>
     <string id="tp_explore">Explorar el mapa</string>
     <string id="tp_no_route">Sin trazado</string>
-    <string id="tp_finish">Hasta la meta</string>
-    <string id="tp_finish_sub">Distancia, D+ y D-</string>
-    <string id="tp_finish_prompt">Pantalla Trail Planner: mostrar también la distancia, el D+ y el D- hasta la meta</string>
     <string id="tp_fuel_prompt">Recordatorio de nutrición (min): -1 = productos del plan repartidos entre avituallamientos, 0 = desactivado</string>
     <string id="tp_vibrate">Vibraciones de los avisos</string>
     <string id="tp_free_run">Salida libre</string>

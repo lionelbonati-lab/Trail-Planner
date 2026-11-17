@@ -10,6 +10,8 @@
     <string id="tp_zoom_10">10 km</string>
     <string id="tp_zoom_5">5 km</string>
     <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Current leg</string>
+    <string id="tp_zoom_ravito">Aid station to aid station</string>
     <string id="tp_slopes">Slope colours</string>
     <string id="tp_slopes_sub">Green to purple</string>
     <string id="tp_slopes_prompt">Profile coloured by slope: uphill green &lt; 5 %, yellow 5-10 %, orange 10-15 %, red 15-25 %, purple 25 % and more; downhill light blue to -15 %, dark blue beyond</string>
@@ -43,9 +45,6 @@
     <string id="tp_map_scale">Map scale</string>
     <string id="tp_explore">Explore map</string>
     <string id="tp_no_route">No route</string>
-    <string id="tp_finish">To finish</string>
-    <string id="tp_finish_sub">Distance, D+ and D-</string>
-    <string id="tp_finish_prompt">Trail Planner screen: also show the distance, D+ and D- left to the finish</string>
     <string id="tp_fuel_prompt">Fuel reminder (min): -1 = plan products spread between aid stations, 0 = off</string>
     <string id="tp_vibrate">Reminder vibrations</string>
     <string id="tp_free_run">Free run</string>

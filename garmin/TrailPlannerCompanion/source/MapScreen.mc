@@ -192,10 +192,20 @@ class CompanionMapView extends WatchUi.MapView {
         run.ep.onLayout(dc);
     }
 
+    // À chaque retour sur la carte, la zone est reposée tout de suite sur le coureur (la carte Garmin
+    // repartait de sa première zone, en Amérique au simulateur, jusqu'au mouvement suivant du coureur).
     function onShow() as Void {
         MapView.onShow();
         var app = getApp();
         app.baseVisible = true;
+        if (!overview && !exploring) {
+            shownScale = -1;
+            if (runnerDegrees(run) != null) {
+                follow();
+            } else {
+                setDefaultArea();
+            }
+        }
     }
 
     function onHide() as Void {
@@ -310,21 +320,25 @@ class CompanionMapView extends WatchUi.MapView {
         }
     }
 
-    // Zone affichée tant qu'il n'y a ni tracé ni position GPS (la carte Garmin refuse de s'afficher sans
-    // zone) : dernière position connue de la montre à l'échelle choisie, sinon la France entière. follow()
-    // et fitRoute() la remplacent dès qu'ils le peuvent.
+    // Zone affichée tant qu'il n'y a pas de position du coureur (la carte Garmin refuse de s'afficher sans
+    // zone) : départ du parcours, sinon dernière position connue de la montre, à l'échelle choisie, sinon la
+    // France entière. follow() et fitRoute() la remplacent dès qu'ils le peuvent.
     function setDefaultArea() as Void {
         var lat = 46.6d;
         var lon = 2.4d;
         var half = 550000.0d;
-        var info = Position.getInfo();
-        if (info != null && info.position != null) {
-            var deg = (info.position as Position.Location).toDegrees();
-            if (deg[0] != 0.0d || deg[1] != 0.0d) {
-                lat = deg[0];
-                lon = deg[1];
-                half = MAP_SCALES[mapScaleLevel()] / 2.0d;
+        // Coureur ou départ du parcours d'abord, puis dernière position connue de la montre.
+        var deg = runnerDegrees(run);
+        if (deg == null) {
+            var info = Position.getInfo();
+            if (info != null && info.position != null) {
+                deg = (info.position as Position.Location).toDegrees();
             }
+        }
+        if (deg != null && (deg[0] != 0.0d || deg[1] != 0.0d)) {
+            lat = deg[0];
+            lon = deg[1];
+            half = MAP_SCALES[mapScaleLevel()] / 2.0d;
         }
         var ky = 111320.0d;
         var kx = 111320.0d * Math.cos(lat * Math.PI / 180.0d);

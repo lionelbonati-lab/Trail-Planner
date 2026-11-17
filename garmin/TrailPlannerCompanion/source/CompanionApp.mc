@@ -169,6 +169,20 @@ class CompanionApp extends Application.AppBase {
         WatchUi.requestUpdate();
     }
 
+    // Appui long sur Haut : menu du zoom sur l'écran Profil, de l'échelle sur l'écran Carte (true) ; sinon
+    // false (menu complet d'EndurancePro).
+    function quickMenu() as Boolean {
+        if (page == PROFILE_PAGE) {
+            pushZoomMenu();
+            return true;
+        }
+        if (page == MAP_PAGE) {
+            pushMapScaleMenu();
+            return true;
+        }
+        return false;
+    }
+
     // Carte en cours d'exploration (déplacer, zoomer avec les boutons de la carte Garmin).
     function exploring() as Boolean {
         return page == MAP_PAGE && mapView != null && mapView.exploring;

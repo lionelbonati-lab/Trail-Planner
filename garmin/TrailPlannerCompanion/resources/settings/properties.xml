@@ -124,6 +124,5 @@
              N minutes, 0 = aucun), vibrations, distance / D+ / D- jusqu'à l'arrivée. -->
         <property id="fuelMin" type="number">-1</property>
         <property id="vibrate" type="boolean">true</property>
-        <property id="finishStats" type="boolean">false</property>
     </properties>
 </resources>

@@ -782,7 +782,7 @@ class TrailPlannerScreen {
         dc.drawText(w / 2, y, font, fit(dc, text, font, 2 * (lo < hi ? lo : hi) - 10), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
-    // Barre à la place de la batterie d'EP : remplie de la fraction f (0 à 1), icône repas à gauche.
+    // Barre à la place de la batterie d'EP : remplie de la fraction f (0 à 1), sans icône.
     function barFrame(dc as Graphics.Dc, l, f as Float, color, fg) as Void {
         var fw = (l.batBarW * (f < 0 ? 0.0 : (f > 1 ? 1.0 : f))).toNumber();
         if (fw > 2 * l.batBarR) {
@@ -792,7 +792,15 @@ class TrailPlannerScreen {
         dc.setPenWidth(1);
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
         dc.drawRoundedRectangle(l.batBarX, l.batteryBarY, l.batBarW, l.batBarH, l.batBarR);
-        dc.drawText(l.battIconX, l.battIconY + l.iconSmallOffsetY, getRun().ep.iconFonts()[0], ICON_FOOD, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // Abscisse (gauche) d'un texte de largeur tw centré sous l'axe de droite, ramené dans l'écran rond à la
+    // hauteur y (police de hauteur fh) : l'heure d'arrivée débordait à droite.
+    function rightX(dc as Graphics.Dc, l, y as Number, fh as Number, tw as Number) as Number {
+        var w = dc.getWidth();
+        var x = l.axisRightX - tw / 2;
+        var max = isRound() ? w / 2 + halfChord(y + fh / 2, w, dc.getHeight()) - 6 : w - 6;
+        return x + tw > max ? max - tw : x;
     }
 
     // Progression du tronçon en cours, du dernier ravito passé (ou du départ) au suivant (ou à
@@ -904,7 +912,7 @@ class TrailPlannerScreen {
             dc.setColor(delta > 60 ? red : (delta < -60 ? green : fg), Graphics.COLOR_TRANSPARENT);
             dc.drawText(l.axisLeftX, l.DistY, font, gap, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
             var eta = clock(nx >= 0 && nx < etas.size() ? etas[nx] : finishEta);
-            var ex = l.axisRightX - dc.getTextWidthInPixels(eta, font) / 2;
+            var ex = rightX(dc, l, l.DistY, dc.getFontHeight(font), dc.getTextWidthInPixels(eta, font));
             dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
             dc.drawText(ex, l.DistY, font, eta, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
@@ -995,7 +1003,7 @@ class TrailPlannerScreen {
         var arr = (to >= 0 && to < plan.cpPlan.size()) ? plan.cpPlan[to] : plan.finishTime();
         var legTime = shortDuration(((arr - dep > 0 ? arr - dep : 0) * paceRatio).toNumber());
         var font = l.fontSecondary;
-        var lx = l.axisRightX - dc.getTextWidthInPixels(legTime, font) / 2;
+        var lx = rightX(dc, l, l.DistY, dc.getFontHeight(font), dc.getTextWidthInPixels(legTime, font));
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
         dc.drawText(lx, l.DistY, font, legTime, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
         dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
