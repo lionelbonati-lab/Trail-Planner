@@ -102,8 +102,8 @@ ni pendant l'exploration de la carte ; changer d'écran à la main annule le ret
   « Hors parcours · N m » si tu t'écartes du tracé ; « Pause » ; rien avant le départ (pas de titre) ;
 - la portion de parcours du **zoom choisi** (parcours entier, 20, 10, 5 ou 2 km, toi au **tiers gauche**
   comme sur la page assistance : tu vois surtout ce qui t'attend), ou le **tronçon en cours** (du point de
-  passage précédent au suivant), ou **d'un ravito à l'autre** (ravitos et bases de vie) ; **appui long sur
-  Haut** depuis le profil : choix du zoom ;
+  passage précédent au suivant, **par défaut**), ou **d'un ravito à l'autre** (ravitos et bases de vie) ;
+  **appui long sur Haut** depuis le profil : choix du zoom ;
 - **altitudes ajustées à la portion affichée** (100 m d'écart au moins, pour ne pas grossir le plat), avec
   la plus haute **au-dessus de sa ligne** et la plus basse **sous la ligne de base**, hors du profil, du côté
   opposé à toi ;

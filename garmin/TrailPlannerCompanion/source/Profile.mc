@@ -11,10 +11,10 @@ const ZOOM_SPANS = [0, 20000, 10000, 5000, 2000, -1, -2] as Array<Number>;
 const RAVITO_COLOR = 0xFF5500;
 const BASE_COLOR = 0xFF0000;
 
-// Palier de zoom choisi (indice dans ZOOM_SPANS).
+// Palier de zoom choisi (indice dans ZOOM_SPANS) ; par défaut, le tronçon en cours.
 function zoomLevel() as Number {
     var z = Application.Properties.getValue("zoom");
-    return (z instanceof Number && z >= 0 && z < ZOOM_SPANS.size()) ? z as Number : 2;
+    return (z instanceof Number && z >= 0 && z < ZOOM_SPANS.size()) ? z as Number : 5;
 }
 
 // Portion du parcours affichée, [début, longueur] (m) : palier en km, le coureur au premier tiers ;

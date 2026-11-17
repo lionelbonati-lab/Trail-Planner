@@ -113,7 +113,7 @@
         <!-- Appli Trail Planner Companion. Le code montre est trail_code_prop (celui d'EndurancePro,
              ci-dessus) : plan, profil, réglages EndurancePro et suivi de l'assistance. -->
         <!-- Zoom du profil : 0 parcours entier, 1 = 20 km, 2 = 10 km, 3 = 5 km, 4 = 2 km autour du coureur. -->
-        <property id="zoom" type="number">2</property>
+        <property id="zoom" type="number">5</property>
         <!-- Profil coloré selon la pente (désactivé par défaut). -->
         <property id="slopes" type="boolean">false</property>
         <!-- Bouton Lap = passage au point le plus proche (désactiver si le tour automatique est utilisé). -->
