@@ -40,8 +40,8 @@ bandeaux d'EP l'entourent en haut et en bas.*
 
 1. **Liste** : tes courses à venir (par date) puis les parcours de ta bibliothèque (par nom), avec
    distance, D+ et date ; la course envoyée à la montre (⌚) est présélectionnée. Sans synchronisation des
-   parcours, la liste propose la course envoyée à la montre. En bas : **Sortie libre** (sans plan,
-   EndurancePro seul) et **Réglages**.
+   parcours, la liste propose la course envoyée à la montre. En bas : **Sortie libre** (sans plan :
+   écrans EndurancePro et Carte seulement, Haut / Bas passent de l'un à l'autre) et **Réglages**.
 2. **Fiche** du parcours choisi : le parcours entier sur la **carte Garmin** (tracé seul sur les montres
    sans cartes), nom, distance, D+. START : démarrer ; appui long sur Haut : réglages ; BACK : liste.
 3. **Écrans de course**, en attente du GPS (anneau rouge, puis vert) ; START pour partir. Avant le départ,

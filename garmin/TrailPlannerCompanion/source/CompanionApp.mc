@@ -10,6 +10,7 @@ import Toybox.WatchUi;
 class CompanionApp extends Application.AppBase {
     const PAGES = 4;          // EndurancePro, Trail Planner, profil, carte
     const TP_PAGE = 1;
+    const PROFILE_PAGE = 2;
     const MAP_PAGE = 3;
 
     var run = null;
@@ -109,10 +110,18 @@ class CompanionApp extends Application.AppBase {
         return mapSupported();
     }
 
-    // Haut / Bas : écran suivant ; un changement à la main annule le retour automatique.
+    // Haut / Bas : écran suivant ; un changement à la main annule le retour automatique. En sortie libre
+    // (aucun parcours choisi), seulement EndurancePro et la carte : Trail Planner et Profil n'ont rien à
+    // montrer.
     function nextPage(dir as Number) as Void {
         focusBack = -1;
-        showPage((page + dir + PAGES) % PAGES);
+        var p = (page + dir + PAGES) % PAGES;
+        if ((run as Run).courseId == null) {
+            while (p == TP_PAGE || p == PROFILE_PAGE) {
+                p = (p + dir + PAGES) % PAGES;
+            }
+        }
+        showPage(p);
     }
 
     // Chaque seconde pendant la sortie (Run.onTick) : un rappel nutrition, l'arrivée à un ravito ou une
