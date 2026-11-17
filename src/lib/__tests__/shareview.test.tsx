@@ -209,6 +209,28 @@ describe('page assistance', () => {
     expect(timeAtDist(rows, start, t0, 25000)).toBe(Date.parse(rows[1].eta))
   })
 
+  it('ravito : coureur sur place encadré, puis temps réel passé une fois reparti', () => {
+    const s = Math.round(Date.parse(snap.start) / 1000)
+    const w = parseWatchPlan(snap.w)!
+    const passA = s + w.cps[0].planned
+    // 7 min après l'arrivée au ravito A (km 5), position 50 m après le point, pas encore reparti.
+    const at = renderToStaticMarkup(<ShareView snap={snap} report={{ t: passA + 400, s, d: 5050, p: `0:${passA}` }} nowMs={(passA + 420) * 1000} />)
+    expect(at).toMatch(/class="[^"]*at-ravito/)
+    expect(at).toContain('Au ravito depuis 7 min · arrêt prévu 3 min')
+    expect(at).toMatch(/Au ravito : <strong>Ravito A<\/strong> depuis 7 min/)
+    expect(at).toContain('class="at-halo"')
+    expect(at).toMatch(/class="mp-pt[^"]*mp-at"/)
+    // Reparti après 8 min (départ noté par la montre) : arrêt réel et écart au prévu.
+    const left = renderToStaticMarkup(<ShareView snap={snap} report={{ t: passA + 900, s, d: 6000, p: `0:${passA}:${passA + 480}` }} nowMs={(passA + 900) * 1000} />)
+    expect(left).not.toMatch(/class="[^"]*at-ravito/)
+    expect(left).not.toContain('at-halo')
+    expect(left).toMatch(/Arrêt 8 min<span class="late"> \(prévu 3 min, \+5\)/)
+    // Ancienne montre (sans départ) déjà loin : plus au ravito, arrêt prévu seulement.
+    const old = renderToStaticMarkup(<ShareView snap={snap} report={{ t: passA + 900, s, d: 6000, p: `0:${passA}` }} nowMs={(passA + 900) * 1000} />)
+    expect(old).not.toMatch(/class="[^"]*at-ravito/)
+    expect(old).toContain('Arrêt prévu 3 min')
+  })
+
   it('relevé trop ancien : ignoré', () => {
     const s = Math.round(Date.parse(snap.start) / 1000)
     const html = renderToStaticMarkup(<ShareView snap={snap} report={{ t: s + 600, s, d: 2000 }} nowMs={(s + 600 + 4 * 3600) * 1000} />)

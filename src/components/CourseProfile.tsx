@@ -52,6 +52,7 @@ export function CourseProfile({
   night,
   onHover,
   readout,
+  atId = null,
 }: {
   profile: [number, number][]
   rows: ProfileRow[]
@@ -64,6 +65,8 @@ export function CourseProfile({
   onHover?: (dist: number | null) => void
   /** Texte affiché au curseur (km, altitude, heure…). */
   readout?: (dist: number) => string
+  /** Point où se trouve le coureur (ravito en cours) : halo, pas grisé. */
+  atId?: string | null
 }) {
   const [hover, setHover] = useState<number | null>(null)
   // Rendu à l'échelle 1 (largeur mesurée) : texte lisible aussi sur téléphone.
@@ -292,9 +295,10 @@ export function CourseProfile({
           const label = shown.has(r.id)
           const flip = !!shown.get(r.id)
           return (
-            <g key={r.id} className={`mp-pt ${r.assist ? 'mp-assist' : ''} ${r.dropbag ? 'mp-bag' : ''} ${r.actual || (follow !== null && r.dist <= follow) ? 'mp-passed' : ''}`}>
+            <g key={r.id} className={['mp-pt', r.assist && 'mp-assist', r.dropbag && 'mp-bag', r.id !== atId && (r.actual || (follow !== null && r.dist <= follow)) && 'mp-passed', r.id === atId && 'mp-at'].filter(Boolean).join(' ')}>
               <title>{`${r.name} · km ${(r.dist / 1000).toFixed(1)}${r.assist ? ' · assistance autorisée' : ''}${r.kind === 'base' ? ' · base de vie' : ''}${r.dropbag ? ' · dropbag' : ''}`}</title>
               {label && <line className="mp-stem" x1={xx} x2={xx} y1={T - 4} y2={yy} />}
+              {r.id === atId && <circle className="at-halo" cx={xx} cy={yy} r={13} />}
               {r.assist && <circle className="assist-ring" cx={xx} cy={yy} r={7} />}
               {r.kind === 'base' ? (
                 <rect x={xx - 5} y={yy - 5} width={10} height={10} rx={1.5} className={r.actual ? 'done-dot' : 'base-mark'} />

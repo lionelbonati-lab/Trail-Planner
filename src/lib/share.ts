@@ -34,6 +34,8 @@ export interface ShareRow {
   dropbag?: boolean
   /** D+ cumulé depuis le départ jusqu'à ce point (m), absent des anciens partages. */
   up?: number
+  /** Départ du ravito (ISO), donné par la montre sur la page assistance (pas dans le partage). */
+  left?: string | null
 }
 
 export interface ShareSnapshot {

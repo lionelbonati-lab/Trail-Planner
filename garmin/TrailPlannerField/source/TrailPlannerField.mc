@@ -451,6 +451,14 @@ class TrailPlannerField extends WatchUi.DataField {
                 last = i;
             }
         }
+        // Départ d'un ravito noté tout seul à 150 m après le point (sans attendre un 2e tour Lap) :
+        // temps passé au ravito envoyé à l'assistance.
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (plan.cpKind[i].equals("r") && passes.hasKey(i) && !departs.hasKey(i) && d > plan.cpDist[i] + 150) {
+                departs.put(i, now);
+                changed = true;
+            }
+        }
         // Ravito atteint (pas un point dépassé de loin, au démarrage en cours de parcours) : sac à emporter.
         if (last >= 0 && d < plan.cpDist[last] + 300) {
             showBag(last, now);
@@ -541,10 +549,15 @@ class TrailPlannerField extends WatchUi.DataField {
 
     // Suivi lu par la tâche de fond, qui l'envoie à l'assistance via le téléphone.
     function saveProgress(info as Activity.Info, now as Number, d as Float) as Void {
+        // Passages « indice:arrivée », et « indice:arrivée:départ » pour un ravito quitté (temps passé au
+        // ravito) : même champ, accepté tel quel par les règles Firestore et lu par les anciennes pages.
         var p = "";
         var keys = passes.keys();
         for (var k = 0; k < keys.size(); k++) {
             p += (k > 0 ? "," : "") + keys[k] + ":" + passes[keys[k]];
+            if (departs.hasKey(keys[k])) {
+                p += ":" + departs[keys[k]];
+            }
         }
         var progress = { "t" => now, "s" => startUnix, "d" => d.toNumber(), "p" => p };
         var loc = info.currentLocation;

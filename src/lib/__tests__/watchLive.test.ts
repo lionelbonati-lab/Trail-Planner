@@ -3,7 +3,7 @@ import { DEFAULT_ATHLETE, newRace } from '../defaults'
 import { plannedAt } from '../live'
 import { computePlan } from '../plan'
 import { watchPlan } from '../watch'
-import { parsePasses, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus } from '../watchLive'
+import { parseDepartures, parsePasses, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus } from '../watchLive'
 
 function gpx(): string {
   const pts: string[] = []
@@ -79,6 +79,18 @@ describe('suivi depuis la montre', () => {
     // À moins de 300 m devant : gardé (distance de la montre un peu en retard sur le point).
     const near = watchStatus({ t, s, d: cp.dist - 200, p: `1:${t - 60}` }, w, t)
     expect(near.passed.has(1)).toBe(true)
+  })
+
+  it('départ du ravito noté par la montre : lu, et base des estimations suivantes', () => {
+    const s = 1_800_000_000
+    const passA = s + w.cps[0].planned
+    expect([...parseDepartures(`0:${passA}:${passA + 600},1:${passA + 900}`)]).toEqual([[0, passA + 600]])
+    const st = watchStatus({ t: passA + 600, s, d: w.cps[0].dist, p: `0:${passA}:${passA + 600}` }, w, passA + 600)
+    expect(st.departed.get(0)).toBe(passA + 600)
+    // Parti 10 min après l'arrivée : la suite part de là (et non de l'arrivée + arrêt prévu).
+    const ref = watchStatus({ t: passA + 600, s, d: w.cps[0].dist, p: `0:${passA}` }, w, passA + 600)
+    expect(st.etas[1]).toBeGreaterThanOrEqual(ref.etas[1])
+    expect(parsePasses(`0:${passA}:${passA + 600}`).get(0)).toBe(passA)
   })
 
   it('point pas encore passé : jamais estimé avant maintenant, la suite est décalée', () => {

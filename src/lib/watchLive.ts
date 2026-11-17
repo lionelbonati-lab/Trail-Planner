@@ -14,7 +14,7 @@ export interface WatchReport {
   lon?: number
   /** Batterie de la montre (%). */
   bat?: number
-  /** Passages : « indice:instant Unix » séparés par des virgules. */
+  /** Passages : « indice:instant Unix » (« indice:arrivée:départ » pour un ravito quitté) séparés par des virgules. */
   p?: string
 }
 
@@ -58,6 +58,16 @@ export function parsePasses(p: string | undefined): Map<number, number> {
   return out
 }
 
+/** Départs des ravitos notés par la montre (troisième valeur d'un passage) : indice -> instant. */
+export function parseDepartures(p: string | undefined): Map<number, number> {
+  const out = new Map<number, number>()
+  for (const part of (p ?? '').split(',')) {
+    const [i, , t] = part.split(':').map(Number)
+    if (Number.isFinite(i) && Number.isFinite(t) && t > 0) out.set(i, t)
+  }
+  return out
+}
+
 export interface WatchStatus {
   /** Ancienneté du relevé (s). */
   age: number
@@ -68,6 +78,8 @@ export interface WatchStatus {
   /** Heure estimée (s Unix) par point ; passage réel si connu. */
   etas: number[]
   passed: Map<number, number>
+  /** Départs des ravitos (s Unix), pour les points passés seulement. */
+  departed: Map<number, number>
   finishEta: number
 }
 
@@ -111,6 +123,7 @@ export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number
   // passage, distance sans tracé GPS qui dérive…) : pas crédible, ignoré.
   const passed = new Map([...parsePasses(report.p)].filter(([i]) => i < plan.cps.length && plan.cps[i].dist <= report.d + PASS_AHEAD_M))
   const ref = [...passed.keys()].reduce((a, i) => Math.max(a, i), -1)
+  const departed = new Map([...parseDepartures(report.p)].filter(([i, t]) => passed.has(i) && t >= passed.get(i)!))
   // Point d'ancrage des estimations : départ, dernier passage (arrêt compris) ou relevé plus récent.
   let ratio = 1
   let t0 = report.s
@@ -118,7 +131,8 @@ export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number
   if (ref >= 0) {
     const cp = plan.cps[ref]
     ratio = ratioOf(passed.get(ref)! - report.s, cp.planned)
-    t0 = passed.get(ref)! + cp.stop
+    // Départ réel du ravito s'il est noté, sinon arrivée + arrêt prévu.
+    t0 = departed.get(ref) ?? passed.get(ref)! + cp.stop
     d0 = cp.dist
   }
   if (report.d > 200 && report.d > d0 + 100 && report.t >= t0 && report.d < plan.total) {
@@ -141,6 +155,7 @@ export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number
     delta: report.d > 200 ? elapsed - planned : 0,
     etas,
     passed,
+    departed,
     finishEta,
   }
 }

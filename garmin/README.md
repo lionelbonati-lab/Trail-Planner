@@ -69,7 +69,9 @@ plan), « Manger ici » (produits cochés « Sur ravito » dans le profil : bana
 affiché **jusqu'au 2e tour Lap** (départ du ravito : les heures estimées repartent du départ réel au lieu de
 l'arrivée + arrêt prévu), ou 300 m après le ravito si tu repars sans appuyer. Si la place manque, le nom du
 ravito suivant est retiré d'abord. Un 1er tour au ravito alors que le GPS a déjà noté l'arrivée la recale à
-l'instant du tour ; le 2e tour est le départ.
+l'instant du tour ; le 2e tour est le départ. Sans 2e tour, le départ est noté tout seul 150 m après le
+ravito. Le départ est envoyé à l'assistance avec le passage (`indice:arrivée:départ`) : le lien assistance
+affiche le temps réellement passé au ravito (et l'écart à l'arrêt prévu).
 
 **Barre de progression.** Sous l'écart, une barre montre le tronçon en cours, du dernier ravito passé (ou
 du départ) au suivant (ou à l'arrivée) : les traits sont les points de passage du tronçon, les points les

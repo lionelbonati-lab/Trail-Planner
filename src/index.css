@@ -276,6 +276,18 @@ button.big { font-size: 17px; padding: 14px 20px; border-radius: 12px; width: 10
 .share-points .delay.early { color: var(--ok); }
 .share-points .delay.on-time { color: var(--muted); font-weight: 400; }
 .share-points .delay.est { font-weight: 400; font-style: italic; }
+.share-points .stop-info { font-size: 12px; }
+.share-points .stop-info .late { color: var(--warn); }
+.share-points .stop-info .early { color: var(--ok); }
+.share-points .stop-info.at { color: var(--series-1); font-weight: 650; }
+.share-points tr.at-ravito td { background: #eaf2fc; border-top: 2px solid var(--series-1); border-bottom: 2px solid var(--series-1); }
+.share-points tr.at-ravito td:first-child { border-left: 2px solid var(--series-1); background: #eaf2fc; }
+.share-points tr.at-ravito td:last-child { border-right: 2px solid var(--series-1); }
+.live-hero .at-ravito-banner { color: var(--series-1); font-weight: 600; }
+.live-hero .at-ravito-banner .kind-icon { color: var(--series-1); }
+.assist-profile .at-halo { fill: var(--series-1); opacity: 0.25; animation: at-pulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes at-pulse { 0%, 100% { opacity: 0.15; transform: scale(0.8); } 50% { opacity: 0.35; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .assist-profile .at-halo { animation: none; } }
 .assist-profile { position: relative; }
 .assist-profile-scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 .assist-profile .leg-bg { fill: var(--surface); }

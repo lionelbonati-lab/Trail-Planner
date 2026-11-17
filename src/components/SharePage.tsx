@@ -25,6 +25,36 @@ function KindIcon({ kind, finish }: { kind: string; finish?: boolean }) {
   )
 }
 
+/** Au-delà de cette distance après un ravito (m), le coureur en est reparti. */
+const AT_RAVITO_M = 150
+
+/** Temps au ravito : arrêt prévu, et réel une fois reparti (ou en cours, s'il y est). */
+function StopInfo({ row, at, sinceMin }: { row: ShareSnapshot['rows'][number]; at: boolean; sinceMin: number }) {
+  const planned = Math.round(row.stopMin)
+  if (at) {
+    return (
+      <div className="stop-info at">
+        Au ravito depuis {sinceMin} min{planned > 0 ? ` · arrêt prévu ${planned} min` : ''}
+      </div>
+    )
+  }
+  if (row.actual && row.left) {
+    const real = Math.round((Date.parse(row.left) - Date.parse(row.actual)) / 60000)
+    const diff = real - planned
+    return (
+      <div className="stop-info">
+        Arrêt {real} min
+        {planned > 0 && (
+          <span className={diff > 0 ? 'late' : diff < 0 ? 'early' : ''}>
+            {' '}(prévu {planned} min{diff ? `, ${diff > 0 ? '+' : '−'}${Math.abs(diff)}` : ''})
+          </span>
+        )}
+      </div>
+    )
+  }
+  return planned > 0 ? <div className="stop-info muted">Arrêt prévu {planned} min</div> : null
+}
+
 /** Avance (−) ou retard (+) sur l'heure prévue, en min ou en h. */
 function signedDelay(sec: number): string {
   const m = Math.round(sec / 60)
@@ -376,6 +406,7 @@ export function ShareView({
       rows: snap.rows.map((r, i) => ({
         ...r,
         actual: watch.passed.has(i) ? new Date(watch.passed.get(i)! * 1000).toISOString() : r.actual,
+        left: watch.departed.has(i) ? new Date(watch.departed.get(i)! * 1000).toISOString() : null,
         eta: new Date(watch.etas[i] * 1000).toISOString(),
       })),
     }
@@ -389,6 +420,12 @@ export function ShareView({
   const long = Date.parse(snap.rows[snap.rows.length - 1]?.planned ?? snap.start) - Date.parse(snap.start) > 20 * 3600000
   const lastDone = [...snap.rows].reverse().find((r) => r.actual)
   const next = snap.rows.find((r) => !r.actual)
+  // Coureur au ravito : arrivé (passage noté), pas encore reparti, position de la montre à moins de
+  // 150 m après le point.
+  const atRavito = watch
+    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + AT_RAVITO_M && watch.dist > r.dist - 2 * AT_RAVITO_M)
+    : undefined
+  const atSinceMin = atRavito ? Math.max(0, Math.round((nowMs - Date.parse(atRavito.actual!)) / 60000)) : 0
   const elapsed = snap.live ? (nowMs - Date.parse(snap.live.startedAt)) / 1000 : null
   // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
   const km = (d: number) => (d / 1000).toFixed(1).replace('.', ',')
@@ -400,7 +437,7 @@ export function ShareView({
           lat: report.lat,
           lon: report.lon,
           label: `Dernier relevé : km ${km(watch.dist)} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
-          estimate: estimate !== null ? { dist: estimate, label: `Estimé maintenant : km ${km(estimate)}` } : null,
+          estimate: !atRavito && estimate !== null ? { dist: estimate, label: `Estimé maintenant : km ${km(estimate)}` } : null,
         }
       : snap.live && lastDone
         ? { dist: lastDone.dist, label: `Dernier passage : ${lastDone.name} à ${clock(lastDone.actual)}` }
@@ -450,7 +487,7 @@ export function ShareView({
         ) : (
         <>
         {/* Pointeur : position estimée entre deux relevés (sinon celle du dernier relevé). */}
-        <CourseProfile profile={snap.profile} rows={snap.rows} position={watch ? (estimate ?? watch.dist) : null} />
+        <CourseProfile profile={snap.profile} rows={snap.rows} atId={atRavito?.id ?? null} position={watch ? (atRavito ? watch.dist : (estimate ?? watch.dist)) : null} />
         {watch && report ? (
           <section className="live-hero">
             <div className="live-label">Montre · en course depuis</div>
@@ -458,8 +495,14 @@ export function ShareView({
             <div className={`live-delta ${watch.delta > 60 ? 'late' : 'early'}`}>
               km {(watch.dist / 1000).toFixed(1)} · {signedMin(watch.delta)} sur le plan
             </div>
-            {estimate !== null && estimate > watch.dist + 50 && (
+            {!atRavito && estimate !== null && estimate > watch.dist + 50 && (
               <div className="live-sub">≈ km {km(estimate)} maintenant (estimé d'après son rythme, entre deux relevés)</div>
+            )}
+            {atRavito && (
+              <div className="live-sub at-ravito-banner">
+                <KindIcon kind={atRavito.kind} /> Au ravito : <strong>{atRavito.name}</strong> depuis {atSinceMin} min
+                {atRavito.stopMin > 0 ? ` (arrêt prévu ${Math.round(atRavito.stopMin)} min)` : ''}
+              </div>
             )}
             {lastDone && <div className="live-sub">Dernier passage : {lastDone.name} à {clock(lastDone.actual)}</div>}
             {next && <div className="live-sub">Prochain : <strong>{next.name}</strong> vers {clock(next.eta, long)}</div>}
@@ -504,9 +547,10 @@ export function ShareView({
           </thead>
           <tbody>
             {snap.rows.map((r, i) => (
-              <tr key={r.id} className={`${isRavitoKind(r.kind) ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''}`}>
+              <tr key={r.id} className={`${isRavitoKind(r.kind) ? 'kind-ravito' : ''} ${r.actual ? 'done' : ''} ${r === atRavito ? 'at-ravito' : ''}`}>
                 <td>
                   <KindIcon kind={r.kind} finish={i === snap.rows.length - 1} /> {r.name}
+                  {isRavitoKind(r.kind) && <StopInfo row={r} at={r === atRavito} sinceMin={atSinceMin} />}
                   {r.notes && <div className="muted small">{r.notes}</div>}
                   {r.lat !== undefined && r.lon !== undefined && (
                     <div>
