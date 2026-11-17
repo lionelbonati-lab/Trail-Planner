@@ -8,6 +8,9 @@
     <setting propertyKey="@Properties.vibrate" title="@Strings.VibrateTitle">
         <settingConfig type="boolean" />
     </setting>
+    <setting propertyKey="@Properties.notify" title="@Strings.NotifyPrompt">
+        <settingConfig type="boolean" />
+    </setting>
     <setting propertyKey="@Properties.lapPass" title="@Strings.LapTitle">
         <settingConfig type="boolean" />
     </setting>

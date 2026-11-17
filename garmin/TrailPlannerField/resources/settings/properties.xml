@@ -3,6 +3,8 @@
     <property id="code" type="string"></property>
     <property id="fuelMin" type="number">-1</property>
     <property id="vibrate" type="boolean">true</property>
+    <!-- Rappels nutrition en notification de la montre (par-dessus tous les écrans de l'activité). -->
+    <property id="notify" type="boolean">true</property>
     <!-- Bouton Lap = passage au point le plus proche (désactiver si le tour auto est utilisé). -->
     <property id="lapPass" type="boolean">true</property>
     <!-- Distance, D+ et D- restant jusqu'à l'arrivée, en plus de ceux jusqu'au prochain point. -->
