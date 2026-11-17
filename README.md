@@ -139,13 +139,15 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   déduite) et la part des glucides ; une eau minérale salée comme la St-Yorre est mélangée à l'eau des flasques, juste assez
   pour le sodium visé, puis à l'isotonique si les flasques d'eau ne suffisent pas (ou s'il n'y en a pas). **Produits salés**
   (moins de 5 g de glucides par portion : bouillon, saucisson, salt caps) : comptés pour le sodium qui manque au tronçon, au
-  ravito de départ (deux portions au plus) ou emportés ; **ordre des sources de sodium** réglable (produits salés du ravito,
-  produits salés emportés, eau minérale salée), le sel complète. **Bibliothèque de produits** : aliments fréquents aux ravitaillements (banane, orange, fruits secs,
+  ravito de départ (deux portions au plus) ou emportés ; le sel complète. **Bibliothèque de produits** : aliments fréquents aux ravitaillements (banane, orange, fruits secs,
   pain d'épices, chips, fromage, bouillon, coca, soupe, St-Yorre…) et produits Baouw, Näak (dont la boisson Ultra Energy), TA Energy (dont l'Energy Drink Mix), Overstim.s, Maurten,
   Sponser (dont les Liquid Energy en sachet de 35 g, Salty et Ultra 25 g, et les Salt Caps) et Decathlon (dont les barres Clak et pâte d'amande), saveurs aux apports presque identiques regroupées ; valeurs indicatives, « Ajouter » les copie dans
   tes produits. Carte **Nutrition** de chaque course : glucides, eau et sodium par heure, **marque présente aux
   ravitaillements** (« Ravitaillement » pour les aliments servis par l'organisation) et **produits retenus** (une liste :
-  chaque ligne choisit un produit, « Ajouter un produit » en ajoute une).
+  chaque ligne choisit un produit, « Ajouter un produit » en ajoute une). **Ordre de la liste**, à trier en glissant la
+  poignée (ou flèches du clavier) : ordre d'affichage, de prise et des rappels de la montre ; le premier produit complète
+  les glucides (arrondi, ou part d'un produit absent comme une banane au départ ; les parts restent celles de l'onglet
+  Nutrition) ; les sources de sodium (produits salés, eau minérale salée) servent dans cet ordre, le sel en dernier.
 - Impression : A4 (profil, temps, sacs de ravito, dropbags) et fiche assistance pour les courses ; bande pour les courses et les parcours.
 - Export Garmin **FIT** ou GPX horodaté (Garmin Connect → PacePro).
 

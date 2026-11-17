@@ -78,8 +78,6 @@ export interface Athlete {
   activities: ActivityRecord[]
   /** Produits de nutrition habituels. */
   products: Product[]
-  /** Ordre des sources de sodium pour couvrir le besoin d'un tronçon (le sel complète en dernier). */
-  sodiumOrder?: SodiumSource[]
   /** Zones d'entraînement en fraction de VC (comme celles de ton entraîneur). */
   zones: TrainingZone[]
   /** Résultats des tests VC (3′, 7′, 12′…), faits des jours différents. */
@@ -220,9 +218,6 @@ export interface Product {
 
 /** Type de produit ; l'eau (plate ou minérale) est un liquide sans glucides. */
 export type ProductType = 'solid' | 'liquid' | 'gel'
-
-/** Source de sodium : produits salés du ravito (bouillon…), emportés (salt caps…), eau minérale salée des flasques. */
-export type SodiumSource = 'ravito' | 'carried' | 'mineral'
 
 export interface TrainingZone {
   name: string

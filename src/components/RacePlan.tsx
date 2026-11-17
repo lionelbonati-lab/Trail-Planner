@@ -21,6 +21,7 @@ import { AssistControls } from './AssistControls'
 import { PrintSheets, type PrintFormat } from './PrintSheets'
 import { ProfileChart } from './ProfileChart'
 import { CourseProfile } from './CourseProfile'
+import { SortableList } from './SortableList'
 import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY, RAVITO_BRAND } from '../lib/productLibrary'
 import { ZonePicker, ZonesCard } from './Zones'
 import { Card, Hint, Kpi, Num, Toggle } from './ui'
@@ -235,9 +236,10 @@ export function RacePlan({
       id = np.id
       onAthleteChange({ ...athlete, products: all })
     }
+    // Ordre de la liste gardé : le produit remplace l'ancien à sa place, ou s'ajoute à la fin.
     const ids = products.map((x) => x.id)
     const next = replace ? ids.map((x) => (x === replace ? id : x)) : [...ids, id]
-    set({ productIds: all.filter((x) => next.includes(x.id)).map((x) => x.id) })
+    set({ productIds: next.filter((x, i) => next.indexOf(x) === i && all.some((p) => p.id === x)) })
   }
   /** Options du choix d'un produit : tes produits pas encore retenus, puis la bibliothèque par marque. */
   const productOptions = (current?: string) => {
@@ -289,7 +291,7 @@ export function RacePlan({
     }
     return [bands((p) => p.tech).filter((b) => b.v > 1), bands((p) => (p.night ? 1 : 0)).filter((b) => b.v === 1)]
   })()
-  const legs = nutritionPlan(race, sim, products, athlete.sodiumOrder)
+  const legs = nutritionPlan(race, sim, products)
   const brands = brandsOf(athlete.products)
   // Dropbags prévus par l'organisation (course) : contenu jusqu'au suivant.
   const dropbags = dropbagPlan(legs, sim.splits.map((s) => s.cp))
@@ -1072,9 +1074,9 @@ export function RacePlan({
                   onChange={(e) => {
                     const brand = e.target.value || undefined
                     // La marque coche ses produits et décoche ceux des autres marques ; les produits sans marque restent.
-                    const ids = athlete.products
-                      .filter((p) => (brand ? !p.brand?.trim() ? products.includes(p) : p.brand.trim() === brand : products.includes(p)))
-                      .map((p) => p.id)
+                    // Ordre de la liste gardé ; les produits de la marque qui n'y étaient pas s'ajoutent à la fin.
+                    const keep = (p: (typeof products)[number]) => (brand ? (!p.brand?.trim() ? products.includes(p) : p.brand.trim() === brand) : products.includes(p))
+                    const ids = [...products.filter(keep), ...athlete.products.filter((p) => keep(p) && !products.includes(p))].map((p) => p.id)
                     set({ ravitoBrand: brand, productIds: brand ? ids : race.productIds })
                   }}
                   disabled={brands.length === 0}
@@ -1088,15 +1090,19 @@ export function RacePlan({
           <div className="field">
             <span className="field-label">Produits sur {isRoute ? 'ce parcours' : 'cette course'}</span>
             <div className="product-rows">
-              {products.map((p) => (
-                <div className="row tight" key={p.id}>
-                  <select value={p.id} onChange={(e) => chooseProduct(e.target.value, p.id)} aria-label="Produit">
-                    {productOptions(p.id)}
-                  </select>
-                  {isAtRavito(p) && <span className="tag ravito-tag" title="Mangé ou bu au ravito, pas emporté">sur ravito</span>}
-                  <button className="ghost" onClick={() => set({ productIds: products.filter((x) => x.id !== p.id).map((x) => x.id) })} aria-label={`Retirer ${p.name}`}><Trash2 /></button>
-                </div>
-              ))}
+              {/* Ordre de la liste (glisser la poignée) : ordre de prise, premier produit qui complète les
+                  glucides, ordre des sources de sodium. */}
+              <SortableList items={products} keyOf={(p) => p.id} label={(p) => p.name} onSort={(next) => set({ productIds: next.map((x) => x.id) })}>
+                {(p) => (
+                  <div className="row tight">
+                    <select value={p.id} onChange={(e) => chooseProduct(e.target.value, p.id)} aria-label="Produit">
+                      {productOptions(p.id)}
+                    </select>
+                    {isAtRavito(p) && <span className="tag ravito-tag" title="Mangé ou bu au ravito, pas emporté">sur ravito</span>}
+                    <button className="ghost" onClick={() => set({ productIds: products.filter((x) => x.id !== p.id).map((x) => x.id) })} aria-label={`Retirer ${p.name}`}><Trash2 /></button>
+                  </div>
+                )}
+              </SortableList>
               {addingProduct ? (
                 <div className="row tight">
                   <select
@@ -1124,7 +1130,9 @@ export function RacePlan({
           <Hint>
             Tes produits (gels, barres, isotonique en flasque) et leur marque se règlent dans l’onglet <a href="#/nutrition">Nutrition</a>.
             Choisir la marque présente aux ravitaillements retient ses produits ; « Ajouter un produit » en ajoute autant que tu veux,
-            parmi tes produits ou la bibliothèque (le produit choisi est alors copié dans tes produits). L'eau augmente de 4 % par °C au-dessus de 15 °C.
+            parmi tes produits ou la bibliothèque (le produit choisi est alors copié dans tes produits). <strong>Ordre de la liste</strong> (glisse
+            la poignée ⋮⋮) : ordre de prise et des rappels de la montre, premier produit qui complète les glucides (les parts restent celles de
+            l'onglet Nutrition), et ordre des sources de sodium (produits salés, St-Yorre), le sel complétant. L'eau augmente de 4 % par °C au-dessus de 15 °C.
           </Hint>
         </Card>
 

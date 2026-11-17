@@ -800,7 +800,13 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
   .debrief tr { break-inside: avoid; }
   .debrief .kpi { border: 1px solid var(--line); }
 }
-.sodium-order { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.sodium-order li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
-.sodium-order li:last-child { border-bottom: none; }
-.sodium-order li .row { flex-shrink: 0; }
+/* Listes triables (glisser-déposer). */
+.sortable { display: grid; gap: 6px; }
+.sortable-row { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.sortable.sorting .sortable-row:not(.dragging) { transition: transform 0.15s ease; }
+.sortable-row.dragging { position: relative; z-index: 2; background: var(--surface); border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16); }
+.drag-handle { touch-action: none; cursor: grab; padding: 6px 4px; color: var(--muted); }
+.sortable-row.dragging .drag-handle { cursor: grabbing; color: var(--ink); }
+.product-rows .sortable-row > .row { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; }
+.product-rows .sortable-row select { flex: 1 1 auto; min-width: 0; width: 100%; }
+.product-rows .sortable-row .tag { flex-shrink: 0; }

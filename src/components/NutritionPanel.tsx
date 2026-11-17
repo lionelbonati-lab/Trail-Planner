@@ -1,6 +1,6 @@
-import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from 'lucide-react'
+import { Check, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { brandsOf, isFlask, isFlaskWater, isSodiumProduct, per100, PRODUCT_TYPES, productType, SODIUM_CARBS_MAX, SODIUM_SOURCES, sodiumOrder, withPer100 } from '../lib/nutrition'
+import { brandsOf, isFlask, isFlaskWater, isSodiumProduct, per100, PRODUCT_TYPES, productType, SODIUM_CARBS_MAX, withPer100 } from '../lib/nutrition'
 import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY } from '../lib/productLibrary'
 import type { Athlete, Product, ProductType } from '../lib/types'
 import { Card, Hint, Num } from './ui'
@@ -26,9 +26,10 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
           minérale salée (St-Yorre : environ 850 mg de sodium par 500 ml) y est mélangée à l'eau plate, juste assez pour le sodium
           visé, puis à l'isotonique si les flasques d'eau ne suffisent pas (ou s'il n'y en a pas) ; case décochée : ignorée.
           <strong>Produit salé</strong> (moins de {SODIUM_CARBS_MAX} g de glucides par portion : bouillon, saucisson, salt caps) : compté pour le
-          sodium qui manque au tronçon, au ravito de départ (case Sur ravito, deux portions au plus) ou emporté, dans l'ordre choisi
-          plus bas ; le sel complète. Dans chaque course, la carte « Nutrition » choisit les produits retenus ou la marque présente aux
-          ravitaillements.
+          sodium qui manque au tronçon, au ravito de départ (case Sur ravito, deux portions au plus) ou emporté ; le sel complète.
+          Dans chaque course, la carte « Nutrition » choisit les produits retenus ou la marque présente aux ravitaillements, et leur
+          <strong>ordre</strong> (à trier en glissant) : ordre de prise, premier produit qui complète les glucides, ordre des sources de
+          sodium. Sans choix, c'est l'ordre de cette liste.
         </Hint>
         <datalist id="tp-brands">{brandsOf(products).map((b) => <option key={b} value={b} />)}</datalist>
         <div className="scroll">
@@ -110,8 +111,6 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         </div>
       </Card>
 
-      <SodiumOrderCard athlete={athlete} onChange={onChange} />
-
       <Card title="Bibliothèque de produits" className="span2">
         <Hint>
           Produits fréquents aux ravitaillements et produits de quelques marques, saveurs aux apports presque identiques regroupées.
@@ -161,35 +160,5 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         </div>
       </Card>
     </div>
-  )
-}
-
-/** Ordre des sources de sodium : ce qui couvre d'abord le sodium manquant d'un tronçon (le sel en dernier). */
-function SodiumOrderCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
-  const order = sodiumOrder(athlete.sodiumOrder)
-  const move = (i: number, by: number) => {
-    const next = [...order]
-    ;[next[i], next[i + by]] = [next[i + by], next[i]]
-    onChange({ ...athlete, sodiumOrder: next })
-  }
-  return (
-    <Card title="Sodium : ordre des sources" className="span2" fold="open">
-      <Hint>
-        Gels, barres et isotonique apportent d'abord leur sodium ; ce qui manque au tronçon vient ensuite de ces sources, dans cet ordre
-        (chacune seulement si elle fait partie des produits retenus pour la course), et le sel complète.
-      </Hint>
-      <ul className="sodium-order">
-        {order.map((src, i) => (
-          <li key={src}>
-            <span>{i + 1}. {SODIUM_SOURCES[src]}</span>
-            <span className="row tight">
-              <button className="ghost" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter : ${SODIUM_SOURCES[src]}`}><ArrowUp /></button>
-              <button className="ghost" onClick={() => move(i, 1)} disabled={i === order.length - 1} aria-label={`Descendre : ${SODIUM_SOURCES[src]}`}><ArrowDown /></button>
-            </span>
-          </li>
-        ))}
-        <li className="muted"><span>{order.length + 1}. Sel (le reste, au-delà de 150 mg)</span></li>
-      </ul>
-    </Card>
   )
 }
