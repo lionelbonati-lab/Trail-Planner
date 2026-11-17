@@ -128,6 +128,23 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
     mark(cpId, new Date(ms).toISOString())
   }
 
+  // Départ d'un ravito (« Reparti » oublié ou appuyé en retard) : saisi ou corrigé, vide pour l'effacer.
+  const editLeft = (cpId: string) => {
+    const cur = race.live?.departures?.[cpId]
+    const txt = prompt('Reparti du ravito à (hh:mm) — vide pour effacer', formatClock(cur ? new Date(cur) : new Date(), tz))
+    if (txt === null || !race.live) return
+    const departures = { ...race.live.departures }
+    if (!txt.trim()) delete departures[cpId]
+    else {
+      const ms = pastClockToMs(txt, tz)
+      if (ms === null) return alert('Format attendu : hh:mm')
+      const arrived = race.live.passages[cpId]
+      if (arrived && ms < Date.parse(arrived)) return alert("L'heure de départ doit suivre l'heure d'arrivée au ravito.")
+      departures[cpId] = new Date(ms).toISOString()
+    }
+    setLive({ ...race.live, departures })
+  }
+
   // Départ appuyé en retard (ou trop tôt) : heure corrigée, passages gardés.
   const fixStart = () => {
     const txt = prompt('Heure de départ (hh:mm)', formatClock(new Date(t0), tz))
@@ -237,6 +254,19 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
                 <td>
                   {r.actual !== null ? <strong>{clock(r.actual)}</strong> : <span className="muted">~{clock(r.eta)}</span>}
                   {r.actual !== null && <span className={`small ${r.actual > r.planned ? 'warn-text' : 'ok-text'}`}> {signed(r.actual - r.planned)}</span>}
+                  {r.actual !== null && isRavitoKind(r.split.cp.kind) && (() => {
+                    // Départ du ravito : heure et temps passé, crayon pour le saisir ou le corriger.
+                    const left = race.live?.departures?.[r.split.cp.id]
+                    const stay = left ? Math.round((Date.parse(left) - (t0 + r.actual! * 1000)) / 60000) : null
+                    return (
+                      <div className="small">
+                        {left ? <>Reparti {formatClock(new Date(left), tz)} · arrêt {stay} min</> : <span className="muted">Départ non noté</span>}{' '}
+                        <button className="ghost inline-btn" onClick={() => editLeft(r.split.cp.id)} title="Saisir ou corriger l'heure de départ du ravito" aria-label={`Modifier le départ de ${r.split.cp.name}`}>
+                          <Pencil />
+                        </button>
+                      </div>
+                    )
+                  })()}
                 </td>
                 <td><button className="ghost" onClick={() => editTime(r.split.cp.id, r.actual)} title="Saisir ou corriger l'heure" aria-label="Modifier l'heure"><Pencil /></button></td>
               </tr>

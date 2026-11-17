@@ -49,6 +49,9 @@ describe('page assistance', () => {
     expect(html).toContain('class="me"')
     // Partie déjà parcourue grisée sur le profil.
     expect(html).toContain('class="done-area"')
+    // Tronçons passés grisés sous le profil aussi.
+    expect(html).toContain('class="leg-done-bg"')
+    expect(html).toContain('class="leg-done"')
     // Points dépassés grisés aussi.
     expect(html).toMatch(/class="mp-pt[^"]*mp-passed"/)
   })
@@ -244,6 +247,10 @@ describe('page assistance', () => {
     const h2 = renderToStaticMarkup(<ShareView snap={left} report={null} nowMs={passA + 10 * 60000} />)
     expect(h2).not.toMatch(/class="[^"]*at-ravito/)
     expect(h2).toMatch(/Arrêt 4 min<span class="late"> \(prévu 3 min, \+1\)/)
+    // Cumul aux ravitos dans le suivi (en orange : 4 min pour 3 prévues).
+    expect(h2).toMatch(/class="live-sub stops-over">Aux ravitos : 4 min \(prévu 3 min\)/)
+    // Au ravito en cours : compté jusqu'à maintenant.
+    expect(html).toContain('Aux ravitos : 5 min (prévu 3 min)')
   })
 
   it('base de vie : reparti à 300 m (montre), 150 m pour un ravito', () => {

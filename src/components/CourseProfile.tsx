@@ -325,12 +325,14 @@ export function CourseProfile({
           return (
             <g key={`band${band}`} className={`leg-band ${band ? 'leg-ravito' : ''}`}>
               <rect x={0} y={top} width={W} height={BAND - 2} className="leg-bg" />
+              {/* Déjà parcouru : fond grisé jusqu'au coureur, comme le profil ; texte grisé des tronçons faits. */}
+              {follow !== null && follow > 0 && <rect x={0} y={top} width={x(Math.min(follow, total))} height={BAND - 2} className="leg-done-bg" />}
               {legs.map((l, i) => {
                 const x0 = x(l.from)
                 const x1 = x(l.to)
                 const txt = legLines(l, x1 - x0)
                 return (
-                  <g key={i}>
+                  <g key={i} className={follow !== null && l.to <= follow + 1 ? 'leg-done' : undefined}>
                     <title>{`${l.km.toFixed(1).replace('.', ',')} km · D+ ${l.up} m`}</title>
                     {i > 0 && <line x1={x0} x2={x0} y1={top} y2={top + BAND - 2} className="leg-sep" />}
                     {txt && (

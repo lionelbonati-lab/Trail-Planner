@@ -28,6 +28,31 @@ function KindIcon({ kind, finish }: { kind: string; finish?: boolean }) {
 /** Au-delà de cette distance après un ravito (m), le coureur en est reparti : 300 m pour une base de vie. */
 const awayM = (kind: string) => (kind === 'base' ? 300 : 150)
 
+/** Durée (ms) en « 42 min » ou « 1 h 05 ». */
+function minText(ms: number): string {
+  const m = Math.round(ms / 60000)
+  return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`
+}
+
+/**
+ * Temps passé aux ravitos (ms) : ravitos quittés (départ noté) et ravito en cours ; arrêts prévus de ces
+ * mêmes ravitos. Null si aucun ne compte encore.
+ */
+function ravitoTotals(rows: ShareSnapshot['rows'], at: ShareSnapshot['rows'][number] | undefined, nowMs: number): { spent: number; planned: number } | null {
+  let spent = 0
+  let planned = 0
+  let n = 0
+  for (const r of rows) {
+    if (!isRavitoKind(r.kind) || !r.actual) continue
+    const end = r.left ? Date.parse(r.left) : r === at ? nowMs : null
+    if (end === null) continue
+    spent += Math.max(0, end - Date.parse(r.actual))
+    planned += r.stopMin * 60000
+    n++
+  }
+  return n ? { spent, planned } : null
+}
+
 /** Temps au ravito : arrêt prévu, et réel une fois reparti (ou en cours, s'il y est). */
 function StopInfo({ row, at, sinceMin }: { row: ShareSnapshot['rows'][number]; at: boolean; sinceMin: number }) {
   const planned = Math.round(row.stopMin)
@@ -429,6 +454,19 @@ export function ShareView({
       : undefined
   const atSinceMin = atRavito ? Math.max(0, Math.round((nowMs - Date.parse(atRavito.actual!)) / 60000)) : 0
   const elapsed = snap.live ? (nowMs - Date.parse(snap.live.startedAt)) / 1000 : null
+  const atBanner = atRavito && (
+    <div className={`live-sub at-ravito-banner ${atRavito.stopMin > 0 && atSinceMin > Math.round(atRavito.stopMin) ? 'over' : ''}`}>
+      <KindIcon kind={atRavito.kind} /> Au ravito : <strong>{atRavito.name}</strong> depuis {atSinceMin} min
+      {atRavito.stopMin > 0 ? ` (arrêt prévu ${Math.round(atRavito.stopMin)} min)` : ''}
+    </div>
+  )
+  // Cumul du temps aux ravitos : ravitos quittés (départ noté) et ravito en cours, face à leurs arrêts prévus.
+  const stops = ravitoTotals(snap.rows, atRavito, nowMs)
+  const stopsLine = stops && (
+    <div className={stops.planned > 0 && Math.round(stops.spent / 60000) > Math.round(stops.planned / 60000) ? 'live-sub stops-over' : 'live-sub'}>
+      Aux ravitos : {minText(stops.spent)}{stops.planned > 0 ? ` (prévu ${minText(stops.planned)})` : ''}
+    </div>
+  )
   // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
   const km = (d: number) => (d / 1000).toFixed(1).replace('.', ',')
   const estimate = watch && report && plan ? estimatedDist(report, plan, nowSec) : null
@@ -500,12 +538,8 @@ export function ShareView({
             {!atRavito && estimate !== null && estimate > watch.dist + 50 && (
               <div className="live-sub">≈ km {km(estimate)} maintenant (estimé d'après son rythme, entre deux relevés)</div>
             )}
-            {atRavito && (
-              <div className={`live-sub at-ravito-banner ${atRavito.stopMin > 0 && atSinceMin > Math.round(atRavito.stopMin) ? 'over' : ''}`}>
-                <KindIcon kind={atRavito.kind} /> Au ravito : <strong>{atRavito.name}</strong> depuis {atSinceMin} min
-                {atRavito.stopMin > 0 ? ` (arrêt prévu ${Math.round(atRavito.stopMin)} min)` : ''}
-              </div>
-            )}
+            {atBanner}
+            {stopsLine}
             {lastDone && <div className="live-sub">Dernier passage : {lastDone.name} à {clock(lastDone.actual)}</div>}
             {next && <div className="live-sub">Prochain : <strong>{next.name}</strong> vers {clock(next.eta, long)}</div>}
             <div className="live-sub">Arrivée estimée {formatClock(new Date(watch.finishEta * 1000), tz, long)}</div>
@@ -521,6 +555,8 @@ export function ShareView({
           <section className="live-hero">
             <div className="live-label">En course depuis</div>
             <div className="live-clock">{elapsed !== null ? formatDuration(elapsed) : ''}</div>
+            {atBanner}
+            {stopsLine}
             {lastDone && <div className="live-sub">Dernier passage : {lastDone.name} à {clock(lastDone.actual)}</div>}
             {next && <div className="live-sub">Prochain : <strong>{next.name}</strong> vers {clock(next.eta, long)}</div>}
           </section>
