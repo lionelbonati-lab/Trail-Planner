@@ -206,6 +206,10 @@ class CompanionMapView extends WatchUi.MapView {
     // Exploration (menu « Explorer la carte ») ou retour au suivi du coureur (BACK).
     function setExploring(on as Boolean) as Void {
         exploring = on;
+        // Fin de l'exploration sur la fiche du parcours : parcours entier de nouveau cadré.
+        if (!on && overview) {
+            fitted = false;
+        }
         setMapMode(on ? WatchUi.MAP_MODE_BROWSE : WatchUi.MAP_MODE_PREVIEW);
         shownScale = -1;
         WatchUi.requestUpdate();
@@ -317,11 +321,21 @@ class CompanionMapView extends WatchUi.MapView {
     function onUpdate(dc as Graphics.Dc) as Void {
         refreshRoute();
         if (overview) {
-            if (!fitted) {
+            // Exploration de la fiche (menu « Explorer la carte ») : carte seule, déplacée par les boutons ;
+            // quittée par la carte elle-même ou par BACK (OverviewDelegate).
+            if (exploring && self has :getMapMode) {
+                if (method(:getMapMode).invoke() == WatchUi.MAP_MODE_PREVIEW) {
+                    exploring = false;
+                    fitted = false;
+                }
+            }
+            if (!fitted && !exploring) {
                 fitted = fitRoute();
             }
             MapView.onUpdate(dc);
-            drawOverviewText(dc, run);
+            if (!exploring) {
+                drawOverviewText(dc, run);
+            }
             return;
         }
         // Sortie du mode exploration par la carte elle-même : retour au suivi (lecture du mode seulement si

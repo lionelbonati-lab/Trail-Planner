@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.3, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.4, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -122,7 +122,8 @@ au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
 - **échelle** choisie dans le menu (largeur de l'écran : 200 m, 500 m, 1 km par défaut, 2 km, 5 km),
   rappelée en bas ;
 - **Explorer la carte** (menu, montres à cartes) : la carte passe en mode exploration Garmin pour la
-  déplacer et zoomer avec les boutons ; BACK revient au suivi ;
+  déplacer et zoomer avec les boutons ; BACK revient au suivi. Aussi sur la **fiche d'un parcours**
+  (écran de démarrage) : BACK revient à la vue d'ensemble ;
 - en haut, comme sur le profil : écart au plan, passages, « Hors parcours ».
 
 **Thème** : celui d'EndurancePro (réglage *Mode sombre*, dossier Affichage), sur tous les écrans.
@@ -159,7 +160,8 @@ Le menu d'EndurancePro, réglable en course comme dans le champ, avec en tête l
 - **Tour = passage au point** ;
 - **Jusqu'à l'arrivée** (distance, D+ et D- restants jusqu'à l'arrivée sur l'écran Trail Planner) ;
 - **Échelle de la carte** ;
-- **Explorer la carte** (montres à cartes) ;
+- **Explorer la carte** (montres à cartes ; proposé seulement avec une carte à l'écran : écrans de course
+  ou fiche d'un parcours, pas depuis la liste) ;
 - **Code Trail Planner** : le code montre à 8 chiffres, le même que pour EndurancePro et le champ ;
 - **Recharger le plan** (nom de la course chargée, ou message d'erreur).
 
@@ -245,7 +247,7 @@ de fichier :
 - le menu a le dossier Trail Planner ; un nouveau code relance le téléchargement du plan ;
 - distance restante du plan Trail Planner (sans parcours Garmin suivi), réglage « Distance restante »
   respecté ;
-- `AppName` et `app_version` (« 0.5.3 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.5.4 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

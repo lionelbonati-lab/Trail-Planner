@@ -20,6 +20,8 @@ class CompanionApp extends Application.AppBase {
     var pendingExplore = false; // « Explorer la carte » choisi dans le menu, lancé une fois le menu fermé
     var baseVisible = true;   // écran de la sortie au premier plan (aucun menu par-dessus)
     var startShown = false;   // liste de l'écran de démarrage au premier plan
+    var overviewOn = false;   // fiche d'un parcours sur la carte Garmin (écran de démarrage)
+    var courseOn = false;     // écrans de course affichés (entre « Démarrer » et le retour à la liste)
     var focusKey = null;      // dernier événement qui a affiché l'écran Trail Planner
     var focusBack = -1;       // écran à retrouver une fois l'événement passé (-1 : aucun)
 
@@ -56,6 +58,7 @@ class CompanionApp extends Application.AppBase {
         var m = map();
         if (m != null) {
             m.setOverview(true);
+            overviewOn = true;
             WatchUi.pushView(m, new OverviewDelegate(), WatchUi.SLIDE_LEFT);
         } else {
             WatchUi.pushView(new CourseOverview(), new OverviewDelegate(), WatchUi.SLIDE_LEFT);
@@ -63,6 +66,7 @@ class CompanionApp extends Application.AppBase {
     }
 
     function endOverview() as Void {
+        overviewOn = false;
         if (mapView != null) {
             mapView.setOverview(false);
         }
@@ -71,6 +75,7 @@ class CompanionApp extends Application.AppBase {
     // Démarrer : écrans de course, au-dessus de la liste (BACK avant le départ y revient).
     function beginCourse() as Void {
         endOverview();
+        courseOn = true;
         page = 0;
         focusBack = -1;
         (mainView as MainView).page = 0;
@@ -79,6 +84,15 @@ class CompanionApp extends Application.AppBase {
         } else {
             WatchUi.switchToView(mainView, new MainDelegate(run as Run), WatchUi.SLIDE_LEFT);
         }
+    }
+
+    // BACK avant le départ : retour à la liste des parcours (l'écran de course est retiré par la montre).
+    function leaveCourse() as Void {
+        stopExplore();
+        courseOn = false;
+        page = 0;
+        focusBack = -1;
+        (mainView as MainView).page = 0;
     }
 
     // Carte avec fond Garmin, si la montre en a (créée une seule fois).
@@ -151,10 +165,26 @@ class CompanionApp extends Application.AppBase {
         return page == MAP_PAGE && mapView != null && mapView.exploring;
     }
 
-    // « Explorer la carte » : appelé une fois le menu fermé (Run.onTick).
+    // Fiche du parcours en exploration (BACK revient à la vue d'ensemble).
+    function overviewExploring() as Boolean {
+        return overviewOn && mapView != null && mapView.exploring;
+    }
+
+    // « Explorer la carte » proposé dans le menu : seulement si une carte est à l'écran sous le menu
+    // (écrans de course, ou fiche d'un parcours), pas depuis la liste.
+    function canExplore() as Boolean {
+        return hasMap() && (courseOn || overviewOn);
+    }
+
+    // « Explorer la carte » : appelé une fois le menu fermé (Run.onTick). Sur la fiche du parcours, la
+    // carte déjà affichée passe en exploration ; en course, l'écran Carte s'affiche en exploration.
     function startExplore() as Void {
         pendingExplore = false;
-        if (!hasMap()) {
+        if (!canExplore()) {
+            return;
+        }
+        if (overviewOn) {
+            mapView.setExploring(true);
             return;
         }
         focusBack = -1;

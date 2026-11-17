@@ -87,13 +87,23 @@ class StartDelegate extends WatchUi.Menu2InputDelegate {
 }
 
 // Fiche du parcours : START démarre, appui long sur Haut ouvre les réglages, BACK revient à la liste.
+// En exploration (menu « Explorer la carte ») : les boutons vont à la carte Garmin, BACK revient à la vue
+// d'ensemble.
 class OverviewDelegate extends WatchUi.BehaviorDelegate {
     function initialize() {
         BehaviorDelegate.initialize();
     }
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
-        if (evt.getKey() == WatchUi.KEY_ENTER) {
+        var key = evt.getKey();
+        if (getApp().overviewExploring()) {
+            if (key == WatchUi.KEY_ESC || key == WatchUi.KEY_LAP) {
+                getApp().stopExplore();
+                return true;
+            }
+            return false;
+        }
+        if (key == WatchUi.KEY_ENTER) {
             getApp().beginCourse();
             return true;
         }
@@ -101,16 +111,26 @@ class OverviewDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onSelect() as Boolean {
+        if (getApp().overviewExploring()) {
+            return false;
+        }
         getApp().beginCourse();
         return true;
     }
 
     function onBack() as Boolean {
+        if (getApp().overviewExploring()) {
+            getApp().stopExplore();
+            return true;
+        }
         getApp().endOverview();
         return false;
     }
 
     function onMenu() as Boolean {
+        if (getApp().overviewExploring()) {
+            return false;
+        }
         WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_UP);
         return true;
     }

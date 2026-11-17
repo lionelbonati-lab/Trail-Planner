@@ -64,11 +64,16 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
         return BehaviorDelegate.onKey(evt);
     }
 
-    // Balayage « retour » (écran tactile) : ignoré pendant la sortie ; en exploration, retour au suivi.
+    // Balayage « retour » (écran tactile) : ignoré pendant la sortie ; en exploration, retour au suivi ;
+    // avant le départ, retour à la liste des parcours.
     function onBack() as Boolean {
         if (getApp().exploring()) {
             getApp().stopExplore();
             return true;
+        }
+        if (run.state == READY) {
+            getApp().leaveCourse();
+            return false;
         }
         return run.state == RUNNING || run.state == PAUSED;
     }
@@ -188,8 +193,9 @@ class TrailPlannerMenu extends WatchUi.Menu2 {
         addItem(_codeItem);
         _scaleItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_map_scale), null, :mapScale, {});
         addItem(_scaleItem);
-        // Exploration : seulement avec le fond de carte Garmin.
-        if (getApp().hasMap()) {
+        // Exploration : seulement avec le fond de carte Garmin, et une carte à l'écran sous le menu (écrans
+        // de course ou fiche du parcours ; depuis la liste, l'option ferait disparaître la liste).
+        if (getApp().canExplore()) {
             addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_explore), null, :explore, {}));
         }
         _planItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_reload), null, :reload, {});
