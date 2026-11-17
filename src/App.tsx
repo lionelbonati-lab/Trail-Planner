@@ -38,7 +38,7 @@ import { parseGpx } from './lib/gpx'
 import { waypointCheckpoints } from './lib/splits'
 import { withNewTrace } from './lib/routing'
 import { epPayload } from './lib/endurancepro'
-import { appCourses, appDocId, type AppCourse, watchList, watchPlan, watchProfile, watchRoute } from './lib/watch'
+import { appCourses, appDocId, type AppCourse, watchList, watchProfile, watchRoute } from './lib/watch'
 import type { DrawResult } from './components/RouteBuilder'
 import { clearLocalData, hasLocalAthlete, localRaceCount, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
 
@@ -73,7 +73,7 @@ const rememberSignedIn = (on: boolean) => {
   }
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
-import { watchStartMs, type WatchReport } from './lib/watchLive'
+import { reportCourse, watchStartMs, type WatchReport } from './lib/watchLive'
 import { debriefPoints, debriefReport, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
 import { debriefNotifyOn, notifiedDebriefs, rememberNotified, showNotice } from './lib/notify'
 import { formatClock, formatDuration, zonedToUtc } from './lib/time'
@@ -103,11 +103,12 @@ function withLiveDebrief(r: Race, athlete: Athlete): Race {
 }
 
 /**
- * Relevé de la montre pour la course qu'elle porte : pris s'il date d'après l'envoi de cette course,
+ * Relevé de la montre pour la course qu'il concerne (parcours choisi dans l'appli montre, sinon la course
+ * envoyée à la montre) : pris s'il date d'après l'envoi de la course à la montre (course sans id),
  * reste sur le parcours et a avancé (un passage ou 1 km). Null : rien à changer.
  */
 function watchDebriefs(race: Race, athlete: Athlete, report: WatchReport): Race['debriefs'] | null {
-  if (athlete.watchRaceAt && report.t * 1000 < Date.parse(athlete.watchRaceAt)) return null
+  if (!reportCourse(report) && athlete.watchRaceAt && report.t * 1000 < Date.parse(athlete.watchRaceAt)) return null
   if (!report.p && report.d < 1000) return null
   const plan = computePlan(race, athlete)
   if (!plan || report.d > plan.track.totalDist + 1000) return null
@@ -394,9 +395,11 @@ export default function App() {
   // Départ libre d'une course sur la montre, sans le mode course du téléphone : départ réel donné par
   // la montre, pour que les heures prévues du plan restent fixes pendant toute l'activité.
   const [watchReport, setWatchReport] = useState<WatchReport | null>(null)
-  // Relevés suivis dès qu'une course est sur la montre : départ réel (ci-dessous) et passages figés
-  // dans le debrief de la sortie.
-  const watchRefs = user && athlete.watchRaceId ? [athlete.watchId, athlete.epCode].filter((r): r is string => !!r).join(',') : ''
+  // Relevés suivis dès qu'une course est sur la montre (ou que l'appli montre a ses parcours) : départ
+  // réel (ci-dessous) et passages figés dans le debrief de la sortie.
+  const watchRefs = user && (athlete.watchRaceId || athlete.appSync) ? [athlete.watchId, athlete.epCode].filter((r): r is string => !!r).join(',') : ''
+  // Course du dernier relevé : parcours choisi dans l'appli montre, sinon la course envoyée à la montre.
+  const reportRaceId = (watchReport && reportCourse(watchReport)) ?? athlete.watchRaceId ?? null
   useEffect(() => {
     setWatchReport(null)
     if (!watchRefs || !cloud) return
@@ -416,7 +419,7 @@ export default function App() {
     return () => clearInterval(id)
   }, [watchReport])
   const watchStart =
-    watchRefs && current && isFreeStart(current) && !current.live && athlete.watchRaceId === current.id
+    watchRefs && current && isFreeStart(current) && !current.live && reportRaceId === current.id
       ? watchStartMs(watchReport, Math.max(nowSec, watchReport?.t ?? 0))
       : null
 
@@ -443,11 +446,24 @@ export default function App() {
     }
   }, [races, clockMs, loaded])
 
+  // Appli montre : parcours choisi dans sa liste au lieu de la course envoyée à la montre. Il devient la
+  // course sur la montre dès son premier relevé (départ réel, direct, debrief, lien permanent), sauf si
+  // une course a été envoyée à la montre depuis ce relevé. Envoi daté du départ de cette activité, pour
+  // que ses relevés comptent.
+  useEffect(() => {
+    if (!watchReport || !loaded || !athlete.watchId) return
+    const id = reportCourse(watchReport)
+    if (!id || id === athlete.watchRaceId || !races.some((r) => r.id === id)) return
+    if (athlete.watchRaceAt && watchReport.t * 1000 < Date.parse(athlete.watchRaceAt)) return
+    patchAthlete({ watchRaceId: id, watchRaceAt: new Date((watchReport.s - 60) * 1000).toISOString() })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- un relevé est traité à son arrivée (et au chargement)
+  }, [watchReport, loaded, races, athlete])
+
   // Debrief : passages relevés par la montre copiés dans la sortie (un relevé n'est traité qu'une fois).
   const debriefDone = useRef('')
   useEffect(() => {
     if (!watchReport || !loaded) return
-    const race = races.find((r) => r.id === athlete.watchRaceId)
+    const race = races.find((r) => r.id === (reportCourse(watchReport) ?? athlete.watchRaceId))
     const key = `${race?.id}|${watchReport.s}|${watchReport.t}|${watchReport.p ?? ''}`
     if (!race || debriefDone.current === key) return
     debriefDone.current = key
@@ -552,11 +568,11 @@ export default function App() {
       else if ((athlete.epSync || wl) && athlete.watchId && cloud) {
         // Pas de course sur la montre : seulement les réglages EndurancePro (et la liste de l'appli).
         const ep = athlete.epSync ? epPayload(athlete, null) : ''
-        const key = `ep:${ep}|wl:${wl ?? ''}`
+        const key = `ep:${ep}|wl:${wl ?? ''}|${athlete.epCode ?? ''}`
         if (lastShared.current.get(athlete.watchId) !== key) {
           const watchId = athlete.watchId
           cloud
-            .publishWatchProfile(watchId, user.uid, ep, wl)
+            .publishWatchProfile(watchId, user.uid, ep, wl, athlete.epCode)
             .then(() => lastShared.current.set(watchId, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
@@ -579,9 +595,10 @@ export default function App() {
     return () => clearTimeout(id)
   }, [races, athlete, user, publish, cloud, appWl])
   // Appli montre Trail Planner Companion (bêta) : plan de chaque course à venir et de chaque parcours de
-  // la bibliothèque (documents <code>-<id> : plan, profil, tracé), et leur liste pour l'écran de
-  // démarrage (champ wl du document du code montre, publié par l'effet ci-dessus). Un parcours n'est
-  // recalculé que s'il a changé (ou le profil de l'athlète).
+  // la bibliothèque (documents <code>-<id> : lien assistance complet, lu par le lien permanent du
+  // coureur, avec le profil et le tracé fins pour la montre), et leur liste pour l'écran de démarrage
+  // (champ wl du document du code montre, publié par l'effet ci-dessus). Un parcours n'est recalculé que
+  // s'il a changé (ou le profil de l'athlète).
   const appPublished = useRef(new Map<string, { race: Race; athlete: Athlete; entry: AppCourse }>())
   useEffect(() => {
     if (!user || !cloud || !athlete.appSync) return
@@ -606,10 +623,13 @@ export default function App() {
           dist: plan.track.totalDist,
           dPlus: plan.track.dPlus,
         }
-        const data = { w: watchPlan(r, athlete, plan.track, plan.sim), wp: watchProfile(plan.track.points), wr: watchRoute(plan.track.points) }
+        const snap = buildSnapshot(user.uid, r, athlete, plan.track, plan.sim, scenarioWindows(plan.track, athlete, plan.opts))
+        const wp = watchProfile(plan.track.points)
+        const wr = watchRoute(plan.track.points)
+        const data = { ...snap, ...(wp ? { wp } : {}), ...(wr ? { wr } : {}) }
         appPublished.current.set(r.id, { race: r, athlete, entry })
         entries.push(entry)
-        for (const code of codes) cloud.publishAppCourse(appDocId(code, r.id), user.uid, data).catch(() => appPublished.current.delete(r.id))
+        for (const code of codes) cloud.publishShare(appDocId(code, r.id), data).catch(() => appPublished.current.delete(r.id))
       }
       setAppWl(watchList(entries, athlete.watchRaceId))
     }, 5000)

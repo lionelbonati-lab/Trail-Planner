@@ -68,7 +68,7 @@ L'appli qui réunit tout pour la course, à lancer à la place de l'activité Tr
 - **EndurancePro** et **Trail Planner** au même style : allure effort, VAM, zones, écart au plan, prochain point, arrivée, ravitos (« À consommer », « À prendre »), rappels nutrition en popup ;
 - **profil** de la course qui te suit, zoomable, couleurs des pentes en option ;
 - **carte Garmin** avec ton parcours, centrée sur toi ;
-- passages et position envoyés à ton **assistance**.
+- passages et position envoyés à ton **assistance**, sur le lien de la course choisie et sur ton lien d’assistance permanent (onglet Montre).
 
 Bêta : à installer par câble (fichier compilé), le même code de synchronisation que les champs.
 

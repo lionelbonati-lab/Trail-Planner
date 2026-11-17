@@ -6,6 +6,7 @@ import { liveStatus } from './live'
 import { isFreeStart } from './plan'
 import { simplifyRoute, type RoutePoint } from './routeGeo'
 import { watchPlan } from './watch'
+import { reportCourse, type WatchReport } from './watchLive'
 import { zonedToUtc } from './time'
 import type { Athlete, Race, SimResult, Track } from './types'
 
@@ -57,7 +58,10 @@ export interface ShareSnapshot {
   rows: ShareRow[]
   /** Plan compact pour le champ de données Garmin (voir watch.ts). */
   w: string
-  /** Code montre si cette course est sur la montre : suivi envoyé par la montre (live/{code}). */
+  /**
+   * Code montre si cette course est sur la montre, ou si l'appli montre peut l'enregistrer (parcours
+   * synchronisés) : suivi envoyé par la montre (live/{code}), filtré par reportFor.
+   */
   liveRef: string | null
   /** Code montre court (8 chiffres), s'il existe : la montre peut aussi envoyer son suivi avec lui. */
   liveRefShort?: string | null
@@ -73,6 +77,10 @@ export interface ShareSnapshot {
   watchSince?: string
   /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */
   freeStart?: boolean
+  /** Id de la course (absent des anciens partages) : relevés de l'appli montre rangés par course. */
+  courseId?: string
+  /** Course envoyée à la montre (relevés du champ Trail Planner, sans id de course). */
+  onWatch?: boolean
 }
 
 export function buildSnapshot(
@@ -107,8 +115,10 @@ export function buildSnapshot(
     live: race.live ? { startedAt: race.live.startedAt, lastUpdate: passages[passages.length - 1] ?? null } : null,
     w: watchPlan(race, athlete, track, sim),
     ...(isFreeStart(race) ? { freeStart: true } : {}),
-    liveRef: athlete.watchId && athlete.watchRaceId === race.id ? athlete.watchId : null,
-    liveRefShort: athlete.epCode && athlete.watchRaceId === race.id ? athlete.epCode : null,
+    liveRef: athlete.watchId && (athlete.watchRaceId === race.id || athlete.appSync) ? athlete.watchId : null,
+    liveRefShort: athlete.epCode && (athlete.watchRaceId === race.id || athlete.appSync) ? athlete.epCode : null,
+    courseId: race.id,
+    onWatch: athlete.watchRaceId === race.id,
     ...(athlete.watchRaceId === race.id && athlete.watchRaceAt ? { watchSince: athlete.watchRaceAt } : {}),
     rows: sim.splits.map((s, i) => {
       const w = windowOf(s.cp.id)
@@ -169,6 +179,64 @@ function navTarget(access: { lat: number; lon: number } | undefined, track: Trac
 
 export function shareUrl(shareId: string): string {
   return `${window.location.origin}${window.location.pathname}#/share/${shareId}`
+}
+
+/** Lien d'assistance permanent du coureur (code montre) : suit la course enregistrée par la montre. */
+export function runnerUrl(code: string): string {
+  return `${window.location.origin}${window.location.pathname}#/suivi/${code}`
+}
+
+/**
+ * Relevé d'un parcours choisi dans l'appli montre sans être la course envoyée à la montre : pris s'il
+ * date de moins de 24 h (au-delà, c'est une ancienne sortie sur ce parcours ; le site, une fois ouvert,
+ * en fait la course sur la montre et garde le relevé).
+ */
+export const APP_REPORT_KEEP_MS = 24 * 3600_000
+
+/**
+ * Relevé de la montre pour ce lien, ou null s'il vient d'une autre activité : autre course (id envoyé par
+ * l'appli montre ; sans id, la course envoyée à la montre), activité d'avant l'envoi de cette course à la
+ * montre, ou distance au-delà de l'arrivée (autre parcours, plus long).
+ */
+export function reportFor(
+  snap: Pick<ShareSnapshot, 'courseId' | 'onWatch' | 'watchSince' | 'totalDist'>,
+  report: WatchReport | null,
+  nowMs: number,
+): WatchReport | null {
+  if (!report) return null
+  if (snap.totalDist > 0 && report.d > snap.totalDist + 1000) return null
+  if (snap.courseId !== undefined) {
+    const course = reportCourse(report)
+    if (course !== null ? course !== snap.courseId : !snap.onWatch) return null
+    if (!snap.onWatch && report.t * 1000 < nowMs - APP_REPORT_KEEP_MS) return null
+  }
+  if (snap.watchSince && report.t * 1000 < Date.parse(snap.watchSince)) return null
+  return report
+}
+
+/** Sortie terminée depuis moins de 12 h : le lien permanent la montre encore (sinon la prochaine course). */
+export const RUNNER_RECENT_MS = 12 * 3600_000
+/** Course de la liste de l'appli encore proposée par le lien permanent jusqu'à 48 h après son départ. */
+export const RUNNER_RACE_KEEP_MS = 48 * 3600_000
+
+/**
+ * Lien permanent du coureur : id de la course à montrer. Sortie en cours ou récente : la course du relevé
+ * (parcours choisi dans l'appli, sinon la course envoyée à la montre) ; sinon la prochaine course de la
+ * liste de l'appli montre (champ wl), sinon la course envoyée à la montre. Null : rien à montrer.
+ */
+export function runnerCourse(base: Pick<ShareSnapshot, 'courseId' | 'wl'> | null, report: WatchReport | null, nowMs: number): string | null {
+  if (report && report.t * 1000 > nowMs - RUNNER_RECENT_MS) {
+    const id = reportCourse(report) ?? base?.courseId ?? null
+    if (id) return id
+  }
+  let next: { id: string; start: number } | null = null
+  for (const line of (base?.wl ?? '').split('\n').slice(1)) {
+    const [id, kind, , start] = line.split('|')
+    const ms = Number(start) * 1000
+    if (!id || kind !== 'c' || !(ms > 0) || ms < nowMs - RUNNER_RACE_KEEP_MS) continue
+    if (!next || ms < next.start) next = { id, start: ms }
+  }
+  return next?.id ?? base?.courseId ?? null
 }
 
 /**

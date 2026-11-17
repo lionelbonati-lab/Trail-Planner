@@ -19,6 +19,9 @@ describe('onglet Montre', () => {
     expect(html).toContain('Trail du Jura')
     expect(html).toContain('EndurancePro')
     expect(html).toContain('installation par câble')
+    // Lien d'assistance permanent du coureur.
+    expect(html).toContain('Lien d’assistance permanent')
+    expect(html).toContain('href="#/suivi/abc123"')
   })
 
   it('connecté sans code : bouton pour le créer ; sans compte : invitation à se connecter', () => {

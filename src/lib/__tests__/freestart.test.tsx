@@ -17,7 +17,8 @@ function gpx(): string {
 describe('départ libre (entraînement)', () => {
   const race = { ...newRace('Footing', gpx()), freeStart: true }
   race.checkpoints = [{ id: 'a', dist: 5000, name: 'Mi-parcours', kind: 'info', stopMin: 0, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }]
-  const athlete = normalizeAthlete({ ...DEFAULT_ATHLETE, name: 'Lionel' })
+  // Course envoyée à la montre : les relevés du champ Trail Planner (sans id de course) sont les siens.
+  const athlete = normalizeAthlete({ ...DEFAULT_ATHLETE, name: 'Lionel', watchId: 'abcdef0123456789', watchRaceId: race.id })
   const plan = computePlan(race, athlete)!
   const snap = buildSnapshot('uid', race, athlete, plan.track, plan.sim, scenarioWindows(plan.track, athlete, plan.opts))
   const halfway = plan.sim.splits[0].arrival

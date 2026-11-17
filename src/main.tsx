@@ -2,18 +2,25 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { SharePage } from './components/SharePage.tsx'
+import { RunnerPage, SharePage } from './components/SharePage.tsx'
 
-/** Lien d'assistance (#/share/<id>) : page publique, sans compte. */
+/**
+ * Lien d'assistance d'une course (#/share/<id>) ou lien permanent du coureur (#/suivi/<code montre>) :
+ * pages publiques, sans compte.
+ */
 function Root() {
-  const read = () => /^#\/share\/([\w-]+)/.exec(window.location.hash)?.[1] ?? null
-  const [shareId, setShareId] = useState(read)
+  const read = () => {
+    const m = /^#\/(share|suivi)\/([\w-]+)/.exec(window.location.hash)
+    return m ? { kind: m[1], id: m[2] } : null
+  }
+  const [link, setLink] = useState(read)
   useEffect(() => {
-    const on = () => setShareId(read())
+    const on = () => setLink(read())
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])
-  return shareId ? <SharePage shareId={shareId} /> : <App />
+  if (link?.kind === 'suivi') return <RunnerPage code={link.id} />
+  return link ? <SharePage shareId={link.id} /> : <App />
 }
 
 createRoot(document.getElementById('root')!).render(

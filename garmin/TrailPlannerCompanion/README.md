@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.1, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.2, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -74,7 +74,8 @@ météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (pop
   prochaine barrière horaire ; « Passage · nom » ou « Départ · nom » 5 s après un tour ; « Hors
   parcours » ; la note d'un point au passage ;
 - **au ravito**, jusqu'au départ : à gauche **« À consommer »** (produits sur ravito) puis **« À prendre »**
-  (sac : eau, produits, sel, note du point), 5 s chacun ; à droite le tronçon suivant ; la barre se
+  (sac : eau, produits, sel, note du point), 5 s chacun, chaque ligne dans la plus grande police qui tient
+  (jusqu'à la plus petite, plutôt que de couper) ; à droite le tronçon suivant ; la barre se
   remplit avec le **temps passé sur l'arrêt prévu** (rouge une fois dépassé), « 3:25/5:00 » dessous, et à
   droite la **durée prévue du tronçon suivant**, corrigée de ton rythme ;
 - avant le départ : vers le premier point et vers l'arrivée, temps prévu du parcours, nom de la course ;
@@ -192,6 +193,16 @@ parcours, les passages (`indice:arrivée:départ`), la position et la batterie. 
 chaque passage (30 s au moins entre deux envois), sinon toutes les 5 minutes, et à la pause et à
 l'enregistrement. Le lien assistance et le debrief de la course les lisent comme ceux du champ.
 
+Le champ `v` dit quelle course est enregistrée : `1` pour la course envoyée à la montre (comme le
+champ), sinon l'id du parcours choisi dans la liste de l'écran de démarrage (texte ; les règles Firestore
+acceptent `v` de tout type, rien à redéployer). Le site range ainsi le suivi dans la bonne course :
+- ce parcours devient la course « sur la montre » dès son premier relevé (départ réel, debrief), sauf si
+  une autre course a été envoyée à la montre depuis ;
+- son lien assistance affiche le direct, et le **lien d'assistance permanent** du coureur
+  (`#/suivi/<code montre>`, onglet Montre du site) le suit tout seul : la course enregistrée, et entre
+  deux sorties la prochaine course ;
+- rien n'est envoyé en sortie libre.
+
 ## Ce qui change par rapport à l'activité Trail de Garmin
 
 - La sortie est enregistrée en **course à pied / trail** (fichier FIT avec GPS, cardio, tours et les
@@ -229,7 +240,7 @@ de fichier :
 - le menu a le dossier Trail Planner ; un nouveau code relance le téléchargement du plan ;
 - distance restante du plan Trail Planner (sans parcours Garmin suivi), réglage « Distance restante »
   respecté ;
-- `AppName` et `app_version` (« 0.5.1 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.5.2 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

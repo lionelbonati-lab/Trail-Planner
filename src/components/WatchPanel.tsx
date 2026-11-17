@@ -2,6 +2,7 @@ import { Check, Copy, ExternalLink, Watch } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, EP_TARGET_ZONES, epPayload, epTargetRank } from '../lib/endurancepro'
 import { APPS_DOC_PATH, WATCH_APPS } from '../lib/garminApps'
+import { runnerUrl } from '../lib/share'
 import { formatPace } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { epVamThresholds } from '../lib/vam'
@@ -28,9 +29,9 @@ export function WatchPanel({
   onOpen: (r: Race) => void
 }) {
   const [copied, setCopied] = useState<string | null>(null)
-  const copy = (text: string) =>
+  const copy = (text: string, key = text) =>
     navigator.clipboard?.writeText(text).then(() => {
-      setCopied(text)
+      setCopied(key)
       setTimeout(() => setCopied(null), 2000)
     })
   const code = athlete.epCode
@@ -89,8 +90,24 @@ export function WatchPanel({
         <ol className="watch-steps small">
           <li>Avant le départ, ouvre l’activité Trail quelques minutes, téléphone à proximité : le champ télécharge le plan (contrôle toutes les 5 min).</li>
           <li>Ensuite, tout fonctionne sans réseau. Désactive le tour automatique : le bouton Lap valide le passage aux points.</li>
-          <li>Si ton téléphone est avec toi, la montre envoie passages et position toutes les 5 min : ton assistance les voit sur le lien assistance.</li>
+          <li>Si ton téléphone est avec toi, la montre envoie passages et position toutes les 5 min : ton assistance les voit sur le lien assistance de la course, ou sur ton lien permanent ci-dessous.</li>
         </ol>
+        {signedIn && athlete.watchId && (
+          <div className="runner-link">
+            <p className="small">
+              <strong>Lien d’assistance permanent</strong>, à donner une seule fois à ton assistance : il montre la course que ta montre
+              enregistre (champ Trail Planner, ou parcours choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course.
+            </p>
+            <div className="row">
+              <button className="ghost" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
+                {copied === 'runner' ? <><Check /> Copié</> : <><Copy /> Copier le lien</>}
+              </button>
+              <a className="small" href={`#/suivi/${athlete.watchId}`} target="_blank" rel="noreferrer">
+                <ExternalLink className="inline" /> Ouvrir
+              </a>
+            </div>
+          </div>
+        )}
       </Card>
 
       <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />

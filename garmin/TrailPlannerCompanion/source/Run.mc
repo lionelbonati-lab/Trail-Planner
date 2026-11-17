@@ -227,11 +227,13 @@ class Run {
 
     // Document live/{code}, comme le champ (mêmes champs, acceptés par les règles Firestore) : dernier
     // relevé de Trail Planner (instant, départ réel, distance le long du parcours, passages
-    // « indice:arrivée[:départ] », position, batterie).
+    // « indice:arrivée[:départ] », position, batterie). « v » : 1 pour la course envoyée à la montre
+    // (comme le champ), sinon l'id du parcours choisi dans la liste, pour que le site range le suivi
+    // (lien d'assistance, debrief) dans la bonne course. Rien en sortie libre.
     function sendProgress(now as Number) as Void {
         var code = codeSetting();
         var rec = tp.progress;
-        if (code == null || !(rec instanceof Dictionary)) {
+        if (code == null || courseId == null || !(rec instanceof Dictionary)) {
             return;
         }
         lastSent = now;
@@ -241,7 +243,7 @@ class Run {
             "s" => { "integerValue" => rec["s"].toString() },
             "d" => { "integerValue" => rec["d"].toString() },
             "p" => { "stringValue" => rec["p"] },
-            "v" => { "integerValue" => "1" }
+            "v" => courseId.equals("") ? { "integerValue" => "1" } : { "stringValue" => courseId }
         };
         if (rec["lat"] != null && rec["lon"] != null) {
             fields.put("lat", { "doubleValue" => rec["lat"] });

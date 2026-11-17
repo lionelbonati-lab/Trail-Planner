@@ -649,6 +649,18 @@ class TrailPlannerScreen {
         return items;
     }
 
+    // Plus grande police (petite, très petite, minuscule) dans laquelle le texte tient sur maxW ; s'il ne
+    // tient dans aucune, la plus petite (et le texte est raccourci).
+    function lineFont(dc as Graphics.Dc, text as String, maxW as Number) {
+        var fonts = [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
+        for (var i = 0; i < fonts.size() - 1; i++) {
+            if (dc.getTextWidthInPixels(text, fonts[i]) <= maxW) {
+                return fonts[i];
+            }
+        }
+        return fonts[fonts.size() - 1];
+    }
+
     // Durée en minutes et secondes : « 4:05 », « 1:02:30 ».
     function mmss(sec as Number) as String {
         var s0 = sec > 0 ? sec : 0;
@@ -909,7 +921,8 @@ class TrailPlannerScreen {
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
         for (var i = 0; i < rows.size() && i < 3; i++) {
             var maxW = xr - 6 - (w / 2 - halfChord(y, w, h)) - 4;
-            dc.drawText(xr - 6, y, lf, fit(dc, rows[i], lf, maxW), Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+            var rf = lineFont(dc, rows[i], maxW);
+            dc.drawText(xr - 6, y, rf, fit(dc, rows[i], rf, maxW), Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
             y += lh;
         }
 

@@ -4,7 +4,7 @@ import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { awayFrom } from '../lib/live'
 import { showNotice } from '../lib/notify'
-import { shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
+import { reportFor, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
@@ -93,29 +93,39 @@ function signedMin(sec: number): string {
   return `${m > 0 ? '+' : m < 0 ? '−' : ''}${Math.abs(m)} min`
 }
 
-/** Page publique pour l'assistance : plan, fenêtres de passage et suivi en direct. */
-export function SharePage({ shareId }: { shareId: string }) {
-  const [snap, setSnap] = useState<ShareSnapshot | null | undefined>(undefined)
-  const [error, setError] = useState<string | null>(null)
-  const [report, setReport] = useState<WatchReport | null>(null)
-  const [, tick] = useState(0)
+/** Document partagé (lien assistance, code montre), chargé avec Firebase à la demande. */
+function useShareDoc(id: string | null): { snap: ShareSnapshot | null | undefined; error: string | null } {
+  const [state, setState] = useState<{ id: string | null; snap: ShareSnapshot | null | undefined; error: string | null }>({ id, snap: undefined, error: null })
   useEffect(() => {
+    if (!id) return
     let unsub: (() => void) | undefined
     let cancelled = false
     import('../lib/cloud')
       .then((c) => {
-        if (!cancelled) unsub = c.subscribeShare(shareId, setSnap, (e) => setError(e.message))
+        if (!cancelled)
+          unsub = c.subscribeShare(
+            id,
+            (snap) => setState({ id, snap, error: null }),
+            (e) => setState({ id, snap: undefined, error: e.message }),
+          )
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => setState({ id, snap: undefined, error: e.message }))
     return () => {
       cancelled = true
       unsub?.()
     }
-  }, [shareId])
-  // Suivi envoyé par la montre, si cette course est sur la montre : avec le code montre long
-  // ou le code court (8 chiffres) ; le relevé le plus récent l'emporte.
-  const liveRef = snap?.liveRef ?? null
-  const liveRefShort = snap?.liveRefShort ?? null
+  }, [id])
+  return state.id === id ? { snap: state.snap, error: state.error } : { snap: undefined, error: null }
+}
+
+/**
+ * Suivi envoyé par la montre (document live/{code}) : avec le code montre long ou le code court
+ * (8 chiffres) ; le relevé le plus récent l'emporte. La page se redessine toutes les 15 s : la position
+ * estimée avance entre deux relevés de la montre.
+ */
+function useWatchReport(liveRef: string | null, liveRefShort: string | null): { report: WatchReport | null; nowMs: number } {
+  const [report, setReport] = useState<WatchReport | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
     const refs = [liveRef, liveRefShort].filter((r): r is string => !!r)
     if (!refs.length) return
@@ -140,16 +150,47 @@ export function SharePage({ shareId }: { shareId: string }) {
     }
   }, [liveRef, liveRefShort])
   useEffect(() => {
-    // Toutes les 15 s : la position estimée avance entre deux relevés de la montre.
-    const id = setInterval(() => tick((x) => x + 1), 15000)
+    const id = setInterval(() => setNowMs(Date.now()), 15000)
     return () => clearInterval(id)
   }, [])
+  return { report, nowMs }
+}
+
+/** Page publique pour l'assistance : plan, fenêtres de passage et suivi en direct. */
+export function SharePage({ shareId }: { shareId: string }) {
+  const { snap, error } = useShareDoc(shareId)
+  // Suivi envoyé par la montre, si cette course est sur la montre (ou dans la liste de l'appli montre).
+  const { report } = useWatchReport(snap?.liveRef ?? null, snap?.liveRefShort ?? null)
 
   if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
   if (snap === undefined) return <main><p className="muted">Chargement…</p></main>
   if (snap === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
 
   return <ShareView snap={snap} report={report} shareId={shareId} />
+}
+
+/**
+ * Lien d'assistance permanent du coureur (#/suivi/<code montre>) : la course que la montre enregistre
+ * (parcours choisi dans l'appli montre, sinon la course envoyée à la montre) et, entre deux sorties, la
+ * prochaine course (voir runnerCourse). Le document du code montre porte la course envoyée à la montre ;
+ * les autres parcours de l'appli montre sont dans les documents <code>-<id>.
+ */
+export function RunnerPage({ code }: { code: string }) {
+  const { snap: base, error } = useShareDoc(code)
+  const { report, nowMs } = useWatchReport(code, base?.liveRefShort ?? null)
+  const courseId = base === undefined ? null : runnerCourse(base, report, nowMs)
+  const docId = courseId && courseId !== base?.courseId ? `${code}-${courseId}` : null
+  const course = useShareDoc(docId)
+
+  if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
+  if (base === undefined || (docId && course.snap === undefined && !course.error)) return <main><p className="muted">Chargement…</p></main>
+  if (base === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
+  // Parcours introuvable (synchronisation de l'appli coupée) : la course envoyée à la montre, s'il y en a une.
+  const full = (s: ShareSnapshot | null | undefined) => (s && Array.isArray(s.rows) && s.rows.length ? s : null)
+  const snap = (docId ? full(course.snap) : null) ?? full(base)
+  if (!snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
+
+  return <ShareView snap={snap} report={report} shareId={`${code}-${snap.courseId ?? ''}`} />
 }
 
 /**
@@ -369,14 +410,10 @@ export function ShareView({
   }
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
-  // Relevé d'une autre activité (fait avant l'envoi de cette course à la montre, ou au-delà de son
-  // arrivée) : ignoré, sinon tout le parcours paraît fait dès l'ouverture d'un nouveau parcours.
-  const report =
-    rawReport &&
-    !(input.watchSince && rawReport.t * 1000 < Date.parse(input.watchSince)) &&
-    !(input.totalDist > 0 && rawReport.d > input.totalDist + 1000)
-      ? rawReport
-      : null
+  // Relevé d'une autre activité (autre course choisie dans l'appli montre, fait avant l'envoi de cette
+  // course à la montre, ou au-delà de son arrivée) : ignoré, sinon tout le parcours paraît fait dès
+  // l'ouverture d'un nouveau parcours.
+  const report = reportFor(input, rawReport, nowMs)
   const nowSec0 = nowMs / 1000
   // Heures recalées sur le départ réel (montre, sinon mode course) s'il diffère du départ officiel ;
   // les barrières horaires suivent le même décalage. Départ libre pas encore parti : heures pour un
