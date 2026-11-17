@@ -1,7 +1,7 @@
 // Plan de nutrition par tronçon entre ravitos : eau, glucides, sodium et
 // nombre de produits à emporter.
 import { isRavitoKind } from './splits'
-import type { Product, ProductType, Race, SimResult } from './types'
+import type { Product, ProductType, Race, SimResult, SodiumSource } from './types'
 
 export interface Leg {
   /** Point de départ du tronçon (« Départ » ou nom du ravito). */
@@ -25,7 +25,11 @@ export interface Leg {
    * Flasques à emporter : d'eau et d'isotonique (produit `isoId`, compté aussi dans `products`) ; les
    * flasques d'eau sont remplies d'eau minérale salée (`waterId`, ex. St-Yorre) si la course en retient une.
    */
-  flasks: { water: number; iso: number; isoId: string | null; waterId?: string | null; mix?: number }
+  /**
+   * Eau minérale salée (`waterId`) : part dans les flasques d'eau (`mix`) puis, si elles ne suffisent pas
+   * ou s'il n'y en a pas, dans les flasques d'isotonique (`isoMix`), par dixièmes.
+   */
+  flasks: { water: number; iso: number; isoId: string | null; waterId?: string | null; mix?: number; isoMix?: number }
 }
 
 /** Produits retenus pour une course (tous si aucun choix n'a été fait). */
@@ -77,6 +81,35 @@ export const isFlaskWater = (p: Product): boolean => productType(p) === 'liquid'
  */
 export const isAtRavito = (p: Product): boolean => !!p.atRavito && !isFlask(p) && !isFlaskWater(p)
 
+/** Moins de glucides que ceci par portion (g) : produit compté pour son sodium, pas pour les glucides. */
+export const SODIUM_CARBS_MAX = 5
+
+/**
+ * Produit salé (bouillon, saucisson, salt caps…) : presque pas de glucides mais du sodium. Prévu pour
+ * couvrir le sodium manquant du tronçon, pas les glucides. Une eau (liquide sans glucides) hors flasque
+ * et pas servie au ravito reste ignorée (case Flasque décochée).
+ */
+export const isSodiumProduct = (p: Product): boolean =>
+  !isFlask(p) && !isFlaskWater(p) && p.carbs < SODIUM_CARBS_MAX && p.sodium >= 50 && !(productType(p) === 'liquid' && !(p.carbs > 0) && !p.atRavito)
+
+/** Ordre par défaut : produits salés du ravito, puis emportés, puis eau minérale salée ; le sel en dernier. */
+export const DEFAULT_SODIUM_ORDER: SodiumSource[] = ['ravito', 'carried', 'mineral']
+
+export const SODIUM_SOURCES: Record<SodiumSource, string> = {
+  ravito: 'Produits salés du ravito (bouillon, saucisson…)',
+  carried: 'Produits salés emportés (salt caps…)',
+  mineral: 'Eau minérale salée dans les flasques (St-Yorre…)',
+}
+
+/** Ordre complet et valide (les sources manquantes ajoutées dans l'ordre par défaut). */
+export function sodiumOrder(order: SodiumSource[] | undefined): SodiumSource[] {
+  const valid = (order ?? []).filter((x, i, a) => DEFAULT_SODIUM_ORDER.includes(x) && a.indexOf(x) === i)
+  return [...valid, ...DEFAULT_SODIUM_ORDER.filter((x) => !valid.includes(x))]
+}
+
+/** Portions au plus d'un même produit salé pris au ravito (un ou deux gobelets de bouillon). */
+const RAVITO_SALTY_MAX = 2
+
 /** Poids d'une portion par défaut (g) : produits saisis avant les valeurs au 100 g. */
 const DEFAULT_WEIGHT: Record<ProductType, number> = { gel: 40, solid: 50, liquid: 40 }
 
@@ -119,7 +152,8 @@ export function flaskSplit(water: number, iso: boolean): { water: number; iso: n
 /** L'eau augmente de 4 % par °C au-dessus de 15 °C (repère courant, à ajuster). */
 const WATER_PER_DEG = 0.04
 
-export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): Leg[] {
+export function nutritionPlan(race: Race, sim: SimResult, products: Product[], order: SodiumSource[] = DEFAULT_SODIUM_ORDER): Leg[] {
+  const sources = sodiumOrder(order)
   const legs: Leg[] = []
   const stops = sim.splits.filter((s) => isRavitoKind(s.cp.kind) || s.cp.id === '__finish' || s === sim.splits[sim.splits.length - 1])
   let fromName = 'Départ'
@@ -131,7 +165,9 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
   const iso = products.find((p) => isFlask(p)) ?? null
   // Eau minérale salée (type « Eau » avec du sodium, par flasque de 500 ml) : remplit les flasques d'eau.
   const mineral = products.find((p) => isFlaskWater(p) && p.sodium > 0) ?? null
-  const usableAll = products.filter((p) => p !== iso && !isFlaskWater(p) && p.carbs > 0 && p.share > 0)
+  // Glucides : gels, solides, liquides hors flasque qui en apportent vraiment (pas les produits salés).
+  const usableAll = products.filter((p) => p !== iso && !isFlaskWater(p) && p.carbs >= SODIUM_CARBS_MAX && p.share > 0)
+  const salty = products.filter(isSodiumProduct)
   for (const s of stops) {
     // Au départ, pas de ravito : les produits « sur ravito » n'y sont pas proposés.
     const usable = fromId === null ? usableAll.filter((p) => !isAtRavito(p)) : usableAll
@@ -164,11 +200,40 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
       ...(iso && flasks.iso ? [{ product: iso, count: flasks.iso }] : []),
       ...usable.map((p, i) => ({ product: p, count: counts[i] })).filter((x) => x.count > 0),
     ]
-    // Eau minérale salée mélangée à l'eau : juste assez pour le sodium visé, jamais plus (part par
-    // dixièmes, arrondie vers le bas) ; rien si les autres produits suffisent déjà.
-    const otherSodium = base.reduce((a, x) => a + x.count * x.product.sodium, 0)
-    const mix = mineral && flasks.water ? Math.max(0, Math.min(1, Math.floor(((sodium - otherSodium) / (flasks.water * mineral.sodium)) * 10 + 1e-9) / 10)) : 0
-    const items = [...base, ...(mineral && mix > 0 ? [{ product: mineral, count: flasks.water }] : [])]
+    // Sodium manquant après gels, barres et isotonique : sources dans l'ordre choisi (produits salés du
+    // ravito de départ, produits salés emportés, eau minérale salée des flasques), le sel complète.
+    let short = sodium - base.reduce((a, x) => a + x.count * x.product.sodium, 0)
+    const saltyItems: { product: Product; count: number }[] = []
+    let mix = 0
+    let isoMix = 0
+    for (const src of sources) {
+      if (short <= 0) break
+      if (src === 'mineral') {
+        if (!mineral || !(mineral.sodium > 0)) continue
+        // Juste assez, jamais plus (dixièmes arrondis vers le bas) : flasques d'eau d'abord, puis
+        // l'isotonique s'il n'y a pas de flasque d'eau ou si elles ne suffisent pas.
+        const tenth = (x: number) => Math.max(0, Math.min(1, Math.floor(x * 10 + 1e-9) / 10))
+        if (flasks.water) mix = tenth(short / (flasks.water * mineral.sodium))
+        const left = short - mix * flasks.water * mineral.sodium
+        if (flasks.iso && (!flasks.water || mix >= 1)) isoMix = tenth(left / (flasks.iso * mineral.sodium))
+        short -= (mix * flasks.water + isoMix * flasks.iso) * mineral.sodium
+        continue
+      }
+      // Produits salés : au ravito de départ (pas au départ de la course), ou emportés.
+      const atRavito = src === 'ravito'
+      if (atRavito && fromId === null) continue
+      for (const p of salty.filter((x) => isAtRavito(x) === atRavito)) {
+        if (short <= 0) break
+        const n = Math.min(atRavito ? RAVITO_SALTY_MAX : Infinity, Math.round(short / p.sodium))
+        if (n > 0) {
+          saltyItems.push({ product: p, count: n })
+          short -= n * p.sodium
+        }
+      }
+    }
+    const otherSodium = [...base, ...saltyItems].reduce((a, x) => a + x.count * x.product.sodium, 0)
+    const flaskCount = (mix > 0 ? flasks.water : 0) + (isoMix > 0 ? flasks.iso : 0)
+    const items = [...base, ...saltyItems, ...(mineral && flaskCount > 0 ? [{ product: mineral, count: flaskCount }] : [])]
     legs.push({
       from: fromName,
       fromId,
@@ -180,8 +245,8 @@ export function nutritionPlan(race: Race, sim: SimResult, products: Product[]): 
       carbs,
       sodium,
       products: items,
-      sodiumFromProducts: Math.round(otherSodium + (mineral ? mix * flasks.water * mineral.sodium : 0)),
-      flasks: { ...flasks, isoId: iso && flasks.iso ? iso.id : null, waterId: mineral && mix > 0 ? mineral.id : null, mix },
+      sodiumFromProducts: Math.round(otherSodium + (mineral ? (mix * flasks.water + isoMix * flasks.iso) * mineral.sodium : 0)),
+      flasks: { ...flasks, isoId: iso && flasks.iso ? iso.id : null, waterId: mineral && flaskCount > 0 ? mineral.id : null, mix, ...(isoMix > 0 ? { isoMix } : {}) },
     })
     fromName = s.cp.name
     fromId = s.cp.id
@@ -225,8 +290,12 @@ export function flaskText(leg: Leg): string {
   // Mélange : part d'eau minérale par flasque (en ml), le reste d'eau plate.
   const mix = leg.flasks.mix ?? 0
   const ml = Math.round((mix * FLASK_L * 1000) / 50) * 50
-  const waterText = !waterName ? `${flaskWord(water)} d'eau` : mix >= 1 ? `${flaskWord(water)} ${waterName}` : `${flaskWord(water)} ${waterName} + eau (${ml} ml + ${FLASK_L * 1000 - ml} ml)`
-  return [water ? waterText : '', iso ? `${flaskWord(iso)} ${isoName}` : ''].filter(Boolean).join(' + ')
+  const waterText = !waterName || !(mix > 0) ? `${flaskWord(water)} d'eau` : mix >= 1 ? `${flaskWord(water)} ${waterName}` : `${flaskWord(water)} ${waterName} + eau (${ml} ml + ${FLASK_L * 1000 - ml} ml)`
+  // Isotonique dissous dans un mélange d'eau minérale salée et d'eau plate (ou dans l'eau minérale seule).
+  const isoMix = leg.flasks.isoMix ?? 0
+  const isoMl = Math.round((isoMix * FLASK_L * 1000) / 50) * 50
+  const isoText = !waterName || !(isoMix > 0) ? `${flaskWord(iso)} ${isoName}` : isoMix >= 1 ? `${flaskWord(iso)} ${isoName} dans ${waterName}` : `${flaskWord(iso)} ${isoName} dans ${waterName} + eau (${isoMl} ml + ${FLASK_L * 1000 - isoMl} ml)`
+  return [water ? waterText : '', iso ? isoText : ''].filter(Boolean).join(' + ')
 }
 
 /** Plus de flasques que celles portées : alerte (remplir en route), sinon null. */
