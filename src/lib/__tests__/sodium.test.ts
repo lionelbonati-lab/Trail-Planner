@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace } from '../defaults'
-import { bagText, flaskText, isSodiumProduct, nutritionPlan, ravitoText, sodiumOrder } from '../nutrition'
+import { bagText, flaskText, isSodiumProduct, nutritionPlan, ravitoText } from '../nutrition'
+import { dropIndex, moveItem } from '../order'
 import { computePlan } from '../plan'
 import { libraryProduct, PRODUCT_LIBRARY } from '../productLibrary'
 import type { Product } from '../types'
@@ -50,10 +51,9 @@ describe('sodium : produits salés, ordre des sources, St-Yorre dans l’isotoni
     expect(none[1].products.some((x) => x.product.id === bouillon.id)).toBe(false)
   })
 
-  it('ordre des sources choisi : ravito puis caps, ou caps d’abord ; le sel complète', () => {
-    const products = [...DEFAULT_PRODUCTS, bouillon, caps]
-    const [, a] = nutritionPlan(race, plan.sim, products, ['ravito', 'carried', 'mineral'])
-    const [, b] = nutritionPlan(race, plan.sim, products, ['carried', 'ravito', 'mineral'])
+  it('sources de sodium dans l’ordre de la liste : bouillon puis caps, ou caps d’abord ; le sel complète', () => {
+    const [, a] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, bouillon, caps])
+    const [, b] = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, caps, bouillon])
     const count = (leg: typeof a, id: string) => leg.products.find((x) => x.product.id === id)?.count ?? 0
     expect(count(a, bouillon.id)).toBeGreaterThan(0)
     expect(count(b, caps.id)).toBeGreaterThan(count(a, caps.id))
@@ -61,9 +61,30 @@ describe('sodium : produits salés, ordre des sources, St-Yorre dans l’isotoni
     // Caps emportées : dans le sac et rappelées par la montre.
     expect(bagText(b)).toContain(`${count(b, caps.id)} × Salt Caps (capsule)`)
     expect(foodLines([b], plan.sim.splits).find((l) => l.startsWith('P|'))).toContain('Salt Caps')
-    // Ordre incomplet ou invalide : complété dans l'ordre par défaut.
-    expect(sodiumOrder(['mineral'])).toEqual(['mineral', 'ravito', 'carried'])
-    expect(sodiumOrder(undefined)).toEqual(['ravito', 'carried', 'mineral'])
+  })
+
+  it('glucides : parts gardées, le premier produit de la liste complète et reprend la part d’un produit absent', () => {
+    const gel: Product = { id: 'g', name: 'Gel', carbs: 25, sodium: 50, share: 0.5, type: 'gel' }
+    const barre: Product = { id: 'b', name: 'Barre', carbs: 30, sodium: 100, share: 0.3, type: 'solid' }
+    const banane: Product = { id: 'ban', name: 'Banane', carbs: 20, sodium: 0, share: 0.2, type: 'solid', atRavito: true }
+    const c = (leg: { products: { product: Product; count: number }[] }, id: string) => leg.products.find((x) => x.product.id === id)?.count ?? 0
+    // Au départ, pas de banane : sa part revient au premier produit de la liste.
+    const hungry = { ...race, carbsPerH: 90 }
+    const [g1] = nutritionPlan(hungry, plan.sim, [gel, barre, banane])
+    const [b1] = nutritionPlan(hungry, plan.sim, [barre, gel, banane])
+    expect(c(g1, 'g') * 25).toBeGreaterThan(c(b1, 'g') * 25)
+    expect(c(b1, 'b') * 30).toBeGreaterThan(c(g1, 'b') * 30)
+    // Ordre d'affichage (et de prise) : celui de la liste.
+    expect(b1.products.map((x) => x.product.id)).toEqual(['b', 'g'])
+  })
+
+  it('tri par glisser-déposer : place d’arrivée et liste réordonnée', () => {
+    expect(moveItem(['a', 'b', 'c', 'd'], 0, 2)).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveItem(['a', 'b', 'c', 'd'], 3, 0)).toEqual(['d', 'a', 'b', 'c'])
+    // Lignes de 40 px : milieux à 20, 60, 100, 140 ; la première glissée de 70 px (centre à 90).
+    expect(dropIndex([20, 60, 100, 140], 0, 90)).toBe(1)
+    expect(dropIndex([20, 60, 100, 140], 0, 150)).toBe(3)
+    expect(dropIndex([20, 60, 100, 140], 3, 10)).toBe(0)
   })
 
   it('St-Yorre : flasques d’eau d’abord, isotonique s’il n’y a pas de flasque d’eau', () => {

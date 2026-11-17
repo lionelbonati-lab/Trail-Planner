@@ -89,7 +89,8 @@ describe('produits retenus pour une course', () => {
       { id: 'c', name: 'Isotonique', carbs: 30, sodium: 300, share: 0, flask: true, brand: 'Overstim' },
     ]
     expect(raceProducts({}, ps)).toBe(ps)
-    expect(raceProducts({ productIds: ['c', 'a'] }, ps).map((p) => p.id)).toEqual(['a', 'c'])
+    // Dans l'ordre de la liste de la course (carte Nutrition), produits supprimés ignorés.
+    expect(raceProducts({ productIds: ['c', 'a', 'x'] }, ps).map((p) => p.id)).toEqual(['c', 'a'])
     expect(brandsOf(ps)).toEqual(['Maurten', 'Overstim'])
     // Plan montre : seuls les produits retenus.
     const race = { ...newRace('Choix', gpx(20)), productIds: ['a'] }
