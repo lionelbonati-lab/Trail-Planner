@@ -378,6 +378,41 @@ export interface LiveState {
   departures?: Record<string, string>
 }
 
+/** Point du parcours figé au moment de la sortie (plan d'alors), pour le debrief. */
+export interface DebriefPoint {
+  id: string
+  name: string
+  kind: CheckpointKind
+  /** Distance depuis le départ (m). */
+  dist: number
+  /** D+ et D- du tronçon qui arrive à ce point (m). */
+  up: number
+  down: number
+  /** Arrivée prévue (s depuis le départ) et arrêt prévu au point (s). */
+  planned: number
+  stop: number
+  /** Barrière horaire (ISO UTC), course à heure fixe seulement. */
+  cutoff: string | null
+}
+
+/** Debrief d'une sortie : plan figé, passages relevés (montre, mode course), corrections et notes. */
+export interface Debrief {
+  id: string
+  createdAt: string
+  points: DebriefPoint[]
+  /** Relevés de la montre : départ et dernier relevé (s Unix), distance, passages et départs des ravitos (id → s Unix). */
+  watch?: { s: number; t: number; d: number; passes: Record<string, number>; departures: Record<string, number> }
+  /** Mode course du téléphone. */
+  live?: LiveState
+  /** Corrections à la main : départ, passages et départs des ravitos (null : effacé). */
+  edits?: { start?: string; passages?: Record<string, string | null>; departures?: Record<string, string | null> }
+  /** Notes par point, et bilan de la sortie. */
+  notes?: Record<string, string>
+  note?: string
+  /** Debrief déjà ouvert : plus proposé en haut de la course. */
+  seen?: boolean
+}
+
 export type CalcMode = 'physio' | 'kme' | 'gap'
 
 export interface KmeSettings {
@@ -481,6 +516,8 @@ export interface Race {
    * vrai départ (mode course, montre) ; l'heure de départ saisie est ignorée.
    */
   freeStart?: boolean
+  /** Debriefs des sorties sur ce parcours (une par départ), passages figés. */
+  debriefs?: Debrief[]
   updatedAt: string
 }
 

@@ -38,7 +38,20 @@ const TAP_PX = 28
 const DONE_COLOR = '#7d8580'
 const RUNNER_ZOOM = 14
 
-export default function ShareMap({ route, points, runner, passageAt }: { route: RoutePoint[]; points: MapPoint[]; runner: Runner | null; passageAt?: PassageAt }) {
+export default function ShareMap({
+  route,
+  points,
+  runner,
+  passageAt,
+  title = 'Carte en direct',
+}: {
+  route: RoutePoint[]
+  points: MapPoint[]
+  runner: Runner | null
+  passageAt?: PassageAt
+  /** Titre au-dessus de la carte (debrief : « Parcours »). */
+  title?: string
+}) {
   const el = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
   const lines = useRef<L.LayerGroup | null>(null)
@@ -219,7 +232,7 @@ export default function ShareMap({ route, points, runner, passageAt }: { route: 
   return (
     <section className={`share-map-wrap ${full ? 'full' : ''}`}>
       <div className="share-map-head">
-        <h3>Carte en direct</h3>
+        <h3>{title}</h3>
         <span className="row tight">
           {runner && (
             <button className={follow ? 'ghost on' : 'ghost'} onClick={centerOnRunner} title="Garder le coureur au centre de la carte">

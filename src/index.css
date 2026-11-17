@@ -304,6 +304,9 @@ button.inline-btn svg { width: 13px; height: 13px; }
 .assist-profile .leg-ravito .leg-sep { stroke: var(--ravito); opacity: 0.5; }
 .assist-profile .leg-text { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
 .assist-profile .leg-ravito .leg-text { fill: var(--ravito); font-weight: 600; }
+.assist-profile .cp-delta { font-size: 10px; font-weight: 650; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.assist-profile .cp-delta.late { fill: var(--warn); }
+.assist-profile .cp-delta.early { fill: var(--ok); }
 .assist-profile .leg-done-bg { fill: #dcdcd8; }
 .assist-profile .leg-done .leg-text, .assist-profile .leg-ravito .leg-done .leg-text { fill: #9a9d99; }
 .assist-profile .leg-done .leg-sep, .assist-profile .leg-ravito .leg-done .leg-sep { stroke: #b9bcb8; opacity: 1; }
@@ -763,3 +766,19 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 
 .ravito-tag { background: #fdf3ec; color: var(--ravito); border-color: var(--ravito); white-space: nowrap; }
 .ravito-line { color: var(--ravito); }
+
+/* Debrief d'une sortie. */
+.debrief .late { color: var(--warn); }
+.debrief .early { color: var(--ok); }
+.debrief .time-edit { background: none; border: none; padding: 0; color: var(--accent); font: inherit; font-variant-numeric: tabular-nums; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.debrief .src-icon { width: 13px; height: 13px; margin-left: 4px; color: var(--muted); vertical-align: -2px; }
+.debrief .note-input { width: 100%; font-size: 14px; }
+.debrief-note { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); resize: vertical; }
+.debrief-table td { vertical-align: top; }
+.debrief-table .debrief-point tr:first-child td { border-bottom: none; padding-bottom: 2px; }
+.debrief-table .note-row td { padding-top: 0; }
+.debrief .nowrap { white-space: nowrap; }
+.debrief-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.debrief-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.debrief-list .late { color: var(--warn); }
+.debrief-list .early { color: var(--ok); }

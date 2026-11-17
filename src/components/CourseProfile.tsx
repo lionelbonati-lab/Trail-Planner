@@ -15,6 +15,8 @@ export interface ProfileRow {
   actual?: string | null
   /** D+ cumulé jusqu'au point (m). */
   up?: number
+  /** Écart au plan au passage (s, positif : retard), affiché sous le point (debrief). */
+  delta?: number | null
 }
 
 /** Portion du parcours (m) avec une valeur (technicité, nuit). */
@@ -35,6 +37,13 @@ function profileGain(profile: [number, number][], d: number): number {
   let up = 0
   for (let i = 1; i < profile.length && profile[i - 1][0] < d; i++) up += Math.max(0, profile[i][1] - profile[i - 1][1])
   return up
+}
+
+/** Écart court sous un point : « +7′ », « −1h05 », « 0′ ». */
+function deltaLabel(sec: number): string {
+  const m = Math.round(sec / 60)
+  const abs = Math.abs(m)
+  return `${m > 0 ? '+' : m < 0 ? '−' : ''}${abs >= 60 ? `${Math.floor(abs / 60)}h${String(abs % 60).padStart(2, '0')}` : `${abs}′`}`
 }
 
 /** Échelle minimale du profil (px par km) : au-delà de la largeur de l'écran, il défile. */
@@ -306,6 +315,11 @@ export function CourseProfile({
                 <circle cx={xx} cy={yy} r={isRavitoKind(r.kind as CheckpointKind) ? 4 : 2.5} className={r.actual ? 'done-dot' : isRavitoKind(r.kind as CheckpointKind) ? 'ravito-dot' : 'cp-dot'} />
               )}
               {r.dropbag && <rect className="bag-mark" x={xx - 4} y={T - 12} width={8} height={8} rx={1.5} />}
+              {r.delta !== undefined && r.delta !== null && (
+                <text x={xx} y={yy + 16} textAnchor="middle" className={`cp-delta ${Math.abs(r.delta) < 60 ? '' : r.delta > 0 ? 'late' : 'early'}`}>
+                  {deltaLabel(r.delta)}
+                </text>
+              )}
               {label && (
                 <text
                   x={xx + (flip ? -2 : 2)}

@@ -73,8 +73,10 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { watchStartMs, type WatchReport } from './lib/watchLive'
+import { debriefPoints, upsertLive, upsertWatch } from './lib/debrief'
+import { DebriefPage } from './components/DebriefPage'
 
-type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre'
+type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre' | 'debrief'
 
 /** Onglets de la barre du haut. */
 const NAV: { tab: Tab; label: string; Icon: typeof Flag }[] = [
@@ -87,14 +89,41 @@ const NAV: { tab: Tab; label: string; Icon: typeof Flag }[] = [
   { tab: 'montre', label: 'Montre', Icon: Watch },
 ]
 
-function readHash(): { tab: Tab; raceId: string | null } {
-  const [hashTab, raceId] = window.location.hash.replace(/^#\/?/, '').split('/')
+/** Mode course : passages copiés dans le debrief de la sortie (plan figé au premier passage). */
+function withLiveDebrief(r: Race, athlete: Athlete): Race {
+  if (!r.live) return r
+  const next = upsertLive(r.debriefs ?? [], r.live, () => {
+    const plan = computePlan(r, athlete)
+    return plan ? debriefPoints(r, plan.sim) : []
+  })
+  return next ? { ...r, debriefs: next } : r
+}
+
+/**
+ * Relevé de la montre pour la course qu'elle porte : pris s'il date d'après l'envoi de cette course,
+ * reste sur le parcours et a avancé (un passage ou 1 km). Null : rien à changer.
+ */
+function watchDebriefs(race: Race, athlete: Athlete, report: WatchReport): Race['debriefs'] | null {
+  if (athlete.watchRaceAt && report.t * 1000 < Date.parse(athlete.watchRaceAt)) return null
+  if (!report.p && report.d < 1000) return null
+  const plan = computePlan(race, athlete)
+  if (!plan || report.d > plan.track.totalDist + 1000) return null
+  return upsertWatch(race.debriefs ?? [], report, () => debriefPoints(race, plan.sim))
+}
+
+function readHash(): { tab: Tab; raceId: string | null; debriefId: string | null } {
+  const [hashTab, raceId, debriefId] = window.location.hash.replace(/^#\/?/, '').split('/')
   // Calculateur VC et Séances ne font plus qu'un onglet (Test VC) : les anciens liens y mènent.
   const tab = hashTab === 'seances' ? 'cs' : hashTab
   return {
     // Courses et parcours ne font plus qu'une page (Parcours) : les anciens liens « courses » y mènent.
-    tab: tab === 'athlete' || tab === 'nutrition' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'tracer' || tab === 'montre' ? tab : 'parcours',
-    raceId: (tab === 'races' || tab === 'live' || tab === 'tracer' || tab === 'parcours') && raceId ? raceId : null,
+    tab:
+      tab === 'athlete' || tab === 'nutrition' || tab === 'cs' || tab === 'analyse' || tab === 'live' || tab === 'tracer' || tab === 'montre' || tab === 'debrief'
+        ? tab
+        : 'parcours',
+    raceId: (tab === 'races' || tab === 'live' || tab === 'tracer' || tab === 'parcours' || tab === 'debrief') && raceId ? raceId : null,
+    // Debrief d'une sortie : #/debrief/<parcours>/<debrief>.
+    debriefId: tab === 'debrief' && debriefId ? debriefId : null,
   }
 }
 
@@ -234,7 +263,7 @@ export default function App() {
       return next
     })
   const updateRace = (r: Race) => {
-    const next = { ...r, updatedAt: new Date().toISOString() }
+    const next = { ...withLiveDebrief(r, athlete), updatedAt: new Date().toISOString() }
     setRaces((all) => all.map((x) => (x.id === r.id ? next : x)))
     saveRaceLater(r.id, next)
   }
@@ -362,10 +391,9 @@ export default function App() {
   // Départ libre d'une course sur la montre, sans le mode course du téléphone : départ réel donné par
   // la montre, pour que les heures prévues du plan restent fixes pendant toute l'activité.
   const [watchReport, setWatchReport] = useState<WatchReport | null>(null)
-  const watchRefs =
-    current && isFreeStart(current) && !current.live && user && athlete.watchRaceId === current.id
-      ? [athlete.watchId, athlete.epCode].filter((r): r is string => !!r).join(',')
-      : ''
+  // Relevés suivis dès qu'une course est sur la montre : départ réel (ci-dessous) et passages figés
+  // dans le debrief de la sortie.
+  const watchRefs = user && athlete.watchRaceId ? [athlete.watchId, athlete.epCode].filter((r): r is string => !!r).join(',') : ''
   useEffect(() => {
     setWatchReport(null)
     if (!watchRefs || !cloud) return
@@ -384,7 +412,23 @@ export default function App() {
     const id = setInterval(() => setNowSec(Date.now() / 1000), 60000)
     return () => clearInterval(id)
   }, [watchReport])
-  const watchStart = watchRefs ? watchStartMs(watchReport, Math.max(nowSec, watchReport?.t ?? 0)) : null
+  const watchStart =
+    watchRefs && current && isFreeStart(current) && !current.live && athlete.watchRaceId === current.id
+      ? watchStartMs(watchReport, Math.max(nowSec, watchReport?.t ?? 0))
+      : null
+
+  // Debrief : passages relevés par la montre copiés dans la sortie (un relevé n'est traité qu'une fois).
+  const debriefDone = useRef('')
+  useEffect(() => {
+    if (!watchReport || !loaded) return
+    const race = races.find((r) => r.id === athlete.watchRaceId)
+    const key = `${race?.id}|${watchReport.s}|${watchReport.t}|${watchReport.p ?? ''}`
+    if (!race || debriefDone.current === key) return
+    debriefDone.current = key
+    const next = watchDebriefs(race, athlete, watchReport)
+    if (next) updateRace({ ...race, debriefs: next })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- un relevé est traité à son arrivée (et au chargement)
+  }, [watchReport, loaded, races, athlete])
 
   // --- Liens d'assistance -----------------------------------------------------
   const lastShared = useRef(new Map<string, string>())
@@ -601,6 +645,16 @@ export default function App() {
           libraryEl
         ) : route.tab === 'analyse' ? (
           <ActivityPanel athlete={athlete} races={races} onChange={updateAthlete} />
+        ) : route.tab === 'debrief' && current ? (
+          <DebriefPage
+            key={`${current.id}/${route.debriefId}`}
+            race={current}
+            athlete={athlete}
+            debriefId={route.debriefId}
+            onChange={updateRace}
+            onAthleteChange={updateAthlete}
+            onBack={() => go('parcours', current.id)}
+          />
         ) : route.tab === 'live' && current ? (
           <LiveMode key={current.id} race={current} athlete={athlete} onChange={updateRace} onExit={() => go('parcours', current.id)} />
         ) : current ? (
@@ -617,6 +671,7 @@ export default function App() {
               onChange={updateRace}
               onAthleteChange={updateAthlete}
               onRedraw={() => go('tracer', current.id)}
+              onDebrief={(id) => go('debrief', `${current.id}/${id}`)}
               share={{
                 available: !!user,
                 url: current.shareId ? shareUrl(current.shareId) : null,

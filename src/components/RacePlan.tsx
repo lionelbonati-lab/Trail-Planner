@@ -11,6 +11,7 @@ import { assistAllowed, FINISH_ID } from '../lib/assist'
 import { isDefaultLevel } from '../lib/level'
 import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
+import { debriefEnded, debriefReport, debriefStart, signedGap, sortedDebriefs } from '../lib/debrief'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { CHECKPOINT_LABELS, commonStop, defaultStop, isRavitoKind, setStops, waypointCheckpoints, withKind } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
@@ -94,6 +95,7 @@ export function RacePlan({
   share,
   watch,
   watchStart = null,
+  onDebrief,
 }: {
   race: Race
   athlete: Athlete
@@ -105,6 +107,8 @@ export function RacePlan({
   watch?: { available: boolean; active: boolean; activate: () => void }
   /** Départ libre : départ réel donné par la montre (ms), si l'activité est en cours. */
   watchStart?: number | null
+  /** Ouvre le debrief d'une sortie. */
+  onDebrief?: (id: string) => void
 }) {
   // Parcours : panneau « Vers une course » (cible, nom) puis résultat.
   const isRoute = race.kind === 'route'
@@ -374,6 +378,12 @@ export function RacePlan({
     return [{ key, kind: k, one, word: targets.length > 1 ? `aux ${targets.length} ${many}` : `${k === 'base' ? 'à la' : 'au'} ${one}`, value, done: targets.every((c) => c.stopMin === value) }]
   })
   const totalStops = race.checkpoints.reduce((a, c) => a + c.stopMin * 60, 0)
+  // Debriefs : sorties sur ce parcours, la dernière terminée proposée tant qu'elle n'a pas été ouverte.
+  const debriefs = sortedDebriefs(race)
+  const proposed = debriefs.find((d) => !d.seen && debriefEnded(d))
+  const proposedReport = proposed ? debriefReport(proposed) : null
+  const runDay = (ms: number) =>
+    new Intl.DateTimeFormat('fr-FR', { timeZone: race.env.timeZone, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ms))
   const nightShare = sim.points.filter((p) => p.night).length / sim.points.length
 
   return (
@@ -452,6 +462,19 @@ export function RacePlan({
                 <button className="ghost" onClick={() => confirm('Désactiver ce lien ? Ton assistance ne pourra plus l’ouvrir.') && share.remove()}>
                   Arrêter le partage
                 </button>
+              </span>
+            </div>
+          )}
+          {onDebrief && proposed && (
+            <div className="banner info debrief-banner">
+              <span>
+                <Flag className="inline" /> <strong>Sortie du {runDay(debriefStart(proposed))} terminée</strong>
+                {proposedReport?.total != null ? ` en ${formatDuration(proposedReport.total)}` : ''} : compare tes passages au plan, note tes impressions,
+                recale ton niveau.
+              </span>
+              <span className="row tight">
+                <button className="primary" onClick={() => onDebrief(proposed.id)}><Flag /> Voir le debrief</button>
+                <button className="ghost" onClick={() => set({ debriefs: (race.debriefs ?? []).map((d) => (d.id === proposed.id ? { ...d, seen: true } : d)) })}>Ignorer</button>
               </span>
             </div>
           )}
@@ -832,6 +855,42 @@ export function RacePlan({
                 </tbody>
               </table>
             </div>
+          </Card>
+        )}
+
+        {onDebrief && debriefs.length > 0 && (
+          <Card title={`Sorties et debriefs (${debriefs.length})`} fold="open">
+            <ul className="debrief-list">
+              {debriefs.map((d) => {
+                const rep = debriefReport(d)
+                const ended = debriefEnded(d)
+                return (
+                  <li key={d.id}>
+                    <span>
+                      <strong>{runDay(rep.start)}</strong> · départ {formatClock(new Date(rep.start), race.env.timeZone)}
+                      <span className="small muted">
+                        {' · '}
+                        {rep.total !== null ? (
+                          <>
+                            arrivée en {formatDuration(rep.total)}{' '}
+                            <span className={rep.total - rep.plannedTotal >= 60 ? 'late' : rep.total - rep.plannedTotal <= -60 ? 'early' : ''}>({signedGap(rep.total - rep.plannedTotal)})</span>
+                          </>
+                        ) : ended ? (
+                          'arrivée non relevée'
+                        ) : (
+                          'en cours'
+                        )}
+                      </span>
+                    </span>
+                    <button onClick={() => onDebrief(d.id)}><Flag /> Debrief</button>
+                  </li>
+                )
+              })}
+            </ul>
+            <Hint>
+              Une sortie par départ : passages relevés par la montre (champ Trail Planner) ou notés en mode course, figés ici avec le plan
+              d'alors (l'appli doit être ouverte une fois après la sortie pour récupérer ceux de la montre).
+            </Hint>
           </Card>
         )}
 
