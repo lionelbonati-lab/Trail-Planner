@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.4, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.5, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -153,22 +153,23 @@ avant le point. Désactive le réglage si tu utilises le tour automatique (Auto 
 
 ## Menu (appui long sur Haut)
 
-Le menu d'EndurancePro, réglable en course comme dans le champ, avec en tête le dossier
-**Trail Planner** :
-- **Zoom du profil** ;
-- **Couleurs des pentes** ;
-- **Tour = passage au point** ;
-- **Jusqu'à l'arrivée** (distance, D+ et D- restants jusqu'à l'arrivée sur l'écran Trail Planner) ;
-- **Échelle de la carte** ;
-- **Explorer la carte** (montres à cartes ; proposé seulement avec une carte à l'écran : écrans de course
+Le menu d'EndurancePro, réglable en course comme dans le champ : l'appli ne fait qu'un, ses réglages sont
+rangés dans les dossiers d'EndurancePro (pas de dossier à part) :
+- en tête, **Explorer la carte** (montres à cartes ; seulement avec une carte à l'écran : écrans de course
   ou fiche d'un parcours, pas depuis la liste) ;
-- **Code Trail Planner** : le code montre à 8 chiffres, le même que pour EndurancePro et le champ ;
-- **Recharger le plan** (nom de la course chargée, ou message d'erreur).
+- **Affichage** : en plus des réglages d'EndurancePro, **Zoom du profil**, **Jusqu'à l'arrivée** (distance,
+  D+ et D- restants jusqu'à l'arrivée sur l'écran Trail Planner), **Échelle de la carte** ;
+- **Colorisation** : **Couleurs des pentes** (profil) ;
+- **Circuit** : **Tour = passage au point** ;
+- **Alarmes** : **Rappels nutrition** (selon le plan, désactivés, ou toutes les 15 à 60 min) et
+  **Vibrations des rappels** (rappels et alertes de barrière horaire) ;
+- **Propriétés** : **Code Trail Planner** (le code montre à 8 chiffres, le même que pour EndurancePro et le
+  champ ; état de la synchro en sous-titre) et **Recharger le plan** (nom de la course chargée, ou message
+  d'erreur).
 
-Dans Garmin Connect (appli installée depuis le Store) : les réglages d'EndurancePro (code, référence
-d'allure, zones VC, données FIT), plus le zoom, les couleurs des pentes, le tour = passage, l'échelle de la carte, et les réglages du
-champ Trail Planner : rappel nutrition (-1 = produits du plan, N = toutes les N minutes, 0 = aucun),
-vibrations, jusqu'à l'arrivée.
+Dans Garmin Connect (appli installée depuis le Store, liste sans dossiers) : les mêmes réglages, dans
+l'ordre des dossiers de la montre (Affichage, Colorisation, Circuit, Allure, Alarmes, Propriétés), puis les
+données FIT d'EndurancePro. Rappel nutrition : -1 = produits du plan, N = toutes les N minutes, 0 = aucun.
 
 ## Plan de la course et réglages EndurancePro
 
@@ -190,7 +191,7 @@ avec la touche ⌚ (document du code). Champs d'un plan :
   plan, plus grossier sur les ultras ;
 - `ep`, les **réglages EndurancePro** (VC, zones VC et VAM, équivalences montée / descente, zone de la
   séance envoyée), comme la synchro du champ EndurancePro : à activer dans l'onglet Montre (synchro
-  EndurancePro). Le menu affiche l'heure de la dernière synchro (dossier Allure › Trail Planner).
+  EndurancePro). Le menu affiche l'heure de la dernière synchro (dossier Propriétés › Code Trail Planner).
 
 ## Suivi pour l'assistance
 
@@ -244,10 +245,11 @@ de fichier :
   tours et à la fin ;
 - les champs FIT sont créés sur la session d'enregistrement (`createFitFields`, au départ) ;
 - la synchro passe par le téléchargement du plan (pas de tâche de fond) ;
-- le menu a le dossier Trail Planner ; un nouveau code relance le téléchargement du plan ;
+- le menu reçoit les réglages de l'appli dans ses dossiers (code Trail Planner déplacé d'Allure dans
+  Propriétés) ; un nouveau code relance le téléchargement du plan ;
 - distance restante du plan Trail Planner (sans parcours Garmin suivi), réglage « Distance restante »
   respecté ;
-- `AppName` et `app_version` (« 0.5.4 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.5.5 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
@@ -258,7 +260,7 @@ Comme le champ (voir `garmin/README.md`, sections 2 et 3) :
 2. « Monkey C: Build for Device », choisis ta montre : un `.prg` est créé dans `bin/`.
 3. Copie-le dans `GARMIN/APPS/` (montre branchée en USB). L'appli apparaît dans la liste des activités et
    applis.
-4. Saisis le code montre dans le menu de l'appli (appui long sur Haut › Trail Planner › Code Trail Planner).
+4. Saisis le code montre dans le menu de l'appli (appui long sur Haut › Propriétés › Code Trail Planner).
 
 **Montres** (API Connect IQ 3.4 au moins, comme EndurancePro), chacune avec la mise en page EndurancePro
 de sa résolution (`monkey.jungle`) :

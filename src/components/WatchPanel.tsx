@@ -52,7 +52,7 @@ export function WatchPanel({
             <ul className="small">
               <li><strong>Trail Planner</strong> : pendant une activité, appui long sur Haut › Champs Connect IQ › Trail Planner › Code montre.</li>
               <li><strong>EndurancePro</strong> : menu du champ › Allure › Trail Planner.</li>
-              <li><strong>Trail Planner Companion</strong> (bêta) : appui long sur Haut › Trail Planner › Code Trail Planner.</li>
+              <li><strong>Trail Planner Companion</strong> (bêta) : appui long sur Haut › Propriétés › Code Trail Planner.</li>
             </ul>
           </>
         ) : athlete.watchId || athlete.epSync ? (
@@ -135,7 +135,7 @@ function CompanionSync({ athlete, onChange, signedIn }: { athlete: Athlete; onCh
       {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
       {on && signedIn && (
         <Hint>
-          Sur la montre : appli Trail Planner Companion › appui long sur Haut › Trail Planner › Code Trail Planner, saisis le code de
+          Sur la montre : appli Trail Planner Companion › appui long sur Haut › Propriétés › Code Trail Planner, saisis le code de
           synchronisation ci-dessus (le même que pour le champ et EndurancePro). La liste se met à jour à chaque lancement de l’appli,
           téléphone à proximité.
         </Hint>

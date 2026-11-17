@@ -1,7 +1,10 @@
 // EnduranceProSettingsMenu.mc — repris d'EndurancePro 2.7.3 dans l'appli Trail Planner Companion :
-// c'est le menu de l'appli (appui long sur Haut). Ajouts : dossier « Trail Planner » en tête
-// (profil, tour = passage, code montre, plan, voir TrailPlannerMenu dans Input.mc) ; un nouveau
-// code montre relance le téléchargement du plan (Run.settingsChanged) au lieu de la tâche de fond.
+// c'est le menu de l'appli (appui long sur Haut). Ajouts de l'appli, rangés dans les dossiers
+// d'EndurancePro (pas de dossier à part) : « Explorer la carte » en tête du menu (seulement avec une carte
+// à l'écran) ; Affichage : zoom du profil, « Jusqu'à l'arrivée », échelle de la carte ; Colorisation :
+// couleurs des pentes ; Circuit : tour = passage au point ; Alarmes : rappels nutrition, vibrations des
+// rappels ; Propriétés : code Trail Planner (déplacé d'Allure) et rechargement du plan. Un nouveau code
+// montre relance le téléchargement du plan (Run.settingsChanged) au lieu de la tâche de fond.
 // En-tête d'origine :
 // EnduranceProSettingsMenu.mc — v2.2.4
 // Menu de réglages on-watch (getSettingsView()) — accessible sans téléphone via appui long
@@ -394,6 +397,29 @@ function indexForValue(options as Array, value as Object) as Number {
     return 0;
 }
 
+// Appli : rappels nutrition (fuelMin) : selon le plan (-1), désactivés (0) ou toutes les N minutes. Une
+// valeur saisie dans Garmin Connect hors de la liste y est ajoutée.
+function fuelOptions() as Array {
+    var opts = [
+        [WatchUi.loadResource(Rez.Strings.tp_fuel_plan) as String, -1],
+        [WatchUi.loadResource(Rez.Strings.opt_disabled) as String, 0]
+    ] as Array;
+    var mins = [15, 20, 30, 45, 60];
+    for (var i = 0; i < mins.size(); i++) {
+        opts.add([mins[i].toString() + " min", mins[i]]);
+    }
+    var cur = Properties.getValue("fuelMin");
+    if (cur instanceof Number && cur > 0 && indexForValue(opts, cur) == 0) {
+        opts.add([(cur as Number).toString() + " min", cur]);
+    }
+    return opts;
+}
+
+function fuelValue() as Number {
+    var v = Properties.getValue("fuelMin");
+    return (v instanceof Number) ? v as Number : -1;
+}
+
 function distToTypeOptions() as Array {
     return [
         [WatchUi.loadResource(Rez.Strings.opt_disabled) as String, 0],
@@ -688,7 +714,6 @@ class AllureSettingsMenu extends WatchUi.Menu2 {
     private var _csPaceItem as WatchUi.MenuItem;
     private var _vcTargetZoneItem as WatchUi.MenuItem;
     private var _vcTargetPctItem as WatchUi.MenuItem;
-    private var _trailSyncItem as WatchUi.MenuItem;
 
     function initialize() {
         Menu2.initialize({:title => paceFolderLabel()});
@@ -706,9 +731,7 @@ class AllureSettingsMenu extends WatchUi.Menu2 {
         addItem(_vcTargetZoneItem);
         _vcTargetPctItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.set_vc_target_pct) as String, null, :vcTargetPct, {});
         addItem(_vcTargetPctItem);
-        // État de la synchro Trail Planner ; appui = saisie du code à 8 chiffres (v2.4.0)
-        _trailSyncItem = new WatchUi.MenuItem("Trail Planner", null, :trailSync, {});
-        addItem(_trailSyncItem);
+        // Appli : code Trail Planner déplacé dans Propriétés (avec le rechargement du plan).
         onShow();
     }
 
@@ -732,7 +755,6 @@ class AllureSettingsMenu extends WatchUi.Menu2 {
         _vcTargetZoneItem.setSubLabel(labelForValue(vcZoneOptions(), (tz != null) ? tz as Number : 2));
         var tpc = Properties.getValue("vc_target_pct_prop");
         _vcTargetPctItem.setSubLabel(((tpc != null) ? tpc.toString() : "80") + "%");
-        _trailSyncItem.setSubLabel(trailSyncSubLabel());
     }
 }
 
@@ -799,6 +821,7 @@ class AlarmSettingsMenu extends WatchUi.Menu2 {
     private var _alarmItem as WatchUi.MenuItem;
     private var _vamAlarmTypeItem as WatchUi.MenuItem;
     private var _targetZoneItem as WatchUi.MenuItem;
+    private var _fuelItem as WatchUi.MenuItem;
 
     function initialize() {
         Menu2.initialize({:title => WatchUi.loadResource(Rez.Strings.menu_alarm_folder) as String});
@@ -814,10 +837,16 @@ class AlarmSettingsMenu extends WatchUi.Menu2 {
         // VAM : remplace « Seuil VAM alarme » et « Seuil FC ». Même réglage que dans le dossier Allure.
         _targetZoneItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.set_vc_target_zone) as String, null, :vcTargetZone, {});
         addItem(_targetZoneItem);
+        // Appli : rappels nutrition (popup) et vibrations des rappels et alertes Trail Planner.
+        _fuelItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_fuel) as String, null, :fuelMin, {});
+        addItem(_fuelItem);
+        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.tp_vibrate) as String, null, :tpVibrate,
+            Properties.getValue("vibrate") != false, {}));
         onShow();
     }
 
     function onShow() as Void {
+        _fuelItem.setSubLabel(labelForValue(fuelOptions(), fuelValue()));
         var apd = Properties.getValue("alarm_popup_duration_prop");
         _alarmPopupDurationItem.setSubLabel(labelForValue(alarmPopupOptions(), (apd != null) ? apd as Number : 5));
 
@@ -875,6 +904,8 @@ class CoeffSettingsMenu extends WatchUi.Menu2 {
 class ProprietesSettingsMenu extends WatchUi.Menu2 {
     private var _paceUnitItem as WatchUi.MenuItem;
     private var _bufferSizeItem as WatchUi.MenuItem;
+    private var _codeItem as WatchUi.MenuItem;
+    private var _planItem as WatchUi.MenuItem;
 
     function initialize() {
         Menu2.initialize({:title => WatchUi.loadResource(Rez.Strings.menu_properties_folder) as String});
@@ -882,10 +913,19 @@ class ProprietesSettingsMenu extends WatchUi.Menu2 {
         addItem(_paceUnitItem);
         _bufferSizeItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.menu_buffer_size) as String, null, :bufferSize, {});
         addItem(_bufferSizeItem);
+        // Appli : code Trail Planner (état de la synchro en sous-titre ; appui = saisie du code à 8
+        // chiffres) et rechargement du plan (nom de la course en sous-titre).
+        _codeItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.set_trail_code) as String, null, :trailSync, {});
+        addItem(_codeItem);
+        _planItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_reload) as String, null, :reload, {});
+        addItem(_planItem);
         onShow();
     }
 
     function onShow() as Void {
+        _codeItem.setSubLabel(trailSyncSubLabel());
+        var run = getRun();
+        _planItem.setSubLabel(run.plan != null ? run.plan.name : run.status);
         var pu = Properties.getValue("pace_unit_prop");
         var puVal = (pu != null) ? pu as Number : 0;
         _paceUnitItem.setSubLabel(labelForValue(paceUnitOptions(), puVal));
@@ -900,6 +940,8 @@ class AffichageSettingsMenu extends WatchUi.Menu2 {
     private var _vamModeItem as WatchUi.MenuItem;
     private var _distToTypeItem as WatchUi.MenuItem;
     private var _batteryModeItem as WatchUi.MenuItem;
+    private var _zoomItem as WatchUi.MenuItem;
+    private var _mapScaleItem as WatchUi.MenuItem;
 
     function initialize() {
         Menu2.initialize({:title => WatchUi.loadResource(Rez.Strings.menu_display_folder) as String});
@@ -915,6 +957,13 @@ class AffichageSettingsMenu extends WatchUi.Menu2 {
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_clock_metric_folder) as String, null, :clockMetricEnabled, clockMetricEnabled == true, {}));
         var showClock = Properties.getValue("show_clock_prop");
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_show_clock) as String, null, :showClock, showClock == true, {}));
+        // Appli : écran Profil, écran Trail Planner, écran Carte.
+        _zoomItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_zoom) as String, null, :tpZoom, {});
+        addItem(_zoomItem);
+        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.tp_finish) as String,
+            WatchUi.loadResource(Rez.Strings.tp_finish_sub) as String, :finishStats, Properties.getValue("finishStats") == true, {}));
+        _mapScaleItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_map_scale) as String, null, :mapScale, {});
+        addItem(_mapScaleItem);
         onShow();
     }
 
@@ -930,6 +979,8 @@ class AffichageSettingsMenu extends WatchUi.Menu2 {
 
         var bd = Properties.getValue("battery_display_prop");
         _batteryModeItem.setSubLabel(labelForValue(batteryDisplayOptions(), (bd != null) ? bd as Number : 0));
+        _zoomItem.setSubLabel(zoomLabel(zoomLevel()));
+        _mapScaleItem.setSubLabel(mapScaleLabel(mapScaleLevel()));
     }
 }
 
@@ -953,6 +1004,9 @@ class ColorisationSettingsMenu extends WatchUi.Menu2 {
         addItem(_colorizePaceAvgItem);
         var cdd = Properties.getValue("colorize_dplus_dmoins_prop");
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_colorize_dplus_dmoins) as String, null, :colorizeDPlusDMoins, cdd == true, {}));
+        // Appli : profil coloré selon la pente.
+        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.tp_slopes) as String,
+            WatchUi.loadResource(Rez.Strings.tp_slopes_sub) as String, :slopes, slopesOn(), {}));
         onShow();
     }
 
@@ -991,6 +1045,9 @@ class CircuitSettingsMenu extends WatchUi.Menu2 {
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_circuit_distance) as String, null, :circuitDistance, cdi == true, {}));
         var cc = Properties.getValue("circuit_chrono_prop");
         addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.menu_circuit_chrono) as String, null, :circuitChrono, cc == true, {}));
+        // Appli : le bouton Lap valide le passage au point le plus proche (2e tour au ravito = départ).
+        addItem(new WatchUi.ToggleMenuItem(WatchUi.loadResource(Rez.Strings.tp_lap_pass) as String, null, :lapPass,
+            Properties.getValue("lapPass") != false, {}));
     }
 }
 
@@ -1030,13 +1087,16 @@ class EnduranceProSettingsMenu extends WatchUi.Menu2 {
     function initialize() {
         Menu2.initialize({:title => WatchUi.loadResource(Rez.Strings.menu_settings_title) as String});
 
+        // Appli : « Explorer la carte » en tête, seulement avec une carte à l'écran sous le menu (écrans de
+        // course ou fiche d'un parcours ; depuis la liste, la carte remplacerait la liste).
+        if (getApp().canExplore()) {
+            addItem(new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.tp_explore) as String, null, :explore, {}));
+        }
+
         // v1.9.49 : Numéro de version en tout premier — purement informatif (pas de
         // branche dans le délégué : la sélection ne fait rien)
         addItem(new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.menu_version_label) as String,
             WatchUi.loadResource(Rez.Strings.app_version) as String, :versionInfo, {}));
-
-        // Appli Trail Planner Companion : profil, tour = passage, code montre et plan de la course.
-        addItem(new WatchUi.MenuItem("Trail Planner", WatchUi.loadResource(Rez.Strings.tp_menu_sub) as String, :tpFolder, {}));
 
         _bagWeightItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.menu_bag_weight) as String, null, :bagWeight, {});
         addItem(_bagWeightItem);
@@ -1168,9 +1228,6 @@ class EnduranceProSettingsDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :coeffFolder) {
             WatchUi.pushView(new CoeffSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_LEFT);
 
-        } else if (id == :tpFolder) {
-            WatchUi.pushView(new TrailPlannerMenu(), new TrailPlannerMenuDelegate(), WatchUi.SLIDE_LEFT);
-
         } else if (id == :propertiesFolder) {
             WatchUi.pushView(new ProprietesSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_LEFT);
 
@@ -1299,6 +1356,51 @@ class EnduranceProSettingsDelegate extends WatchUi.Menu2InputDelegate {
             var cdd = item as WatchUi.ToggleMenuItem;
             Properties.setValue("colorize_dplus_dmoins_prop", cdd.isEnabled());
             getApp().refreshViewSettings();
+
+        // --- Appli Trail Planner Companion ---
+        } else if (id == :explore) {
+            // Lancée une fois le menu fermé, au tour suivant de Run.onTick : la carte passe alors en
+            // exploration (écran Carte en course, carte de la fiche du parcours).
+            getApp().pendingExplore = true;
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+
+        } else if (id == :tpZoom) {
+            var zm = new WatchUi.Menu2({:title => WatchUi.loadResource(Rez.Strings.tp_zoom) as String});
+            for (var z = 0; z < ZOOM_SPANS.size(); z++) {
+                zm.addItem(new WatchUi.MenuItem(zoomLabel(z), null, z, {}));
+            }
+            zm.setFocus(zoomLevel());
+            WatchUi.pushView(zm, new ZoomDelegate(), WatchUi.SLIDE_LEFT);
+
+        } else if (id == :mapScale) {
+            var sm = new WatchUi.Menu2({:title => WatchUi.loadResource(Rez.Strings.tp_map_scale) as String});
+            for (var z = 0; z < MAP_SCALES.size(); z++) {
+                sm.addItem(new WatchUi.MenuItem(mapScaleLabel(z), null, z, {}));
+            }
+            sm.setFocus(mapScaleLevel());
+            WatchUi.pushView(sm, new MapScaleDelegate(), WatchUi.SLIDE_LEFT);
+
+        } else if (id == :finishStats) {
+            Properties.setValue("finishStats", (item as WatchUi.ToggleMenuItem).isEnabled());
+            getApp().refreshViewSettings();
+
+        } else if (id == :slopes) {
+            Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());
+            getApp().refreshViewSettings();
+
+        } else if (id == :lapPass) {
+            Properties.setValue("lapPass", (item as WatchUi.ToggleMenuItem).isEnabled());
+
+        } else if (id == :fuelMin) {
+            WatchUi.pushView(new PropertyListMenu(WatchUi.loadResource(Rez.Strings.tp_fuel) as String, fuelOptions(), "fuelMin"),
+                new PropertyListDelegate("fuelMin"), WatchUi.SLIDE_LEFT);
+
+        } else if (id == :tpVibrate) {
+            Properties.setValue("vibrate", (item as WatchUi.ToggleMenuItem).isEnabled());
+
+        } else if (id == :reload) {
+            getRun().fetch();
+            WatchUi.popView(WatchUi.SLIDE_RIGHT);
         }
     }
 }

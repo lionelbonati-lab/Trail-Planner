@@ -1,4 +1,5 @@
-<!-- settings.xml — EndurancePro 2.7.3 + appli Trail Planner Companion (fin du fichier) -->
+<!-- settings.xml — EndurancePro 2.7.3 + appli Trail Planner Companion, dans l'ordre des dossiers du menu de
+     la montre (Affichage, Colorisation, Circuit, Allure, Alarmes, Propriétés), puis l'enregistrement FIT. -->
 <!-- v1.9.45 : Tous les réglages migrés vers le menu on-watch (getSettingsView, voir
      EnduranceProSettingsMenu.mc). v2.1.2 : lissage (buffer_size_prop) et unité d'allure
      (pace_unit_prop, AFFICHAGE montre, modifiable en course) migrés à leur tour vers le
@@ -14,12 +15,42 @@
 <resources>
     <settings>
 
-        <!-- v2.4.0 : Synchro Trail Planner (code à coller depuis le site) + référence d'allure
-             et bornes des zones VC (aussi réglables / synchronisées sur la montre) -->
-        <setting propertyKey="@Properties.trail_code_prop" title="@Strings.set_trail_code">
-            <settingConfig type="alphaNumeric" />
+        <!-- Affichage (dossier Affichage de la montre) : écrans Profil, Trail Planner et Carte de l'appli -->
+        <setting propertyKey="@Properties.zoom" title="@Strings.tp_zoom">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.tp_zoom_all</listEntry>
+                <listEntry value="1">@Strings.tp_zoom_20</listEntry>
+                <listEntry value="2">@Strings.tp_zoom_10</listEntry>
+                <listEntry value="3">@Strings.tp_zoom_5</listEntry>
+                <listEntry value="4">@Strings.tp_zoom_2</listEntry>
+            </settingConfig>
         </setting>
 
+        <setting propertyKey="@Properties.finishStats" title="@Strings.tp_finish_prompt">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.mapScale" title="@Strings.tp_map_scale">
+            <settingConfig type="list">
+                <listEntry value="0">200 m</listEntry>
+                <listEntry value="1">500 m</listEntry>
+                <listEntry value="2">1 km</listEntry>
+                <listEntry value="3">2 km</listEntry>
+                <listEntry value="4">5 km</listEntry>
+            </settingConfig>
+        </setting>
+
+        <!-- Colorisation : profil coloré selon la pente -->
+        <setting propertyKey="@Properties.slopes" title="@Strings.tp_slopes_prompt">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <!-- Circuit : tour = passage au point -->
+        <setting propertyKey="@Properties.lapPass" title="@Strings.tp_lap_pass_prompt">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <!-- Allure : référence d'allure et bornes des zones VC (aussi réglables / synchronisées sur la montre) -->
         <setting propertyKey="@Properties.pace_ref_prop" title="@Strings.set_pace_ref">
             <settingConfig type="list">
                 <listEntry value="0">@Strings.set_target_pace</listEntry>
@@ -32,6 +63,21 @@
             <settingConfig type="alphaNumeric" />
         </setting>
 
+        <!-- Alarmes : rappels nutrition et vibrations des rappels Trail Planner -->
+        <setting propertyKey="@Properties.fuelMin" title="@Strings.tp_fuel_prompt">
+            <settingConfig type="numeric" min="-1" max="120" />
+        </setting>
+
+        <setting propertyKey="@Properties.vibrate" title="@Strings.tp_vibrate">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <!-- Propriétés : code Trail Planner (code à 8 chiffres du site : plan, parcours, réglages, suivi) -->
+        <setting propertyKey="@Properties.trail_code_prop" title="@Strings.set_trail_code">
+            <settingConfig type="alphaNumeric" />
+        </setting>
+
+        <!-- Enregistrement FIT (téléphone seulement, voir l'en-tête) -->
         <setting propertyKey="@Properties.fit_pace_unit_prop" title="@Strings.set_fit_pace_unit">
             <settingConfig type="list">
                 <listEntry value="0">min/km</listEntry>
@@ -69,48 +115,6 @@
 
         <setting propertyKey="@Properties.fit_coefficients_prop" title="@Strings.set_fit_coefficients">
             <settingConfig type="boolean" />
-        </setting>
-
-        <!-- Appli Trail Planner Companion : profil et tour = passage (aussi dans le menu de la montre,
-             dossier Trail Planner). -->
-        <setting propertyKey="@Properties.zoom" title="@Strings.tp_zoom">
-            <settingConfig type="list">
-                <listEntry value="0">@Strings.tp_zoom_all</listEntry>
-                <listEntry value="1">@Strings.tp_zoom_20</listEntry>
-                <listEntry value="2">@Strings.tp_zoom_10</listEntry>
-                <listEntry value="3">@Strings.tp_zoom_5</listEntry>
-                <listEntry value="4">@Strings.tp_zoom_2</listEntry>
-            </settingConfig>
-        </setting>
-
-        <setting propertyKey="@Properties.slopes" title="@Strings.tp_slopes_prompt">
-            <settingConfig type="boolean" />
-        </setting>
-
-        <setting propertyKey="@Properties.lapPass" title="@Strings.tp_lap_pass_prompt">
-            <settingConfig type="boolean" />
-        </setting>
-
-        <setting propertyKey="@Properties.fuelMin" title="@Strings.tp_fuel_prompt">
-            <settingConfig type="numeric" min="-1" max="120" />
-        </setting>
-
-        <setting propertyKey="@Properties.vibrate" title="@Strings.tp_vibrate">
-            <settingConfig type="boolean" />
-        </setting>
-
-        <setting propertyKey="@Properties.finishStats" title="@Strings.tp_finish_prompt">
-            <settingConfig type="boolean" />
-        </setting>
-
-        <setting propertyKey="@Properties.mapScale" title="@Strings.tp_map_scale">
-            <settingConfig type="list">
-                <listEntry value="0">200 m</listEntry>
-                <listEntry value="1">500 m</listEntry>
-                <listEntry value="2">1 km</listEntry>
-                <listEntry value="3">2 km</listEntry>
-                <listEntry value="4">5 km</listEntry>
-            </settingConfig>
         </setting>
 
     </settings>

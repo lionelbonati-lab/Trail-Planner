@@ -184,6 +184,7 @@ class CompanionMapView extends WatchUi.MapView {
         setMapMode(WatchUi.MAP_MODE_PREVIEW);
         var s = System.getDeviceSettings();
         setScreenVisibleArea(0, 0, s.screenWidth, s.screenHeight);
+        setDefaultArea();
     }
 
     function onLayout(dc as Graphics.Dc) as Void {
@@ -222,6 +223,14 @@ class CompanionMapView extends WatchUi.MapView {
         shownScale = -1;
         exploring = false;
         setMapMode(WatchUi.MAP_MODE_PREVIEW);
+        // Fiche : parcours entier tout de suite s'il est déjà là, sinon zone par défaut (jamais celle d'un
+        // autre parcours) en attendant son tracé, cadré dès qu'il arrive (onUpdate).
+        if (on) {
+            fitted = fitRoute();
+            if (!fitted) {
+                setDefaultArea();
+            }
+        }
     }
 
     // Cadre le parcours entier (avec une marge de 15 %).
@@ -292,6 +301,33 @@ class CompanionMapView extends WatchUi.MapView {
     }
 
     // Zone affichée centrée sur le coureur, à l'échelle du menu ; recentrée dès qu'il a bougé de 5 m.
+    // Zone affichée tant qu'il n'y a ni tracé ni position GPS (la carte Garmin refuse de s'afficher sans
+    // zone) : dernière position connue de la montre à l'échelle choisie, sinon la France entière. follow()
+    // et fitRoute() la remplacent dès qu'ils le peuvent.
+    function setDefaultArea() as Void {
+        var lat = 46.6d;
+        var lon = 2.4d;
+        var half = 550000.0d;
+        var info = Position.getInfo();
+        if (info != null && info.position != null) {
+            var deg = (info.position as Position.Location).toDegrees();
+            if (deg[0] != 0.0d || deg[1] != 0.0d) {
+                lat = deg[0];
+                lon = deg[1];
+                half = MAP_SCALES[mapScaleLevel()] / 2.0d;
+            }
+        }
+        var ky = 111320.0d;
+        var kx = 111320.0d * Math.cos(lat * Math.PI / 180.0d);
+        var dLat = half / ky;
+        var dLon = kx > 0 ? half / kx : dLat;
+        setMapVisibleArea(
+            new Position.Location({ :latitude => lat + dLat, :longitude => lon - dLon, :format => :degrees }),
+            new Position.Location({ :latitude => lat - dLat, :longitude => lon + dLon, :format => :degrees })
+        );
+        shownScale = -1;
+    }
+
     function follow() as Void {
         var center = runnerDegrees(run);
         if (center == null) {

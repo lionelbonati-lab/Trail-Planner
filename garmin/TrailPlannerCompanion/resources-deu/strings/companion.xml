@@ -2,7 +2,8 @@
 <!-- Textes propres à l'appli Trail Planner Companion (ceux d'EndurancePro sont dans strings.xml). -->
 <strings>
     <string id="AppName">Trail Planner Companion</string>
-    <string id="tp_menu_sub">Profil, Runden, Plan</string>
+    <string id="tp_fuel">Ernährungserinnerungen</string>
+    <string id="tp_fuel_plan">Laut Plan</string>
     <string id="tp_zoom">Profil-Zoom</string>
     <string id="tp_zoom_all">Ganze Strecke</string>
     <string id="tp_zoom_20">20 km</string>
@@ -46,7 +47,7 @@
     <string id="tp_finish_sub">Distanz, D+ und D-</string>
     <string id="tp_finish_prompt">Trail-Planner-Seite: auch Distanz, D+ und D- bis zum Ziel anzeigen</string>
     <string id="tp_fuel_prompt">Verpflegungserinnerung (min): -1 = Produkte des Plans zwischen den Verpflegungen verteilt, 0 = aus</string>
-    <string id="tp_vibrate">Trail-Planner-Vibrationen</string>
+    <string id="tp_vibrate">Vibration bei Erinnerungen</string>
     <string id="tp_free_run">Freier Lauf</string>
     <string id="tp_free_sub">Ohne Plan</string>
     <string id="tp_settings">Einstellungen</string>

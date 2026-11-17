@@ -168,98 +168,10 @@ class DiscardDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-// --- Dossier « Trail Planner » du menu (en tête du menu d'EndurancePro) -----------------------------------
+// --- Réglages de l'appli rangés dans les dossiers d'EndurancePro (voir EnduranceProSettingsMenu.mc) -------
 
 function zoomLabel(z as Number) as String {
     return tpText([Rez.Strings.tp_zoom_all, Rez.Strings.tp_zoom_20, Rez.Strings.tp_zoom_10, Rez.Strings.tp_zoom_5, Rez.Strings.tp_zoom_2][z]);
-}
-
-class TrailPlannerMenu extends WatchUi.Menu2 {
-    private var _zoomItem as WatchUi.MenuItem;
-    private var _codeItem as WatchUi.MenuItem;
-    private var _planItem as WatchUi.MenuItem;
-    private var _scaleItem as WatchUi.MenuItem;
-
-    function initialize() {
-        Menu2.initialize({ :title => "Trail Planner" });
-        _zoomItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_zoom), null, :zoom, {});
-        addItem(_zoomItem);
-        addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_slopes), tpText(Rez.Strings.tp_slopes_sub), :slopes, slopesOn(), {}));
-        addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_lap_pass), null, :lapPass,
-            Application.Properties.getValue("lapPass") != false, {}));
-        addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_finish), tpText(Rez.Strings.tp_finish_sub), :finishStats,
-            Application.Properties.getValue("finishStats") == true, {}));
-        _codeItem = new WatchUi.MenuItem(tpText(Rez.Strings.set_trail_code), null, :code, {});
-        addItem(_codeItem);
-        _scaleItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_map_scale), null, :mapScale, {});
-        addItem(_scaleItem);
-        // Exploration : seulement avec le fond de carte Garmin, et une carte à l'écran sous le menu (écrans
-        // de course ou fiche du parcours ; depuis la liste, l'option ferait disparaître la liste).
-        if (getApp().canExplore()) {
-            addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_explore), null, :explore, {}));
-        }
-        _planItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_reload), null, :reload, {});
-        addItem(_planItem);
-        onShow();
-    }
-
-    function onShow() as Void {
-        _zoomItem.setSubLabel(zoomLabel(zoomLevel()));
-        _scaleItem.setSubLabel(mapScaleLabel(mapScaleLevel()));
-        var code = Application.Properties.getValue("trail_code_prop");
-        var text = "-";
-        if (code instanceof String && (code as String).length() > 0) {
-            var c = code as String;
-            text = (c.length() <= 8) ? c : (c.substring(0, 8) as String) + "...";
-        }
-        _codeItem.setSubLabel(text);
-        var run = getRun();
-        _planItem.setSubLabel(run.plan != null ? run.plan.name : run.status);
-    }
-}
-
-class TrailPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
-    function initialize() {
-        Menu2InputDelegate.initialize();
-    }
-
-    function onSelect(item as WatchUi.MenuItem) as Void {
-        var id = item.getId();
-        if (id == :zoom) {
-            var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_zoom) });
-            for (var z = 0; z < ZOOM_SPANS.size(); z++) {
-                menu.addItem(new WatchUi.MenuItem(zoomLabel(z), null, z, {}));
-            }
-            menu.setFocus(zoomLevel());
-            WatchUi.pushView(menu, new ZoomDelegate(), WatchUi.SLIDE_LEFT);
-        } else if (id == :mapScale) {
-            var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_map_scale) });
-            for (var z = 0; z < MAP_SCALES.size(); z++) {
-                menu.addItem(new WatchUi.MenuItem(mapScaleLabel(z), null, z, {}));
-            }
-            menu.setFocus(mapScaleLevel());
-            WatchUi.pushView(menu, new MapScaleDelegate(), WatchUi.SLIDE_LEFT);
-        } else if (id == :explore) {
-            // Lancée une fois le menu fermé (dossier Trail Planner et menu principal), au tour suivant
-            // de Run.onTick : la carte remplace alors l'écran affiché.
-            var app = getApp();
-            app.pendingExplore = true;
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-        } else if (id == :slopes) {
-            Application.Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());
-        } else if (id == :lapPass) {
-            Application.Properties.setValue("lapPass", (item as WatchUi.ToggleMenuItem).isEnabled());
-        } else if (id == :finishStats) {
-            Application.Properties.setValue("finishStats", (item as WatchUi.ToggleMenuItem).isEnabled());
-        } else if (id == :code) {
-            // Code à 8 chiffres d'EndurancePro (le même pour le plan, le profil et le suivi).
-            pushTrailCodePicker();
-        } else if (id == :reload) {
-            getRun().fetch();
-            WatchUi.popView(WatchUi.SLIDE_RIGHT);
-        }
-    }
 }
 
 class ZoomDelegate extends WatchUi.Menu2InputDelegate {
