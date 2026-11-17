@@ -175,6 +175,8 @@ class CompanionMapView extends WatchUi.MapView {
     var cLon = 0.0d;
     var shownScale = -1;
     var exploring = false;     // mode exploration Garmin (déplacer, zoomer)
+    var overview = false;      // fiche du parcours à l'écran de démarrage : parcours entier
+    var fitted = false;        // parcours entier déjà cadré
 
     function initialize(r as Run) {
         MapView.initialize();
@@ -207,6 +209,40 @@ class CompanionMapView extends WatchUi.MapView {
         setMapMode(on ? WatchUi.MAP_MODE_BROWSE : WatchUi.MAP_MODE_PREVIEW);
         shownScale = -1;
         WatchUi.requestUpdate();
+    }
+
+    // Fiche du parcours (écran de démarrage) : parcours entier, sans suivi ni bandeaux.
+    function setOverview(on as Boolean) as Void {
+        overview = on;
+        fitted = false;
+        shownScale = -1;
+        exploring = false;
+        setMapMode(WatchUi.MAP_MODE_PREVIEW);
+    }
+
+    // Cadre le parcours entier (avec une marge de 15 %).
+    function fitRoute() as Boolean {
+        var r = run.route;
+        if (r == null || r.size() < 2) {
+            return false;
+        }
+        var laMin = r.lat[0];
+        var laMax = laMin;
+        var loMin = r.lon[0];
+        var loMax = loMin;
+        for (var i = 1; i < r.size(); i++) {
+            if (r.lat[i] < laMin) { laMin = r.lat[i]; }
+            if (r.lat[i] > laMax) { laMax = r.lat[i]; }
+            if (r.lon[i] < loMin) { loMin = r.lon[i]; }
+            if (r.lon[i] > loMax) { loMax = r.lon[i]; }
+        }
+        var mla = (laMax - laMin) * 0.15 + 50;
+        var mlo = (loMax - loMin) * 0.15 + 50;
+        setMapVisibleArea(
+            new Position.Location({ :latitude => (laMax + mla) / 100000.0d, :longitude => (loMin - mlo) / 100000.0d, :format => :degrees }),
+            new Position.Location({ :latitude => (laMin - mla) / 100000.0d, :longitude => (loMax + mlo) / 100000.0d, :format => :degrees })
+        );
+        return true;
     }
 
     // Parcours et repères posés une fois (et de nouveau quand le plan ou le tracé change).
@@ -280,6 +316,14 @@ class CompanionMapView extends WatchUi.MapView {
 
     function onUpdate(dc as Graphics.Dc) as Void {
         refreshRoute();
+        if (overview) {
+            if (!fitted) {
+                fitted = fitRoute();
+            }
+            MapView.onUpdate(dc);
+            drawOverviewText(dc, run);
+            return;
+        }
         // Sortie du mode exploration par la carte elle-même : retour au suivi (lecture du mode seulement si
         // la montre la propose).
         if (exploring && self has :getMapMode) {

@@ -47,4 +47,11 @@
     <string id="tp_finish_prompt">Trail Planner screen: also show the distance, D+ and D- left to the finish</string>
     <string id="tp_fuel_prompt">Fuel reminder (min): -1 = plan products spread between aid stations, 0 = off</string>
     <string id="tp_vibrate">Trail Planner vibrations</string>
+    <string id="tp_free_run">Free run</string>
+    <string id="tp_free_sub">No plan</string>
+    <string id="tp_settings">Settings</string>
+    <string id="tp_on_watch">Sent to the watch</string>
+    <string id="tp_loading">Loading...</string>
+    <string id="tp_choose">START: go</string>
+    <string id="tp_no_courses">No courses</string>
 </strings>

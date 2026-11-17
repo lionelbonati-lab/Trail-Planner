@@ -47,4 +47,11 @@
     <string id="tp_finish_prompt">Ecrã Trail Planner: mostrar também a distância, o D+ e o D- até à chegada</string>
     <string id="tp_fuel_prompt">Lembrete de nutrição (min): -1 = produtos do plano repartidos entre abastecimentos, 0 = desativado</string>
     <string id="tp_vibrate">Vibrações Trail Planner</string>
+    <string id="tp_free_run">Saída livre</string>
+    <string id="tp_free_sub">Sem plano</string>
+    <string id="tp_settings">Definições</string>
+    <string id="tp_on_watch">Enviada para o relógio</string>
+    <string id="tp_loading">A carregar...</string>
+    <string id="tp_choose">START: partir</string>
+    <string id="tp_no_courses">Nenhum percurso</string>
 </strings>

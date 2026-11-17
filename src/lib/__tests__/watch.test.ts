@@ -240,8 +240,8 @@ describe("liste des parcours de l'appli montre (champ wl)", () => {
     const wl = watchList([
       { id: 'd', kind: 'race', name: 'Maxi | Race\nannecy', start: 1811995200.4, dist: 42123.6, dPlus: 2580.2 },
       { id: 'a', kind: 'route', name: 'Boucle du Salève', start: 0, dist: 15400, dPlus: 820 },
-    ])
-    expect(wl.split('\n')).toEqual(['TPL1', 'd|c|Maxi   Race annecy|1811995200|42124|2580', 'a|p|Boucle du Salève|0|15400|820'])
+    ], 'a')
+    expect(wl.split('\n')).toEqual(['TPL1', 'd|c|Maxi   Race annecy|1811995200|42124|2580', 'a|p|Boucle du Salève|0|15400|820|*'])
     expect(appDocId('12345678', 'abc')).toBe('12345678-abc')
   })
 })

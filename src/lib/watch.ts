@@ -411,12 +411,18 @@ export function appCourses(races: Race[], today: string): Race[] {
  * après l'en-tête, dans l'ordre de l'écran de démarrage :
  *
  *   TPL1
- *   <id>|<c course, p parcours>|<nom>|<départ s Unix ou 0>|<distance m>|<D+ m>
+ *   <id>|<c course, p parcours>|<nom>|<départ s Unix ou 0>|<distance m>|<D+ m>[|*]
  *
- * Le plan de chaque parcours (champs w, wp, wr) est dans le document `<code>-<id>` (appDocId).
+ * « * » : parcours envoyé à la montre (touche ⌚), proposé en premier. Le plan de chaque parcours
+ * (champs w, wp, wr) est dans le document `<code>-<id>` (appDocId).
  */
-export function watchList(courses: AppCourse[]): string {
-  return ['TPL1', ...courses.map((c) => [c.id, c.kind === 'race' ? 'c' : 'p', clean(c.name, 24), Math.round(c.start), Math.round(c.dist), Math.round(c.dPlus)].join('|'))].join('\n')
+export function watchList(courses: AppCourse[], onWatchId?: string): string {
+  return [
+    'TPL1',
+    ...courses.map((c) =>
+      [c.id, c.kind === 'race' ? 'c' : 'p', clean(c.name, 24), Math.round(c.start), Math.round(c.dist), Math.round(c.dPlus), ...(c.id === onWatchId ? ['*'] : [])].join('|'),
+    ),
+  ].join('\n')
 }
 
 /** Document du plan d'un parcours de l'appli montre, pour un code montre. */

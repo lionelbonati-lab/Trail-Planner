@@ -611,7 +611,7 @@ export default function App() {
         entries.push(entry)
         for (const code of codes) cloud.publishAppCourse(appDocId(code, r.id), user.uid, data).catch(() => appPublished.current.delete(r.id))
       }
-      setAppWl(watchList(entries))
+      setAppWl(watchList(entries, athlete.watchRaceId))
     }, 5000)
     return () => clearTimeout(id)
   }, [races, athlete, user, cloud])

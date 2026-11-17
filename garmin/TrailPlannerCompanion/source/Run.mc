@@ -58,6 +58,8 @@ class Run {
     var route = null;         // tracé de la carte (MapRoute) : champ wr, sinon ligne G du plan
     var routeText = null;     // texte du champ wr chargé (null : tracé tiré du plan)
     var routePlan = null;     // plan dont le tracé de repli est tiré
+    var routeFor = null;      // parcours de la dernière demande de tracé
+    var courseId = null;      // parcours choisi à l'écran de démarrage (id, "" course envoyée, null libre)
 
     function initialize() {
         ep = new EnduranceProView();
@@ -266,9 +268,15 @@ class Run {
     }
 
     // --- Plan de la course ---------------------------------------------------------------------------
+    // Document du code montre (le même que pour le champ et EndurancePro) : plan de la course envoyée à
+    // la montre `w` (et son profil `wp`), réglages EndurancePro `ep`, liste des parcours de l'appli `wl`.
+    // Parcours choisi à l'écran de démarrage (courseId) :
+    // - un parcours de la liste : son document `<code>-<id>` (plan w, profil wp, tracé wr) ;
+    // - "" : la course envoyée à la montre (document du code, quand la liste est vide) ;
+    // - null : sortie libre, sans plan (ou rien encore choisi).
+    // Plans gardés dans le stockage de la montre : « plan0 » / « profile0 » (course envoyée), « plan » /
+    // « profile » (parcours de la liste, planCourse), « route » (tracé du parcours choisi, routeCourse).
 
-    // Document du code montre (le même que pour le champ et EndurancePro) : plan `w`, profil `wp` et
-    // réglages EndurancePro `ep`, via le téléphone.
     function fetch() as Void {
         var code = codeSetting();
         if (code == null) {
@@ -278,7 +286,7 @@ class Run {
         fetchCode = code;
         Communications.makeWebRequest(
             "https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/%28default%29/documents/shares/" +
-                code + "?mask.fieldPaths=w&mask.fieldPaths=wp&mask.fieldPaths=ep",
+                code + "?mask.fieldPaths=w&mask.fieldPaths=wp&mask.fieldPaths=ep&mask.fieldPaths=wl",
             null,
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
@@ -286,6 +294,9 @@ class Run {
             },
             method(:onPlan)
         );
+        if (courseId != null && !courseId.equals("")) {
+            fetchCourse();
+        }
     }
 
     function onPlan(responseCode as Number, data as Dictionary or String or Null) as Void {
@@ -295,23 +306,31 @@ class Run {
             var w = null;
             var wp = null;
             var epText = null;
+            var wl = null;
             if (fields instanceof Dictionary) {
                 w = textOf(fields["w"]);
                 wp = textOf(fields["wp"]);
                 epText = textOf(fields["ep"]);
+                wl = textOf(fields["wl"]);
             }
-            // Document sans course (`w` vide : réglages EndurancePro seuls) : on garde le dernier plan.
+            // Course envoyée à la montre (`w` vide : réglages EndurancePro seuls, on garde la dernière).
             noCourse = true;
             if (w != null && w.length() > 4) {
                 noCourse = false;
-                // Nouveau plan (ou nouveau code) : tracé de la carte à retélécharger.
-                if (!sameText(Application.Storage.getValue("plan"), w) || !sameText(Application.Storage.getValue("planCode"), fetchCode)) {
+                if (!sameText(Application.Storage.getValue("plan0"), w) && courseId != null && courseId.equals("")) {
                     Application.Storage.setValue("route", null);
                 }
-                Application.Storage.setValue("plan", w);
-                Application.Storage.setValue("profile", wp);
+                Application.Storage.setValue("plan0", w);
+                Application.Storage.setValue("profile0", wp);
                 Application.Storage.setValue("planCode", fetchCode);
-                needRoute = Application.Storage.getValue("route") == null;
+                needRoute = courseId != null && courseId.equals("") && Application.Storage.getValue("route") == null;
+            }
+            // Liste des parcours de l'écran de démarrage.
+            var oldList = Application.Storage.getValue("list");
+            Application.Storage.setValue("list", wl);
+            Application.Storage.setValue("listCode", fetchCode);
+            if (!sameText(oldList, wl)) {
+                getApp().refreshStart();
             }
             Application.Storage.setValue("fetchError", null);
             // Réglages EndurancePro (VC, zones, équivalences, zone de la séance), comme la synchro du champ.
@@ -329,16 +348,60 @@ class Run {
         WatchUi.requestUpdate();
     }
 
-    // Tracé fin de l'écran Carte (champ wr, jusqu'à 10 000 caractères) : requête à part, la réponse du
-    // plan restant de taille raisonnable pour la montre.
-    function fetchRoute() as Void {
+    // Plan du parcours choisi dans la liste (document `<code>-<id>`).
+    function fetchCourse() as Void {
         var code = codeSetting();
-        if (code == null) {
+        if (code == null || courseId == null || courseId.equals("")) {
             return;
         }
         Communications.makeWebRequest(
             "https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/%28default%29/documents/shares/" +
-                code + "?mask.fieldPaths=wr",
+                code + "-" + courseId + "?mask.fieldPaths=w&mask.fieldPaths=wp",
+            null,
+            {
+                :method => Communications.HTTP_REQUEST_METHOD_GET,
+                :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON
+            },
+            method(:onCourse)
+        );
+    }
+
+    function onCourse(responseCode as Number, data as Dictionary or String or Null) as Void {
+        if (responseCode != 200 || !(data instanceof Dictionary) || courseId == null) {
+            return;
+        }
+        var fields = data["fields"];
+        var w = fields instanceof Dictionary ? textOf(fields["w"]) : null;
+        if (w == null || w.length() <= 4) {
+            return;
+        }
+        var same = sameText(Application.Storage.getValue("planCourse"), courseId) && sameText(Application.Storage.getValue("plan"), w);
+        if (!same) {
+            Application.Storage.setValue("route", null);
+        }
+        Application.Storage.setValue("plan", w);
+        Application.Storage.setValue("profile", textOf(fields["wp"]));
+        Application.Storage.setValue("planCourse", courseId);
+        Application.Storage.setValue("planCode", fetchCode != null ? fetchCode : codeSetting());
+        load();
+        if (Application.Storage.getValue("route") == null) {
+            fetchRoute();
+        }
+        WatchUi.requestUpdate();
+    }
+
+    // Tracé fin de l'écran Carte (champ wr, jusqu'à 10 000 caractères) du parcours choisi : requête à part,
+    // pour que chaque réponse reste de taille raisonnable pour la montre.
+    function fetchRoute() as Void {
+        var code = codeSetting();
+        if (code == null || courseId == null) {
+            return;
+        }
+        var doc = courseId.equals("") ? code : code + "-" + courseId;
+        routeFor = courseId;
+        Communications.makeWebRequest(
+            "https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/%28default%29/documents/shares/" +
+                doc + "?mask.fieldPaths=wr",
             null,
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
@@ -351,16 +414,18 @@ class Run {
     // Sans champ wr (site d'une ancienne version) : "" (téléchargé, rien), le tracé est tiré du plan.
     // En cas d'échec : nouvel essai avec le plan suivant (5 min).
     function onRoute(responseCode as Number, data as Dictionary or String or Null) as Void {
-        if (responseCode == 200 && data instanceof Dictionary) {
+        if (responseCode == 200 && data instanceof Dictionary && sameText(routeFor, courseId)) {
             var fields = data["fields"];
             var wr = fields instanceof Dictionary ? textOf(fields["wr"]) : null;
             Application.Storage.setValue("route", wr != null ? wr : "");
+            Application.Storage.setValue("routeCourse", courseId);
             loadRoute();
             WatchUi.requestUpdate();
         }
     }
 
-    // Tracé de la carte : champ wr s'il est là, sinon ligne G du plan (relu seulement s'il a changé).
+    // Tracé de la carte : champ wr du parcours choisi s'il est là, sinon ligne G du plan (relu seulement
+    // s'il a changé).
     function loadRoute() as Void {
         if (plan == null) {
             route = null;
@@ -369,6 +434,9 @@ class Run {
             return;
         }
         var text = Application.Storage.getValue("route");
+        if (!sameText(Application.Storage.getValue("routeCourse"), courseId)) {
+            text = null;
+        }
         if (text instanceof String && (text as String).length() > 4) {
             if (routeText != null && (text as String).equals(routeText)) {
                 return;
@@ -395,17 +463,64 @@ class Run {
         return null;
     }
 
-    // Relit le plan enregistré s'il a changé et le donne à Trail Planner (qui recale la position et, en
-    // course, garde les passages déjà notés). Un plan téléchargé avec un autre code (code changé depuis)
-    // est ignoré.
+    // Écran de démarrage : parcours choisi (id de la liste, "" course envoyée, null sortie libre).
+    function selectCourse(id) as Void {
+        courseId = id;
+        load();
+        if (id != null && !id.equals("")) {
+            fetchCourse();
+        } else if (id != null && route == null) {
+            fetchRoute();
+        }
+    }
+
+    // Liste des parcours de l'écran de démarrage : [id, « c » / « p », nom, départ, distance, D+, envoyé]
+    // par parcours (champ wl, téléchargé avec le même code).
+    function courses() as Array {
+        var out = [] as Array;
+        var text = Application.Storage.getValue("list");
+        if (!(text instanceof String) || !sameText(Application.Storage.getValue("listCode"), lastCode)) {
+            return out;
+        }
+        var lines = splitText(text as String, "\n");
+        if (lines.size() < 1 || !lines[0].equals("TPL1")) {
+            return out;
+        }
+        for (var i = 1; i < lines.size(); i++) {
+            var p = splitText(lines[i], "|");
+            if (p.size() >= 6) {
+                out.add([p[0], p[1], p[2], toNum(p[3]), toNum(p[4]), toNum(p[5]), p.size() >= 7 && p[6].equals("*")]);
+            }
+        }
+        return out;
+    }
+
+    // Nom de la course envoyée à la montre (document du code), ou null.
+    function mainCourseName() as String or Null {
+        var text = Application.Storage.getValue("plan0");
+        if (!(text instanceof String) || !sameText(Application.Storage.getValue("planCode"), lastCode)) {
+            return null;
+        }
+        var p = parsePlan(text as String, null);
+        return p != null ? p.name : null;
+    }
+
+    // Relit le plan du parcours choisi s'il a changé et le donne à Trail Planner (qui recale la position
+    // et, en course, garde les passages déjà notés). Un plan téléchargé avec un autre code est ignoré.
     function load() as Void {
-        var text = Application.Storage.getValue("plan");
-        var prof = Application.Storage.getValue("profile");
+        var text = null;
+        var prof = null;
+        if (courseId != null && sameText(Application.Storage.getValue("planCode"), lastCode)) {
+            if (courseId.equals("")) {
+                text = Application.Storage.getValue("plan0");
+                prof = Application.Storage.getValue("profile0");
+            } else if (sameText(Application.Storage.getValue("planCourse"), courseId)) {
+                text = Application.Storage.getValue("plan");
+                prof = Application.Storage.getValue("profile");
+            }
+        }
         if (!(prof instanceof String)) {
             prof = null;
-        }
-        if (!sameText(Application.Storage.getValue("planCode"), lastCode)) {
-            text = null;
         }
         if (!(text instanceof String)) {
             plan = null;
@@ -441,6 +556,8 @@ class Run {
         var err = Application.Storage.getValue("fetchError");
         if (lastCode == null) {
             status = tpText(Rez.Strings.tp_no_code);
+        } else if (courseId == null) {
+            status = tpText(Rez.Strings.tp_free_run);
         } else if (plan != null) {
             status = "";
         } else if (err == 404) {

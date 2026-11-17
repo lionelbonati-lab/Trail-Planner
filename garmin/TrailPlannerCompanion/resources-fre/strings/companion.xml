@@ -47,4 +47,11 @@
     <string id="tp_finish_prompt">Écran Trail Planner : afficher aussi la distance, le D+ et le D- restant jusqu'à l'arrivée</string>
     <string id="tp_fuel_prompt">Rappel nutrition (min) : -1 = produits du plan répartis entre les ravitos, 0 = désactivé</string>
     <string id="tp_vibrate">Vibrations Trail Planner</string>
+    <string id="tp_free_run">Sortie libre</string>
+    <string id="tp_free_sub">Sans plan</string>
+    <string id="tp_settings">Réglages</string>
+    <string id="tp_on_watch">Envoyée sur la montre</string>
+    <string id="tp_loading">Chargement...</string>
+    <string id="tp_choose">START : démarrer</string>
+    <string id="tp_no_courses">Aucun parcours</string>
 </strings>

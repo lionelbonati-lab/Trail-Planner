@@ -47,4 +47,11 @@
     <string id="tp_finish_prompt">Trail-Planner-Seite: auch Distanz, D+ und D- bis zum Ziel anzeigen</string>
     <string id="tp_fuel_prompt">Verpflegungserinnerung (min): -1 = Produkte des Plans zwischen den Verpflegungen verteilt, 0 = aus</string>
     <string id="tp_vibrate">Trail-Planner-Vibrationen</string>
+    <string id="tp_free_run">Freier Lauf</string>
+    <string id="tp_free_sub">Ohne Plan</string>
+    <string id="tp_settings">Einstellungen</string>
+    <string id="tp_on_watch">An die Uhr gesendet</string>
+    <string id="tp_loading">Wird geladen...</string>
+    <string id="tp_choose">START: los</string>
+    <string id="tp_no_courses">Keine Strecken</string>
 </strings>

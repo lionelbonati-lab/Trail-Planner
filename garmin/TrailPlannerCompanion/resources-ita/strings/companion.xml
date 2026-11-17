@@ -47,4 +47,11 @@
     <string id="tp_finish_prompt">Schermata Trail Planner: mostra anche distanza, D+ e D- fino all'arrivo</string>
     <string id="tp_fuel_prompt">Promemoria nutrizione (min): -1 = prodotti del piano distribuiti tra i ristori, 0 = disattivato</string>
     <string id="tp_vibrate">Vibrazioni Trail Planner</string>
+    <string id="tp_free_run">Uscita libera</string>
+    <string id="tp_free_sub">Senza piano</string>
+    <string id="tp_settings">Impostazioni</string>
+    <string id="tp_on_watch">Inviata all'orologio</string>
+    <string id="tp_loading">Caricamento...</string>
+    <string id="tp_choose">START: via</string>
+    <string id="tp_no_courses">Nessun percorso</string>
 </strings>

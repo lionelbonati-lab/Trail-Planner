@@ -1,6 +1,7 @@
 import Toybox.Application;
 import Toybox.Graphics;
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.WatchUi;
 
 // Boutons, comme dans une activité Garmin :
@@ -53,7 +54,10 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
                 pushPauseMenu();
                 return true;
             }
-            // Avant le départ ou sortie terminée : BACK quitte l'appli.
+            // Sortie terminée : BACK quitte l'appli. Avant le départ : retour à la liste des parcours.
+            if (run.state == DONE) {
+                System.exit();
+            }
             return BehaviorDelegate.onKey(evt);
         }
         // Haut, Bas, Menu : comportements habituels (onNextPage, onPreviousPage, onMenu).
