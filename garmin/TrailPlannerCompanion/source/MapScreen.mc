@@ -296,11 +296,20 @@ class CompanionMapView extends WatchUi.MapView {
                 }
             }
         }
-        setPolyline(line);
-        setMapMarker(markers);
+        // La carte Garmin refuse un tracé ou une liste de repères vides (sortie libre, tracé pas encore
+        // arrivé, parcours sans ravito) : on efface alors ce qui était posé.
+        if (route != null && route.size() >= 2) {
+            setPolyline(line);
+        } else {
+            clearPolyline();
+        }
+        if (markers.size() > 0) {
+            setMapMarker(markers);
+        } else {
+            clearMapMarker();
+        }
     }
 
-    // Zone affichée centrée sur le coureur, à l'échelle du menu ; recentrée dès qu'il a bougé de 5 m.
     // Zone affichée tant qu'il n'y a ni tracé ni position GPS (la carte Garmin refuse de s'afficher sans
     // zone) : dernière position connue de la montre à l'échelle choisie, sinon la France entière. follow()
     // et fitRoute() la remplacent dès qu'ils le peuvent.
@@ -328,6 +337,7 @@ class CompanionMapView extends WatchUi.MapView {
         shownScale = -1;
     }
 
+    // Zone affichée centrée sur le coureur, à l'échelle du menu ; recentrée dès qu'il a bougé de 5 m.
     function follow() as Void {
         var center = runnerDegrees(run);
         if (center == null) {
