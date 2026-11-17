@@ -2,10 +2,13 @@
 
 Appli Connect IQ pour montres Garmin (une **appli**, pas un champ de données) qui **enregistre ta sortie
 Trail** avec :
+- un **écran de démarrage** façon Komoot : tes courses à venir et les parcours de ta bibliothèque,
+  synchronisés depuis l'app web, avec leur fiche (carte Garmin du parcours, distance, D+) ;
 - l'**écran et les calculs d'EndurancePro 2.7.3**, à l'identique (allure effort, VAM, zones, alarmes,
-  données FIT, menu de réglages, 6 langues, thèmes clair et sombre) ;
-- l'**écran du champ Trail Planner**, à l'identique (écart au plan, prochain point, barrières horaires,
-  rappels nutrition, écran du ravito) ;
+  données FIT, menu de réglages, 6 langues, thèmes clair et sombre), et **ses bandeaux du haut et du bas
+  sur tous les écrans** ;
+- l'**écran Trail Planner** au style d'EndurancePro : les calculs du champ Trail Planner (écart au plan,
+  prochain point, arrivée, barrières, rappels nutrition, ravitos) avec les éléments graphiques d'EP ;
 - le **profil de la course qui te suit**, zoomable, avec l'écart au plan ;
 - la **carte** : ton parcours Trail Planner sur le fond de carte Garmin de la montre, centrée sur toi ;
 - le **suivi pour l'assistance** (passages, position, batterie), comme le champ Trail Planner.
@@ -14,42 +17,75 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.4.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
+
+![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
+
+*Écran Trail Planner, au ravito (« À consommer » puis « À prendre ») et rappel nutrition : aperçus avec les
+icônes et les positions d'EndurancePro sur Enduro 3, polices simulées.*
 
 ![Aperçu approximatif de l'écran du profil sur Enduro 3 (écran rond 280 px)](apercu-profil.png)
 
 *Aperçu approximatif de l'écran du profil (polices Garmin simulées), dessiné à partir d'une course de
-42 km et du même calcul que l'appli. L'écran EndurancePro est celui du champ.*
+42 km et du même calcul que l'appli ; dans l'appli, les bandeaux d'EP l'entourent en haut et en bas.*
 
 ![Aperçu approximatif de l'écran Carte, tracé seul](apercu-carte.png)
 
 *Écran Carte en tracé seul (montres sans cartes) ; sur les montres à cartes, le même tracé et les mêmes
-repères sont posés sur le fond de carte Garmin, qui ne peut pas être simulé ici.*
+repères sont posés sur le fond de carte Garmin, qui ne peut pas être simulé ici. Dans l'appli, les
+bandeaux d'EP l'entourent en haut et en bas.*
+
+## Démarrage (façon Komoot)
+
+1. **Liste** : tes courses à venir (par date) puis les parcours de ta bibliothèque (par nom), avec
+   distance, D+ et date ; la course envoyée à la montre (⌚) est présélectionnée. Sans synchronisation des
+   parcours, la liste propose la course envoyée à la montre. En bas : **Sortie libre** (sans plan,
+   EndurancePro seul) et **Réglages**.
+2. **Fiche** du parcours choisi : le parcours entier sur la **carte Garmin** (tracé seul sur les montres
+   sans cartes), nom, distance, D+. START : démarrer ; appui long sur Haut : réglages ; BACK : liste.
+3. **Écrans de course**, en attente du GPS (anneau rouge, puis vert) ; START pour partir. Avant le départ,
+   BACK ramène à la liste.
+
+La liste et le plan du parcours choisi sont téléchargés via le téléphone (au lancement puis toutes les
+5 minutes) : active **« Synchroniser mes parcours avec l'appli »** dans l'onglet Montre de l'app web
+(encart Trail Planner Companion, bêta).
 
 ## Écrans (Haut / Bas pour passer de l'un à l'autre)
+
+**Bandeaux d'EndurancePro sur tous les écrans** : en haut, la FC (valeur et anneau coloré par zone), la
+2e métrique, le tour et la barre de zone FC ; en bas, le trait coloré par la FC, l'autonomie, l'icône du
+mode d'allure et l'heure. Le popup d'alarme d'EndurancePro (et celui des rappels Trail Planner)
+s'affiche par-dessus, quel que soit l'écran.
 
 **1. EndurancePro** : l'écran du champ EndurancePro 2.7.3, sans changement. FC dans un cercle et sa
 barre de zones, D+, D- et altitude, VAM, allure effort instantanée et moyenne colorées par zone, sac,
 météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (popup ou notification).
 
-**2. Trail Planner** : l'écran du champ Trail Planner, à l'identique (voir `garmin/README.md`) :
-- avant le départ : nom, distance, D+, temps prévu, heure de départ, avec quoi partir ;
-- en course : prochain point (distance, D+ et D- restants, heures prévue et estimée), **écart au plan**,
-  barre du tronçon (points de passage, produits à prendre), marge sur la prochaine **barrière horaire**
-  (alerte sous 30 min), en option « Jusqu'à l'arrivée » ;
-- **rappels nutrition** (produit prévu, eau à boire) ; **écran du ravito** à l'arrivée (pause, tronçon
-  suivant, à manger sur place, sac « À emporter », note du point) jusqu'au départ ;
-- textes en français, comme le champ.
+**2. Trail Planner** : les calculs du champ Trail Planner, avec les éléments graphiques d'EndurancePro :
+- **colonne gauche** : vers le prochain point (distance, D+, D-) ; **colonne droite** : vers l'arrivée ;
+  **colonne centrale** : celle d'EndurancePro (alarme, sac, soleil, température, humidité) ;
+- **barre** (à la place de la batterie d'EP) : progression d'un ravito au suivant, un trait par point de
+  passage, un point par produit à prendre (orange à venir, gris déjà rappelé) ;
+- **sous la barre** : écart réel / prévu (`+6'` en rouge = 6 min de retard, avance en vert) et heure
+  estimée au prochain point ;
+- **dernière ligne** (à la place du chrono) : le prochain point, en alternance (5 s) avec la marge sur la
+  prochaine barrière horaire ; « Passage · nom » ou « Départ · nom » 5 s après un tour ; « Hors
+  parcours » ; la note d'un point au passage ;
+- **au ravito**, jusqu'au départ : à gauche **« À consommer »** (produits sur ravito) puis **« À prendre »**
+  (sac : eau, produits, sel, note du point), 5 s chacun ; à droite le tronçon suivant ; la barre se
+  remplit avec le **temps passé sur l'arrêt prévu** (rouge une fois dépassé), « 3:25/5:00 » dessous, et à
+  droite la **durée prévue du tronçon suivant**, corrigée de ton rythme ;
+- avant le départ : vers le premier point et vers l'arrivée, temps prévu du parcours, nom de la course ;
+- **rappels nutrition** (« Gel · 0.2 L », 30 s) et **alerte de barrière** (sous 30 min, 10 s) en popup
+  d'EndurancePro, sur tous les écrans, avec vibration.
 
 C'est aussi le **moteur de suivi de toute l'appli** : position calée sur le tracé, passages (position ou
 Lap), estimations ; le profil, la carte et l'envoi à l'assistance lisent ses données.
 
-**Bascule automatique** : un rappel nutrition, l'arrivée à un ravito (ou à un point avec une note) et une
-alerte de barrière horaire affichent l'écran Trail Planner (avec vibration), quel que soit l'écran en
-cours, puis l'appli revient à l'écran d'avant : 30 s pour un rappel, jusqu'au départ du ravito, 10 s pour
-une barrière. Pas de bascule par-dessus un menu ni pendant l'exploration de la carte ; changer d'écran à
-la main annule le retour.
+**Bascule automatique** : à l'arrivée à un ravito, l'appli affiche l'écran Trail Planner (quel que soit
+l'écran en cours), puis revient à l'écran d'avant au départ du ravito. Pas de bascule par-dessus un menu
+ni pendant l'exploration de la carte ; changer d'écran à la main annule le retour.
 
 **3. Profil de la course** (sans km ni nom de point) :
 - en haut, l'**écart au plan** à l'endroit où tu es (`+6'` = 6 min de retard, en rouge ; avance en
@@ -129,7 +165,10 @@ vibrations, jusqu'à l'arrivée.
 ## Plan de la course et réglages EndurancePro
 
 L'appli lit le **document du code montre** (onglet Montre de l'app web), via le téléphone, au lancement
-puis toutes les 5 minutes. Envoie une course à la montre avec la touche ⌚. Quatre champs :
+puis toutes les 5 minutes : la liste des parcours (`wl`, format TPL1, `watchList`) et les réglages
+EndurancePro ; puis le document du parcours choisi (`<code>-<id>`, `appDocId`, publié par l'app web pour
+chaque course à venir et chaque parcours de la bibliothèque). Sans liste, la course envoyée à la montre
+avec la touche ⌚ (document du code). Champs d'un plan :
 - `w`, le plan compact du champ (format TP1, `src/lib/watch.ts`) : nom, points de passage, temps prévus,
   tracé pour caler le GPS ;
 - `wp`, le **profil fin** de l'appli (format TPP1, `watchProfile`) : altitudes le long du parcours à 2 m

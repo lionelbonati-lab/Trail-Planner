@@ -59,6 +59,7 @@ montée et descente. Avec la synchronisation, il reprend ta VC, tes zones et la 
 Type : Appli (activité)
 Statut : Bêta
 Store :
+Image : companion-trail-planner.png
 Guide : https://github.com/lionelbonati-lab/Trail-Planner/tree/main/garmin/TrailPlannerCompanion
 
 L'appli qui réunit tout pour la course, à lancer à la place de l'activité Trail :
@@ -71,3 +72,9 @@ L'appli qui réunit tout pour la course, à lancer à la place de l'activité Tr
 
 Bêta : à installer par câble (fichier compilé), le même code de synchronisation que les champs.
 
+Aperçus (polices simulées, Enduro 3) :
+
+![Écran Trail Planner](companion-trail-planner.png)
+![Au ravito : à consommer](companion-ravito-consommer.png)
+![Au ravito : à prendre](companion-ravito-prendre.png)
+![Rappel nutrition](companion-rappel.png)
