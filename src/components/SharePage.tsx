@@ -2,7 +2,7 @@ import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { timeAtDist, type ShareSnapshot } from '../lib/share'
+import { shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
@@ -436,6 +436,14 @@ export function ShareView({
       })),
     }
   }
+  // Fin du lien : 1 h après l'arrivée, notée en mode course ou relevée par la montre (même si le
+  // relevé date), sinon après l'arrivée estimée. Départ libre pas encore parti : lien en attente
+  // du prochain départ (parcours d'entraînement réutilisé), jamais fermé.
+  const lastI = snap.rows.length - 1
+  const watchFinishS = report && plan && plan.cps.length === snap.rows.length ? watchStatus(report, plan, report.t).passed.get(lastI) : undefined
+  const finishedAt = snap.rows[lastI]?.actual ? Date.parse(snap.rows[lastI].actual!) : watchFinishS !== undefined ? watchFinishS * 1000 : null
+  const news = [report ? report.t * 1000 : NaN, snap.live ? Date.parse(snap.live.lastUpdate ?? snap.live.startedAt) : NaN].filter(Number.isFinite)
+  const closesAt = snap.freeStart && !freeStarted ? null : shareClosesAt(snap.rows[lastI], finishedAt, news.length ? Math.max(...news) : null)
   // Suivi saisi à la main (sans montre) : le prochain point n'est jamais estimé avant maintenant.
   if (!watch && snap.live) {
     // Encore au ravito (pas de « Reparti ») : l'arrêt qui s'allonge depuis la dernière mise à jour du
@@ -493,6 +501,31 @@ export function ShareView({
   const planStartMs = Date.parse(snap.start)
   const startMs = watch && report ? report.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : planStartMs
   const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs)
+  if (closesAt !== null && nowMs >= closesAt) {
+    // Temps de course : départ relevé par la montre si l'arrivée vient d'elle.
+    const runStart = report && report.s > 0 && watchFinishS !== undefined ? report.s * 1000 : startMs
+    return (
+      <div className="app">
+        <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
+        <main className="share">
+          <h1>{snap.raceName}</h1>
+          <section className="card share-closed">
+            <h2><Flag className="inline" /> Suivi terminé</h2>
+            {finishedAt !== null && (
+              <p>
+                {snap.athleteName ? `${snap.athleteName} : arrivée` : 'Arrivée'} à <strong>{formatClock(new Date(finishedAt), tz, long)}</strong>
+                {finishedAt > runStart ? ` en ${formatDuration((finishedAt - runStart) / 1000)}` : ''}.
+              </p>
+            )}
+            <p className="muted">
+              Ce lien assistance s'est arrêté automatiquement 1 h après {finishedAt !== null ? "l'arrivée" : 'la fin prévue de la course'} : plus de
+              position ni de suivi en direct.
+            </p>
+          </section>
+        </main>
+      </div>
+    )
+  }
   // Toucher le tracé sur la carte : heure de passage à cet endroit (réelle si déjà passé, estimée sinon).
   const runnerAt = watch ? (estimate ?? watch.dist) : lastDone ? lastDone.dist : null
   const passageAt = (d: number) => {

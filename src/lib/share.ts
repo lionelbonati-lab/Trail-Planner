@@ -130,6 +130,29 @@ export function buildSnapshot(
   }
 }
 
+/** Le lien assistance s'arrête tout seul 1 h après la fin de la course. */
+export const SHARE_CLOSE_AFTER_MS = 3600_000
+/** Sans nouvelles du coureur (montre ou mode course) depuis 3 h : activité considérée finie. */
+export const SHARE_SILENT_MS = 3 * 3600_000
+
+/**
+ * Fin du lien assistance (instant en ms) : 1 h après l'arrivée si elle est connue (passage noté
+ * en mode course ou relevé par la montre). Sinon 1 h après la plus tardive de l'arrivée estimée,
+ * de la fourchette « au plus tard », de la barrière horaire de l'arrivée et de 3 h sans nouvelles
+ * du coureur. Départ libre pas encore parti : l'arrivée estimée suit l'heure actuelle, jamais fermé.
+ */
+export function shareClosesAt(
+  finish: Pick<ShareRow, 'eta' | 'late' | 'cutoff'> | undefined,
+  finishedAt: number | null,
+  lastNewsMs: number | null,
+): number | null {
+  if (finishedAt !== null) return finishedAt + SHARE_CLOSE_AFTER_MS
+  if (!finish) return null
+  const at = (iso: string | null) => (iso ? Date.parse(iso) || 0 : 0)
+  const silent = lastNewsMs !== null ? lastNewsMs + SHARE_SILENT_MS : 0
+  return Math.max(at(finish.eta), at(finish.late), at(finish.cutoff), silent) + SHARE_CLOSE_AFTER_MS
+}
+
 /** Destination du lien GPS d'un point : son accès assistance, sinon le point du parcours. */
 function navTarget(access: { lat: number; lon: number } | undefined, track: Track, dist: number) {
   const r5 = (x: number) => Math.round(x * 1e5) / 1e5

@@ -154,7 +154,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   sinon distance parcourue) suivie automatiquement ; entre deux relevés de la montre (5 min au mieux, limite
   Garmin), position estimée d'après le rythme mesuré, arrêts aux ravitos compris (une heure au plus). Encart
   Garmin LiveTrack : l'assistance colle le lien reçu par e-mail au départ (envoi automatique de Garmin), gardé
-  sur son téléphone.
+  sur son téléphone. **Arrêt automatique 1 h après l'arrivée** (passage noté en mode course ou relevé par la
+  montre) : la page n'affiche plus que « Suivi terminé », l'heure d'arrivée et le temps de course, sans position
+  ni carte. Arrivée inconnue : 1 h après la plus tardive de l'arrivée estimée, de la fourchette « au plus tard »,
+  de la barrière horaire de l'arrivée et de 3 h sans nouvelles. Départ libre (parcours d'entraînement) : le lien
+  attend le prochain départ une fois le dernier relevé vieux de 12 h.
 - **Navigation de l'assistance** : dans les temps de passage d'une course, case « Assistance autorisée » par
   point (ravitos et arrivée d'office) et épingle pour placer son accès (parking, salle) sur la carte. Page assistance en deux onglets : **Suivi**
   (direct, carte affichée par une case à cocher, lien « Y aller » Google Maps vers chaque point, son accès s'il
