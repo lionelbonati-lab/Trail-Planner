@@ -9,17 +9,22 @@ ClimbPro et PacePro continuent de fonctionner) :
 - **jusqu'à l'arrivée** (réglage « Jusqu'à l'arrivée », désactivé par défaut) : distance, D+ et D- restants
   jusqu'à l'arrivée, en plus de ceux du prochain point ;
 - **bouton Lap = passage** au point le plus proche : heure de passage notée, position recalée, heures
-  estimées des points suivants recalculées (écran « Passage · nom » 5 s) ;
+  estimées des points suivants recalculées (écran « Passage · nom » 5 s) ; **au ravito, 2e tour = départ**
+  du ravito (écran « Départ · nom » 5 s) ;
+- **barre de progression** au centre de l'écran : le tronçon en cours d'un ravito au suivant, partie faite
+  pleine, un **trait** par point de passage, un **point** par produit à prendre (orange à venir, gris déjà
+  rappelé), un triangle à ta position ;
 - **marge sur la prochaine barrière horaire**, avec vibration si elle passe sous 30 min ;
 - **rappels nutrition** : le **produit prévu** (« Gel », « Barre »…) et l'eau à boire (vibration + écran
   30 s) ; les produits du plan nutrition sont répartis équitablement sur chaque tronçon entre deux ravitos ;
-- **à l'arrivée à un ravito** : distance, D+ et D- jusqu'au ravito suivant, et écran « À emporter » (eau,
+- **à l'arrivée à un ravito** : **pause en cours / prévue**, distance, D+ et D- jusqu'au ravito suivant,
+  **à manger sur place** (produits « sur ravito » du plan), et écran « À emporter » (eau,
   produits, sel jusqu'au ravito suivant), comme la colonne « À emporter » du plan nutrition ; l'eau en
   quantité réelle et en flasques de 500 ml (« 1.1 L : 2 eau + 1 iso », l'isotonique n'étant alors plus
   répété dans les produits) ;
 - avant le départ : nom, distance, D+ et temps prévu ; heure de départ pour une **course** seulement
   (« Départ libre » si elle est en départ libre), aucune heure pour un **parcours d'entraînement** ; **avec
-  quoi partir** (sac du premier tronçon : eau en flasques, produits, sel ; une seule ligne sur un petit champ) ;
+  quoi partir** (sac du premier tronçon : eau en flasques, produits, sel) ;
 - **note du point** (« frontale, veste… », colonne Notes du plan) : sur l'écran du ravito, sous « À emporter » ;
   à un point sans sac, écran du nom du point et de sa note au passage ;
 - **suivi pour l'assistance** : passages réels, position et batterie envoyés toutes les 5 min via ton
@@ -28,10 +33,11 @@ ClimbPro et PacePro continuent de fonctionner) :
 
 ![Aperçu approximatif sur Enduro 3 (écran rond 280 px)](apercu-enduro3.png)
 
-*Aperçu approximatif (polices Garmin simulées). Sur écran rond, l'écart — le texte le plus court — se
-place du côté du bord arrondi ; un texte trop long passe à une forme plus courte (« 4.2 km D+245 D-30 »,
-« Arr. » pour l'arrivée), puis est raccourci à la largeur disponible. Si tout ne tient pas en hauteur,
-l'écart passe en police moyenne, puis les lignes secondaires (heure prévue, nom du point) sont retirées.*
+*Aperçu approximatif (polices Garmin simulées). Le champ est prévu **en plein écran** (un écran de données
+à lui seul) : il n'a plus de mise en page pour demi-écran ou quart d'écran. Un texte trop long passe à une
+forme plus courte (« 4.2 km D+245 D-30 », « Arr. » pour l'arrivée), puis est raccourci à la largeur
+disponible ; si tout ne tient pas en hauteur, l'écart passe en police moyenne, puis les lignes secondaires
+(heure prévue, nom du point) sont retirées.*
 
 **D+ et D- restants.** Le plan contient le profil de dénivelé du parcours (D+ et D- cumulés depuis le
 départ, simplifiés à 5 m près, un sommet à chaque point de passage) : le D+ et le D- d'un point au suivant
@@ -51,11 +57,19 @@ tronçon / nombre de produits). Réglage « Rappel nutrition » dans Garmin Conn
 rappels, N = « Manger / boire » toutes les N minutes, 0 = aucun rappel. Sans produits dans le profil
 athlète, rappel « Manger / boire » au rythme des glucides du plan.
 
-**Arrivée à un ravito.** Dès le passage (position ou bouton Lap), l'écran du ravito affiche le tronçon
-suivant (« Vers Arnouvaz », « 12.4 km · D+850 · D-420 » jusqu'au ravito suivant ou à l'arrivée, comme le
-tableau du plan), puis « À emporter · nom du ravito » : l'eau, les produits et le sel à prendre pour ce
-tronçon. Il reste affiché pendant l'arrêt prévu (1 à 10 min) et disparaît 300 m après le ravito. Si la
-place manque (demi-écran), le titre puis le nom du ravito suivant sont retirés ; les chiffres restent.
+**Arrivée à un ravito.** Dès le passage (position ou 1er tour Lap), l'écran du ravito affiche :
+« Pause 3:25 / 5:00 » (temps depuis l'arrivée / arrêt prévu, en rouge une fois dépassé), le tronçon suivant
+(« Vers Arnouvaz », « 12.4 km · D+850 · D-420 » jusqu'au ravito suivant ou à l'arrivée, comme le tableau du
+plan), « Manger ici » (produits cochés « Sur ravito » dans le profil : banane, bouillon…), puis « À emporter
+· nom du ravito » : la note du point, l'eau, les produits et le sel à prendre pour ce tronçon. Il reste
+affiché **jusqu'au 2e tour Lap** (départ du ravito : les heures estimées repartent du départ réel au lieu de
+l'arrivée + arrêt prévu), ou 300 m après le ravito si tu repars sans appuyer. Si la place manque, le nom du
+ravito suivant est retiré d'abord. Un 1er tour au ravito alors que le GPS a déjà noté l'arrivée la recale à
+l'instant du tour ; le 2e tour est le départ.
+
+**Barre de progression.** Sous l'écart, une barre montre le tronçon en cours, du dernier ravito passé (ou
+du départ) au suivant (ou à l'arrivée) : les traits sont les points de passage du tronçon, les points les
+produits à prendre, placés là où tombera leur rappel (orange à venir, gris déjà rappelés).
 
 ![Aperçu approximatif des écrans nutrition](apercu-nutrition.png)
 
@@ -140,7 +154,7 @@ modifiables dans l'app Garmin Connect : *Appareils → ta montre → Activités 
 l'arrivée).
 
 Puis, sur la montre : activité **Trail → Paramètres → Écrans de données** → ajoute un champ
-**Connect IQ → Trail Planner** (idéalement en grand : demi-écran ou plein écran).
+**Connect IQ → Trail Planner** sur un écran de données **à un seul champ (plein écran)**.
 
 ## 4. Le jour de la course
 

@@ -42,6 +42,7 @@ En course (captures simulées sur Enduro 3) :
 ![Passage validé](ecran-3-passage-valide.png)
 ![Au ravito](ecran-4-au-ravito.png)
 ![Alerte nourriture](ecran-5-alerte-nourriture.png)
+![Départ du ravito](ecran-6-depart-du-ravito.png)
 
 Montres : fēnix 5 Plus, 6 Pro, 7, 7 Pro, 8, 9 et E, epix 2, Enduro 3, Forerunner 255, 265, 955 et 965.
 

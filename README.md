@@ -176,10 +176,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   nouveau tracé reste en brouillon).
 
 **Montre Garmin**
-- Champ de données Connect IQ (`garmin/`) : écart au plan, prochain point (distance, D+ et D- restants,
+- Champ de données Connect IQ (`garmin/`), en plein écran : écart au plan, barre de progression du tronçon
+  entre deux ravitos (points de passage et produits à prendre), prochain point (distance, D+ et D- restants,
   heures prévue et estimée ; jusqu'à l'arrivée en plus par un réglage de la montre), barrières horaires,
   rappels nutrition (produit prévu, produits du plan répartis équitablement entre deux ravitos), écran
-  « À emporter » à l'arrivée à un ravito, avec distance, D+ et D- jusqu'au ravito suivant ; avant le départ, nom, distance, D+ et temps prévu (heure de départ pour une course
+  du ravito à l'arrivée (pause en cours / prévue, à manger sur place, « À emporter », distance, D+ et D-
+  jusqu'au ravito suivant ; 2e tour Lap = départ du ravito) ; avant le départ, nom, distance, D+ et temps prévu (heure de départ pour une course
   seulement) ; la course choisie (« Mettre sur la montre ») se télécharge avec un code unique ;
   passages et position renvoyés au lien assistance toutes les 5 min (via le téléphone). Position le long du
   parcours par le **GPS calé sur le tracé** envoyé avec le plan (pas d'erreur cumulée de distance, raccourci

@@ -10,7 +10,8 @@
 //                          simplifiée à ±45 s près (points là où l'allure change)
 //   C|<dist m>|<prévu s>|<barrière s Unix ou 0>|<type r/s/c/i>|<nom>|<arrêt s>|<note>   (un par point)
 //   P|<produit>|<produit>|…   noms des produits du plan nutrition (gels, barres…)
-//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,…[|<eau du sac, avec eau minérale>]
+//   F|<point de départ>|<point d'arrivée>|<eau dL>|<sel mg>|<p>,<p>,…[|<eau du sac, avec eau minérale>[|<sur ravito>]]
+//                          sur ravito : produits à manger ou boire au ravito de départ, « 1 Banane;1 Bouillon »
 //                          un par tronçon entre ravitos (indices des lignes C, −1 = départ) : sac
 //                          « À emporter » au départ du tronçon (eau, sodium à ajouter en sel, produits) et
 //                          produits dans l'ordre où les prendre (indices dans P). La montre répartit ces
@@ -146,11 +147,14 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
     })
     const water = Math.round(leg.water * 10)
     const salt = extraSodium(leg)
-    if (!order.length && !water && !salt) continue
     // Texte de l'eau seulement avec un mélange d'eau minérale : sinon la montre calcule les flasques
     // elle-même (ligne W), ce qui laisse la place au tracé GPS sur les longs ultras.
     const waterText = leg.flasks.waterId ? watchWaterText(leg) : ''
-    out.push(`F|${index(leg.fromId)}|${index(leg.toId)}|${water}|${salt}|${order.join(',')}${waterText ? `|${waterText}` : ''}`)
+    // À manger ou boire au ravito de départ du tronçon (produits « sur ravito ») : « 1 Banane;1 Bouillon ».
+    const site = leg.fromId === null ? '' : leg.products.filter((x) => isAtRavito(x.product)).map((x) => `${x.count} ${clean(x.product.name.replace(/[;,]/g, ' '), 16)}`).join(';')
+    if (!order.length && !water && !salt && !site) continue
+    const extra = site ? `|${waterText}|${site}` : waterText ? `|${waterText}` : ''
+    out.push(`F|${index(leg.fromId)}|${index(leg.toId)}|${water}|${salt}|${order.join(',')}${extra}`)
   }
   // Flasques : volume (dL) et isotonique (indice dans P, −1 sans) ; la montre en tire les flasques de
   // chaque tronçon d'après son eau, comme flaskSplit.

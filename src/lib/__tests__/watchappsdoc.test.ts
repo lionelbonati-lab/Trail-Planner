@@ -16,7 +16,7 @@ describe('page « Applications Garmin » modifiable sur GitHub', () => {
     expect(() => readFileSync(`public/montre/${tp.image}`)).not.toThrow()
     // Galerie des captures en course : cinq images, toutes présentes dans le dossier.
     const gallery = tp.body.map(galleryImages).find(Boolean)!
-    expect(gallery.map((g) => g.alt)).toEqual(['Avant le départ', 'Sur le parcours', 'Entrée de ravito', 'Passage validé', 'Au ravito', 'Alerte nourriture'])
+    expect(gallery.map((g) => g.alt)).toEqual(['Avant le départ', 'Sur le parcours', 'Entrée de ravito', 'Passage validé', 'Au ravito', 'Alerte nourriture', 'Départ du ravito'])
     for (const g of gallery) expect(() => readFileSync(`public/montre/${g.src}`)).not.toThrow()
     // Texte mêlé d'une image : pas une galerie.
     expect(galleryImages({ kind: 'p', parts: parseInline('un ![écran](a.png)') })).toBeNull()

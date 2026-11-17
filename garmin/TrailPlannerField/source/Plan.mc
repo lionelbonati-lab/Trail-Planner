@@ -63,6 +63,7 @@ class Plan {
     var legSalt as Array<Number> = [] as Array<Number>;
     var legFirst as Array<Number> = [] as Array<Number>;
     var legWaterText as Array<String> = [] as Array<String>;
+    var legSite as Array<String> = [] as Array<String>;   // à manger au ravito de départ, « 1 Banane;1 Bouillon »
     var foodP as Array<Number> = [] as Array<Number>;
     // Ligne W : volume d'une flasque (dL, 0 = pas de flasques) et isotonique (indice dans foodName, -1 sans).
     var flaskDl as Number = 0;
@@ -148,6 +149,12 @@ class Plan {
     function foodLabel(k as Number) as String {
         var p = foodP[k];
         return (p >= 0 && p < foodName.size()) ? foodName[p] : "Manger";
+    }
+
+    // À manger ou boire au ravito de départ du tronçon l (produits « sur ravito » du plan).
+    function site(l as Number) as Array<String> {
+        var t = l < legSite.size() ? legSite[l] : "";
+        return t.length() > 0 ? splitText(t, ";") : [] as Array<String>;
     }
 
     // Sac « À emporter » du tronçon l : eau (quantité réelle et flasques), produits (nombre et nom, dans
@@ -550,6 +557,7 @@ function parsePlan(text as String) as Plan or Null {
             p.legSalt.add(toNum(parts[4]));
             p.legFirst.add(p.foodP.size());
             p.legWaterText.add(parts.size() >= 7 ? parts[6] : "");
+            p.legSite.add(parts.size() >= 8 ? parts[7] : "");
             if (parts[5].length() > 0) {
                 var items = splitText(parts[5], ",");
                 for (var k = 0; k < items.size(); k++) {

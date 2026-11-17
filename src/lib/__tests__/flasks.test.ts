@@ -188,3 +188,24 @@ describe('produits « sur ravito »', () => {
     expect(lines.find((l) => l.startsWith('P|')) ?? '').not.toContain('Banane')
   })
 })
+
+describe('montre : à manger au ravito', () => {
+  it('produits « sur ravito » envoyés à part (ligne F), sans rappel pendant le tronçon', () => {
+    const race = newRace('Ravito', gpx(30))
+    race.checkpoints = [{ id: 'r1', dist: 15000, name: 'R1', kind: 'ravito', stopMin: 5, cutoff: '', water: 0, carbs: 0, notes: '', auto: false }]
+    const plan = computePlan(race, DEFAULT_ATHLETE)!
+    const banane: Product = { id: 'ban', name: 'Banane', carbs: 25, sodium: 0, share: 0.3, atRavito: true }
+    const legs = nutritionPlan(race, plan.sim, [...DEFAULT_PRODUCTS, banane])
+    const lines = foodLines(legs, plan.sim.splits)
+    const P = lines.find((l) => l.startsWith('P|'))!.split('|').slice(1)
+    const F = lines.filter((l) => l.startsWith('F|')).map((l) => l.split('|'))
+    // Tronçon depuis le ravito : banane à manger sur place, pas parmi les produits rappelés.
+    const fromR1 = F.find((f) => f[1] === '0')!
+    const n = legs[1].products.find((x) => x.product.id === 'ban')?.count ?? 0
+    expect(n).toBeGreaterThan(0)
+    expect(fromR1[7]).toBe(`${n} Banane`)
+    expect(P).not.toContain('Banane')
+    // Tronçon depuis le départ : rien à manger sur place.
+    expect(F.find((f) => f[1] === '-1')![7]).toBeUndefined()
+  })
+})
