@@ -547,8 +547,11 @@ export default function App() {
     const id = race.shareId ?? (await shareRace(race))
     if (!id) return
     const url = shareUrl(id)
-    if (await copyText(url)) flash(`Lien assistance de « ${race.name} » copié.`)
-    else flash(`Lien assistance de « ${race.name} » :`, { link: url })
+    // Rappel du lien permanent (onglet Montre), qui suit toutes les courses.
+    const permanent = athlete.watchId ? ' Ou donne une fois pour toutes ton lien permanent (onglet Montre), qui suit chaque course.' : ''
+    const tab = athlete.watchId ? { tab: 'montre' as const } : {}
+    if (await copyText(url)) flash(`Lien assistance de « ${race.name} » copié.${permanent}`, tab)
+    else flash(`Lien assistance de « ${race.name} » :`, { link: url, ...tab })
   }
   const unshareRace = async (race: Race) => {
     if (!race.shareId) return

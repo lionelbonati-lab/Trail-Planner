@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
 import { computePlan, scenarioWindows } from '../plan'
-import { APP_REPORT_KEEP_MS, buildSnapshot, reportFor, RUNNER_RACE_KEEP_MS, RUNNER_RECENT_MS, runnerCourse } from '../share'
+import { APP_REPORT_KEEP_MS, buildSnapshot, reportFor, RUNNER_RACE_KEEP_MS, RUNNER_RECENT_MS, runnerBanner, runnerCourse } from '../share'
 import { reportCourse } from '../watchLive'
 
 function gpx(): string {
@@ -65,20 +65,30 @@ describe('lien d’assistance permanent du coureur', () => {
   const base = { courseId: 'r1', wl }
 
   it('entre deux sorties : la prochaine course de la liste de l’appli', () => {
-    expect(runnerCourse(base, null, now)).toBe('r1')
+    expect(runnerCourse(base, null, now)).toEqual({ id: 'r1', mode: 'next' })
     // Course passée depuis plus de 48 h : la suivante.
-    expect(runnerCourse(base, null, now + 3 * day * 1000 + RUNNER_RACE_KEEP_MS + 1000)).toBe('r2')
+    expect(runnerCourse(base, null, now + 3 * day * 1000 + RUNNER_RACE_KEEP_MS + 1000)).toEqual({ id: 'r2', mode: 'next' })
     // Plus rien à venir : la course envoyée à la montre ; rien du tout sans elle.
-    expect(runnerCourse({ courseId: 'r1', wl: 'TPL1' }, null, now)).toBe('r1')
+    expect(runnerCourse({ courseId: 'r1', wl: 'TPL1' }, null, now)).toEqual({ id: 'r1', mode: 'watch' })
     expect(runnerCourse({ wl: 'TPL1' }, null, now)).toBeNull()
   })
 
   it('pendant une sortie et 12 h après : la course enregistrée', () => {
     const report = { t: sec(now) - 300, s: sec(now) - 3600, d: 5000, v: 'p1' }
-    expect(runnerCourse(base, report, now)).toBe('p1')
+    expect(runnerCourse(base, report, now)).toEqual({ id: 'p1', mode: 'activity' })
     // Champ Trail Planner (sans id) : la course envoyée à la montre.
-    expect(runnerCourse({ ...base, courseId: 'r9' }, { ...report, v: 1 }, now)).toBe('r9')
+    expect(runnerCourse({ ...base, courseId: 'r9' }, { ...report, v: 1 }, now)).toEqual({ id: 'r9', mode: 'activity' })
     // Sortie terminée depuis plus de 12 h : de nouveau la prochaine course.
-    expect(runnerCourse(base, report, now + RUNNER_RECENT_MS)).toBe('r1')
+    expect(runnerCourse(base, report, now + RUNNER_RECENT_MS)).toEqual({ id: 'r1', mode: 'next' })
+  })
+
+  it('bandeau : en course, sortie terminée, dernière sortie, prochaine course datée', () => {
+    const snap = { start: '2026-05-30T05:00:00Z', plannedStart: '2026-05-30T05:00:00Z', timeZone: 'Europe/Paris', totalDist: 20000 }
+    const report = { t: sec(now) - 600, s: sec(now) - 7200, d: 8000 }
+    expect(runnerBanner('activity', snap, report, now)).toBe('En course')
+    expect(runnerBanner('activity', snap, { ...report, d: 19900 }, now)).toBe('Sortie terminée')
+    expect(runnerBanner('activity', snap, report, now + 4 * 3600_000)).toBe('Dernière sortie')
+    expect(runnerBanner('next', snap, null, now)).toBe('Prochaine course · samedi 30/05')
+    expect(runnerBanner('watch', { ...snap, freeStart: true }, null, now)).toBe('Sur la montre')
   })
 })

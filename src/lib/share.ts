@@ -219,15 +219,22 @@ export const RUNNER_RECENT_MS = 12 * 3600_000
 /** Course de la liste de l'appli encore proposée par le lien permanent jusqu'à 48 h après son départ. */
 export const RUNNER_RACE_KEEP_MS = 48 * 3600_000
 
+/** Ce que montre le lien permanent : la sortie en cours ou récente, la prochaine course, la course sur la montre. */
+export type RunnerMode = 'activity' | 'next' | 'watch'
+
 /**
- * Lien permanent du coureur : id de la course à montrer. Sortie en cours ou récente : la course du relevé
+ * Lien permanent du coureur : course à montrer. Sortie en cours ou récente : la course du relevé
  * (parcours choisi dans l'appli, sinon la course envoyée à la montre) ; sinon la prochaine course de la
  * liste de l'appli montre (champ wl), sinon la course envoyée à la montre. Null : rien à montrer.
  */
-export function runnerCourse(base: Pick<ShareSnapshot, 'courseId' | 'wl'> | null, report: WatchReport | null, nowMs: number): string | null {
+export function runnerCourse(
+  base: Pick<ShareSnapshot, 'courseId' | 'wl'> | null,
+  report: WatchReport | null,
+  nowMs: number,
+): { id: string; mode: RunnerMode } | null {
   if (report && report.t * 1000 > nowMs - RUNNER_RECENT_MS) {
     const id = reportCourse(report) ?? base?.courseId ?? null
-    if (id) return id
+    if (id) return { id, mode: 'activity' }
   }
   let next: { id: string; start: number } | null = null
   for (const line of (base?.wl ?? '').split('\n').slice(1)) {
@@ -236,7 +243,32 @@ export function runnerCourse(base: Pick<ShareSnapshot, 'courseId' | 'wl'> | null
     if (!id || kind !== 'c' || !(ms > 0) || ms < nowMs - RUNNER_RACE_KEEP_MS) continue
     if (!next || ms < next.start) next = { id, start: ms }
   }
-  return next?.id ?? base?.courseId ?? null
+  if (next) return { id: next.id, mode: 'next' }
+  return base?.courseId ? { id: base.courseId, mode: 'watch' } : null
+}
+
+/**
+ * Bandeau du lien permanent : « En course », « Sortie terminée » (arrivée relevée), « Dernière sortie »
+ * (plus de relevé depuis 3 h), « Prochaine course · samedi 30/05 », « Sur la montre » (date d'une course).
+ * `report` : le relevé de la course montrée (voir reportFor).
+ */
+export function runnerBanner(
+  mode: RunnerMode,
+  snap: Pick<ShareSnapshot, 'plannedStart' | 'start' | 'timeZone' | 'totalDist' | 'freeStart'>,
+  report: WatchReport | null,
+  nowMs: number,
+): string {
+  if (mode === 'activity') {
+    if (!report) return 'Dernière sortie'
+    if (snap.totalDist > 0 && report.d >= snap.totalDist - 300) return 'Sortie terminée'
+    return nowMs - report.t * 1000 < SHARE_SILENT_MS ? 'En course' : 'Dernière sortie'
+  }
+  const label = mode === 'next' ? 'Prochaine course' : 'Sur la montre'
+  if (snap.freeStart) return label
+  const day = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: snap.timeZone }).format(
+    new Date(snap.plannedStart ?? snap.start),
+  )
+  return `${label} · ${day}`
 }
 
 /**

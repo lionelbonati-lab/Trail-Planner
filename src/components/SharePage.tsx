@@ -4,7 +4,7 @@ import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { awayFrom } from '../lib/live'
 import { showNotice } from '../lib/notify'
-import { reportFor, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
+import { reportFor, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
@@ -178,8 +178,8 @@ export function SharePage({ shareId }: { shareId: string }) {
 export function RunnerPage({ code }: { code: string }) {
   const { snap: base, error } = useShareDoc(code)
   const { report, nowMs } = useWatchReport(code, base?.liveRefShort ?? null)
-  const courseId = base === undefined ? null : runnerCourse(base, report, nowMs)
-  const docId = courseId && courseId !== base?.courseId ? `${code}-${courseId}` : null
+  const target = base === undefined ? null : runnerCourse(base, report, nowMs)
+  const docId = target && target.id !== base?.courseId ? `${code}-${target.id}` : null
   const course = useShareDoc(docId)
 
   if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
@@ -190,7 +190,8 @@ export function RunnerPage({ code }: { code: string }) {
   const snap = (docId ? full(course.snap) : null) ?? full(base)
   if (!snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
 
-  return <ShareView snap={snap} report={report} shareId={`${code}-${snap.courseId ?? ''}`} />
+  const banner = runnerBanner(target?.mode ?? 'watch', snap, reportFor(snap, report, nowMs), nowMs)
+  return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} />
 }
 
 /**
@@ -387,6 +388,15 @@ function NotifyBox({ alerts }: { alerts: ReturnType<typeof useCrossingAlerts> })
   )
 }
 
+/** Bandeau du lien permanent du coureur. */
+function RunnerBanner({ text }: { text: string }) {
+  return (
+    <p className={`runner-banner${text === 'En course' ? ' live' : ''}`}>
+      <span>Lien permanent</span> {text}
+    </p>
+  )
+}
+
 /** Affichage du lien assistance (séparé du chargement, pour pouvoir le tester). */
 export function ShareView({
   snap: input,
@@ -394,11 +404,14 @@ export function ShareView({
   nowMs = Date.now(),
   shareId,
   initialTab,
+  banner,
 }: {
   snap: ShareSnapshot
   report: WatchReport | null
   nowMs?: number
   shareId?: string
+  /** Lien permanent du coureur : ce que la page montre en ce moment (voir runnerBanner). */
+  banner?: string
   /** Onglet affiché à l'ouverture (sinon le dernier choisi sur ce téléphone). */
   initialTab?: 'suivi' | 'trajets'
 }) {
@@ -526,6 +539,7 @@ export function ShareView({
       <div className="app">
         <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
         <main className="share">
+          {banner && <RunnerBanner text={banner} />}
           <h1>{snap.raceName}</h1>
           <section className="card share-closed">
             <h2><Flag className="inline" /> Suivi terminé</h2>
@@ -561,6 +575,7 @@ export function ShareView({
     <div className="app">
       <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
       <main className="share">
+        {banner && <RunnerBanner text={banner} />}
         <h1>{snap.raceName}</h1>
         <p className="muted">
           {snap.athleteName} ·{' '}
