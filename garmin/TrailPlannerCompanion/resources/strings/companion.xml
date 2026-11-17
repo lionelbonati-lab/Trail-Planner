@@ -42,4 +42,9 @@
     <string id="tp_map_scale">Map scale</string>
     <string id="tp_explore">Explore map</string>
     <string id="tp_no_route">No route</string>
+    <string id="tp_finish">To finish</string>
+    <string id="tp_finish_sub">Distance, D+ and D-</string>
+    <string id="tp_finish_prompt">Trail Planner screen: also show the distance, D+ and D- left to the finish</string>
+    <string id="tp_fuel_prompt">Fuel reminder (min): -1 = plan products spread between aid stations, 0 = off</string>
+    <string id="tp_vibrate">Trail Planner vibrations</string>
 </strings>

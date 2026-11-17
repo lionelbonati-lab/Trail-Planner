@@ -42,4 +42,9 @@
     <string id="tp_map_scale">Kartenmaßstab</string>
     <string id="tp_explore">Karte erkunden</string>
     <string id="tp_no_route">Keine Strecke</string>
+    <string id="tp_finish">Bis zum Ziel</string>
+    <string id="tp_finish_sub">Distanz, D+ und D-</string>
+    <string id="tp_finish_prompt">Trail-Planner-Seite: auch Distanz, D+ und D- bis zum Ziel anzeigen</string>
+    <string id="tp_fuel_prompt">Verpflegungserinnerung (min): -1 = Produkte des Plans zwischen den Verpflegungen verteilt, 0 = aus</string>
+    <string id="tp_vibrate">Trail-Planner-Vibrationen</string>
 </strings>

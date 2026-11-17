@@ -4,15 +4,17 @@ Appli Connect IQ pour montres Garmin (une **appli**, pas un champ de données) q
 Trail** avec :
 - l'**écran et les calculs d'EndurancePro 2.7.3**, à l'identique (allure effort, VAM, zones, alarmes,
   données FIT, menu de réglages, 6 langues, thèmes clair et sombre) ;
+- l'**écran du champ Trail Planner**, à l'identique (écart au plan, prochain point, barrières horaires,
+  rappels nutrition, écran du ravito) ;
 - le **profil de la course qui te suit**, zoomable, avec l'écart au plan ;
 - la **carte** : ton parcours Trail Planner sur le fond de carte Garmin de la montre, centrée sur toi ;
 - le **suivi pour l'assistance** (passages, position, batterie), comme le champ Trail Planner.
 
-Elle complète le champ de données Trail Planner (`garmin/TrailPlannerField`), qui continue de s'utiliser
-dans l'activité Trail de Garmin. Pendant une activité, Garmin n'affiche que des champs de données, et un
-champ ne réagit pas aux boutons : pour avoir le profil zoomable, il faut lancer la sortie depuis cette appli.
+Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'utiliser dans l'activité
+Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
+zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.3.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.4.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran du profil sur Enduro 3 (écran rond 280 px)](apercu-profil.png)
@@ -31,7 +33,25 @@ repères sont posés sur le fond de carte Garmin, qui ne peut pas être simulé 
 barre de zones, D+, D- et altitude, VAM, allure effort instantanée et moyenne colorées par zone, sac,
 météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (popup ou notification).
 
-**2. Profil de la course** (sans km ni nom de point) :
+**2. Trail Planner** : l'écran du champ Trail Planner, à l'identique (voir `garmin/README.md`) :
+- avant le départ : nom, distance, D+, temps prévu, heure de départ, avec quoi partir ;
+- en course : prochain point (distance, D+ et D- restants, heures prévue et estimée), **écart au plan**,
+  barre du tronçon (points de passage, produits à prendre), marge sur la prochaine **barrière horaire**
+  (alerte sous 30 min), en option « Jusqu'à l'arrivée » ;
+- **rappels nutrition** (produit prévu, eau à boire) ; **écran du ravito** à l'arrivée (pause, tronçon
+  suivant, à manger sur place, sac « À emporter », note du point) jusqu'au départ ;
+- textes en français, comme le champ.
+
+C'est aussi le **moteur de suivi de toute l'appli** : position calée sur le tracé, passages (position ou
+Lap), estimations ; le profil, la carte et l'envoi à l'assistance lisent ses données.
+
+**Bascule automatique** : un rappel nutrition, l'arrivée à un ravito (ou à un point avec une note) et une
+alerte de barrière horaire affichent l'écran Trail Planner (avec vibration), quel que soit l'écran en
+cours, puis l'appli revient à l'écran d'avant : 30 s pour un rappel, jusqu'au départ du ravito, 10 s pour
+une barrière. Pas de bascule par-dessus un menu ni pendant l'exploration de la carte ; changer d'écran à
+la main annule le retour.
+
+**3. Profil de la course** (sans km ni nom de point) :
 - en haut, l'**écart au plan** à l'endroit où tu es (`+6'` = 6 min de retard, en rouge ; avance en
   vert). À la place, pendant 5 s : « Passage · nom », « Départ · nom » ou « Tour N » après un tour ;
   « Hors parcours · N m » si tu t'écartes du tracé ; « Pause » ; le nom de la course avant le départ ;
@@ -51,7 +71,7 @@ rouge 15–25 %, violet 25 % et plus. Descente : bleu clair de −5 à −15 %, 
 5 % : vert. La pente est une moyenne sur 1/20 au moins de la portion affichée (100 m au zoom 2 km, 500 m
 au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
 
-**3. Carte** : carte orientée nord, centrée sur toi (flèche bleue = cap GPS) :
+**4. Carte** : carte orientée nord, centrée sur toi (flèche bleue = cap GPS) :
 - **ton parcours Trail Planner** en magenta (tracé fin envoyé par l'app web, à 3 m près sur une course
   normale), les ravitos, bases de vie et l'arrivée en repères ;
 - **fond de carte Garmin** de la montre (chemins, relief, noms) sur les montres à cartes ; sur les autres
@@ -74,7 +94,7 @@ prêt (START), orange = pause.
 |---|---|---|---|
 | START | Démarrer | Pause (menu Reprendre / Enregistrer / Supprimer) | Reprendre |
 | BACK (Lap) | Quitter l'appli | Nouveau tour et passage au point | Menu de pause |
-| Haut / Bas | Écran suivant (EP, profil, carte) | Écran suivant | Écran suivant |
+| Haut / Bas | Écran suivant (EP, Trail Planner, profil, carte) | Écran suivant | Écran suivant |
 | Appui long sur Haut | Menu | Menu | Menu |
 
 Écran tactile : balayages pour changer d'écran. Un balayage « retour » ne coupe pas la sortie, et un tap
@@ -95,13 +115,16 @@ Le menu d'EndurancePro, réglable en course comme dans le champ, avec en tête l
 - **Zoom du profil** ;
 - **Couleurs des pentes** ;
 - **Tour = passage au point** ;
+- **Jusqu'à l'arrivée** (distance, D+ et D- restants jusqu'à l'arrivée sur l'écran Trail Planner) ;
 - **Échelle de la carte** ;
 - **Explorer la carte** (montres à cartes) ;
 - **Code Trail Planner** : le code montre à 8 chiffres, le même que pour EndurancePro et le champ ;
 - **Recharger le plan** (nom de la course chargée, ou message d'erreur).
 
 Dans Garmin Connect (appli installée depuis le Store) : les réglages d'EndurancePro (code, référence
-d'allure, zones VC, données FIT), plus le zoom, les couleurs des pentes, le tour = passage et l'échelle de la carte.
+d'allure, zones VC, données FIT), plus le zoom, les couleurs des pentes, le tour = passage, l'échelle de la carte, et les réglages du
+champ Trail Planner : rappel nutrition (-1 = produits du plan, N = toutes les N minutes, 0 = aucun),
+vibrations, jusqu'à l'arrivée.
 
 ## Plan de la course et réglages EndurancePro
 
@@ -138,8 +161,17 @@ l'enregistrement. Le lien assistance et le debrief de la course les lisent comme
   n'est pas importé dans les parcours Garmin de la montre (pour la navigation Garmin, export FIT du plan
   à importer dans Garmin Connect, comme avant). La **distance restante** d'EndurancePro (prochain point, fin du
   parcours) vient de la navigation Garmin : elle reste vide dans l'appli.
-- **Le champ Trail Planner ne s'affiche pas** dans une appli Connect IQ. Sa nutrition, ses barrières
-  horaires, son prochain point et l'écran du ravito ne sont pas encore dans l'appli (prévu ensuite).
+- Le champ Trail Planner lui-même ne s'affiche pas dans une appli Connect IQ : son écran et ses calculs y
+  sont repris (écran 2). Ses notifications de rappel sont remplacées par la bascule automatique.
+
+## Code repris du champ Trail Planner
+
+`source/TrailPlannerScreen.mc` et `source/Plan.mc` viennent du champ (`garmin/TrailPlannerField/source`,
+commit 074f467). Changements, signalés « Appli : » dans le code : classe simple pilotée par l'appli (plan
+donné par `Run`, `compute()` chaque seconde, `onTimerLap()` au Lap), plein écran au thème
+d'EndurancePro, bascule automatique (`focusKey`) au lieu de l'alerte de champ de données, relevé du suivi
+envoyé par l'appli au lieu de la tâche de fond ; profil fin (`wp`) ajouté au plan. Une évolution du champ
+se reporte ici à la main.
 
 ## Code repris d'EndurancePro
 

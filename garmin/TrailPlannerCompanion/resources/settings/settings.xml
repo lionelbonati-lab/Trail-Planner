@@ -91,6 +91,18 @@
             <settingConfig type="boolean" />
         </setting>
 
+        <setting propertyKey="@Properties.fuelMin" title="@Strings.tp_fuel_prompt">
+            <settingConfig type="numeric" min="-1" max="120" />
+        </setting>
+
+        <setting propertyKey="@Properties.vibrate" title="@Strings.tp_vibrate">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.finishStats" title="@Strings.tp_finish_prompt">
+            <settingConfig type="boolean" />
+        </setting>
+
         <setting propertyKey="@Properties.mapScale" title="@Strings.tp_map_scale">
             <settingConfig type="list">
                 <listEntry value="0">200 m</listEntry>

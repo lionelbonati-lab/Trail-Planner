@@ -42,4 +42,9 @@
     <string id="tp_map_scale">Escala del mapa</string>
     <string id="tp_explore">Explorar el mapa</string>
     <string id="tp_no_route">Sin trazado</string>
+    <string id="tp_finish">Hasta la meta</string>
+    <string id="tp_finish_sub">Distancia, D+ y D-</string>
+    <string id="tp_finish_prompt">Pantalla Trail Planner: mostrar también la distancia, el D+ y el D- hasta la meta</string>
+    <string id="tp_fuel_prompt">Recordatorio de nutrición (min): -1 = productos del plan repartidos entre avituallamientos, 0 = desactivado</string>
+    <string id="tp_vibrate">Vibraciones Trail Planner</string>
 </strings>

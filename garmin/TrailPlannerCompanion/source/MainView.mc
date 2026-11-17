@@ -4,9 +4,11 @@ import Toybox.WatchUi;
 
 // Écrans de la sortie, passés avec Haut / Bas (CompanionApp.showPage) :
 // 0. EndurancePro (écran du champ EndurancePro 2.7.3, à l'identique) ;
-// 1. profil de la course qui suit le coureur (zoom et couleurs des pentes dans le menu), écart au plan
+// 1. Trail Planner (écran du champ Trail Planner, à l'identique : écart, prochain point, barre du
+//    tronçon, barrière, rappels nutrition, ravito) ;
+// 2. profil de la course qui suit le coureur (zoom et couleurs des pentes dans le menu), écart au plan
 //    en haut ;
-// 2. carte : vue CompanionMapView (fond de carte Garmin) sur les montres à cartes ; sinon dessinée ici
+// 3. carte : vue CompanionMapView (fond de carte Garmin) sur les montres à cartes ; sinon dessinée ici
 //    (tracé seul, drawTrace).
 // Avant le départ et en pause, un anneau au bord de l'écran donne l'état : rouge = GPS en recherche,
 // vert = prêt (START), orange = pause. Le thème (clair / sombre) est celui d'EndurancePro.
@@ -23,6 +25,17 @@ class MainView extends WatchUi.View {
         run.ep.onLayout(dc);
     }
 
+    // Menu par-dessus ou retour : pas de bascule automatique sur l'écran Trail Planner pendant un menu.
+    function onShow() as Void {
+        var app = getApp();
+        app.baseVisible = true;
+    }
+
+    function onHide() as Void {
+        var app = getApp();
+        app.baseVisible = false;
+    }
+
     function onUpdate(dc as Graphics.Dc) as Void {
         if (run.state == DONE) {
             dc.setColor(themeFg(), themeBg());
@@ -34,6 +47,9 @@ class MainView extends WatchUi.View {
         if (page == 0) {
             run.ep.onUpdate(dc);
         } else if (page == 1) {
+            run.tp.onUpdate(dc);
+            run.ep.drawAlarmPopup(dc);
+        } else if (page == 2) {
             dc.setColor(themeFg(), themeBg());
             dc.clear();
             drawProfilePage(dc);

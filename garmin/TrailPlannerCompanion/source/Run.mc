@@ -19,10 +19,10 @@ const DONE = 3;     // enregistrée ou supprimée : BACK pour quitter
 
 // La sortie :
 // - enregistrement (activité Trail, fichier FIT avec les champs d'EndurancePro) ;
-// - EndurancePro : calculs chaque seconde, départ, tours et fin transmis comme à un champ de données ;
-// - position le long du parcours (GPS calé sur le tracé du plan, comme le champ Trail Planner) ;
-// - passages aux points (position, ou bouton Lap = passage au point le plus proche, 2e Lap au ravito =
-//   départ) et suivi envoyé à l'assistance (document live/{code}, même format que le champ) ;
+// - EndurancePro (ep) et Trail Planner (tp, le champ de données repris à l'identique) : calculs chaque
+//   seconde, départ, tours et fin transmis comme à des champs de données. Trail Planner est le moteur du
+//   suivi : position calée sur le tracé, passages (position ou Lap), estimations, rappels ; le profil, la
+//   carte et l'envoi à l'assistance (document live/{code}) lisent ses données ;
 // - plan de la course, profil et réglages EndurancePro (champs w, wp et ep du document du code
 //   montre), téléchargés via le téléphone au lancement puis toutes les 5 minutes ; tracé fin de l'écran
 //   Carte (champ wr) dans une requête à part, quand le plan change.
@@ -30,6 +30,7 @@ class Run {
     const PROJECT = "trail-planner-814f6";
 
     var ep as EnduranceProView;   // écran et calculs EndurancePro
+    var tp as TrailPlannerScreen; // écran et calculs Trail Planner (suivi de la course)
     var plan = null;          // Plan ou null
     var status = "";          // message affiché sans plan
     var noCourse = false;     // document du code sans course envoyée (réglages EndurancePro seuls)
@@ -37,24 +38,14 @@ class Run {
     var saved = false;        // DONE : sortie enregistrée (sinon supprimée)
     var session = null;       // ActivityRecording.Session
     var gpsOk = false;
+    // Repris de Trail Planner chaque seconde, pour le profil et la carte.
     var dist = 0.0;           // m le long du parcours
-    var matched = -1.0;       // m le long du parcours au dernier calage GPS (-1 : pas encore calé)
-    var matchedAt = 0.0;      // distance montre (m) à ce calage
-    var offCount = 0;         // relevés GPS consécutifs hors du tracé
-    var offRoute = false;     // hors du tracé depuis 5 relevés
+    var offRoute = false;     // hors du tracé
     var offBy = 0;            // écart au tracé (m)
-    var lapOffset = 0.0;      // sans tracé GPS : correction de distance apportée par les tours (m)
-    var lastWalked = 0.0;     // distance montre au dernier calcul (m)
-    var elapsed = 0.0;        // temps écoulé de la sortie (s, pauses comprises)
-    var startUnix = 0;        // départ réel (s Unix) = maintenant − temps écoulé
-    var passes = {};          // indice du point -> instant de passage (s Unix)
-    var departs = {};         // ravito -> instant de départ (s Unix)
-    var lapped = {};          // points validés par un tour (bouton Lap)
     var laps = 1;             // tour en cours
     var msg = "";             // « Passage · nom », « Départ · nom », « Tour N »...
     var msgShort = "";        // ... forme courte si la place manque (nom du point seul)
     var msgUntil = 0;         // ... affiché jusqu'à cet instant (s Unix)
-    var dirty = false;        // passages changés depuis le dernier envoi à l'assistance
     var lastSent = 0;         // dernier envoi du suivi (s Unix)
     var planText = null;      // textes du plan et du profil chargés (seul un plan modifié est relu)
     var profText = null;
@@ -70,6 +61,7 @@ class Run {
 
     function initialize() {
         ep = new EnduranceProView();
+        tp = new TrailPlannerScreen();
         lastCode = codeSetting();
         load();
     }
@@ -106,20 +98,33 @@ class Run {
 
     function onTick() as Void {
         ticks++;
+        var now = Time.now().value();
         var info = Activity.getActivityInfo();
         if (info != null) {
-            // Comme pour un champ de données : calcul chaque seconde, chrono arrêté ou non.
+            // Comme pour des champs de données : calcul chaque seconde, chrono arrêté ou non.
             ep.compute(info);
-            if (state == RUNNING && plan != null) {
-                update(info);
+            tp.compute(info);
+            dist = tp.dist;
+            offRoute = tp.offRoute;
+            offBy = tp.offBy;
+            // Suivi pour l'assistance : peu après un passage (30 s au moins entre deux envois), sinon
+            // toutes les 5 minutes.
+            if (state == RUNNING && tp.progress != null &&
+                ((tp.progressDirty && now - lastSent >= 30) || now - lastSent >= 300)) {
+                sendProgress(now);
             }
         }
         if (ticks % 300 == 0) {
             fetch();
         }
+        var app = getApp();
         // « Explorer la carte » choisi dans le menu, maintenant fermé.
-        if (getApp().pendingExplore) {
-            getApp().startExplore();
+        if (app.pendingExplore) {
+            app.startExplore();
+        }
+        // Rappel nutrition, ravito, barrière horaire : écran Trail Planner, puis retour.
+        if (state == RUNNING) {
+            app.checkFocus(tp.focusKey(now));
         }
         WatchUi.requestUpdate();
     }
@@ -135,15 +140,6 @@ class Run {
             });
             // Champs FIT d'EndurancePro : à créer avant le départ de la session.
             ep.createFitFields(session);
-            passes = {};
-            departs = {};
-            lapped = {};
-            matched = -1.0;
-            matchedAt = 0.0;
-            offCount = 0;
-            offRoute = false;
-            lapOffset = 0.0;
-            dist = 0.0;
             laps = 1;
             lastSent = 0;
         }
@@ -184,15 +180,20 @@ class Run {
     }
 
     // BACK (Lap) pendant l'enregistrement : nouveau tour dans le fichier FIT et nouveau circuit
-    // d'EndurancePro (les valeurs du tour qui se termine sont déjà dans ses champs FIT), et passage au
-    // point le plus proche (réglage « Tour = passage au point »).
+    // d'EndurancePro (les valeurs du tour qui se termine sont déjà dans ses champs FIT), et, comme le
+    // champ Trail Planner, passage au point le plus proche (2e tour au ravito = départ), réglage « Tour =
+    // passage au point ». Un tour loin de tout point reste un tour (« Tour N »).
     function lap() as Void {
         session.addLap();
         ep.onTimerLap();
         laps++;
         signal(Attention.TONE_LAP);
         var now = Time.now().value();
-        if (!lapPassage(now)) {
+        var before = tp.lapMsgUntil;
+        tp.onTimerLap();
+        if (tp.lapMsgUntil != before) {
+            show(tp.lapTitle + " · " + tp.lapMsg, tp.lapMsg, now);
+        } else {
             show(tpText(Rez.Strings.tp_lap) + " " + laps, "", now);
         }
     }
@@ -212,200 +213,39 @@ class Run {
         msgUntil = now + 5;
     }
 
-    // --- Position et passages (comme le champ de données) -------------------------------------------
-
-    function update(info as Activity.Info) as Void {
-        elapsed = info.elapsedTime != null ? info.elapsedTime / 1000.0 : 0.0;
-        var now = Time.now().value();
-        startUnix = now - elapsed.toNumber();
-        lastWalked = info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
-        var d = courseDistance(info);
-        dist = d;
-        var n = plan.cpDist.size();
-        var changed = false;
-        // Passage (tour Lap ou position) contredit par le GPS calé sur le tracé (coureur à plus de 200 m
-        // avant le point) : annulé, le point sera de nouveau détecté en y arrivant.
-        if (plan.hasRoute() && matched >= 0) {
-            var keys = passes.keys();
-            for (var k = 0; k < keys.size(); k++) {
-                var li = keys[k] as Number;
-                if (li < n && d < plan.cpDist[li] - 200) {
-                    passes.remove(li);
-                    lapped.remove(li);
-                    departs.remove(li);
-                    changed = true;
-                }
-            }
-        }
-        // Points atteints d'après la position.
-        for (var i = 0; i < n; i++) {
-            if (!passes.hasKey(i) && d >= plan.cpDist[i] - 30) {
-                passes.put(i, now);
-                changed = true;
-            }
-        }
-        // Départ d'un ravito noté tout seul 150 m après le point, 300 m après une base de vie (sans
-        // attendre un 2e tour Lap) : temps passé au ravito envoyé à l'assistance.
-        for (var i = 0; i < n; i++) {
-            var away = plan.cpBase[i] ? 300 : 150;
-            if (plan.cpKind[i].equals("r") && passes.hasKey(i) && !departs.hasKey(i) && d > plan.cpDist[i] + away) {
-                departs.put(i, now);
-                changed = true;
-            }
-        }
-        if (changed) {
-            dirty = true;
-        }
-        // Suivi pour l'assistance : peu après un passage (30 s au moins entre deux envois), sinon
-        // toutes les 5 minutes.
-        if ((dirty && now - lastSent >= 30) || now - lastSent >= 300) {
-            sendProgress(info, now);
-        }
-    }
-
-    // Distance le long du parcours (m) : position GPS calée sur le tracé du plan près de la position
-    // attendue (dernier calage + distance montre depuis) ; hors du tracé, elle reste figée (« Hors
-    // parcours ») ; sans position GPS, elle avance avec la distance montre. Plan sans tracé : distance
-    // parcourue, corrigée par les tours.
-    function courseDistance(info as Activity.Info) as Float {
-        var walked = lastWalked;
-        if (!plan.hasRoute()) {
-            return walked + lapOffset;
-        }
-        var since = walked - matchedAt;
-        var expected = matched >= 0 ? matched + since : walked;
-        var loc = info.currentLocation;
-        var q = info.currentLocationAccuracy;
-        if (loc == null || (q != null && q < Position.QUALITY_USABLE)) {
-            return expected;
-        }
-        // Pas encore calé et hors du tracé (échauffement…) : recherche sur tout le parcours toutes les 5 s.
-        if (matched < 0 && offCount % 5 != 0) {
-            offCount++;
-            offRoute = offCount >= 5;
-            return 0.0;
-        }
-        var deg = loc.toDegrees();
-        var maxOff = plan.onRouteMax();
-        var r = matched < 0
-            ? plan.locate(deg[0], deg[1], 0.0, plan.total + 1000.0, expected, 0.1, maxOff)
-            : plan.locate(deg[0], deg[1], matched - 300.0, matched + since * 1.2 + 1000.0, expected, 1.0, maxOff);
-        if (r[0] != null) {
-            matched = r[0];
-            matchedAt = walked;
-            offCount = 0;
-            offRoute = false;
-            return matched;
-        }
-        offCount++;
-        offRoute = offCount >= 5;
-        offBy = r[1] != null && r[1] > 0 ? r[1].toNumber() : 0;
-        return matched >= 0 ? matched : 0.0;
-    }
-
-    // Bouton Lap = passage, comme le champ : 2e tour au ravito (arrivée validée par un tour, pas encore
-    // reparti, moins de 300 m après et 2 h au plus) = départ du ravito ; sinon passage au point le plus
-    // proche pas encore validé par un tour, à 150 m au plus devant ou 300 m derrière avec le GPS calé
-    // (500 m sans tracé calé), position recalée sur le point. Un tour loin de tout point reste un tour.
-    // Renvoie true si le tour a servi.
-    function lapPassage(now as Number) as Boolean {
-        if (plan == null || Application.Properties.getValue("lapPass") == false) {
-            return false;
-        }
-        var n = plan.cpDist.size();
-        for (var i = n - 1; i >= 0; i--) {
-            if (plan.cpKind[i].equals("r") && lapped.hasKey(i) && !departs.hasKey(i) &&
-                dist < plan.cpDist[i] + 300 && now - (passes[i] as Number) < 7200) {
-                departs.put(i, now);
-                dirty = true;
-                show(tpText(Rez.Strings.tp_depart) + " · " + plan.cpName[i], plan.cpName[i], now);
-                return true;
-            }
-        }
-        var gps = plan.hasRoute() && matched >= 0;
-        var win = gps ? 300.0 : 500.0;
-        var ahead = gps ? 150.0 : 500.0;
-        var best = -1;
-        var bestGap = 0.0;
-        for (var i = 0; i < n; i++) {
-            if (lapped.hasKey(i)) {
-                continue;
-            }
-            var gap = plan.cpDist[i] - dist;
-            if (gap > ahead) {
-                continue;
-            }
-            if (gap < 0) {
-                gap = -gap;
-            }
-            if (gap <= win && (best < 0 || gap < bestGap)) {
-                best = i;
-                bestGap = gap;
-            }
-        }
-        if (best < 0) {
-            return false;
-        }
-        var at = plan.cpDist[best].toFloat();
-        lapped.put(best, true);
-        passes.put(best, now);
-        if (gps) {
-            matched = at;
-            matchedAt = lastWalked;
-            offCount = 0;
-            offRoute = false;
-        } else {
-            lapOffset += at - dist;
-        }
-        dist = at;
-        dirty = true;
-        show(tpText(Rez.Strings.tp_passage) + " · " + plan.cpName[best], plan.cpName[best], now);
-        return true;
-    }
-
     // --- Suivi pour l'assistance ---------------------------------------------------------------------
 
     // Envoi immédiat (pause, fin de la sortie).
     function sendNow() as Void {
-        var info = Activity.getActivityInfo();
-        if (info != null && plan != null) {
-            sendProgress(info, Time.now().value());
+        if (tp.progress != null) {
+            sendProgress(Time.now().value());
         }
     }
 
-    // Document live/{code}, comme le champ (mêmes champs, acceptés par les règles Firestore) : instant,
-    // départ réel, distance le long du parcours, passages « indice:arrivée[:départ] », position, batterie.
-    function sendProgress(info as Activity.Info, now as Number) as Void {
+    // Document live/{code}, comme le champ (mêmes champs, acceptés par les règles Firestore) : dernier
+    // relevé de Trail Planner (instant, départ réel, distance le long du parcours, passages
+    // « indice:arrivée[:départ] », position, batterie).
+    function sendProgress(now as Number) as Void {
         var code = codeSetting();
-        if (code == null) {
+        var rec = tp.progress;
+        if (code == null || !(rec instanceof Dictionary)) {
             return;
         }
         lastSent = now;
-        dirty = false;
-        var p = "";
-        var keys = passes.keys();
-        for (var k = 0; k < keys.size(); k++) {
-            p += (k > 0 ? "," : "") + keys[k] + ":" + passes[keys[k]];
-            if (departs.hasKey(keys[k])) {
-                p += ":" + departs[keys[k]];
-            }
-        }
+        tp.progressDirty = false;
         var fields = {
-            "t" => { "integerValue" => now.toString() },
-            "s" => { "integerValue" => startUnix.toString() },
-            "d" => { "integerValue" => dist.toNumber().toString() },
-            "p" => { "stringValue" => p },
+            "t" => { "integerValue" => rec["t"].toString() },
+            "s" => { "integerValue" => rec["s"].toString() },
+            "d" => { "integerValue" => rec["d"].toString() },
+            "p" => { "stringValue" => rec["p"] },
             "v" => { "integerValue" => "1" }
         };
-        var loc = info.currentLocation;
-        if (loc != null) {
-            var deg = loc.toDegrees();
-            fields.put("lat", { "doubleValue" => deg[0].toFloat() });
-            fields.put("lon", { "doubleValue" => deg[1].toFloat() });
+        if (rec["lat"] != null && rec["lon"] != null) {
+            fields.put("lat", { "doubleValue" => rec["lat"] });
+            fields.put("lon", { "doubleValue" => rec["lon"] });
         }
-        var stats = System.getSystemStats();
-        if (stats != null && stats.battery != null) {
-            fields.put("bat", { "integerValue" => stats.battery.toNumber().toString() });
+        if (rec["bat"] != null) {
+            fields.put("bat", { "integerValue" => rec["bat"].toString() });
         }
         var name = "projects/" + PROJECT + "/databases/(default)/documents/live/" + code;
         Communications.makeWebRequest(
@@ -554,9 +394,9 @@ class Run {
         return null;
     }
 
-    // Relit le plan enregistré s'il a changé ; il faut alors recaler la position sur tout le parcours.
-    // En course, les passages déjà notés sont gardés (rapportés aux points du nouveau plan). Un plan
-    // téléchargé avec un autre code (code changé depuis) est ignoré.
+    // Relit le plan enregistré s'il a changé et le donne à Trail Planner (qui recale la position et, en
+    // course, garde les passages déjà notés). Un plan téléchargé avec un autre code (code changé depuis)
+    // est ignoré.
     function load() as Void {
         var text = Application.Storage.getValue("plan");
         var prof = Application.Storage.getValue("profile");
@@ -571,41 +411,13 @@ class Run {
             planText = null;
             profText = null;
         } else if (planText == null || !text.equals(planText) || !sameText(prof, profText)) {
-            var old = plan;
             plan = parsePlan(text as String, prof as String or Null);
             planText = plan != null ? text : null;
             profText = plan != null ? prof : null;
-            matched = -1.0;
-            offCount = 0;
-            offRoute = false;
-            if (state != READY && old != null && plan != null) {
-                passes = remap(passes, old, plan);
-                departs = remap(departs, old, plan);
-                lapped = remap(lapped, old, plan);
-            }
         }
+        tp.setPlan(plan);
         loadRoute();
         refreshStatus();
-    }
-
-    // Points notés (passages, départs) d'un plan à l'autre : même point à moins de 100 m près.
-    function remap(marks as Dictionary, old, cur) as Dictionary {
-        var out = {};
-        var keys = marks.keys();
-        for (var k = 0; k < keys.size(); k++) {
-            var i = keys[k] as Number;
-            if (i >= old.cpDist.size()) {
-                continue;
-            }
-            for (var j = 0; j < cur.cpDist.size(); j++) {
-                var gap = cur.cpDist[j] - old.cpDist[i];
-                if (gap > -100 && gap < 100) {
-                    out.put(j, marks[i]);
-                    break;
-                }
-            }
-        }
-        return out;
     }
 
     function sameText(a, b) as Boolean {
@@ -643,6 +455,7 @@ class Run {
         } else {
             status = tpText(Rez.Strings.tp_waiting);
         }
+        tp.status = status;
     }
 
     // Réglages changés (Garmin Connect, ou code saisi sur la montre) : avec un autre code, l'ancien plan
@@ -659,11 +472,12 @@ class Run {
         fetch();
     }
 
-    // Écart au plan à l'endroit où l'on est (s, positif : retard), ou null (pas de plan, avant 200 m).
+    // Écart au plan à l'endroit où l'on est (s, positif : retard), comme l'écran Trail Planner, ou null
+    // (avant le départ, sans plan, avant 200 m).
     function planGap() as Float or Null {
-        if (plan == null || state == READY || dist <= 200) {
+        if (plan == null || state == READY || !tp.running || tp.dist <= 200) {
             return null;
         }
-        return elapsed - plan.plannedAt(dist);
+        return tp.delta.toFloat();
     }
 }

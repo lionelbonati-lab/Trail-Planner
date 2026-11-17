@@ -178,6 +178,8 @@ class TrailPlannerMenu extends WatchUi.Menu2 {
         addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_slopes), tpText(Rez.Strings.tp_slopes_sub), :slopes, slopesOn(), {}));
         addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_lap_pass), null, :lapPass,
             Application.Properties.getValue("lapPass") != false, {}));
+        addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_finish), tpText(Rez.Strings.tp_finish_sub), :finishStats,
+            Application.Properties.getValue("finishStats") == true, {}));
         _codeItem = new WatchUi.MenuItem(tpText(Rez.Strings.set_trail_code), null, :code, {});
         addItem(_codeItem);
         _scaleItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_map_scale), null, :mapScale, {});
@@ -230,13 +232,16 @@ class TrailPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :explore) {
             // Lancée une fois le menu fermé (dossier Trail Planner et menu principal), au tour suivant
             // de Run.onTick : la carte remplace alors l'écran affiché.
-            getApp().pendingExplore = true;
+            var app = getApp();
+            app.pendingExplore = true;
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
         } else if (id == :slopes) {
             Application.Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id == :lapPass) {
             Application.Properties.setValue("lapPass", (item as WatchUi.ToggleMenuItem).isEnabled());
+        } else if (id == :finishStats) {
+            Application.Properties.setValue("finishStats", (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id == :code) {
             // Code à 8 chiffres d'EndurancePro (le même pour le plan, le profil et le suivi).
             pushTrailCodePicker();

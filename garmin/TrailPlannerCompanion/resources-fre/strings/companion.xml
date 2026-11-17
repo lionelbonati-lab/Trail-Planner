@@ -42,4 +42,9 @@
     <string id="tp_map_scale">Échelle de la carte</string>
     <string id="tp_explore">Explorer la carte</string>
     <string id="tp_no_route">Pas de tracé</string>
+    <string id="tp_finish">Jusqu'à l'arrivée</string>
+    <string id="tp_finish_sub">Distance, D+ et D-</string>
+    <string id="tp_finish_prompt">Écran Trail Planner : afficher aussi la distance, le D+ et le D- restant jusqu'à l'arrivée</string>
+    <string id="tp_fuel_prompt">Rappel nutrition (min) : -1 = produits du plan répartis entre les ravitos, 0 = désactivé</string>
+    <string id="tp_vibrate">Vibrations Trail Planner</string>
 </strings>

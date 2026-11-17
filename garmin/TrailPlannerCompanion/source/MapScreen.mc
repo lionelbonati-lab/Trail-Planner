@@ -6,7 +6,7 @@ import Toybox.Position;
 import Toybox.System;
 import Toybox.WatchUi;
 
-// Écran Carte (3e écran) : le parcours de la course (tracé fin envoyé par l'app web), les ravitos, bases
+// Écran Carte (4e écran) : le parcours de la course (tracé fin envoyé par l'app web), les ravitos, bases
 // de vie et l'arrivée, et ta position, carte orientée nord, centrée sur toi à l'échelle choisie dans le
 // menu (largeur de l'écran : 200 m à 5 km).
 // - Montres à cartes : fond de carte Garmin de la montre (WatchUi.MapView, classe CompanionMapView,
@@ -189,6 +189,18 @@ class CompanionMapView extends WatchUi.MapView {
     function onLayout(dc as Graphics.Dc) as Void {
         MapView.onLayout(dc);
         run.ep.onLayout(dc);
+    }
+
+    function onShow() as Void {
+        MapView.onShow();
+        var app = getApp();
+        app.baseVisible = true;
+    }
+
+    function onHide() as Void {
+        MapView.onHide();
+        var app = getApp();
+        app.baseVisible = false;
     }
 
     // Exploration (menu « Explorer la carte ») ou retour au suivi du coureur (BACK).
