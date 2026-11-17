@@ -3,7 +3,7 @@
 Appli Connect IQ pour montres Garmin (une **appli**, pas un champ de données) qui **enregistre ta sortie
 Trail** avec :
 - un **écran de démarrage** façon Komoot : tes courses à venir et les parcours de ta bibliothèque,
-  synchronisés depuis l'app web, avec leur fiche (carte Garmin du parcours, distance, D+) ;
+  synchronisés depuis l'app web, avec leur fiche (résumé d'avant départ, comme le champ Trail Planner) ;
 - l'**écran et les calculs d'EndurancePro 2.7.3**, à l'identique (allure effort, VAM, zones, alarmes,
   données FIT, menu de réglages, 6 langues, thèmes clair et sombre), et **ses bandeaux du haut et du bas
   sur tous les écrans** ;
@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.1, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -42,10 +42,13 @@ bandeaux d'EP l'entourent en haut et en bas.*
    distance, D+ et date ; la course envoyée à la montre (⌚) est présélectionnée. Sans synchronisation des
    parcours, la liste propose la course envoyée à la montre. En bas : **Sortie libre** (sans plan :
    écrans EndurancePro et Carte seulement, Haut / Bas passent de l'un à l'autre) et **Réglages**.
-2. **Fiche** du parcours choisi : le parcours entier sur la **carte Garmin** (tracé seul sur les montres
-   sans cartes), nom, distance, D+. START : démarrer ; appui long sur Haut : réglages ; BACK : liste.
+2. **Fiche** du parcours choisi : le **résumé d'avant départ du champ Trail Planner** (nom, distance · D+,
+   temps prévu, heure de départ ou « Départ libre », « Emporter au départ » et le sac du premier
+   tronçon). START : démarrer ; appui long sur Haut : réglages ; BACK : liste.
 3. **Écrans de course**, en attente du GPS (« GPS... » en rouge, puis « START : départ » en vert) ; START pour partir. Avant le départ,
-   BACK ramène à la liste.
+   BACK ramène à la liste. **Pendant la sortie**, la liste ne reste jamais affichée : si la montre retire
+   l'écran de course (BACK / Lap), il revient aussitôt et le tour est noté ; impossible de choisir un autre
+   parcours avant la fin de la sortie.
 
 La liste et le plan du parcours choisi sont téléchargés via le téléphone (au lancement puis toutes les
 5 minutes) : active **« Synchroniser mes parcours avec l'appli »** dans l'onglet Montre de l'app web
@@ -70,7 +73,8 @@ météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (pop
   passage, un point par produit à prendre (orange à venir, gris déjà rappelé) ;
 - **sous la barre** : écart réel / prévu (`+6'` en rouge = 6 min de retard, avance en vert) et heure
   estimée au prochain point ;
-- **dernière ligne** (à la place du chrono) : le prochain point, en alternance (5 s) avec la marge sur la
+- **dernière ligne** (à la place du chrono, dans la plus grande police qui tient le texte entier) : le
+  prochain point, en alternance (5 s) avec la marge sur la
   prochaine barrière horaire ; « Passage · nom » ou « Départ · nom » 5 s après un tour ; « Hors
   parcours » ; la note d'un point au passage ;
 - **au ravito**, jusqu'au départ : à gauche **« À consommer »** (produits sur ravito) puis **« À prendre »**
@@ -129,8 +133,7 @@ au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
   200 m, 500 m, 1 km par défaut, 2 km, 5 km), rappelée en bas ; pas de titre en haut ; à chaque retour sur
   la carte, elle se pose tout de suite sur toi ;
 - **Explorer la carte** (menu, montres à cartes) : la carte passe en mode exploration Garmin pour la
-  déplacer et zoomer avec les boutons ; BACK revient au suivi. Aussi sur la **fiche d'un parcours**
-  (écran de démarrage) : BACK revient à la vue d'ensemble ;
+  déplacer et zoomer avec les boutons ; BACK revient au suivi ;
 - en haut, comme sur le profil : écart au plan, passages, « Hors parcours ».
 
 **Thème** : celui d'EndurancePro (réglage *Mode sombre*, dossier Affichage), sur tous les écrans.
@@ -164,8 +167,7 @@ avant le point. Désactive le réglage si tu utilises le tour automatique (Auto 
 
 Le menu d'EndurancePro, réglable en course comme dans le champ : l'appli ne fait qu'un, ses réglages sont
 rangés dans les dossiers d'EndurancePro (pas de dossier à part) :
-- en tête, **Explorer la carte** (montres à cartes ; seulement avec une carte à l'écran : écrans de course
-  ou fiche d'un parcours, pas depuis la liste) ;
+- en tête, **Explorer la carte** (montres à cartes ; seulement depuis les écrans de course) ;
 - **Affichage** : en plus des réglages d'EndurancePro, **Zoom du profil** et **Échelle de la carte** (aussi
   par appui long sur Haut depuis le profil ou la carte) ;
 - **Colorisation** : **Couleurs des pentes** (profil) ;
@@ -262,7 +264,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.0 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.1 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

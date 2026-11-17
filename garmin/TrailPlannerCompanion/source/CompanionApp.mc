@@ -1,6 +1,8 @@
 import Toybox.Activity;
 import Toybox.Application;
 import Toybox.Lang;
+import Toybox.System;
+import Toybox.Timer;
 import Toybox.WatchUi;
 
 // Trail Planner Companion : appli montre qui enregistre la sortie Trail avec les écrans et les calculs
@@ -23,6 +25,7 @@ class CompanionApp extends Application.AppBase {
     var startShown = false;   // liste de l'écran de démarrage au premier plan
     var overviewOn = false;   // fiche d'un parcours sur la carte Garmin (écran de démarrage)
     var courseOn = false;     // écrans de course affichés (entre « Démarrer » et le retour à la liste)
+    var restoreTimer = null;  // retour à la course si la liste apparaît pendant une sortie (restoreCourse)
     var focusKey = null;      // dernier événement qui a affiché l'écran Trail Planner
     var focusBack = -1;       // écran à retrouver une fois l'événement passé (-1 : aucun)
 
@@ -47,23 +50,48 @@ class CompanionApp extends Application.AppBase {
         return [new StartMenu(), new StartDelegate()];
     }
 
-    // Liste des parcours changée (téléchargée) : la liste affichée est refaite.
+    // Liste des parcours changée (téléchargée) : la liste affichée est refaite (jamais pendant une sortie).
     function refreshStart() as Void {
-        if (startShown) {
+        if (startShown && !(run as Run).active()) {
             WatchUi.switchToView(new StartMenu(), new StartDelegate(), WatchUi.SLIDE_IMMEDIATE);
         }
     }
 
-    // Fiche du parcours choisi : sur la carte Garmin si la montre en a, sinon tracé seul.
+    // Fiche du parcours choisi : résumé d'avant départ, comme le champ Trail Planner (CourseOverview) ; la
+    // carte reste sur l'écran Carte (la fiche sur la carte Garmin, setOverview, n'est plus utilisée).
     function showOverview() as Void {
-        var m = map();
-        if (m != null) {
-            m.setOverview(true);
-            overviewOn = true;
-            WatchUi.pushView(m, new OverviewDelegate(), WatchUi.SLIDE_LEFT);
-        } else {
-            WatchUi.pushView(new CourseOverview(), new OverviewDelegate(), WatchUi.SLIDE_LEFT);
+        WatchUi.pushView(new CourseOverview(), new OverviewDelegate(), WatchUi.SLIDE_LEFT);
+    }
+
+    // Liste à l'écran (StartMenu.onShow) : pendant une sortie, elle ne doit pas rester affichée. Si la
+    // montre a retiré l'écran de course (bouton BACK / Lap traité par le système), il revient aussitôt.
+    function onStartShown() as Void {
+        if (run != null && (run as Run).active()) {
+            restoreTimer = new Timer.Timer();
+            (restoreTimer as Timer.Timer).start(method(:restoreCourse), 50, false);
         }
+    }
+
+    // Retour à l'écran de course affiché avant ; tour noté s'il ne l'a pas été (le BACK qui a retiré l'écran
+    // était un tour), menu de pause en pause.
+    function restoreCourse() as Void {
+        restoreTimer = null;
+        var r = run as Run;
+        if (!startShown || !r.active()) {
+            return;
+        }
+        courseOn = true;
+        focusBack = -1;
+        var v = (page == MAP_PAGE && mapView != null) ? mapView : mainView;
+        WatchUi.pushView(v, new MainDelegate(r), WatchUi.SLIDE_IMMEDIATE);
+        if (r.state == RUNNING) {
+            if (System.getTimer() - r.lastLapMs > 1500) {
+                r.lap();
+            }
+        } else {
+            pushPauseMenu();
+        }
+        WatchUi.requestUpdate();
     }
 
     function endOverview() as Void {

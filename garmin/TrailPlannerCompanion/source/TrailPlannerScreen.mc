@@ -771,15 +771,27 @@ class TrailPlannerScreen {
     }
 
     // Ligne du bas (place du chrono d'EP), raccourcie à la largeur de l'écran rond.
+    // Appli : la plus grande police (moyenne à minuscule) dans laquelle le texte tient entier dans l'écran
+    // rond à cette hauteur ; coupé seulement s'il ne tient dans aucune (nom du prochain point).
     function bottomLine(dc as Graphics.Dc, l, text as String, color) as Void {
         var w = dc.getWidth();
+        var h = dc.getHeight();
         var y = l.TimerY;
-        var font = Graphics.FONT_MEDIUM;
-        var fh = dc.getFontHeight(font);
-        var lo = halfChord(y - fh / 2, w, dc.getHeight());
-        var hi = halfChord(y + fh / 2, w, dc.getHeight());
+        var fonts = [Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
+        var font = Graphics.FONT_XTINY;
+        var maxW = w;
+        for (var i = 0; i < fonts.size(); i++) {
+            font = fonts[i];
+            var fh = dc.getFontHeight(font);
+            var lo = halfChord(y - fh / 2, w, h);
+            var hi = halfChord(y + fh / 2, w, h);
+            maxW = isRound() ? 2 * (lo < hi ? lo : hi) - 10 : w - 10;
+            if (dc.getTextWidthInPixels(text, font) <= maxW) {
+                break;
+            }
+        }
         dc.setColor(color, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(w / 2, y, font, fit(dc, text, font, 2 * (lo < hi ? lo : hi) - 10), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        dc.drawText(w / 2, y, font, fit(dc, text, font, maxW), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
     // Barre à la place de la batterie d'EP : remplie de la fraction f (0 à 1), sans icône.

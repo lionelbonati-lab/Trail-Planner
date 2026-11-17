@@ -4,7 +4,7 @@
      pour l'assistance. API 3.4 au moins (comme EndurancePro). Chaque montre a sa mise en page
      EndurancePro (monkey.jungle) : pour en ajouter une, l'ajouter ici ET dans monkey.jungle. -->
 <iq:manifest version="3" xmlns:iq="http://www.garmin.com/xml/connectiq">
-    <iq:application id="1d699b56-427e-4916-93e3-0586da162219" type="watch-app" name="@Strings.AppName" entry="CompanionApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.4.0" version="0.6.0">
+    <iq:application id="1d699b56-427e-4916-93e3-0586da162219" type="watch-app" name="@Strings.AppName" entry="CompanionApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="3.4.0" version="0.6.1">
         <iq:products>
             <iq:product id="enduro3"/>
             <iq:product id="epix2"/>

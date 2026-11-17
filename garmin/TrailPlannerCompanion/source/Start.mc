@@ -10,9 +10,10 @@ import Toybox.WatchUi;
 // Écran de démarrage, façon Komoot :
 // 1. liste : courses à venir et parcours de la bibliothèque synchronisés depuis l'app web (la course
 //    envoyée à la montre en premier), « Sortie libre », « Réglages » ;
-// 2. fiche du parcours choisi : la carte Garmin du parcours (tracé seul sur les montres sans cartes),
-//    nom, distance, D+, date ; START = démarrer, appui long sur Haut = réglages, BACK = liste ;
+// 2. fiche du parcours choisi : le résumé d'avant départ du champ Trail Planner (nom, distance, D+, temps
+//    prévu, départ, « Emporter au départ ») ; START = démarrer, appui long sur Haut = réglages, BACK = liste ;
 // 3. écrans de course (EndurancePro, Trail Planner, profil, carte), en attente du GPS, puis START.
+// Pendant une sortie, la liste ne reste jamais affichée (CompanionApp.onStartShown / restoreCourse).
 
 // Ligne de la liste : « 42.1 km · D+2350 · 30/05 ».
 function courseSub(dist as Number, dPlus as Number, start as Number) as String {
@@ -56,6 +57,7 @@ class StartMenu extends WatchUi.Menu2 {
     function onShow() as Void {
         var app = getApp();
         app.startShown = true;
+        app.onStartShown();
     }
 
     function onHide() as Void {
@@ -72,6 +74,10 @@ class StartDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId();
         var app = getApp();
+        // Sortie en cours : pas d'autre parcours (l'écran de course revient tout seul, onStartShown).
+        if (getRun().active()) {
+            return;
+        }
         if (id == :settings) {
             WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_LEFT);
         } else if (id == :free) {
@@ -154,80 +160,9 @@ function drawOverviewText(dc as Graphics.Dc, run as Run) as Void {
     drawFitted(dc, (h * 0.89).toNumber(), tpText(Rez.Strings.tp_choose), darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN, Graphics.FONT_XTINY, true);
 }
 
-// Tracé du parcours entier, ajusté à l'écran (montres sans cartes) : magenta, ravitos, bases de vie.
-function drawRouteFit(dc as Graphics.Dc, run as Run, top as Number, bottom as Number) as Void {
-    var route = run.route;
-    if (route == null || route.size() < 2) {
-        return;
-    }
-    var w = dc.getWidth();
-    var laMin = route.lat[0];
-    var laMax = laMin;
-    var loMin = route.lon[0];
-    var loMax = loMin;
-    for (var i = 1; i < route.size(); i++) {
-        var la = route.lat[i];
-        var lo = route.lon[i];
-        if (la < laMin) { laMin = la; }
-        if (la > laMax) { laMax = la; }
-        if (lo < loMin) { loMin = lo; }
-        if (lo > loMax) { loMax = lo; }
-    }
-    var cosLat = Math.cos((laMin + laMax) / 2.0 / 100000.0 * Math.PI / 180.0);
-    var spanX = (loMax - loMin) * cosLat;
-    var spanY = (laMax - laMin).toFloat();
-    var side = isRound() ? (w * 0.2).toNumber() : 10;
-    var bw = w - 2 * side;
-    var bh = bottom - top;
-    // Échelle (px par 1e-5 degré) : le parcours entier tient dans le cadre.
-    var k = 1.0;
-    if (spanX * bh > spanY * bw) {
-        k = spanX > 0 ? bw / spanX : 1.0;
-    } else {
-        k = spanY > 0 ? bh / spanY : 1.0;
-    }
-    var cx = w / 2.0;
-    var cy = (top + bottom) / 2.0;
-    var mLo = (loMin + loMax) / 2.0;
-    var mLa = (laMin + laMax) / 2.0;
-    if (dc has :setPenWidth) {
-        dc.setPenWidth(w > 300 ? 4 : 3);
-    }
-    dc.setColor(ROUTE_COLOR, Graphics.COLOR_TRANSPARENT);
-    var px = 0;
-    var py = 0;
-    for (var i = 0; i < route.size(); i++) {
-        var x = (cx + (route.lon[i] - mLo) * cosLat * k).toNumber();
-        var y = (cy - (route.lat[i] - mLa) * k).toNumber();
-        if (i > 0) {
-            dc.drawLine(px, py, x, y);
-        }
-        px = x;
-        py = y;
-    }
-    if (dc has :setPenWidth) {
-        dc.setPenWidth(1);
-    }
-    var plan = run.plan;
-    if (plan != null) {
-        var n = plan.cpDist.size();
-        for (var c = 0; c < n; c++) {
-            var isBase = plan.cpBase[c];
-            if (!isBase && !plan.cpKind[c].equals("r")) {
-                continue;
-            }
-            var p = route.at(plan.cpDist[c].toFloat());
-            var x = (cx + (p[1] - mLo) * cosLat * k).toNumber();
-            var y = (cy - (p[0] - mLa) * k).toNumber();
-            dc.setColor(themeBg(), Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(x, y, 6);
-            dc.setColor(isBase ? BASE_COLOR : RAVITO_COLOR, Graphics.COLOR_TRANSPARENT);
-            dc.fillCircle(x, y, 4);
-        }
-    }
-}
-
-// Fiche du parcours sans fond de carte Garmin.
+// Fiche du parcours : le résumé d'avant départ du champ Trail Planner. Nom, « 23.4 km · D+1245 », temps
+// prévu, heure de départ (course seulement : « Départ libre » sans heure), « Emporter au départ » et le
+// sac du premier tronçon (4 lignes au plus), puis « START : démarrer ». Lignes centrées verticalement.
 class CourseOverview extends WatchUi.View {
     function initialize() {
         View.initialize();
@@ -235,10 +170,51 @@ class CourseOverview extends WatchUi.View {
 
     function onUpdate(dc as Graphics.Dc) as Void {
         var run = getRun();
+        var tp = run.tp;
         var h = dc.getHeight();
-        dc.setColor(themeFg(), themeBg());
+        var fg = themeFg();
+        dc.setColor(fg, themeBg());
         dc.clear();
-        drawRouteFit(dc, run, (h * 0.22).toNumber(), (h * 0.70).toNumber());
-        drawOverviewText(dc, run);
+        var plan = run.plan;
+        if (plan == null) {
+            drawFitted(dc, h / 2, tpText(Rez.Strings.tp_loading), fg, Graphics.FONT_SMALL, false);
+            return;
+        }
+        var up = plan.dPlus;
+        if (up < 0 && plan.hasClimb()) {
+            up = plan.climbUp[plan.climbUp.size() - 1];
+        }
+        var stats = (plan.total / 1000.0).format("%.1f") + " km" + (up >= 0 ? " · D+" + up : "");
+        var lines = [
+            [plan.name, Graphics.FONT_XTINY, fg],
+            [stats, Graphics.FONT_SMALL, fg],
+            ["Temps prévu " + tp.shortDuration(plan.finishTime()), Graphics.FONT_XTINY, fg]
+        ] as Array;
+        if (plan.isRace()) {
+            lines.add(plan.start > 0 ? ["Départ " + tp.clock(plan.start), Graphics.FONT_SMALL, fg] : ["Départ libre", Graphics.FONT_XTINY, fg]);
+        }
+        var l0 = plan.legFromCp(-1);
+        if (l0 >= 0) {
+            var rows = tp.packItems(dc, plan.bag(l0), Graphics.FONT_XTINY, 4);
+            if (rows.size() > 0) {
+                lines.add(["Emporter au départ", Graphics.FONT_XTINY, Graphics.COLOR_ORANGE]);
+            }
+            for (var i = 0; i < rows.size(); i++) {
+                lines.add([rows[i], Graphics.FONT_XTINY, fg]);
+            }
+        }
+        // Hauteur totale, puis lignes de haut en bas autour du milieu (au-dessus de « START »).
+        var total = 0;
+        for (var i = 0; i < lines.size(); i++) {
+            total += dc.getFontHeight((lines[i] as Array)[1]);
+        }
+        var y = (h * 0.47).toNumber() - total / 2;
+        for (var i = 0; i < lines.size(); i++) {
+            var line = lines[i] as Array;
+            var fh = dc.getFontHeight(line[1]);
+            drawFitted(dc, y + fh / 2, line[0] as String, line[2], line[1], false);
+            y += fh;
+        }
+        drawFitted(dc, (h * 0.89).toNumber(), tpText(Rez.Strings.tp_choose), darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN, Graphics.FONT_XTINY, false);
     }
 }

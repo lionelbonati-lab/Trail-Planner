@@ -60,6 +60,7 @@ class Run {
     var routeText = null;     // texte du champ wr chargé (null : tracé tiré du plan)
     var routePlan = null;     // plan dont le tracé de repli est tiré
     var routeFor = null;      // parcours de la dernière demande de tracé
+    var lastLapMs = 0;        // dernier tour (System.getTimer), pour ne pas le compter deux fois (restoreCourse)
     // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
     var profLoad = null;      // [ProfileReader, GroupReader] ou null...
     var profLoadPlan = null;  // ... pour ce plan
@@ -160,6 +161,11 @@ class Run {
         signal(Attention.TONE_START);
     }
 
+    // Sortie en cours (chrono lancé ou en pause) : les écrans de course ne doivent pas être quittés.
+    function active() as Boolean {
+        return state == RUNNING || state == PAUSED;
+    }
+
     function pause() as Void {
         session.stop();
         state = PAUSED;
@@ -195,6 +201,7 @@ class Run {
     // champ Trail Planner, passage au point le plus proche (2e tour au ravito = départ), réglage « Tour =
     // passage au point ». Un tour loin de tout point reste un tour (« Tour N »).
     function lap() as Void {
+        lastLapMs = System.getTimer();
         session.addLap();
         ep.onTimerLap();
         laps++;
