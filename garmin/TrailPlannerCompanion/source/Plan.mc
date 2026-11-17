@@ -22,6 +22,7 @@ class Plan {
     var curveT as Array<Number> = [] as Array<Number>;
     var cpDist as Array<Number> = [] as Array<Number>;
     var cpKind as Array<String> = [] as Array<String>;
+    var cpName as Array<String> = [] as Array<String>;   // nom (écran « Passage · nom »), pas sur le profil
     var cpStop as Array<Number> = [] as Array<Number>;
     var cpBase as Array<Boolean> = [] as Array<Boolean>;
     // Tracé simplifié (ligne G) : distance le long du parcours (m) et position de chaque sommet (m)
@@ -335,6 +336,7 @@ function parsePlan(text as String, profile as String or Null) as Plan or Null {
         } else if (tag.equals("C") && parts.size() >= 6) {
             p.cpDist.add(toNum(parts[1]));
             p.cpKind.add(parts[4]);
+            p.cpName.add(parts[5]);
             p.cpStop.add(parts.size() >= 7 ? toNum(parts[6]) : 0);
             p.cpBase.add(parts.size() >= 9 && parts[8].equals("b"));
         } else if (tag.equals("E") && parts.size() >= 2) {

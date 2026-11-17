@@ -1,17 +1,95 @@
-<settings>
-    <setting propertyKey="@Properties.code" title="@Strings.CodeTitle" prompt="@Strings.CodePrompt">
-        <settingConfig type="alphaNumeric" />
-    </setting>
-    <setting propertyKey="@Properties.zoom" title="@Strings.ZoomTitle">
-        <settingConfig type="list">
-            <listEntry value="0">@Strings.ZoomAll</listEntry>
-            <listEntry value="1">@Strings.Zoom20</listEntry>
-            <listEntry value="2">@Strings.Zoom10</listEntry>
-            <listEntry value="3">@Strings.Zoom5</listEntry>
-            <listEntry value="4">@Strings.Zoom2</listEntry>
-        </settingConfig>
-    </setting>
-    <setting propertyKey="@Properties.slopes" title="@Strings.SlopesPrompt">
-        <settingConfig type="boolean" />
-    </setting>
-</settings>
+<!-- settings.xml — EndurancePro 2.7.3 + appli Trail Planner Companion (fin du fichier) -->
+<!-- v1.9.45 : Tous les réglages migrés vers le menu on-watch (getSettingsView, voir
+     EnduranceProSettingsMenu.mc). v2.1.2 : lissage (buffer_size_prop) et unité d'allure
+     (pace_unit_prop, AFFICHAGE montre, modifiable en course) migrés à leur tour vers le
+     dossier "Propriétés" on-watch. Refonte complète des champs FIT (voir matrice) : 8
+     toggles ON/OFF + 1 unité (fit_pace_unit_prop, ENREGISTREMENT FIT — volontairement
+     indépendante de pace_unit_prop), gérés exclusivement depuis Garmin Connect (pas de
+     version on-watch) — modifiables tant que l'activité n'est pas démarrée (voir
+     EnduranceProApp.onSettingsChanged()). v2.1.4 : fit_enabled_prop (toggle global FIT)
+     retiré — redondant avec les 8 toggles dédiés qui gardent déjà chaque champ. v2.2.9 :
+     tentative de retrait de fit_pace_unit_prop (allure+vitesse toujours ensemble) → deux
+     crashs successifs (STRING interdit sur RECORD, puis "Out of memory" à 20 champs
+     combinés) — picker rétabli, comportement identique à la v2.2.8. -->
+<resources>
+    <settings>
+
+        <!-- v2.4.0 : Synchro Trail Planner (code à coller depuis le site) + référence d'allure
+             et bornes des zones VC (aussi réglables / synchronisées sur la montre) -->
+        <setting propertyKey="@Properties.trail_code_prop" title="@Strings.set_trail_code">
+            <settingConfig type="alphaNumeric" />
+        </setting>
+
+        <setting propertyKey="@Properties.pace_ref_prop" title="@Strings.set_pace_ref">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.set_target_pace</listEntry>
+                <listEntry value="1">@Strings.opt_ref_vc</listEntry>
+                <listEntry value="2">@Strings.opt_ref_vc_pct</listEntry>
+            </settingConfig>
+        </setting>
+
+        <setting propertyKey="@Properties.vc_zones_prop" title="@Strings.set_vc_zones">
+            <settingConfig type="alphaNumeric" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_pace_unit_prop" title="@Strings.set_fit_pace_unit">
+            <settingConfig type="list">
+                <listEntry value="0">min/km</listEntry>
+                <listEntry value="1">km/h</listEntry>
+            </settingConfig>
+        </setting>
+
+        <setting propertyKey="@Properties.fit_pace_speed_prop" title="@Strings.set_fit_pace_speed">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_temp_bag_corr_prop" title="@Strings.set_fit_temp_bag_corr">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_bag_weight_prop" title="@Strings.set_fit_bag_weight">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_avg_pace_speed_prop" title="@Strings.set_fit_avg_pace_speed">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_effort_dist_prop" title="@Strings.set_fit_effort_dist">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_vam_lap_prop" title="@Strings.set_fit_vam_lap">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_temp_coeff_prop" title="@Strings.set_fit_temp_coeff">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.fit_coefficients_prop" title="@Strings.set_fit_coefficients">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <!-- Appli Trail Planner Companion : profil et tour = passage (aussi dans le menu de la montre,
+             dossier Trail Planner). -->
+        <setting propertyKey="@Properties.zoom" title="@Strings.tp_zoom">
+            <settingConfig type="list">
+                <listEntry value="0">@Strings.tp_zoom_all</listEntry>
+                <listEntry value="1">@Strings.tp_zoom_20</listEntry>
+                <listEntry value="2">@Strings.tp_zoom_10</listEntry>
+                <listEntry value="3">@Strings.tp_zoom_5</listEntry>
+                <listEntry value="4">@Strings.tp_zoom_2</listEntry>
+            </settingConfig>
+        </setting>
+
+        <setting propertyKey="@Properties.slopes" title="@Strings.tp_slopes_prompt">
+            <settingConfig type="boolean" />
+        </setting>
+
+        <setting propertyKey="@Properties.lapPass" title="@Strings.tp_lap_pass_prompt">
+            <settingConfig type="boolean" />
+        </setting>
+
+    </settings>
+</resources>

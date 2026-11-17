@@ -5,10 +5,11 @@ import Toybox.WatchUi;
 
 // Boutons, comme dans une activité Garmin :
 // - START : départ, pause (menu Reprendre / Enregistrer / Supprimer), reprise ;
-// - BACK (Lap) : nouveau tour pendant l'enregistrement, menu de pause en pause, sortie de l'appli
-//   avant le départ ou une fois la sortie enregistrée ;
-// - Haut / Bas : écran suivant (profil, données) ;
-// - appui long sur Haut (Menu) : zoom du profil, couleurs des pentes, code montre, plan.
+// - BACK (Lap) : nouveau tour pendant l'enregistrement (et passage au point le plus proche, 2e tour au
+//   ravito = départ), menu de pause en pause, sortie de l'appli avant le départ ou une fois la sortie
+//   enregistrée ;
+// - Haut / Bas : écran suivant (EndurancePro, profil) ;
+// - appui long sur Haut (Menu) : réglages d'EndurancePro, avec le dossier « Trail Planner » en tête.
 // Écran tactile : balayages pour changer d'écran ; un balayage « retour » ne coupe pas la sortie et le tap
 // ne fait rien (START et BACK restent sur les boutons).
 class MainDelegate extends WatchUi.BehaviorDelegate {
@@ -71,26 +72,27 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    // Menu d'EndurancePro (réglables en course, comme dans le champ).
     function onMenu() as Boolean {
         if (run.state != DONE) {
-            WatchUi.pushView(new SettingsMenu(run), new SettingsDelegate(run), WatchUi.SLIDE_UP);
+            WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_UP);
         }
         return true;
     }
 }
 
 // Texte d'une ressource (Rez.Strings.…).
-function label(res) as String {
+function tpText(res) as String {
     return WatchUi.loadResource(res) as String;
 }
 
 // --- Menu de pause ----------------------------------------------------------------------------------------
 
 function pushPauseMenu() as Void {
-    var menu = new WatchUi.Menu2({ :title => "Pause" });
-    menu.addItem(new WatchUi.MenuItem(label(Rez.Strings.Resume), null, :resume, {}));
-    menu.addItem(new WatchUi.MenuItem(label(Rez.Strings.Save), null, :save, {}));
-    menu.addItem(new WatchUi.MenuItem(label(Rez.Strings.Discard), null, :discard, {}));
+    var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_paused) });
+    menu.addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_resume), null, :resume, {}));
+    menu.addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_save), null, :save, {}));
+    menu.addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_discard), null, :discard, {}));
     WatchUi.pushView(menu, new PauseDelegate(), WatchUi.SLIDE_UP);
 }
 
@@ -110,9 +112,9 @@ class PauseDelegate extends WatchUi.Menu2InputDelegate {
             WatchUi.popView(WatchUi.SLIDE_DOWN);
         } else if (id == :discard) {
             // Confirmation dans un second menu, « Non » en premier.
-            var ask = new WatchUi.Menu2({ :title => label(Rez.Strings.DiscardAsk) });
-            ask.addItem(new WatchUi.MenuItem(label(Rez.Strings.No), null, :no, {}));
-            ask.addItem(new WatchUi.MenuItem(label(Rez.Strings.Yes), null, :yes, {}));
+            var ask = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_discard_ask) });
+            ask.addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_no), null, :no, {}));
+            ask.addItem(new WatchUi.MenuItem(tpText(Rez.Strings.tp_yes), null, :yes, {}));
             WatchUi.pushView(ask, new DiscardDelegate(), WatchUi.SLIDE_LEFT);
         }
         WatchUi.requestUpdate();
@@ -137,51 +139,54 @@ class DiscardDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-// --- Menu des réglages (appui long sur Haut) ----------------------------------------------------------------
+// --- Dossier « Trail Planner » du menu (en tête du menu d'EndurancePro) -----------------------------------
 
 function zoomLabel(z as Number) as String {
-    return label([Rez.Strings.ZoomAll, Rez.Strings.Zoom20, Rez.Strings.Zoom10, Rez.Strings.Zoom5, Rez.Strings.Zoom2][z]);
+    return tpText([Rez.Strings.tp_zoom_all, Rez.Strings.tp_zoom_20, Rez.Strings.tp_zoom_10, Rez.Strings.tp_zoom_5, Rez.Strings.tp_zoom_2][z]);
 }
 
-class SettingsMenu extends WatchUi.Menu2 {
+class TrailPlannerMenu extends WatchUi.Menu2 {
     private var _zoomItem as WatchUi.MenuItem;
     private var _codeItem as WatchUi.MenuItem;
+    private var _planItem as WatchUi.MenuItem;
 
-    function initialize(run as Run) {
+    function initialize() {
         Menu2.initialize({ :title => "Trail Planner" });
-        _zoomItem = new WatchUi.MenuItem(label(Rez.Strings.ZoomTitle), null, :zoom, {});
+        _zoomItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_zoom), null, :zoom, {});
         addItem(_zoomItem);
-        addItem(new WatchUi.ToggleMenuItem(label(Rez.Strings.SlopesTitle), label(Rez.Strings.SlopesSub), :slopes, slopesOn(), {}));
-        _codeItem = new WatchUi.MenuItem(label(Rez.Strings.CodeTitle), null, :code, {});
+        addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_slopes), tpText(Rez.Strings.tp_slopes_sub), :slopes, slopesOn(), {}));
+        addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_lap_pass), null, :lapPass,
+            Application.Properties.getValue("lapPass") != false, {}));
+        _codeItem = new WatchUi.MenuItem(tpText(Rez.Strings.set_trail_code), null, :code, {});
         addItem(_codeItem);
-        addItem(new WatchUi.MenuItem(label(Rez.Strings.ReloadTitle), run.plan != null ? run.plan.name : run.status, :reload, {}));
+        _planItem = new WatchUi.MenuItem(tpText(Rez.Strings.tp_reload), null, :reload, {});
+        addItem(_planItem);
         onShow();
     }
 
     function onShow() as Void {
         _zoomItem.setSubLabel(zoomLabel(zoomLevel()));
-        var code = Application.Properties.getValue("code");
+        var code = Application.Properties.getValue("trail_code_prop");
         var text = "-";
         if (code instanceof String && (code as String).length() > 0) {
             var c = code as String;
             text = (c.length() <= 8) ? c : (c.substring(0, 8) as String) + "...";
         }
         _codeItem.setSubLabel(text);
+        var run = getRun();
+        _planItem.setSubLabel(run.plan != null ? run.plan.name : run.status);
     }
 }
 
-class SettingsDelegate extends WatchUi.Menu2InputDelegate {
-    var run as Run;
-
-    function initialize(r as Run) {
+class TrailPlannerMenuDelegate extends WatchUi.Menu2InputDelegate {
+    function initialize() {
         Menu2InputDelegate.initialize();
-        run = r;
     }
 
     function onSelect(item as WatchUi.MenuItem) as Void {
         var id = item.getId();
         if (id == :zoom) {
-            var menu = new WatchUi.Menu2({ :title => label(Rez.Strings.ZoomTitle) });
+            var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_zoom) });
             for (var z = 0; z < ZOOM_SPANS.size(); z++) {
                 menu.addItem(new WatchUi.MenuItem(zoomLabel(z), null, z, {}));
             }
@@ -189,11 +194,14 @@ class SettingsDelegate extends WatchUi.Menu2InputDelegate {
             WatchUi.pushView(menu, new ZoomDelegate(), WatchUi.SLIDE_LEFT);
         } else if (id == :slopes) {
             Application.Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());
+        } else if (id == :lapPass) {
+            Application.Properties.setValue("lapPass", (item as WatchUi.ToggleMenuItem).isEnabled());
         } else if (id == :code) {
-            pushCodePicker();
+            // Code à 8 chiffres d'EndurancePro (le même pour le plan, le profil et le suivi).
+            pushTrailCodePicker();
         } else if (id == :reload) {
-            run.fetch();
-            WatchUi.popView(WatchUi.SLIDE_DOWN);
+            getRun().fetch();
+            WatchUi.popView(WatchUi.SLIDE_RIGHT);
         }
     }
 }
@@ -206,78 +214,5 @@ class ZoomDelegate extends WatchUi.Menu2InputDelegate {
     function onSelect(item as WatchUi.MenuItem) as Void {
         Application.Properties.setValue("zoom", item.getId() as Number);
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
-    }
-}
-
-// --- Code montre à 8 chiffres (comme dans le champ de données) -------------------------------------------
-
-// Un chiffre par colonne (police texte, assez étroite pour 8 colonnes).
-class CodeDigitFactory extends WatchUi.PickerFactory {
-    function initialize() {
-        PickerFactory.initialize();
-    }
-
-    function getSize() as Number {
-        return 10;
-    }
-
-    function getValue(index as Number) as Object or Null {
-        return index;
-    }
-
-    function getDrawable(index as Number, selected as Boolean) as WatchUi.Drawable or Null {
-        return new WatchUi.Text({
-            :text => index.toString(),
-            :color => Graphics.COLOR_WHITE,
-            :font => Graphics.FONT_MEDIUM,
-            :locX => WatchUi.LAYOUT_HALIGN_CENTER,
-            :locY => WatchUi.LAYOUT_VALIGN_CENTER
-        });
-    }
-}
-
-function pushCodePicker() as Void {
-    var cur = Application.Properties.getValue("code");
-    var code = (cur instanceof String && (cur as String).length() == 8) ? cur as String : "00000000";
-    var pattern = [] as Array<WatchUi.PickerFactory>;
-    var defaults = [] as Array<Number>;
-    for (var i = 0; i < 8; i++) {
-        var d = (code.substring(i, i + 1) as String).toNumber();
-        pattern.add(new CodeDigitFactory());
-        defaults.add((d != null && d >= 0 && d <= 9) ? d as Number : 0);
-    }
-    var picker = new WatchUi.Picker({
-        :title => new WatchUi.Text({
-            :text => label(Rez.Strings.CodeTitle),
-            :color => Graphics.COLOR_WHITE,
-            :locX => WatchUi.LAYOUT_HALIGN_CENTER,
-            :locY => WatchUi.LAYOUT_VALIGN_CENTER
-        }),
-        :pattern => pattern,
-        :defaults => defaults
-    });
-    WatchUi.pushView(picker, new CodePickerDelegate(), WatchUi.SLIDE_LEFT);
-}
-
-// 00000000 efface le code.
-class CodePickerDelegate extends WatchUi.PickerDelegate {
-    function initialize() {
-        PickerDelegate.initialize();
-    }
-
-    function onAccept(values as Array) as Boolean {
-        var code = "";
-        for (var i = 0; i < values.size(); i++) {
-            code += (values[i] as Number).toString();
-        }
-        Application.Properties.setValue("code", code.equals("00000000") ? "" : code);
-        getRun().settingsChanged();
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-        return true;
-    }
-
-    function onCancel() as Boolean {
-        WatchUi.popView(WatchUi.SLIDE_RIGHT);
-        return true;
     }
 }

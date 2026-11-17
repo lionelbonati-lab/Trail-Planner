@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Labels FIT -->
+    <string id="label_eff_generic">Anstr.-Tempo</string>
+    <string id="label_eff_temp_factor">Temp.-Faktor</string>
+    <string id="label_eff_speed_kmh">Anstr.-Geschw.</string>
+    <string id="label_fit_temp_bag_corr">Korr.Temp+Rucks.</string>
+    <string id="label_fit_lap_pace">Anstr.-Tempo</string>
+    <string id="label_fit_lap_vam">VAM Durchschn.</string>
+    <string id="label_fit_temp_corr">Temp-Korr.</string>
+    <string id="label_fit_bag_kg">Rucksackgewicht</string>
+    <string id="label_fit_climb_coeff">Anstiegs&#xe4;quiv.</string>
+    <string id="label_fit_descent_coeff">Abstiegs&#xe4;quiv.</string>
+    <string id="label_fit_avg_pace_std">&#xd8; Tempo Std</string>
+    <string id="label_fit_avg_pace_mtn">&#xd8; Tempo Berge</string>
+    <string id="label_fit_avg_speed_std">&#xd8; Geschw. Std</string>
+    <string id="label_fit_avg_speed_mtn">&#xd8; Geschw. Bg.</string>
+    <string id="label_fit_effort_dist">Anstr.-Dist.</string>
+
+    <!-- v1.9.44 : On-Watch-Einstellungsmen&#xfc; (getSettingsView) -->
+    <string id="menu_settings_title">Einstellungen</string>
+    <string id="menu_bag_weight">Rucksackgewicht</string>
+    <string id="menu_alarm">Ausl&#xf6;ser</string>
+    <string id="menu_hr_display">HF-Zonenanzeige</string>
+    <string id="menu_vam_mode">VAM-Anzeigemodus</string>
+    <string id="menu_metric_slot">2. Metrik</string>
+    <string id="menu_metric_slot1">Metrik 1</string>
+    <string id="menu_metric_slot2">Metrik 2</string>
+    <string id="menu_metric_fatigue">Erm&#xfc;dung</string>
+    <string id="menu_metric_cal">Kalorien</string>
+    <string id="menu_metric_km">Anstr.-km</string>
+    <string id="menu_metric_body_battery">Body Battery</string>
+    <string id="menu_clock_metric_folder">Akkulaufzeit</string>
+    <string id="menu_show_clock">Uhrzeit anzeigen</string>
+    <string id="menu_colorize_dplus_dmoins">D+/D- Umrandung</string>
+    <string id="menu_vam_zones_bar">VAM-Balken</string>
+    <string id="menu_version_label">Version</string>
+    <string id="app_version">0.2.0 (EndurancePro 2.7.3)</string>
+    <string id="menu_temp_corr">Temp.-Korrektur</string>
+    <string id="menu_solar_corr">Solar-Korrektur</string>
+    <string id="menu_bag_weight_title">Rucksackgewicht (kg)</string>
+    <string id="menu_dark_mode">Dunkelmodus</string>
+    <string id="menu_pace_folder">Tempo</string>
+    <string id="menu_speed_folder">Geschwindigkeit</string>
+    <string id="menu_vam_folder">VAM-Zonen</string>
+    <string id="menu_hr_folder">HF</string>
+    <string id="menu_alarm_folder">Alarme</string>
+    <string id="menu_coeff_folder">Koeff.</string>
+    <string id="menu_properties_folder">Eigenschaften</string>
+    <string id="menu_buffer_size">Gl&#xe4;ttung</string>
+    <string id="menu_buffer_size_title">Gl&#xe4;ttung (5-60s)</string>
+    <string id="menu_display_folder">Anzeige</string>
+    <string id="menu_colorize_folder">Einfärbung</string>
+    <string id="menu_zone_fc">HF-Zone</string>
+    <string id="menu_vam_mode_short">VAM-Modus</string>
+    <string id="menu_vam_colorize">VAM</string>
+    <string id="menu_vam_circuit">Runde</string>
+    <string id="menu_vam_circuit_off">Runde inaktiv</string>
+    <string id="menu_battery_mode">Akkumodus</string>
+
+    <!-- Settings titles -->
+    <string id="set_dark_mode">Dunkelmodus</string>
+    <string id="set_buffer_size">VAM/Tempo-Gl&#xe4;ttung (5-60s)</string>
+    <string id="set_dist_to_type">Restdistanz</string>
+    <string id="set_pace_mode">Tempomodus</string>
+    <string id="set_speed_mode">Geschw.-Modus</string>
+    <string id="set_colorize_pace">Tempo</string>
+    <string id="set_colorize_speed">Geschwindigkeit</string>
+    <string id="set_target_pace">Zieltempo</string>
+    <string id="set_target_speed">Zielgeschwindigkeit</string>
+    <string id="set_pace_fast_threshold">Schwelle schnell</string>
+    <string id="set_cur_lap_pace">Runde</string>
+    <string id="menu_circuit_folder">Runde</string>
+    <string id="menu_circuit_dplus_dmoins">D+/D-</string>
+    <string id="menu_circuit_allure">&#xd8; Tempo</string>
+    <string id="menu_circuit_distance">Distanz</string>
+    <string id="menu_circuit_chrono">Timer</string>
+    <string id="set_pace_unit">Geschwindigkeitseinheit</string>
+    <string id="set_vam_display_mode">VAM-Anzeigemodus</string>
+    <string id="set_vam_zones">VAM-Zonen</string>
+    <string id="set_vam_zone1_min">Zone 1 Min</string>
+    <string id="set_vam_zone1_max">Zone 1 Max</string>
+    <string id="set_vam_zone2_max">Zone 2 Max</string>
+    <string id="set_vam_zone3_max">Zone 3 Max</string>
+    <string id="set_vam_zone4_max">Zone 4 Max</string>
+    <string id="set_alarm">Alarm</string>
+    <string id="set_alarm_popup">Alarm</string>
+    <string id="set_alarm_display_type">Anzeigetyp</string>
+    <string id="opt_popup">Popup</string>
+    <string id="opt_notification">Benachrichtigung</string>
+    <string id="set_alarm_type">Alarmtyp</string>
+    <string id="set_metric_slot">Sekund&#xe4;rmetrik (oben links)</string>
+    <string id="set_hr_display">HF-Zonenanzeige</string>
+    <string id="set_temp_enabled">Temperaturkorrektur</string>
+    <string id="set_bag_weight">Rucksackgewicht (0-20 kg)</string>
+    <string id="set_climb_coeff">Anstiegs&#xe4;quiv.</string>
+    <string id="set_descent_coeff">Abstiegs&#xe4;quiv.</string>
+    <string id="set_battery_display">Akkuanzeige</string>
+    <string id="menu_bag_weight_mode">Rucksackgewicht-Modus</string>
+    <string id="set_bag_weight_mode">Rucksackgewicht-Berechnung</string>
+    <string id="opt_bag_weight_flat">Pauschal (1%/kg)</string>
+    <string id="opt_bag_weight_relative">Relativ zum K&#xf6;rpergewicht</string>
+
+    <!-- v2.1.2 : FIT-Neugestaltung — 8 Schalter (nur Garmin Connect) -->
+    <!-- v2.1.3 : FIT-Einheit unabhängig von der Anzeige-Einheit (pace_unit_prop) -->
+    <!-- v2.2.9 : Entfernungsversuch → OOM-Absturz, wiederhergestellt -->
+    <string id="set_fit_pace_unit">Tempo-/Geschwindigkeitseinheit (FIT-Aufzeichnung)</string>
+    <string id="set_fit_pace_speed">Tempo/Geschwindigkeit Anstrengung</string>
+    <string id="set_fit_temp_bag_corr">Angewandte Temp.+Rucksack-Korrektur</string>
+    <string id="set_fit_bag_weight">Rucksackgewicht</string>
+    <string id="set_fit_avg_pace_speed">Anstrengungstempo/-geschw. Durchschn.</string>
+    <string id="set_fit_effort_dist">Anstrengungsdistanz</string>
+    <string id="set_fit_vam_lap">VAM Rundendurchschn.</string>
+    <string id="set_fit_temp_coeff">Temp.-Koeffizient</string>
+    <string id="set_fit_coefficients">Koeffizienten</string>
+
+    <!-- List options -->
+    <string id="opt_disabled">Deaktiviert</string>
+    <string id="opt_off">AUS</string>
+    <string id="opt_on">EIN</string>
+    <string id="opt_next_waypoint">N&#xe4;chster Wegpunkt</string>
+    <string id="opt_end_course">Streckenende</string>
+    <string id="opt_alternating">Wechselnd</string>
+    <string id="opt_pace_normal">Normal (flach)</string>
+    <string id="opt_pace_standard">Standard-Anstrengung</string>
+    <string id="opt_pace_mountain">Bergige Anstrengung</string>
+    <string id="opt_pace_below_target">Durchschnitt</string>
+    <string id="opt_pace_too_fast">Aktuell</string>
+    <string id="opt_pace_both">Unter Ziel + zu schnell</string>
+    <string id="opt_vam_only">Nur VAM</string>
+    <string id="opt_grade_only">Steigung</string>
+    <string id="opt_lap_avg_only">Runde</string>
+    <string id="opt_vam_grade">VAM + Steigung %</string>
+    <string id="opt_vam_lap">VAM + Runden-&#xd8;</string>
+    <string id="opt_lap_grade">Runden-&#xd8; + Steigung %</string>
+    <string id="opt_vam_lap_grade">VAM + Runden-&#xd8; + Steigung %</string>
+    <string id="opt_bar">Balken</string>
+    <string id="opt_background">Hintergrund</string>
+    <string id="opt_font">Schriftfarbe</string>
+    <string id="opt_alarm_pace">Tempo</string>
+    <string id="opt_alarm_speed">Geschw.</string>
+    <string id="opt_alarm_hr">HF</string>
+    <string id="opt_vam_pace">VAM + Tempo</string>
+    <string id="opt_vam_hr">VAM + HF</string>
+    <string id="opt_pace_hr">Tempo + HF</string>
+    <string id="opt_all">Alles</string>
+    <string id="opt_vib">Vibration</string>
+    <string id="opt_sound">Ton</string>
+    <string id="opt_vib_sound">Vibration + Ton</string>
+    <string id="opt_fatigue_only">Nur Erm&#xfc;dung</string>
+    <string id="opt_calories_only">Nur Kalorien</string>
+    <string id="opt_effort_km_only">Nur Anstrengungs-km</string>
+    <string id="opt_version_only">Nur Version</string>
+    <string id="opt_fatigue_cal">Erm&#xfc;dung+Kalorien</string>
+    <string id="opt_fatigue_km">Erm&#xfc;dung+Anstr.-km</string>
+    <string id="opt_cal_km">Kalorien+Anstr.-km</string>
+    <string id="opt_hr_value">Wert</string>
+    <string id="opt_hr_circle">Kreis</string>
+    <string id="opt_hr_val_circle">Wert + Kreis</string>
+    <string id="opt_hr_val_bar">Wert + Balken</string>
+    <string id="opt_hr_circle_bar">Kreis + Balken</string>
+    <string id="opt_coeff_default">1.0 (Standard)</string>
+    <string id="opt_battery">Akku</string>
+
+    <!-- FIX 23/08/2026 : fehlende Einheiten, in den Alarm-Toasts verwendet -->
+    <string id="unite_km_h">km/h</string>
+    <string id="unite_m_h">m/h</string>
+
+    <!-- v2.4.0 : Zones VC (colorisation/alarme d'allure) et synchro Trail Planner -->
+    <string id="set_pace_ref">Referenz</string>
+    <string id="opt_ref_vc">CS-Zone</string>
+    <string id="opt_ref_vc_pct">% der CS</string>
+    <string id="set_cs">Krit. Geschw.</string>
+    <string id="set_vc_target_zone">Zielzone</string>
+    <string id="set_vc_target_pct">Ziel-% der CS</string>
+    <string id="opt_no_code">Kein Code</string>
+    <string id="opt_synced">Sync</string>
+    <string id="opt_waiting">Warten</string>
+    <string id="set_trail_code">Trail-Planner-Code</string>
+    <string id="set_vc_zones">CS-Zonen (% der CS)</string>
+</resources>

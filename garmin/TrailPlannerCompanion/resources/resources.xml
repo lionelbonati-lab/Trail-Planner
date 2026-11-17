@@ -1,0 +1,121 @@
+<resources>
+
+    <strings>
+        <!-- Labels FIT RECORD (IDs 1-4) -->
+        <string id="label_eff_generic">Effort Pace</string>
+        <string id="label_eff_temp_factor">Temp. Factor</string>
+        <string id="label_eff_speed_kmh">Effort Speed</string>
+        <string id="label_fit_temp_bag_corr">Temp+Pack Corr.</string>
+        <!-- Labels FIT LAP (IDs 4-5) -->
+        <string id="label_fit_lap_pace">Effort Pace</string>
+        <string id="label_fit_lap_vam">Avg VAM</string>
+        <!-- Labels FIT SESSION correcteurs (IDs 6-9) -->
+        <string id="label_fit_temp_corr">Temp Corr.</string>
+        <string id="label_fit_bag_kg">Pack Weight</string>
+        <string id="label_fit_climb_coeff">Climb Coeff.</string>
+        <string id="label_fit_descent_coeff">Descent Coeff.</string>
+        <!-- Labels FIT SESSION allures moyennes (IDs 10-13) — raccourcis (v2.2.9 : économie
+             mémoire FIT, chaque label est stocké 2x, LAP + SESSION) -->
+        <string id="label_fit_avg_pace_std">Pace Std</string>
+        <string id="label_fit_avg_pace_mtn">Pace Mtn</string>
+        <string id="label_fit_avg_speed_std">Speed Std</string>
+        <string id="label_fit_avg_speed_mtn">Speed Mtn</string>
+        <!-- Labels FIT SESSION distance effort (ID 14) -->
+        <string id="label_fit_effort_dist">Effort Dist.</string>
+        <!-- Unités -->
+        <string id="unite_km">km</string>
+        <string id="unite_km_h">km/h</string>
+        <string id="unite_m_h">m/h</string>
+        <string id="unite_m_s">m/s</string>
+        <string id="unite_min_km">min/km</string>
+        <string id="unite_s_km">s/km</string>
+        <string id="unite_kg">kg</string>
+        <string id="unite_vide"> </string>
+        <string id="unite_mult">x</string>
+        <string id="unite_pct">%</string>
+        <!-- v1.9.44 : Menu de réglages on-watch (getSettingsView) -->
+        <string id="menu_settings_title">Settings</string>
+        <string id="menu_bag_weight">Bag weight</string>
+        <string id="menu_alarm">Alarm</string>
+        <string id="menu_hr_display">HR zone display</string>
+        <string id="menu_vam_mode">VAM display mode</string>
+        <string id="menu_metric_slot">2nd metric</string>
+        <string id="menu_metric_slot1">Metric 1</string>
+        <string id="menu_metric_slot2">Metric 2</string>
+        <string id="menu_metric_fatigue">Fatigue</string>
+        <string id="menu_metric_cal">Calories</string>
+        <string id="menu_metric_km">Effort km</string>
+        <string id="menu_metric_body_battery">Body Battery</string>
+        <string id="menu_clock_metric_folder">Battery autonomy</string>
+        <string id="menu_show_clock">Show clock</string>
+        <string id="menu_colorize_dplus_dmoins">D+/D- outline</string>
+        <string id="menu_vam_zones_bar">VAM bar</string>
+        <string id="menu_version_label">Version</string>
+        <string id="app_version">0.2.0 (EndurancePro 2.7.3)</string>
+        <string id="menu_temp_corr">Temp. correction</string>
+        <string id="menu_solar_corr">Solar correction</string>
+        <string id="menu_bag_weight_title">Bag weight (kg)</string>
+        <string id="menu_dark_mode">Dark mode</string>
+        <string id="menu_pace_folder">Pace</string>
+        <string id="menu_speed_folder">Speed</string>
+        <string id="menu_vam_folder">VAM Zones</string>
+        <string id="menu_hr_folder">HR</string>
+        <string id="menu_alarm_folder">Alarms</string>
+        <string id="menu_coeff_folder">Coeffs</string>
+        <!-- v2.1.2 : Dossier Propriétés (unité de vitesse, lissage — migrés du téléphone) -->
+        <string id="menu_properties_folder">Properties</string>
+        <string id="menu_buffer_size">Smoothing</string>
+        <string id="menu_buffer_size_title">Smoothing (5-60s)</string>
+        <!-- v2.0.4 : Dossier Affichage (regroupe les réglages d'apparence) -->
+        <string id="menu_display_folder">Display</string>
+        <string id="menu_colorize_folder">Colorization</string>
+        <string id="menu_zone_fc">HR Zone</string>
+        <string id="menu_vam_mode_short">VAM Mode</string>
+        <string id="menu_vam_colorize">VAM</string>
+        <string id="menu_vam_circuit">Lap display</string>
+        <string id="menu_vam_circuit_off">Lap mode off</string>
+        <string id="menu_battery_mode">Battery mode</string>
+        <!-- v2.2.8 : Dossier Circuit — coupe-circuit général + toggle par donnée.
+             set_cur_lap_pace manquait jusqu'ici du fichier de base (EN) : ajouté ici. -->
+        <string id="set_cur_lap_pace">Circuit</string>
+        <string id="menu_circuit_folder">Circuit</string>
+        <string id="menu_circuit_dplus_dmoins">D+/D-</string>
+        <string id="menu_circuit_allure">Avg. pace</string>
+        <string id="menu_circuit_distance">Distance</string>
+        <string id="menu_circuit_chrono">Timer</string>
+    </strings>
+
+    <fitContributions>
+        <!-- v2.1.2 : REFONTE COMPLÈTE (20 champs, voir matrice fournie par l'utilisateur).
+             Chaque champ n'est réellement créé à l'exécution que si son toggle dédié
+             (Application.Properties, réglable uniquement depuis Garmin Connect) est actif —
+             tous les IDs possibles sont néanmoins déclarés ici. Pour les paires allure/vitesse
+             (1/2, 5-8, 12-15), un seul des deux champs de chaque paire est créé selon
+             pace_unit_prop ; pas de "precision" pour ces champs à type non fixe (STRING en
+             mn/km, FLOAT en km/h), comme pour les autres champs dynamiques du fichier. -->
+        <!-- RECORD (IDs 1-4) — displayInChart (pas displayInActivitySummary, réservé aux
+             valeurs SESSION uniques) pour que Connect affiche la série temporelle en graphique -->
+        <fitField id="1"  dataLabel="@Strings.label_eff_generic"        unitLabel="@Strings.unite_min_km" precision="2" sortOrder="0" displayInChart="true" chartTitle="@Strings.label_eff_generic" fillColor="FF6600"/>
+        <fitField id="2"  dataLabel="@Strings.label_eff_speed_kmh"      unitLabel="@Strings.unite_km_h" precision="1" sortOrder="1" displayInChart="true" chartTitle="@Strings.label_eff_speed_kmh" fillColor="0066FF"/>
+        <fitField id="3"  dataLabel="@Strings.label_fit_temp_bag_corr"  unitLabel="@Strings.unite_pct" precision="1" sortOrder="2" displayInChart="true" chartTitle="@Strings.label_fit_temp_bag_corr" fillColor="00AA55"/>
+        <fitField id="4"  dataLabel="@Strings.label_fit_bag_kg"         unitLabel="@Strings.unite_kg"   precision="0" sortOrder="3" displayInChart="true" chartTitle="@Strings.label_fit_bag_kg" fillColor="AA00AA"/>
+        <!-- CYCLE / LAP (IDs 5-11) -->
+        <fitField id="5"  dataLabel="@Strings.label_fit_avg_pace_std"   unitLabel="@Strings.unite_min_km" sortOrder="4" displayInActivityLaps="true"/>
+        <fitField id="6"  dataLabel="@Strings.label_fit_avg_pace_mtn"   unitLabel="@Strings.unite_min_km" sortOrder="5" displayInActivityLaps="true"/>
+        <fitField id="7"  dataLabel="@Strings.label_fit_avg_speed_std"  unitLabel="@Strings.unite_km_h" precision="1" sortOrder="6" displayInActivityLaps="true"/>
+        <fitField id="8"  dataLabel="@Strings.label_fit_avg_speed_mtn"  unitLabel="@Strings.unite_km_h" precision="1" sortOrder="7" displayInActivityLaps="true"/>
+        <fitField id="9"  dataLabel="@Strings.label_fit_effort_dist"    unitLabel="@Strings.unite_km"   precision="1" sortOrder="8" displayInActivityLaps="true"/>
+        <fitField id="10" dataLabel="@Strings.label_fit_bag_kg"         unitLabel="@Strings.unite_kg"   precision="0" sortOrder="9" displayInActivityLaps="true"/>
+        <fitField id="11" dataLabel="@Strings.label_fit_lap_vam"        unitLabel="@Strings.unite_m_h"  precision="0" sortOrder="10" displayInActivityLaps="true"/>
+        <!-- SESSION (IDs 12-20) -->
+        <fitField id="12" dataLabel="@Strings.label_fit_avg_pace_std"   unitLabel="@Strings.unite_min_km" sortOrder="11" displayInActivitySummary="true"/>
+        <fitField id="13" dataLabel="@Strings.label_fit_avg_pace_mtn"   unitLabel="@Strings.unite_min_km" sortOrder="12" displayInActivitySummary="true"/>
+        <fitField id="14" dataLabel="@Strings.label_fit_avg_speed_std"  unitLabel="@Strings.unite_km_h" precision="1" sortOrder="13" displayInActivitySummary="true"/>
+        <fitField id="15" dataLabel="@Strings.label_fit_avg_speed_mtn"  unitLabel="@Strings.unite_km_h" precision="1" sortOrder="14" displayInActivitySummary="true"/>
+        <fitField id="16" dataLabel="@Strings.label_fit_effort_dist"    unitLabel="@Strings.unite_km"   precision="1" sortOrder="15" displayInActivitySummary="true"/>
+        <fitField id="17" dataLabel="@Strings.label_fit_temp_corr"      unitLabel="@Strings.unite_vide" precision="0" sortOrder="16" displayInActivitySummary="true"/>
+        <fitField id="18" dataLabel="@Strings.label_fit_bag_kg"         unitLabel="@Strings.unite_kg"   precision="0" sortOrder="17" displayInActivitySummary="true"/>
+        <fitField id="19" dataLabel="@Strings.label_fit_climb_coeff"    unitLabel="@Strings.unite_mult" precision="1" sortOrder="18" displayInActivitySummary="true"/>
+        <fitField id="20" dataLabel="@Strings.label_fit_descent_coeff"  unitLabel="@Strings.unite_mult" precision="1" sortOrder="19" displayInActivitySummary="true"/>
+    </fitContributions>
+</resources>

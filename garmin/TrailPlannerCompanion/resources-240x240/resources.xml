@@ -1,0 +1,12 @@
+<resources>
+    <fonts>
+        <font id="EnduranceIconsMed" filename="fonts/icon.fnt" />
+        <font id="EnduranceIconsParam" filename="fonts/paramicon.fnt" />
+        <font id="EnduranceIconsNotif" filename="fonts/notificon.fnt" />
+        <font id="EnduranceIconsPace" filename="fonts/paceicon.fnt" />
+    </fonts>
+
+    <bitmaps>
+        <bitmap id="BgIcon" filename="fonts/bgicon_0.png" />
+    </bitmaps>
+</resources>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes propres à l'appli Trail Planner Companion (ceux d'EndurancePro sont dans strings.xml). -->
+<strings>
+    <string id="AppName">Trail Planner Companion</string>
+    <string id="tp_menu_sub">Profil, tours, plan</string>
+    <string id="tp_zoom">Zoom du profil</string>
+    <string id="tp_zoom_all">Parcours entier</string>
+    <string id="tp_zoom_20">20 km</string>
+    <string id="tp_zoom_10">10 km</string>
+    <string id="tp_zoom_5">5 km</string>
+    <string id="tp_zoom_2">2 km</string>
+    <string id="tp_slopes">Couleurs des pentes</string>
+    <string id="tp_slopes_sub">Vert à violet</string>
+    <string id="tp_slopes_prompt">Profil coloré selon la pente : montée vert &lt; 5 %, jaune 5-10 %, orange 10-15 %, rouge 15-25 %, violet 25 % et plus ; descente bleu clair jusqu'à -15 %, bleu foncé au-delà</string>
+    <string id="tp_lap_pass">Tour = passage au point</string>
+    <string id="tp_lap_pass_prompt">Le bouton Lap valide le passage au point le plus proche (2e tour au ravito = départ) ; à désactiver si le tour automatique est utilisé</string>
+    <string id="tp_reload">Recharger le plan</string>
+    <string id="tp_resume">Reprendre</string>
+    <string id="tp_save">Enregistrer</string>
+    <string id="tp_discard">Supprimer</string>
+    <string id="tp_discard_ask">Supprimer la sortie ?</string>
+    <string id="tp_no">Non</string>
+    <string id="tp_yes">Oui, supprimer</string>
+    <string id="tp_paused">Pause</string>
+    <string id="tp_resume_hint">START : reprendre</string>
+    <string id="tp_start">START : départ</string>
+    <string id="tp_off_route">Hors parcours</string>
+    <string id="tp_lap">Tour</string>
+    <string id="tp_passage">Passage</string>
+    <string id="tp_depart">Départ</string>
+    <string id="tp_saved">Sortie enregistrée</string>
+    <string id="tp_discarded">Sortie supprimée</string>
+    <string id="tp_quit">BACK : quitter</string>
+    <string id="tp_no_code">Saisis le code montre</string>
+    <string id="tp_unknown_code">Code inconnu</string>
+    <string id="tp_no_phone">Téléphone non connecté</string>
+    <string id="tp_too_big">Plan trop gros pour la montre</string>
+    <string id="tp_plan_error">Plan : erreur</string>
+    <string id="tp_no_course">Aucune course envoyée</string>
+    <string id="tp_waiting">Plan en attente...</string>
+    <string id="tp_no_profile">Pas de profil</string>
+</strings>
