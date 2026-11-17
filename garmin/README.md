@@ -55,7 +55,11 @@ si le tronçon prend plus de temps que prévu, les rappels s'espacent et les pro
 jusqu'au ravito suivant. L'écran indique le produit et l'eau à boire d'ici le rappel suivant (eau du
 tronçon / nombre de produits). Réglage « Rappel nutrition » dans Garmin Connect : -1 (par défaut) = ces
 rappels, N = « Manger / boire » toutes les N minutes, 0 = aucun rappel. Sans produits dans le profil
-athlète, rappel « Manger / boire » au rythme des glucides du plan.
+athlète, rappel « Manger / boire » au rythme des glucides du plan. **Notifications** (réglage « Notifications » sur la montre,
+activé par défaut, aussi dans Garmin Connect) : chaque rappel « Manger / boire » s'affiche aussi en
+notification de la montre (alerte du champ de données : écran orange avec le produit et l'eau à boire,
+par-dessus l'écran de l'activité en cours, même si le champ Trail Planner n'est pas affiché) ; désactivé,
+le rappel reste seulement dans le champ.
 
 **Arrivée à un ravito.** Dès le passage (position ou 1er tour Lap), l'écran du ravito affiche :
 « Pause 3:25 / 5:00 » (temps depuis l'arrivée / arrêt prévu, en rouge une fois dépassé), le tronçon suivant

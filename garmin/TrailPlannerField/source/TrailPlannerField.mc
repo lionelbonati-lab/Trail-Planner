@@ -347,6 +347,26 @@ class TrailPlannerField extends WatchUi.DataField {
         return plan != null ? plan.fuelMin : 0;
     }
 
+    // Rappel « Manger / boire » en notification de la montre (alerte du champ de données, affichée
+    // par-dessus l'écran de l'activité en cours, quel qu'il soit), si le réglage « Notifications » est
+    // activé (par défaut). k : produit du plan (indice dans foodP), ou -1 sans produit.
+    function notifyFood(k as Number) as Void {
+        if (Application.Properties.getValue("notify") == false || !(self has :showAlert)) {
+            return;
+        }
+        var label = null;
+        var water = 0.0;
+        if (plan != null && k >= 0 && k < plan.foodP.size()) {
+            label = plan.foodLabel(k);
+            water = plan.foodWater(k);
+        }
+        try {
+            showAlert(new FoodAlert(label, water));
+        } catch (e) {
+            // Alerte refusée (une autre est affichée) : le rappel reste dans le champ.
+        }
+    }
+
     function vibrate(strong as Boolean) as Void {
         var on = Application.Properties.getValue("vibrate");
         if (on == false) {
@@ -498,6 +518,7 @@ class TrailPlannerField extends WatchUi.DataField {
                 foodMsg = hit;
                 fuelUntil = now + 30;
                 vibrate(false);
+                notifyFood(hit);
             }
             if (food >= n || foodAt >= 0) {
                 foodSync = false;
@@ -512,6 +533,7 @@ class TrailPlannerField extends WatchUi.DataField {
                     foodMsg = -1;
                     fuelUntil = now + 30;
                     vibrate(false);
+                    notifyFood(-1);
                 }
             }
         }
@@ -1055,5 +1077,40 @@ class TrailPlannerField extends WatchUi.DataField {
         }
         lines.add(cutText != null ? [cutText, Graphics.FONT_XTINY, cutColor, cutWarn ? 0 : 3] : ["Arrivée " + clock(finishEta), Graphics.FONT_XTINY, fg, 3]);
         drawLines(dc, lines);
+    }
+}
+
+// Notification « Manger / boire » : produit prévu et eau à boire d'ici le rappel suivant, en blanc sur
+// orange comme le rappel du champ, affichée par la montre par-dessus l'écran de l'activité.
+class FoodAlert extends WatchUi.DataFieldAlert {
+    private var _label as String or Null;
+    private var _water as Float;
+
+    function initialize(label as String or Null, water as Float) {
+        DataFieldAlert.initialize();
+        _label = label;
+        _water = water;
+    }
+
+    function onUpdate(dc as Graphics.Dc) as Void {
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_ORANGE);
+        dc.clear();
+        var lines = [["Manger / boire", Graphics.FONT_SMALL]] as Array<Array>;
+        if (_label != null) {
+            lines.add([_label as String, Graphics.FONT_MEDIUM]);
+        }
+        if (_water >= 0.05) {
+            lines.add(["Boire " + _water.format("%.1f") + " L", Graphics.FONT_SMALL]);
+        }
+        var total = 0;
+        for (var i = 0; i < lines.size(); i++) {
+            total += dc.getFontHeight(lines[i][1] as Graphics.FontDefinition);
+        }
+        var y = (dc.getHeight() - total) / 2;
+        for (var i = 0; i < lines.size(); i++) {
+            var font = lines[i][1] as Graphics.FontDefinition;
+            dc.drawText(dc.getWidth() / 2, y, font, lines[i][0] as String, Graphics.TEXT_JUSTIFY_CENTER);
+            y += dc.getFontHeight(font);
+        }
     }
 }
