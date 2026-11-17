@@ -179,6 +179,20 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   tout l'écran, a une flèche de retour en haut à gauche (confirmation si un tracé existant a été modifié ; un
   nouveau tracé reste en brouillon).
 
+**Après la course**
+- **Debrief de chaque sortie** (courses et parcours d'entraînement, un par départ) : passages relevés par la montre
+  (champ Trail Planner) ou notés en mode course, figés dans le parcours avec le plan d'alors. Montre et mode course
+  d'une même sortie (départs à moins de 30 min) sont fusionnés ; la montre prime, une correction à la main prime sur
+  tout. Les relevés de la montre sont récupérés quand l'appli est ouverte (pendant ou après la sortie, tant qu'une
+  autre activité ne les a pas remplacés). Sortie terminée (arrivée relevée, ou 3 h sans nouvelles) : proposée en haut
+  du parcours jusqu'à ce qu'elle soit ouverte ; liste « Sorties et debriefs ».
+- **Page debrief** (dans l'appli seulement) : arrivée, temps et écart au plan, arrêts aux ravitos ; profil façon page
+  assistance avec l'avance ou le retard sous chaque point ; carte (toucher le tracé : heure de passage) ; temps de
+  passage prévus (recalés sur le vrai départ) et réels, écart, marge sur les barrières, heure corrigeable (départ,
+  passage, départ d'un ravito) ; note par point et bilan ; tronçons prévu / réel (allure, D+ / D-, arrêt compris
+  si le départ du ravito n'est pas connu) ; arrêts aux ravitos ; **niveau recalé** d'après la sortie (arrêts réels
+  remplacés par les arrêts prévus), à appliquer au profil.
+
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`), en plein écran : écart au plan, barre de progression du tronçon
   entre deux ravitos (points de passage et produits à prendre), prochain point (distance, D+ et D- restants,
