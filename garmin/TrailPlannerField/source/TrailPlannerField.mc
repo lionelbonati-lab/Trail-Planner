@@ -18,6 +18,9 @@ class TrailPlannerField extends WatchUi.DataField {
     // Le retard (ou l'avance) se prolonge sur la suite, amorti de 30 % et borné (comme l'app web).
     const DAMPING = 0.7;
     const CUTOFF_WARN = 1800; // s : alerte si la marge passe sous 30 min
+    const START_ZONE = 2000.0; // m : calage immédiat sur le début du parcours
+    const CONFIRM_S = 120;     // s sur le tracé avant de se caler ailleurs (départ en cours de parcours)
+    const BRIDGE_MAX = 500.0;  // m de distance montre au plus sans position GPS, si l'on était sur le tracé
 
     var plan = null;          // Plan ou null
     var status = "";          // message affiché sans plan
@@ -54,6 +57,9 @@ class TrailPlannerField extends WatchUi.DataField {
     var matchedAt = 0.0;      // distance montre (m) à ce calage
     var offCount = 0;         // relevés GPS consécutifs hors du tracé
     var offRoute = false;     // hors du tracé depuis 5 relevés
+    var candidate = -1.0;     // premier calage en attente de confirmation : m le long du parcours (-1 : aucun)...
+    var candidateAt = 0.0;    // ... distance montre (m) à ce relevé...
+    var candidateSince = 0;   // ... et début de la présence sur le tracé (s Unix)
     var offBy = 0;            // écart au tracé (m)
     var etas = [] as Array<Number>; // heure estimée (s Unix) de chaque point, recalculée aux passages
     var lapped = {};          // points validés par un tour (bouton Lap)
@@ -80,6 +86,7 @@ class TrailPlannerField extends WatchUi.DataField {
             plan = parsePlan(text);
             planText = plan != null ? text : null;
             matched = -1.0;
+            candidate = -1.0;
             offCount = 0;
             offRoute = false;
             etas = [] as Array<Number>;
@@ -141,34 +148,33 @@ class TrailPlannerField extends WatchUi.DataField {
     }
 
     // Distance le long du parcours (m).
-    // Avec le tracé du plan (ligne G) : position GPS calée sur le tracé, près de la position attendue
-    // (dernier calage + distance montre parcourue depuis) ; la distance montre ne sert qu'entre deux
-    // relevés, sans erreur cumulée ni souci de parcours modifié (raccourci, détour). Hors du tracé, la
-    // distance reste figée (« Hors parcours ») ; sans position GPS, elle avance avec la distance montre.
+    // Avec le tracé du plan (ligne G) : la position vient du GPS, calée sur le tracé près de la position
+    // attendue (dernier calage + distance montre parcourue depuis), sans erreur cumulée ni souci de
+    // parcours modifié (raccourci, détour). Premier calage : voir firstMatch (croiser le parcours ne suffit
+    // pas). Hors du tracé, la distance reste figée (« Hors parcours »). Sans position GPS utilisable (forêt
+    // dense, tunnel) : la distance montre prend le relais, 500 m au plus, seulement si le dernier relevé
+    // était sur le tracé ; sinon la distance reste figée, et elle n'avance jamais avant le premier calage.
     // Sans tracé (plan d'une ancienne version) : navigation du parcours si elle est active et
     // cohérente, sinon distance parcourue.
     function courseDistance(info as Activity.Info) as Float {
         var walked = info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
         if (plan.hasRoute()) {
             var since = walked - matchedAt;
-            var expected = matched >= 0 ? matched + since : walked;
             var loc = info.currentLocation;
             var q = info.currentLocationAccuracy;
             // 3 = Position.QUALITY_USABLE (module Position non importé : pas de permission nécessaire).
             if (loc == null || (q != null && q < 3)) {
-                return expected;
-            }
-            // Pas encore calé et hors du tracé (échauffement…) : recherche sur tout le parcours toutes les 5 s.
-            if (matched < 0 && offCount % 5 != 0) {
-                offCount++;
-                offRoute = offCount >= 5;
-                return 0.0;
+                if (matched >= 0 && offCount == 0) {
+                    return matched + (since < BRIDGE_MAX ? since : BRIDGE_MAX);
+                }
+                return matched >= 0 ? matched : 0.0;
             }
             var deg = loc.toDegrees();
             var maxOff = plan.onRouteMax();
-            var r = matched < 0
-                ? plan.locate(deg[0], deg[1], 0.0, plan.total + 1000.0, expected, 0.1, maxOff)
-                : plan.locate(deg[0], deg[1], matched - 300.0, matched + since * 1.2 + 1000.0, expected, 1.0, maxOff);
+            if (matched < 0) {
+                return firstMatch(deg, walked, maxOff);
+            }
+            var r = plan.locate(deg[0], deg[1], matched - 300.0, matched + since * 1.2 + 1000.0, matched + since, 1.0, maxOff);
             if (r[0] != null) {
                 matched = r[0];
                 matchedAt = walked;
@@ -179,7 +185,7 @@ class TrailPlannerField extends WatchUi.DataField {
             offCount++;
             offRoute = offCount >= 5;
             offBy = r[1] != null && r[1] > 0 ? r[1].toNumber() : 0;
-            return matched >= 0 ? matched : 0.0;
+            return matched;
         }
         var d = walked;
         var toDest = info.distanceToDestination;
@@ -194,6 +200,43 @@ class TrailPlannerField extends WatchUi.DataField {
             }
         }
         return d + lapOffset;
+    }
+
+    // Premier calage sur le tracé : recherche sur tout le parcours toutes les 5 s, au plus près du départ.
+    // Sur les 2 premiers km du parcours : calé tout de suite. Ailleurs (départ en cours de parcours) : la
+    // position doit rester sur le tracé 2 min de suite, suivie près de la position attendue, sinon on
+    // repart de zéro ; croiser le parcours ne suffit donc pas. Renvoie 0 tant que ce n'est pas fait.
+    function firstMatch(deg as Array, walked as Float, maxOff as Float) as Float {
+        if (candidate < 0 && offCount % 5 != 0) {
+            offCount++;
+            offRoute = offCount >= 5;
+            return 0.0;
+        }
+        var now = Time.now().value();
+        var r = candidate < 0
+            ? plan.locate(deg[0], deg[1], 0.0, plan.total + 1000.0, 0.0, 0.1, maxOff)
+            : plan.locate(deg[0], deg[1], candidate - 300.0, candidate + (walked - candidateAt) * 1.2 + 300.0, candidate + walked - candidateAt, 1.0, maxOff);
+        if (r[0] == null) {
+            candidate = -1.0;
+            offCount++;
+            offRoute = offCount >= 5;
+            offBy = r[1] != null && r[1] > 0 ? r[1].toNumber() : 0;
+            return 0.0;
+        }
+        if (candidate < 0) {
+            candidateSince = now;
+        }
+        candidate = r[0];
+        candidateAt = walked;
+        offCount = 0;
+        offRoute = false;
+        if (candidate > START_ZONE && now - candidateSince < CONFIRM_S) {
+            return 0.0;
+        }
+        matched = candidate;
+        matchedAt = walked;
+        candidate = -1.0;
+        return matched;
     }
 
     // Heures estimées des points d'après ce qui a déjà été fait : rythme réel au dernier point passé
@@ -398,6 +441,7 @@ class TrailPlannerField extends WatchUi.DataField {
             alerted = {};
             nextFuel = 0.0;
             matched = -1.0;
+            candidate = -1.0;
             matchedAt = 0.0;
             offCount = 0;
             offRoute = false;

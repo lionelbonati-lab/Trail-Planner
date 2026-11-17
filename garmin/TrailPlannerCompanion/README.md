@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.5.2, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.5.3, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -83,7 +83,11 @@ météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (pop
   d'EndurancePro, sur tous les écrans, avec vibration.
 
 C'est aussi le **moteur de suivi de toute l'appli** : position calée sur le tracé, passages (position ou
-Lap), estimations ; le profil, la carte et l'envoi à l'assistance lisent ses données.
+Lap), estimations ; le profil, la carte et l'envoi à l'assistance lisent ses données. La position vient
+du **GPS** et non de la distance parcourue, comme dans le champ (voir `garmin/README.md`, « Position le long
+du parcours ») : premier calage sur les 2 premiers km ou après 2 min de suite sur le tracé ailleurs, rien ne
+compte avant ; sans GPS, relais par la distance de la montre 500 m au plus, seulement si tu étais sur le
+tracé juste avant.
 
 **Bascule automatique** : à l'arrivée à un ravito, l'appli affiche l'écran Trail Planner (quel que soit
 l'écran en cours), puis revient à l'écran d'avant au départ du ravito. Pas de bascule par-dessus un menu
@@ -241,7 +245,7 @@ de fichier :
 - le menu a le dossier Trail Planner ; un nouveau code relance le téléchargement du plan ;
 - distance restante du plan Trail Planner (sans parcours Garmin suivi), réglage « Distance restante »
   respecté ;
-- `AppName` et `app_version` (« 0.5.2 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.5.3 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

@@ -242,6 +242,7 @@ button.danger { color: var(--danger); }
 .live-delta { font-size: 18px; font-weight: 650; margin-top: 4px; }
 .live-delta.late { color: var(--warn); }
 .live-delta.early { color: var(--ok); }
+.live-delta.off { color: var(--warn); }
 .live-sub { color: var(--muted); margin-top: 4px; }
 .live-next-name { font-size: 22px; font-weight: 700; margin: 2px 0; }
 .live-at { border: 2px solid var(--series-1); }

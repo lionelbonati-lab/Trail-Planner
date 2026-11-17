@@ -104,8 +104,15 @@ Trail Planner) pour couper cette fonction.
 parcours ; à chaque seconde, la position GPS est ramenée sur ce tracé, près de l'endroit attendu (dernier
 calage + distance faite depuis). La distance de la montre ne sert qu'entre deux relevés : pas d'erreur
 cumulée (distance GPS trop longue ou trop courte), et un raccourci ou un détour se recale dès le retour sur
-le tracé. Hors du tracé (5 s de suite), la distance reste figée et le champ affiche **« Hors parcours ·
-N m »** en rouge ; sans GPS (tunnel…), elle avance avec la distance de la montre. Un aller-retour ou une
+le tracé. **Premier calage** : tout de suite sur les 2 premiers km du parcours ; ailleurs (départ en cours
+de parcours), seulement après 2 min de suite sur le tracé : croiser le parcours pendant une autre sortie
+ne fait rien avancer. Tant que tu n'es pas calé, la position reste au départ : aucun passage, rien de
+compté avec la distance de la montre. Hors du tracé (5 s de suite), la distance reste figée et le champ
+affiche **« Hors parcours · N m »** en rouge. Sans GPS utilisable (forêt dense, tunnel, démarrage), la
+distance de la montre prend le relais **500 m au plus**, et seulement si tu étais sur le tracé juste avant ;
+sinon la position reste figée jusqu'au retour du GPS. La page d'assistance compare aussi la position GPS
+reçue au tracé : à plus de 300 m, elle affiche « Hors parcours » ou « Pas encore sur le parcours », sans
+avancée estimée. Un aller-retour ou une
 boucle qui repasse au même endroit ne trompe pas le calage (il cherche près de la position attendue).
 Si le parcours change (modifié dans l'app web), la montre reçoit le nouveau plan dans les 5 min et se
 recale sur tout le parcours, en gardant les passages déjà notés. Plan d'une ancienne version (sans

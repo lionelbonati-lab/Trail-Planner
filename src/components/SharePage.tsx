@@ -4,7 +4,7 @@ import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { awayFrom } from '../lib/live'
 import { showNotice } from '../lib/notify'
-import { reportFor, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
+import { offText, reportFor, reportOffCourse, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
@@ -456,6 +456,8 @@ export function ShareView({
   const plan = snap.w ? parseWatchPlan(snap.w) : null
   const nowSec = nowMs / 1000
   const watch = report && plan && nowSec - report.t < WATCH_FRESH_S ? watchStatus(report, plan, nowSec) : null
+  // Position GPS du relevé loin du tracé : hors parcours (ou pas encore dessus), sans avancée estimée.
+  const offCourse = watch ? reportOffCourse(snap, report) : null
   if (watch && plan && plan.cps.length === snap.rows.length) {
     snap = {
       ...snap,
@@ -495,7 +497,9 @@ export function ShareView({
   // Coureur au ravito : arrivé (passage noté), pas encore reparti. Montre : position à moins de 150 m
   // après le point (300 m après une base de vie). Mode course : dernier passage saisi, sans « Reparti ».
   const atRavito = watch
-    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayFrom(r.kind) && watch.dist > r.dist - 2 * awayFrom(r.kind))
+    ? offCourse
+      ? undefined
+      : [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayFrom(r.kind) && watch.dist > r.dist - 2 * awayFrom(r.kind))
     : snap.live && lastDone && isRavitoKind(lastDone.kind) && !lastDone.left
       ? lastDone
       : undefined
@@ -516,14 +520,16 @@ export function ShareView({
   )
   // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
   const km = (d: number) => (d / 1000).toFixed(1).replace('.', ',')
-  const estimate = watch && report && plan ? estimatedDist(report, plan, nowSec) : null
+  const estimate = watch && report && plan && !offCourse ? estimatedDist(report, plan, nowSec) : null
   const runner: Runner | null =
     watch && report
       ? {
           dist: watch.dist,
           lat: report.lat,
           lon: report.lon,
-          label: `Dernier relevé : km ${km(watch.dist)} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
+          label: offCourse
+            ? `${offCourse.notStarted ? 'Pas encore sur le parcours' : 'Hors parcours'} : à ${offText(offCourse.off)} du tracé · il y a ${Math.max(0, Math.round(watch.age / 60))} min`
+            : `Dernier relevé : km ${km(watch.dist)} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
           estimate: !atRavito && estimate !== null ? { dist: estimate, label: `Estimé maintenant : km ${km(estimate)}` } : null,
         }
       : snap.live && lastDone
@@ -605,14 +611,23 @@ export function ShareView({
         ) : (
         <>
         {/* Pointeur : position estimée entre deux relevés (sinon celle du dernier relevé). */}
-        <CourseProfile profile={snap.profile} rows={snap.rows} atId={atRavito?.id ?? null} position={watch ? (atRavito ? watch.dist : (estimate ?? watch.dist)) : null} />
+        <CourseProfile profile={snap.profile} rows={snap.rows} atId={atRavito?.id ?? null} position={watch && !offCourse?.notStarted ? (atRavito ? watch.dist : (estimate ?? watch.dist)) : null} />
         {watch && report ? (
           <section className="live-hero">
             <div className="live-label">Montre · en course depuis</div>
             <div className="live-clock">{formatDuration(watch.elapsed)}</div>
-            <div className={`live-delta ${watch.delta > 60 ? 'late' : 'early'}`}>
-              km {(watch.dist / 1000).toFixed(1)} · {signedMin(watch.delta)} sur le plan
-            </div>
+            {offCourse ? (
+              <>
+                <div className="live-delta off">
+                  {offCourse.notStarted ? 'Pas encore sur le parcours' : 'Hors parcours'} · à {offText(offCourse.off)} du tracé
+                </div>
+                {!offCourse.notStarted && <div className="live-sub">Dernière position sur le parcours : km {km(watch.dist)}</div>}
+              </>
+            ) : (
+              <div className={`live-delta ${watch.delta > 60 ? 'late' : 'early'}`}>
+                km {(watch.dist / 1000).toFixed(1)} · {signedMin(watch.delta)} sur le plan
+              </div>
+            )}
             {!atRavito && estimate !== null && estimate > watch.dist + 50 && (
               <div className="live-sub">≈ km {km(estimate)} maintenant (estimé d'après son rythme, entre deux relevés)</div>
             )}

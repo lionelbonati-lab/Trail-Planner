@@ -4,7 +4,7 @@ import { assistAllowed, FINISH_ID } from './assist'
 import { elevationGain, indexAt } from './gpx'
 import { liveStatus } from './live'
 import { isFreeStart } from './plan'
-import { simplifyRoute, type RoutePoint } from './routeGeo'
+import { routeOffset, simplifyRoute, type RoutePoint } from './routeGeo'
 import { watchPlan } from './watch'
 import { reportCourse, type WatchReport } from './watchLive'
 import type { DebriefReport } from './debrief'
@@ -223,6 +223,28 @@ export function reportFor(
   return report
 }
 
+/**
+ * Au-delà de cet écart au tracé (m), la position GPS du relevé est hors du parcours (la montre se cale à
+ * 50 à 250 m selon la finesse du tracé qu'elle a reçu ; le tracé de la page est simplifié lui aussi).
+ */
+export const OFF_COURSE_M = 300
+
+/**
+ * Relevé dont la position GPS est loin du tracé de la course : écart (m), et si le coureur n'a encore
+ * rien fait du parcours (pas de passage, moins de 200 m). Null : sur le parcours, ou position inconnue.
+ */
+export function reportOffCourse(snap: Pick<ShareSnapshot, 'route'>, report: WatchReport | null): { off: number; notStarted: boolean } | null {
+  if (!report || report.lat === undefined || report.lon === undefined || !snap.route) return null
+  const r = routeOffset(snap.route, report.lat, report.lon)
+  if (!r || r.off <= OFF_COURSE_M) return null
+  return { off: r.off, notStarted: !report.p && report.d < 200 }
+}
+
+/** Écart au tracé lisible : « 450 m », « 3,2 km ». */
+export function offText(m: number): string {
+  return m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`
+}
+
 /** Sortie terminée depuis moins de 12 h : le lien permanent la montre encore (sinon la prochaine course). */
 export const RUNNER_RECENT_MS = 12 * 3600_000
 /** Course de la liste de l'appli encore proposée par le lien permanent jusqu'à 48 h après son départ. */
@@ -261,21 +283,24 @@ export function runnerCourse(
 }
 
 /**
- * Bandeau du lien permanent : « En course », « Sortie terminée » (arrivée relevée), « Dernière sortie »
- * (plus de relevé depuis 3 h), « Prochaine course · samedi 30/05 » (« Course · … » une fois l'heure de
+ * Bandeau du lien permanent : « En course », « Hors parcours » / « Pas encore sur le parcours » (position
+ * GPS loin du tracé), « Sortie terminée » (arrivée relevée), « Dernière sortie » (plus de relevé depuis 3 h), « Prochaine course · samedi 30/05 » (« Course · … » une fois l'heure de
  * départ passée), « Dernière sortie · samedi 30/05 » (dernière course passée).
  * `report` : le relevé de la course montrée (voir reportFor).
  */
 export function runnerBanner(
   mode: RunnerMode,
-  snap: Pick<ShareSnapshot, 'plannedStart' | 'start' | 'timeZone' | 'totalDist' | 'freeStart'>,
+  snap: Pick<ShareSnapshot, 'plannedStart' | 'start' | 'timeZone' | 'totalDist' | 'freeStart' | 'route'>,
   report: WatchReport | null,
   nowMs: number,
 ): string {
   if (mode === 'activity') {
     if (!report) return 'Dernière sortie'
     if (snap.totalDist > 0 && report.d >= snap.totalDist - 300) return 'Sortie terminée'
-    return nowMs - report.t * 1000 < SHARE_SILENT_MS ? 'En course' : 'Dernière sortie'
+    if (nowMs - report.t * 1000 >= SHARE_SILENT_MS) return 'Dernière sortie'
+    // Position GPS loin du tracé : la montre n'est pas (ou plus) sur le parcours.
+    const away = reportOffCourse(snap, report)
+    return away ? (away.notStarted ? 'Pas encore sur le parcours' : 'Hors parcours') : 'En course'
   }
   const startMs = Date.parse(snap.plannedStart ?? snap.start)
   const label = mode === 'last' ? 'Dernière sortie' : startMs <= nowMs ? 'Course' : 'Prochaine course'

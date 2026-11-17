@@ -69,6 +69,30 @@ export function routePointAt(route: RoutePoint[], d: number): { lat: number; lon
   return { lat: a0 + (a1 - a0) * f, lon: o0 + (o1 - o0) * f }
 }
 
+/**
+ * Écart (m) d'une position au tracé, et distance le long du tracé du point le plus proche (projection
+ * locale plane, assez précise à l'échelle d'un parcours). Null sans tracé.
+ */
+export function routeOffset(route: RoutePoint[], lat: number, lon: number): { off: number; dist: number } | null {
+  if (route.length < 2) return null
+  const ky = 111195
+  const kx = ky * Math.cos((lat * Math.PI) / 180)
+  let best: { off: number; dist: number } | null = null
+  for (let i = 1; i < route.length; i++) {
+    const [d0, a0, o0] = route[i - 1]
+    const [d1, a1, o1] = route[i]
+    const x0 = (o0 - lon) * kx
+    const y0 = (a0 - lat) * ky
+    const dx = (o1 - o0) * kx
+    const dy = (a1 - a0) * ky
+    const len2 = dx * dx + dy * dy
+    const f = len2 > 0 ? Math.min(1, Math.max(0, -(x0 * dx + y0 * dy) / len2)) : 0
+    const off = Math.hypot(x0 + dx * f, y0 + dy * f)
+    if (!best || off < best.off) best = { off, dist: d0 + (d1 - d0) * f }
+  }
+  return best
+}
+
 /** Partie du tracé avant (`done`) et après (`todo`) la distance `d`, le point de coupure inclus des deux côtés. */
 export function splitRouteAt(route: RoutePoint[], d: number): { done: [number, number][]; todo: [number, number][] } {
   const cut = routePointAt(route, d)
