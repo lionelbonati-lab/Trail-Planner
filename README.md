@@ -137,9 +137,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
 - Onglet **Nutrition** : tes produits avec leur **type** (solide, liquide, gel ; l'eau est un liquide sans glucides), une case **Sur ravito** (aliment mangé ou bu au ravito, compté dans le tronçon qui en part mais pas emporté : ni au départ, ni dans le sac, les dropbags ou les rappels de la montre ; cochée d'office pour les aliments de ravitaillement de la bibliothèque), une case **Flasque** (poudre pour une
   flasque de 500 ml ; pour une eau, liquide sans glucides : cochée, elle remplit les flasques d'eau, décochée, elle est ignorée), leur marque, les glucides et le sodium **au 100 g** et le **poids** d'une portion (la portion en est
   déduite) et la part des glucides ; une eau minérale salée comme la St-Yorre est mélangée à l'eau des flasques, juste assez
-  pour le sodium visé. **Bibliothèque de produits** : aliments fréquents aux ravitaillements (banane, orange, fruits secs,
+  pour le sodium visé, puis à l'isotonique si les flasques d'eau ne suffisent pas (ou s'il n'y en a pas). **Produits salés**
+  (moins de 5 g de glucides par portion : bouillon, saucisson, salt caps) : comptés pour le sodium qui manque au tronçon, au
+  ravito de départ (deux portions au plus) ou emportés ; **ordre des sources de sodium** réglable (produits salés du ravito,
+  produits salés emportés, eau minérale salée), le sel complète. **Bibliothèque de produits** : aliments fréquents aux ravitaillements (banane, orange, fruits secs,
   pain d'épices, chips, fromage, bouillon, coca, soupe, St-Yorre…) et produits Baouw, Näak (dont la boisson Ultra Energy), TA Energy (dont l'Energy Drink Mix), Overstim.s, Maurten,
-  Sponser et Decathlon (dont les barres Clak et pâte d'amande), saveurs aux apports presque identiques regroupées ; valeurs indicatives, « Ajouter » les copie dans
+  Sponser (dont les Liquid Energy en sachet de 35 g, Salty et Ultra 25 g, et les Salt Caps) et Decathlon (dont les barres Clak et pâte d'amande), saveurs aux apports presque identiques regroupées ; valeurs indicatives, « Ajouter » les copie dans
   tes produits. Carte **Nutrition** de chaque course : glucides, eau et sodium par heure, **marque présente aux
   ravitaillements** (« Ravitaillement » pour les aliments servis par l'organisation) et **produits retenus** (une liste :
   chaque ligne choisit un produit, « Ajouter un produit » en ajoute une).

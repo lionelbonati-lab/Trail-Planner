@@ -109,7 +109,7 @@ export function watchPlan(race: Race, athlete: Athlete, track: Track, sim: SimRe
       const cut = s.cp.cutoff ? Math.round(zonedToUtc(s.cp.cutoff, race.env.timeZone).getTime() / 1000) : 0
       return `C|${Math.round(s.to)}|${Math.round(s.arrival)}|${Number.isFinite(cut) ? cut : 0}|${KIND[s.cp.kind] ?? 'i'}|${pointName(s.cp.name)}|${Math.round(s.cp.stopMin * 60)}|${clean((s.cp.notes ?? '').replace(/[|\s]+/g, ' '), 40)}${s.cp.kind === 'base' ? '|b' : ''}`
     }),
-    ...foodLines(nutritionPlan(race, sim, raceProducts(race, athlete.products)), sim.splits),
+    ...foodLines(nutritionPlan(race, sim, raceProducts(race, athlete.products), athlete.sodiumOrder), sim.splits),
   ]
   const base = lines.join('\n')
   // Taille en octets (accents des noms sur 2 octets) ; les lignes E et G n'ont que des caractères ASCII.
@@ -167,6 +167,7 @@ export function foodLines(legs: Leg[], splits: SplitRow[]): string[] {
 /**
  * Eau du sac pour la montre, comme le plan : « 1.2 L : 2 eau + 1 iso » ; avec un mélange d'eau minérale,
  * « 1.2 L : 2 St-Yorre+eau + 1 iso;St-Yorre 200 + eau 300 ml » (« ; » : ligne suivante sur la montre).
+ * Eau minérale aussi dans l'isotonique : « 0.5 L : 1 iso+St-Yorre;iso : St-Yorre 250 + eau 250 ml ».
  */
 export function watchWaterText(leg: Leg): string {
   if (!(leg.water > 0)) return ''
@@ -174,12 +175,17 @@ export function watchWaterText(leg: Leg): string {
   const mix = leg.flasks.mix ?? 0
   const mineral = waterId ? leg.products.find((x) => x.product.id === waterId)?.product.name : undefined
   const name = mineral ? clean(mineral.replace(/[;,]/g, ' '), 12) : ''
-  const kind = !mineral ? 'eau' : mix >= 1 ? name : `${name}+eau`
-  const parts = [water ? `${water} ${kind}` : '', iso ? `${iso} iso` : ''].filter(Boolean)
+  const isoMix = leg.flasks.isoMix ?? 0
+  const kind = !mineral || !(mix > 0) ? 'eau' : mix >= 1 ? name : `${name}+eau`
+  const parts = [water ? `${water} ${kind}` : '', iso ? `${iso} iso${mineral && isoMix > 0 ? `+${name}` : ''}` : ''].filter(Boolean)
   const head = `${leg.water.toFixed(1)} L${parts.length ? ` : ${parts.join(' + ')}` : " d'eau"}`
-  if (!mineral || mix >= 1 || !water) return head
-  const ml = Math.round((mix * FLASK_L * 1000) / 50) * 50
-  return `${head};${name} ${ml} + eau ${FLASK_L * 1000 - ml} ml`
+  if (!mineral) return head
+  const ml = (f: number) => Math.round((f * FLASK_L * 1000) / 50) * 50
+  const detail = [
+    water && mix > 0 && mix < 1 ? `${name} ${ml(mix)} + eau ${FLASK_L * 1000 - ml(mix)} ml` : '',
+    iso && isoMix > 0 && isoMix < 1 ? `iso : ${name} ${ml(isoMix)} + eau ${FLASK_L * 1000 - ml(isoMix)} ml` : '',
+  ].filter(Boolean)
+  return [head, ...detail].join(';')
 }
 
 /** Place maximale de la ligne E (caractères). */

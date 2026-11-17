@@ -2,7 +2,7 @@
 // Valeurs au 100 g (ou 100 ml) et poids d'une portion, relevées sur les fiches des fabricants ou des
 // revendeurs (novembre 2026) : indicatives, à vérifier sur l'étiquette. Les saveurs d'une même gamme
 // aux apports presque identiques (à quelques grammes près) sont regroupées en un seul article.
-import { withPer100 } from './nutrition'
+import { SODIUM_CARBS_MAX, withPer100 } from './nutrition'
 import type { Product, ProductType } from './types'
 
 export interface LibraryItem {
@@ -72,6 +72,10 @@ export const PRODUCT_LIBRARY: LibraryItem[] = [
   // Sponser.
   { id: 'sponser-liquid', brand: 'Sponser', name: 'Liquid Energy tube 70 g', type: 'gel', carbs: 70, sodium: 172, weight: 70, note: 'Pure et Plus (caféine)' },
   { id: 'sponser-competition', brand: 'Sponser', name: 'Competition (dose)', type: 'liquid', carbs: 90, sodium: 580, weight: 30, flask: true, note: '30 g pour 500 ml' },
+  { id: 'sponser-le-sachet', brand: 'Sponser', name: 'Liquid Energy sachet 35 g', type: 'gel', carbs: 69, sodium: 351, weight: 35, note: 'Plus (caféine) et saveurs proches ; boîte de 40 sachets' },
+  { id: 'sponser-le-salty', brand: 'Sponser', name: 'Liquid Energy Salty sachet 35 g', type: 'gel', carbs: 57, sodium: 443, weight: 35, note: 'version salée' },
+  { id: 'sponser-le-ultra', brand: 'Sponser', name: 'Liquid Energy Ultra sachet 25 g', type: 'gel', carbs: 44, sodium: 560, weight: 25, note: 'avec MCT et acides aminés' },
+  { id: 'sponser-salt-caps', brand: 'Sponser', name: 'Salt Caps (capsule)', type: 'solid', carbs: 0, sodium: 18200, weight: 1.1, note: '200 mg de sodium par capsule (2 pour 750 à 1000 ml de boisson)' },
 
   // Decathlon.
   { id: 'dkt-gel', brand: 'Decathlon', name: 'Energy Gel 32 g', type: 'gel', carbs: 72, sodium: 100, weight: 32, note: 'courte et longue distance, toutes saveurs' },
@@ -80,9 +84,13 @@ export const PRODUCT_LIBRARY: LibraryItem[] = [
   { id: 'dkt-iso-plus', brand: 'Decathlon', name: 'Boisson ISO+ (dose)', type: 'liquid', carbs: 86, sodium: 1040, weight: 38, flask: true, note: '38 g pour 500 ml' },
 ]
 
-/** Article de la bibliothèque en produit de l'athlète (part des glucides par défaut selon le type). */
+/**
+ * Article de la bibliothèque en produit de l'athlète (part des glucides par défaut selon le type ;
+ * aucune pour un produit salé, compté pour son sodium).
+ */
 export function libraryProduct(item: LibraryItem): Product {
-  const share = item.type === 'gel' ? 0.5 : item.type === 'solid' ? 0.3 : 0
+  const salty = (item.carbs * item.weight) / 100 < SODIUM_CARBS_MAX
+  const share = salty ? 0 : item.type === 'gel' ? 0.5 : item.type === 'solid' ? 0.3 : 0
   const base: Product = {
     id: crypto.randomUUID(),
     libraryId: item.id,

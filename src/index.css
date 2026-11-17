@@ -800,3 +800,7 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
   .debrief tr { break-inside: avoid; }
   .debrief .kpi { border: 1px solid var(--line); }
 }
+.sodium-order { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.sodium-order li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.sodium-order li:last-child { border-bottom: none; }
+.sodium-order li .row { flex-shrink: 0; }

@@ -1,6 +1,6 @@
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { brandsOf, isFlask, isFlaskWater, per100, PRODUCT_TYPES, productType, withPer100 } from '../lib/nutrition'
+import { brandsOf, isFlask, isFlaskWater, isSodiumProduct, per100, PRODUCT_TYPES, productType, SODIUM_CARBS_MAX, SODIUM_SOURCES, sodiumOrder, withPer100 } from '../lib/nutrition'
 import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY } from '../lib/productLibrary'
 import type { Athlete, Product, ProductType } from '../lib/types'
 import { Card, Hint, Num } from './ui'
@@ -24,8 +24,11 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
           ses glucides et son sodium déduits du plan ; au-delà de 4 flasques, le plan signale qu'il faut remplir en route.
           L'eau est un <strong>liquide sans glucides</strong> : case Flasque cochée, elle remplit les flasques d'eau ; une eau
           minérale salée (St-Yorre : environ 850 mg de sodium par 500 ml) y est mélangée à l'eau plate, juste assez pour le sodium
-          visé ; case décochée : ignorée. Dans chaque course, la carte « Nutrition » choisit les
-          produits retenus ou la marque présente aux ravitaillements.
+          visé, puis à l'isotonique si les flasques d'eau ne suffisent pas (ou s'il n'y en a pas) ; case décochée : ignorée.
+          <strong>Produit salé</strong> (moins de {SODIUM_CARBS_MAX} g de glucides par portion : bouillon, saucisson, salt caps) : compté pour le
+          sodium qui manque au tronçon, au ravito de départ (case Sur ravito, deux portions au plus) ou emporté, dans l'ordre choisi
+          plus bas ; le sel complète. Dans chaque course, la carte « Nutrition » choisit les produits retenus ou la marque présente aux
+          ravitaillements.
         </Hint>
         <datalist id="tp-brands">{brandsOf(products).map((b) => <option key={b} value={b} />)}</datalist>
         <div className="scroll">
@@ -79,6 +82,8 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                       <span className="muted">selon l’eau</span>
                     ) : isFlaskWater(p) ? (
                       <span className="muted">eau des flasques</span>
+                    ) : isSodiumProduct(p) ? (
+                      <span className="muted" title="Compté pour le sodium manquant, pas pour les glucides">pour le sodium</span>
                     ) : productType(p) === 'liquid' && !(p.carbs > 0) ? (
                       <span className="muted">—</span>
                     ) : (
@@ -95,7 +100,7 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
                   <Plus /> Ajouter un produit
                 </button>
                 {(() => {
-                  const sum = products.filter((p) => !isFlask(p)).reduce((a, p) => a + p.share, 0)
+                  const sum = products.filter((p) => !isFlask(p) && !isSodiumProduct(p) && p.carbs >= SODIUM_CARBS_MAX).reduce((a, p) => a + p.share, 0)
                   return Math.abs(sum - 1) > 0.01 ? <span className="warn-text"> La somme des parts fait {Math.round(sum * 100)} % (elle est ramenée à 100 %).</span> : null
                 })()}
               </td>
@@ -104,6 +109,8 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         </table>
         </div>
       </Card>
+
+      <SodiumOrderCard athlete={athlete} onChange={onChange} />
 
       <Card title="Bibliothèque de produits" className="span2">
         <Hint>
@@ -154,5 +161,35 @@ export function NutritionPanel({ athlete, onChange }: { athlete: Athlete; onChan
         </div>
       </Card>
     </div>
+  )
+}
+
+/** Ordre des sources de sodium : ce qui couvre d'abord le sodium manquant d'un tronçon (le sel en dernier). */
+function SodiumOrderCard({ athlete, onChange }: { athlete: Athlete; onChange: (a: Athlete) => void }) {
+  const order = sodiumOrder(athlete.sodiumOrder)
+  const move = (i: number, by: number) => {
+    const next = [...order]
+    ;[next[i], next[i + by]] = [next[i + by], next[i]]
+    onChange({ ...athlete, sodiumOrder: next })
+  }
+  return (
+    <Card title="Sodium : ordre des sources" className="span2" fold="open">
+      <Hint>
+        Gels, barres et isotonique apportent d'abord leur sodium ; ce qui manque au tronçon vient ensuite de ces sources, dans cet ordre
+        (chacune seulement si elle fait partie des produits retenus pour la course), et le sel complète.
+      </Hint>
+      <ul className="sodium-order">
+        {order.map((src, i) => (
+          <li key={src}>
+            <span>{i + 1}. {SODIUM_SOURCES[src]}</span>
+            <span className="row tight">
+              <button className="ghost" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Monter : ${SODIUM_SOURCES[src]}`}><ArrowUp /></button>
+              <button className="ghost" onClick={() => move(i, 1)} disabled={i === order.length - 1} aria-label={`Descendre : ${SODIUM_SOURCES[src]}`}><ArrowDown /></button>
+            </span>
+          </li>
+        ))}
+        <li className="muted"><span>{order.length + 1}. Sel (le reste, au-delà de 150 mg)</span></li>
+      </ul>
+    </Card>
   )
 }

@@ -289,7 +289,7 @@ export function RacePlan({
     }
     return [bands((p) => p.tech).filter((b) => b.v > 1), bands((p) => (p.night ? 1 : 0)).filter((b) => b.v === 1)]
   })()
-  const legs = nutritionPlan(race, sim, products)
+  const legs = nutritionPlan(race, sim, products, athlete.sodiumOrder)
   const brands = brandsOf(athlete.products)
   // Dropbags prévus par l'organisation (course) : contenu jusqu'au suivant.
   const dropbags = dropbagPlan(legs, sim.splits.map((s) => s.cp))
