@@ -383,3 +383,44 @@ export function watchProfile(points: { dist: number; ele: number }[], budget = P
 export function watchUrl(projectId: string, shareId: string): string {
   return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/%28default%29/documents/shares/${shareId}?mask.fieldPaths=w`
 }
+
+/** Parcours proposés par l'écran de démarrage de l'appli montre (Trail Planner Companion). */
+export interface AppCourse {
+  id: string
+  kind: 'race' | 'route'
+  name: string
+  /** Départ prévu (s Unix), 0 pour un parcours d'entraînement ou un départ inconnu. */
+  start: number
+  /** Distance (m) et D+ (m) du parcours. */
+  dist: number
+  dPlus: number
+}
+
+/**
+ * Courses et parcours à proposer sur l'appli montre : courses à venir (départ aujourd'hui ou plus tard,
+ * `today` au format AAAA-MM-JJ), par date, puis parcours de la bibliothèque, par nom.
+ */
+export function appCourses(races: Race[], today: string): Race[] {
+  const upcoming = races.filter((r) => r.kind === 'race' && r.env.start.slice(0, 10) >= today).sort((a, b) => a.env.start.localeCompare(b.env.start))
+  const routes = races.filter((r) => r.kind === 'route').sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  return [...upcoming, ...routes]
+}
+
+/**
+ * Champ `wl` du document du code montre : liste des parcours de l'appli montre, une ligne par parcours
+ * après l'en-tête, dans l'ordre de l'écran de démarrage :
+ *
+ *   TPL1
+ *   <id>|<c course, p parcours>|<nom>|<départ s Unix ou 0>|<distance m>|<D+ m>
+ *
+ * Le plan de chaque parcours (champs w, wp, wr) est dans le document `<code>-<id>` (appDocId).
+ */
+export function watchList(courses: AppCourse[]): string {
+  return ['TPL1', ...courses.map((c) => [c.id, c.kind === 'race' ? 'c' : 'p', clean(c.name, 24), Math.round(c.start), Math.round(c.dist), Math.round(c.dPlus)].join('|'))].join('\n')
+}
+
+/** Document du plan d'un parcours de l'appli montre, pour un code montre. */
+export function appDocId(code: string, raceId: string): string {
+  return `${code}-${raceId}`
+}
+

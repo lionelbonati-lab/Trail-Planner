@@ -761,6 +761,7 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .mp-legend .lg-night { background: #8a8f98; opacity: 0.4; border-radius: 2px; }
 
 .race-badge { margin-left: 8px; vertical-align: 2px; }
+.beta-badge { margin-left: 6px; vertical-align: 2px; background: #fde8c8; color: #8a4b00; }
 
 .lib-brands { flex-wrap: wrap; margin-bottom: 8px; }
 

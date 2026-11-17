@@ -274,9 +274,24 @@ export async function publishShare(shareId: string, snap: ShareSnapshot) {
  * Document du code montre sans course envoyée : seulement les réglages EndurancePro (`ep`).
  * `w` vide : le champ Trail Planner garde son dernier plan.
  */
-export async function publishWatchProfile(watchId: string, owner: string, ep: string) {
+export async function publishWatchProfile(watchId: string, owner: string, ep: string, wl?: string) {
   if (!db) throw new Error('Synchronisation indisponible : Firebase non configuré.')
-  await setDoc(doc(db, 'shares', watchId), { owner, updatedAt: new Date().toISOString(), w: '', ep })
+  await setDoc(doc(db, 'shares', watchId), { owner, updatedAt: new Date().toISOString(), w: '', ep, ...(wl ? { wl } : {}) })
+}
+
+/**
+ * Plan d'un parcours pour l'appli montre (document `<code>-<id>`, voir appDocId) : plan compact, profil
+ * et tracé, lus par l'écran de démarrage quand le parcours est choisi.
+ */
+export async function publishAppCourse(docId: string, owner: string, data: { w: string; wp?: string | null; wr?: string | null }) {
+  if (!db) throw new Error('Synchronisation indisponible : Firebase non configuré.')
+  await setDoc(doc(db, 'shares', docId), {
+    owner,
+    updatedAt: new Date().toISOString(),
+    w: data.w,
+    ...(data.wp ? { wp: data.wp } : {}),
+    ...(data.wr ? { wr: data.wr } : {}),
+  })
 }
 
 /**

@@ -67,6 +67,8 @@ export interface ShareSnapshot {
   wp?: string
   /** Tracé fin pour l'écran Carte de l'appli montre (document du code montre seulement, voir watchRoute). */
   wr?: string
+  /** Liste des parcours de l'appli montre (document du code montre seulement, voir watchList). */
+  wl?: string
   /** Envoi de cette course à la montre (ISO) : un relevé antérieur vient d'une autre activité. */
   watchSince?: string
   /** Départ libre : la page assistance recale les heures sur le départ réel (ou sur maintenant). */

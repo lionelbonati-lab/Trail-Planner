@@ -121,6 +121,11 @@ export interface Athlete {
    * Planner : document qui reçoit les réglages EndurancePro et le plan de la course envoyée.
    */
   epCode?: string
+  /**
+   * Synchroniser les parcours avec l'appli montre Trail Planner Companion (bêta) : courses à venir et
+   * bibliothèque publiées pour son écran de démarrage, via le code montre.
+   */
+  appSync?: boolean
   /** Dernière modification (ISO), pour départager les appareils. */
   updatedAt?: string
 }

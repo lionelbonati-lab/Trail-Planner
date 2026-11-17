@@ -38,7 +38,7 @@ import { parseGpx } from './lib/gpx'
 import { waypointCheckpoints } from './lib/splits'
 import { withNewTrace } from './lib/routing'
 import { epPayload } from './lib/endurancepro'
-import { watchProfile, watchRoute } from './lib/watch'
+import { appCourses, appDocId, type AppCourse, watchList, watchPlan, watchProfile, watchRoute } from './lib/watch'
 import type { DrawResult } from './components/RouteBuilder'
 import { clearLocalData, hasLocalAthlete, localRaceCount, localStore, type Backup, type Store, type SyncStatus } from './lib/storage'
 
@@ -76,7 +76,7 @@ import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { watchStartMs, type WatchReport } from './lib/watchLive'
 import { debriefPoints, debriefReport, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
 import { debriefNotifyOn, notifiedDebriefs, rememberNotified, showNotice } from './lib/notify'
-import { formatClock, formatDuration } from './lib/time'
+import { formatClock, formatDuration, zonedToUtc } from './lib/time'
 import { DebriefPage } from './components/DebriefPage'
 
 type Tab = 'races' | 'athlete' | 'nutrition' | 'cs' | 'analyse' | 'live' | 'parcours' | 'tracer' | 'montre' | 'debrief'
@@ -458,6 +458,10 @@ export default function App() {
 
   // --- Liens d'assistance -----------------------------------------------------
   const lastShared = useRef(new Map<string, string>())
+  // Liste des parcours de l'appli montre Trail Planner Companion (champ wl du document du code montre).
+  const [appWl, setAppWl] = useState('')
+  const appWlRef = useRef('')
+  appWlRef.current = appWl
   const publish = useCallback(
     async (race: Race, a: Athlete, shareId: string) => {
       if (!user || !cloud) return
@@ -472,6 +476,7 @@ export default function App() {
         if (wp) snap.wp = wp
         const wr = watchRoute(plan.track.points)
         if (wr) snap.wr = wr
+        if (a.appSync && appWlRef.current) snap.wl = appWlRef.current
       }
       const key = JSON.stringify({ ...snap, updatedAt: '' })
       if (lastShared.current.get(shareId) === key) return
@@ -541,15 +546,17 @@ export default function App() {
     const id = setTimeout(() => {
       for (const r of races) if (r.shareId) publish(r, athlete, r.shareId).catch(() => undefined)
       const onWatch = races.find((r) => r.id === athlete.watchRaceId)
+      // Liste des parcours de l'appli montre, si sa synchronisation est active.
+      const wl = athlete.appSync && appWl ? appWl : undefined
       if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId).catch(() => undefined)
-      else if (athlete.epSync && athlete.watchId && cloud) {
-        // Pas de course sur la montre : seulement les réglages EndurancePro.
-        const ep = epPayload(athlete, null)
-        const key = `ep:${ep}`
+      else if ((athlete.epSync || wl) && athlete.watchId && cloud) {
+        // Pas de course sur la montre : seulement les réglages EndurancePro (et la liste de l'appli).
+        const ep = athlete.epSync ? epPayload(athlete, null) : ''
+        const key = `ep:${ep}|wl:${wl ?? ''}`
         if (lastShared.current.get(athlete.watchId) !== key) {
           const watchId = athlete.watchId
           cloud
-            .publishWatchProfile(watchId, user.uid, ep)
+            .publishWatchProfile(watchId, user.uid, ep, wl)
             .then(() => lastShared.current.set(watchId, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
@@ -557,20 +564,57 @@ export default function App() {
       // Code court saisi sur la montre : plan de la course envoyée (champ Trail Planner) et réglages
       // EndurancePro, sinon réglages EndurancePro seulement.
       if (onWatch && athlete.epCode) publish(onWatch, athlete, athlete.epCode).catch(() => undefined)
-      else if (athlete.epSync && athlete.epCode && cloud) {
-        const ep = epPayload(athlete, onWatch ?? null)
-        const key = `ep:${ep}`
+      else if ((athlete.epSync || wl) && athlete.epCode && cloud) {
+        const ep = athlete.epSync ? epPayload(athlete, onWatch ?? null) : ''
+        const key = `ep:${ep}|wl:${wl ?? ''}`
         const code = athlete.epCode
         if (lastShared.current.get(code) !== key) {
           cloud
-            .publishWatchProfile(code, user.uid, ep)
+            .publishWatchProfile(code, user.uid, ep, wl)
             .then(() => lastShared.current.set(code, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
       }
     }, 5000)
     return () => clearTimeout(id)
-  }, [races, athlete, user, publish, cloud])
+  }, [races, athlete, user, publish, cloud, appWl])
+  // Appli montre Trail Planner Companion (bêta) : plan de chaque course à venir et de chaque parcours de
+  // la bibliothèque (documents <code>-<id> : plan, profil, tracé), et leur liste pour l'écran de
+  // démarrage (champ wl du document du code montre, publié par l'effet ci-dessus). Un parcours n'est
+  // recalculé que s'il a changé (ou le profil de l'athlète).
+  const appPublished = useRef(new Map<string, { race: Race; athlete: Athlete; entry: AppCourse }>())
+  useEffect(() => {
+    if (!user || !cloud || !athlete.appSync) return
+    const codes = [athlete.watchId, athlete.epCode].filter((c): c is string => !!c)
+    if (!codes.length) return
+    const id = setTimeout(() => {
+      const entries: AppCourse[] = []
+      for (const r of appCourses(races, new Date().toLocaleDateString('sv'))) {
+        const prev = appPublished.current.get(r.id)
+        if (prev && prev.race === r && prev.athlete === athlete) {
+          entries.push(prev.entry)
+          continue
+        }
+        const plan = computePlan(r, athlete)
+        if (!plan) continue
+        const start = zonedToUtc(r.env.start, r.env.timeZone).getTime() / 1000
+        const entry: AppCourse = {
+          id: r.id,
+          kind: r.kind,
+          name: r.name,
+          start: r.kind === 'race' && Number.isFinite(start) ? start : 0,
+          dist: plan.track.totalDist,
+          dPlus: plan.track.dPlus,
+        }
+        const data = { w: watchPlan(r, athlete, plan.track, plan.sim), wp: watchProfile(plan.track.points), wr: watchRoute(plan.track.points) }
+        appPublished.current.set(r.id, { race: r, athlete, entry })
+        entries.push(entry)
+        for (const code of codes) cloud.publishAppCourse(appDocId(code, r.id), user.uid, data).catch(() => appPublished.current.delete(r.id))
+      }
+      setAppWl(watchList(entries))
+    }, 5000)
+    return () => clearTimeout(id)
+  }, [races, athlete, user, cloud])
   // Montre utilisée (course envoyée ou synchro EndurancePro) : réserve le code court à 8 chiffres.
   const reservingEp = useRef(false)
   useEffect(() => {

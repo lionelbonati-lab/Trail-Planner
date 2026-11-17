@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, DEFAULT_PRODUCTS, newRace } from '../defaults'
 import { computePlan } from '../plan'
 import { extraSodium, intakeOrder, nutritionPlan } from '../nutrition'
-import { climbLine, fuelInterval, MAP_ROUTE_MAX, PROFILE_MAX, routeLine, WATCH_PLAN_MAX, watchPlan, watchProfile, watchRoute, watchUrl } from '../watch'
+import { appCourses, appDocId, climbLine, fuelInterval, MAP_ROUTE_MAX, PROFILE_MAX, routeLine, WATCH_PLAN_MAX, watchList, watchPlan, watchProfile, watchRoute, watchUrl } from '../watch'
 import { parseWatchPlan, plannedAtWatch } from '../watchLive'
 
 function gpx(): string {
@@ -220,6 +220,29 @@ describe('tracé de la carte de l\'appli montre (champ wr)', () => {
     expect(small!.length).toBeLessThanOrEqual(half)
     expect(Number(small!.split('|')[1])).toBeGreaterThan(3)
     expect(watchRoute(pts, 50)).toBeNull()
+  })
+})
+
+describe("liste des parcours de l'appli montre (champ wl)", () => {
+  it('courses à venir par date, puis parcours de la bibliothèque par nom ; courses passées écartées', () => {
+    const mk = (id: string, kind: 'race' | 'route', name: string, start: string) => ({ ...newRace(name, gpx()), id, kind, env: { ...newRace(name, gpx()).env, start } })
+    const races = [
+      mk('a', 'route', 'Boucle du Salève', '2026-01-01T08:00'),
+      mk('b', 'race', 'UTMB', '2027-08-27T18:00'),
+      mk('c', 'race', 'Passée', '2026-06-06T06:00'),
+      mk('d', 'race', 'Maxi-Race', '2027-05-30T04:00'),
+      mk('e', 'route', 'Arête de la Bourgeoise', '2026-01-01T08:00'),
+    ]
+    expect(appCourses(races, '2026-11-17').map((r) => r.id)).toEqual(['d', 'b', 'e', 'a'])
+  })
+
+  it('une ligne par parcours après l\'en-tête, nom nettoyé, document par code et parcours', () => {
+    const wl = watchList([
+      { id: 'd', kind: 'race', name: 'Maxi | Race\nannecy', start: 1811995200.4, dist: 42123.6, dPlus: 2580.2 },
+      { id: 'a', kind: 'route', name: 'Boucle du Salève', start: 0, dist: 15400, dPlus: 820 },
+    ])
+    expect(wl.split('\n')).toEqual(['TPL1', 'd|c|Maxi   Race annecy|1811995200|42124|2580', 'a|p|Boucle du Salève|0|15400|820'])
+    expect(appDocId('12345678', 'abc')).toBe('12345678-abc')
   })
 })
 

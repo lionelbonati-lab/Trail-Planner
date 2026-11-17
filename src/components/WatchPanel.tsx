@@ -47,10 +47,11 @@ export function WatchPanel({
               <strong className="ep-short" aria-label={`Code ${code.split('').join(' ')}`}>{`${code.slice(0, 4)} ${code.slice(4)}`}</strong>
               <button className="ghost" onClick={() => copy(code)}>{copied === code ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
             </div>
-            <p className="small">Le même code pour les deux applications, à saisir une seule fois sur la montre :</p>
+            <p className="small">Le même code pour toutes les applications, à saisir une seule fois sur la montre :</p>
             <ul className="small">
               <li><strong>Trail Planner</strong> : pendant une activité, appui long sur Haut › Champs Connect IQ › Trail Planner › Code montre.</li>
               <li><strong>EndurancePro</strong> : menu du champ › Allure › Trail Planner.</li>
+              <li><strong>Trail Planner Companion</strong> (bêta) : appui long sur Haut › Trail Planner › Code Trail Planner.</li>
             </ul>
           </>
         ) : athlete.watchId || athlete.epSync ? (
@@ -93,7 +94,43 @@ export function WatchPanel({
       </Card>
 
       <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />
+
+      <CompanionSync athlete={athlete} onChange={onChange} signedIn={signedIn} />
     </div>
+  )
+}
+
+/** Appli montre Trail Planner Companion (bêta) : synchronisation des parcours pour son écran de démarrage. */
+function CompanionSync({ athlete, onChange, signedIn }: { athlete: Athlete; onChange: (a: Athlete) => void; signedIn: boolean }) {
+  const on = !!athlete.appSync
+  const toggle = (v: boolean) =>
+    onChange({ ...athlete, appSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
+  return (
+    <Card title={<>Trail Planner Companion <span className="badge beta-badge">Bêta</span></>} className="span2">
+      <Hint>
+        L’appli montre qui réunit EndurancePro, le champ Trail Planner, le profil qui te suit et la carte Garmin de ton parcours.
+        Avec la synchronisation, son écran de démarrage propose tes courses à venir et les parcours de ta bibliothèque, à jour à
+        chaque modification ici ; tu choisis, tu vois la fiche (carte, profil, distance, D+), tu démarres.
+      </Hint>
+      <label className="check">
+        <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser mes parcours avec l’appli
+      </label>
+      {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
+      {on && signedIn && (
+        <Hint>
+          Sur la montre : appli Trail Planner Companion › appui long sur Haut › Trail Planner › Code Trail Planner, saisis le code de
+          synchronisation ci-dessus (le même que pour le champ et EndurancePro). La liste se met à jour à chaque lancement de l’appli,
+          téléphone à proximité.
+        </Hint>
+      )}
+      <p className="small">
+        Version bêta, pas encore sur le Connect IQ Store : installation par câble du fichier compilé (
+        <a href="https://github.com/lionelbonati-lab/Trail-Planner/tree/main/garmin/TrailPlannerCompanion" target="_blank" rel="noreferrer">
+          mode d’emploi
+        </a>
+        ).
+      </p>
+    </Card>
   )
 }
 
@@ -102,7 +139,7 @@ const BASE = import.meta.env.BASE_URL
 /** Contenu de secours (fichier injoignable, hors ligne sans cache) : textes intégrés à l'app. */
 const FALLBACK_DOC: WatchAppsDoc = {
   intro: [],
-  apps: WATCH_APPS.map((a) => ({ name: a.name, type: a.kind, store: a.storeUrl, image: null, guide: a.guideUrl, body: [{ kind: 'p', parts: [{ kind: 'text', text: a.what }] }] })),
+  apps: WATCH_APPS.map((a) => ({ name: a.name, type: a.kind, store: a.storeUrl, image: null, guide: a.guideUrl, status: null, body: [{ kind: 'p', parts: [{ kind: 'text', text: a.what }] }] })),
 }
 
 /** Contenu du cadre, lu dans public/montre/applications.md (modifiable sur GitHub). */
@@ -175,7 +212,8 @@ function WatchAppsCard() {
         {doc.apps.map((app) => (
           <div key={app.name} className="watch-app">
             <div>
-              <strong>{app.name}</strong> {app.type && <span className="muted small">· {app.type}</span>}
+              <strong>{app.name}</strong> {app.status && <span className="badge beta-badge">{app.status}</span>}{' '}
+              {app.type && <span className="muted small">· {app.type}</span>}
             </div>
             {app.image && <img className="watch-shot" src={docUrl(app.image, BASE)} alt={`Écran de la montre : ${app.name}`} loading="lazy" />}
             <Blocks blocks={app.body} />
