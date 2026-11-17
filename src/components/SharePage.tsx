@@ -438,6 +438,14 @@ export function ShareView({
   }
   // Suivi saisi à la main (sans montre) : le prochain point n'est jamais estimé avant maintenant.
   if (!watch && snap.live) {
+    // Encore au ravito (pas de « Reparti ») : l'arrêt qui s'allonge depuis la dernière mise à jour du
+    // partage décale la suite (la part d'avant est déjà dans les heures estimées du partage).
+    const lastIn = [...snap.rows].reverse().find((r) => r.actual)
+    if (lastIn && isRavitoKind(lastIn.kind) && !lastIn.left) {
+      const stayEnd = Date.parse(lastIn.actual!) + lastIn.stopMin * 60000
+      const extra = Math.max(0, nowMs - stayEnd) - Math.max(0, Date.parse(snap.updatedAt) - stayEnd)
+      if (extra > 0) snap = { ...snap, rows: snap.rows.map((r) => (r.actual ? r : { ...r, eta: new Date(Date.parse(r.eta) + extra).toISOString() })) }
+    }
     const nextRow = snap.rows.find((r) => !r.actual)
     const lag = nextRow ? nowMs - Date.parse(nextRow.eta) : 0
     if (lag > 60000) snap = { ...snap, rows: snap.rows.map((r) => (r.actual ? r : { ...r, eta: new Date(Date.parse(r.eta) + lag).toISOString() })) }

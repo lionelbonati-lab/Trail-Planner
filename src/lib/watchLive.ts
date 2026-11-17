@@ -97,6 +97,9 @@ function paceRatio(report: WatchReport, planned: number): number {
   return ratioOf(report.t - report.s, planned)
 }
 
+/** Relevé plus ancien : on ne sait plus si le coureur est encore au ravito (s). */
+export const AT_STOP_FRESH_S = 20 * 60
+
 /** Au-delà, un passage noté devant la position du coureur est ignoré (m). */
 export const PASS_AHEAD_M = 300
 
@@ -129,14 +132,20 @@ export function watchStatus(report: WatchReport, plan: WatchPlan, nowSec: number
   let ratio = 1
   let t0 = report.s
   let d0 = 0
+  // Encore au ravito (arrêt prévu ou base de vie, pas de départ noté, position à moins de 150 m après,
+  // 300 m après une base de vie, relevé de moins de 20 min) : départ estimé à la fin de l'arrêt prévu,
+  // et jamais avant maintenant (un arrêt qui s'allonge décale toute la suite).
+  let atStop = false
   if (ref >= 0) {
     const cp = plan.cps[ref]
     ratio = ratioOf(passed.get(ref)! - report.s, cp.planned)
+    atStop = (cp.stop > 0 || !!cp.base) && !departed.has(ref) && report.d < cp.dist + (cp.base ? 300 : 150) && nowSec - report.t < AT_STOP_FRESH_S
     // Départ réel du ravito s'il est noté, sinon arrivée + arrêt prévu.
     t0 = departed.get(ref) ?? passed.get(ref)! + cp.stop
+    if (atStop) t0 = Math.max(t0, nowSec)
     d0 = cp.dist
   }
-  if (report.d > 200 && report.d > d0 + 100 && report.t >= t0 && report.d < plan.total) {
+  if (!atStop && report.d > 200 && report.d > d0 + 100 && report.t >= t0 && report.d < plan.total) {
     ratio = ratioOf(elapsed, planned)
     t0 = report.t
     d0 = report.d

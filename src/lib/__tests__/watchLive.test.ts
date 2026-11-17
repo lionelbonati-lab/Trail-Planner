@@ -93,6 +93,23 @@ describe('suivi depuis la montre', () => {
     expect(parsePasses(`0:${passA}:${passA + 600}`).get(0)).toBe(passA)
   })
 
+  it('arrêt au ravito plus long que prévu : la suite recule minute par minute', () => {
+    const s = 1_800_000_000
+    const cp = w.cps[0]
+    expect(cp.stop).toBeGreaterThan(0)
+    const passA = s + cp.planned
+    const report = { t: passA + 60, s, d: cp.dist + 20, p: `0:${passA}` }
+    // Dans l'arrêt prévu : départ estimé à sa fin.
+    const inStop = watchStatus(report, w, passA + 60)
+    // 10 min après la fin de l'arrêt prévu, toujours au ravito (relevé récent) : 10 min de plus.
+    const over = watchStatus({ ...report, t: passA + cp.stop + 500 }, w, passA + cp.stop + 600)
+    expect(over.etas[1] - inStop.etas[1]).toBeCloseTo(600, -1)
+    expect(over.finishEta - inStop.finishEta).toBeCloseTo(600, -1)
+    // Départ noté : plus de décalage au-delà du départ réel.
+    const left = watchStatus({ ...report, t: passA + cp.stop + 500, p: `0:${passA}:${passA + cp.stop}` }, w, passA + cp.stop + 600)
+    expect(Math.abs(left.etas[1] - inStop.etas[1])).toBeLessThan(5)
+  })
+
   it('point pas encore passé : jamais estimé avant maintenant, la suite est décalée', () => {
     const s = 1_800_000_000
     const passA = s + w.cps[0].planned

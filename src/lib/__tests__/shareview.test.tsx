@@ -242,6 +242,13 @@ describe('page assistance', () => {
     expect(html).toMatch(/class="[^"]*at-ravito/)
     // 5 min sur place pour 3 min prévues : chrono en orange.
     expect(html).toMatch(/class="stop-info at over">Au ravito depuis 5 min · arrêt prévu 3 min/)
+    // Arrêt qui s'allonge depuis la mise à jour du partage : la suite recule d'autant.
+    const pub = { ...at, updatedAt: new Date(passA + 3 * 60000).toISOString() }
+    const etaOf = (h: string) => h.match(/~(\d{2}:\d{2})/g)!
+    const a1 = etaOf(renderToStaticMarkup(<ShareView snap={pub} report={null} nowMs={passA + 4 * 60000} />))
+    const a2 = etaOf(renderToStaticMarkup(<ShareView snap={pub} report={null} nowMs={passA + 14 * 60000} />))
+    const toMin = (t: string) => Number(t.slice(1, 3)) * 60 + Number(t.slice(4, 6))
+    expect(toMin(a2[a2.length - 1]) - toMin(a1[a1.length - 1])).toBeGreaterThanOrEqual(9)
     // Reparti (snapshot du mode course) : temps réel passé.
     const left = { ...at, rows: at.rows.map((r, i) => (i === 0 ? { ...r, left: new Date(passA + 4 * 60000).toISOString() } : r)) }
     const h2 = renderToStaticMarkup(<ShareView snap={left} report={null} nowMs={passA + 10 * 60000} />)

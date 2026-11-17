@@ -1,5 +1,6 @@
 // Suivi en direct : passages réels, avance/retard et recalcul de la suite.
 import { indexAt, projectOnTrack } from './gpx'
+import { isRavitoKind } from './splits'
 import type { LiveState, SimResult, SplitRow, Track } from './types'
 
 export interface LiveRow {
@@ -43,7 +44,9 @@ export function liveStatus(live: LiveState, sim: SimResult, nowMs: number, cutof
   const lastPlanned = last ? last.arrival : 0
   // Départ du dernier point : réel s'il est noté (« Reparti »), sinon arrivée + arrêt prévu.
   const leftIso = last ? live.departures?.[last.cp.id] : undefined
-  const lastLeft = leftIso ? (Date.parse(leftIso) - t0) / 1000 : lastActual + (last ? last.cp.stopMin * 60 : 0)
+  // Encore au ravito (pas de « Reparti ») : départ au plus tôt maintenant, un arrêt qui s'allonge décale la suite.
+  const stayEnd = lastActual + (last ? last.cp.stopMin * 60 : 0)
+  const lastLeft = leftIso ? (Date.parse(leftIso) - t0) / 1000 : last && isRavitoKind(last.cp.kind) ? Math.max(stayEnd, (nowMs - t0) / 1000) : stayEnd
   // Borné : un passage saisi par erreur ne doit pas rendre l'estimation absurde.
   const raw = last && lastPlanned > 60 ? Math.min(1.6, Math.max(0.7, lastActual / lastPlanned)) : 1
   const ratio = 1 + DAMPING * (raw - 1)
