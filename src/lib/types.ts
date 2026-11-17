@@ -404,6 +404,8 @@ export interface Debrief {
   watch?: { s: number; t: number; d: number; passes: Record<string, number>; departures: Record<string, number> }
   /** Mode course du téléphone. */
   live?: LiveState
+  /** Enregistrement de l'activité importé (FIT / GPX) : départ, passages et départs des ravitos (id → ms Unix). */
+  file?: { name: string; start: number; passes: Record<string, number>; departures: Record<string, number> }
   /** Corrections à la main : départ, passages et départs des ravitos (null : effacé). */
   edits?: { start?: string; passages?: Record<string, string | null>; departures?: Record<string, string | null> }
   /** Notes par point, et bilan de la sortie. */

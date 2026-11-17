@@ -11,7 +11,8 @@ import { assistAllowed, FINISH_ID } from '../lib/assist'
 import { isDefaultLevel } from '../lib/level'
 import { athleteKme } from '../lib/endurancepro'
 import { isFreeStart, planOptions } from '../lib/plan'
-import { debriefEnded, debriefReport, debriefStart, signedGap, sortedDebriefs } from '../lib/debrief'
+import { debriefEnded, debriefReport, debriefStart, sortedDebriefs } from '../lib/debrief'
+import { SortiesCard } from './DebriefSorties'
 import { bagFactor, calibrateDurability, scenarioInputs, SCENARIOS, simulate, type SimOptions } from '../lib/model'
 import { CHECKPOINT_LABELS, commonStop, defaultStop, isRavitoKind, setStops, waypointCheckpoints, withKind } from '../lib/splits'
 import { formatClock, formatDuration, formatPace, parseDuration, utcToZonedInput, zonedToUtc } from '../lib/time'
@@ -858,41 +859,7 @@ export function RacePlan({
           </Card>
         )}
 
-        {onDebrief && debriefs.length > 0 && (
-          <Card title={`Sorties et debriefs (${debriefs.length})`} fold="open">
-            <ul className="debrief-list">
-              {debriefs.map((d) => {
-                const rep = debriefReport(d)
-                const ended = debriefEnded(d)
-                return (
-                  <li key={d.id}>
-                    <span>
-                      <strong>{runDay(rep.start)}</strong> · départ {formatClock(new Date(rep.start), race.env.timeZone)}
-                      <span className="small muted">
-                        {' · '}
-                        {rep.total !== null ? (
-                          <>
-                            arrivée en {formatDuration(rep.total)}{' '}
-                            <span className={rep.total - rep.plannedTotal >= 60 ? 'late' : rep.total - rep.plannedTotal <= -60 ? 'early' : ''}>({signedGap(rep.total - rep.plannedTotal)})</span>
-                          </>
-                        ) : ended ? (
-                          'arrivée non relevée'
-                        ) : (
-                          'en cours'
-                        )}
-                      </span>
-                    </span>
-                    <button onClick={() => onDebrief(d.id)}><Flag /> Debrief</button>
-                  </li>
-                )
-              })}
-            </ul>
-            <Hint>
-              Une sortie par départ : passages relevés par la montre (champ Trail Planner) ou notés en mode course, figés ici avec le plan
-              d'alors (l'appli doit être ouverte une fois après la sortie pour récupérer ceux de la montre).
-            </Hint>
-          </Card>
-        )}
+        {onDebrief && <SortiesCard race={race} athlete={athlete} onChange={onChange} onDebrief={onDebrief} />}
 
         <Card
           title="Temps de passage"

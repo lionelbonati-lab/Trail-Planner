@@ -192,6 +192,18 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   passage, départ d'un ravito) ; note par point et bilan ; tronçons prévu / réel (allure, D+ / D-, arrêt compris
   si le départ du ravito n'est pas connu) ; arrêts aux ravitos ; **niveau recalé** d'après la sortie (arrêts réels
   remplacés par les arrêts prévus), à appliquer au profil.
+- **Debrief prêt** : bandeau en haut de l'appli quel que soit l'onglet (sortie des 7 derniers jours pas encore
+  ouverte) et, si activée sur le téléphone (« Me prévenir à l'arrivée »), notification à l'arrivée relevée (appli
+  ouverte, même en arrière-plan ; une fois par sortie).
+- **Comparer les sorties** d'un même parcours : dans le debrief, « Comparer avec » une autre sortie (écart à chaque
+  point, par tronçon et à l'arrivée) ; sur le parcours, temps écoulé à chaque point des 6 dernières sorties (meilleur en
+  gras) et graphique d'évolution du temps d'arrivée.
+- **Exports du debrief** : feuille A4 / PDF (impression du navigateur, notes et bilan compris), tableur CSV pour Excel
+  (passages, tronçons, arrêts, notes) et résumé texte à copier dans un message.
+- **Import de l'enregistrement** (FIT / GPX horodaté) : passages au plus près de chaque point (premier passage pour
+  les allers-retours) et arrivée / départ des ravitos d'après les arrêts enregistrés (immobile plus d'une minute dans
+  un rayon de 150 m, 300 m pour une base de vie). Il complète la sortie du même départ sans écraser montre, mode course
+  ni corrections, ou crée une sortie.
 
 **Montre Garmin**
 - Champ de données Connect IQ (`garmin/`), en plein écran : écart au plan, barre de progression du tronçon

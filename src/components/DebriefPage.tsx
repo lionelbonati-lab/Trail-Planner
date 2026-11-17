@@ -1,6 +1,8 @@
-import { ArrowLeft, Gauge, Check, Pencil, RotateCcw, Smartphone, Trash2, Watch } from 'lucide-react'
+import { ArrowLeft, Check, ClipboardCopy, FileSpreadsheet, FileUp, Gauge, Pencil, Printer, RotateCcw, Smartphone, Trash2, Upload, Watch } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { clockNear, debriefReport, levelTarget, realTimeAt, signedGap, type TimeSource } from '../lib/debrief'
+import { clockNear, compareReports, debriefCsv, debriefReport, debriefText, levelTarget, realTimeAt, signedGap, sortedDebriefs, type TimeSource } from '../lib/debrief'
+import { importActivity } from '../lib/debriefImport'
+import { download } from '../lib/exportGpx'
 import { indexAt } from '../lib/gpx'
 import { levelFromTime, type Effort, type LevelEstimate } from '../lib/level'
 import { computePlan } from '../lib/plan'
@@ -20,7 +22,18 @@ const gapClass = (sec: number | null) => (sec === null || Math.abs(sec) < 60 ? '
 const SOURCE: Record<TimeSource, { label: string; many: string; icon: typeof Watch }> = {
   watch: { label: 'relevé par la montre', many: 'relevés par la montre', icon: Watch },
   live: { label: 'noté en mode course', many: 'notés en mode course', icon: Smartphone },
+  file: { label: "tiré de l'enregistrement importé", many: "tirés de l'enregistrement importé", icon: FileUp },
   edit: { label: 'corrigé à la main', many: 'corrigés à la main', icon: Pencil },
+}
+
+/** Copie dans le presse-papiers ; false si le navigateur la refuse. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Effort de la sortie pour l'estimation du niveau : « race » ou « z<indice> » (comme la carte Niveau). */
@@ -49,6 +62,8 @@ export function DebriefPage({
   const plan = useMemo(() => computePlan(race, athlete), [race, athlete])
   const [effort, setEffort] = useState(race.kind === 'race' ? 'race' : 'z1')
   const [showMap, setShowMap] = useState(false)
+  const [compareId, setCompareId] = useState('')
+  const [info, setInfo] = useState<{ text: string; warn?: boolean } | null>(null)
   const [level, setLevel] = useState<{ est: LevelEstimate | null; busy: boolean; error: string | null }>({ est: null, busy: false, error: null })
   const set = (patch: Partial<Debrief>) =>
     debrief && onChange({ ...race, debriefs: (race.debriefs ?? []).map((d) => (d.id === debrief.id ? { ...d, ...patch } : d)) })
@@ -77,6 +92,13 @@ export function DebriefPage({
   const notes = debrief.notes ?? {}
   const stopsKnown = r.stops.filter((s) => s.actual !== null)
   const target = levelTarget(r)
+  // Comparaison avec une autre sortie sur ce parcours.
+  const others = sortedDebriefs(race).filter((d) => d.id !== debrief.id)
+  const other = others.find((d) => d.id === compareId)
+  const cmp = other ? compareReports(r, debriefReport(other)) : null
+  const shortDay = (ms: number) => new Intl.DateTimeFormat('fr-FR', { timeZone: tz, day: 'numeric', month: 'short', year: '2-digit' }).format(new Date(ms))
+  const otherDay = other ? shortDay(debriefReport(other).start) : ''
+  const fileName = `${race.name.replace(/[\\/:*?"<>|]+/g, ' ').trim()} - debrief ${new Date(r.start).toISOString().slice(0, 10)}`
 
   const editPassage = (id: string, name: string, ref: number, current: number | null) => {
     const txt = prompt(`Passage à ${name} (hh:mm) — vide pour l'effacer`, formatClock(new Date(current ?? ref), tz))
@@ -112,6 +134,22 @@ export function DebriefPage({
     const ms = clockNear(txt, tz, r.start)
     if (ms === null) return alert('Format attendu : hh:mm')
     set({ edits: { ...edits, start: new Date(ms).toISOString() } })
+  }
+  // Enregistrement de l'activité : complète cette sortie (sans écraser montre, mode course ni corrections).
+  const importFile = async (files: FileList | null) => {
+    const f = files?.[0]
+    if (!f) return
+    try {
+      const res = importActivity(race, athlete, f.name, new Uint8Array(await f.arrayBuffer()), debrief.id)
+      onChange(res.race)
+      setInfo({ text: res.message })
+    } catch (e) {
+      setInfo({ text: (e as Error).message, warn: true })
+    }
+  }
+  const copySummary = async () => {
+    const ok = await copyText(debriefText(race.name, debrief, tz))
+    setInfo({ text: ok ? 'Résumé copié : colle-le dans un message ou un e-mail.' : 'Copie refusée par le navigateur.', warn: !ok })
   }
   const remove = () => {
     if (!confirm('Supprimer ce debrief ? Les passages relevés et tes notes seront perdus.')) return
@@ -195,8 +233,35 @@ export function DebriefPage({
         <p className="small muted">
           {sources.size
             ? `Passages ${[...sources].map((s) => SOURCE[s].many).join(', ')}. Touche une heure pour la corriger.`
-            : 'Aucun passage relevé : note-les à la main (touche « — » dans les temps de passage).'}
+            : 'Aucun passage relevé : note-les à la main (touche « — » dans les temps de passage) ou importe l’enregistrement de ta montre.'}
         </p>
+        <div className="row no-print debrief-tools">
+          <label className="button" title="FIT ou GPX de ta montre : passages manquants et arrêts aux ravitos (rien n'est écrasé)">
+            <Upload /> Compléter avec l'enregistrement
+            <input type="file" accept=".gpx,.fit,application/gpx+xml" hidden onChange={(e) => { void importFile(e.target.files); e.target.value = '' }} />
+          </label>
+          <button onClick={() => window.print()} title="Feuille A4 : « Enregistrer en PDF » dans la fenêtre d'impression"><Printer /> PDF / imprimer</button>
+          <button onClick={() => download(`${fileName}.csv`, debriefCsv(race.name, debrief, tz), 'text/csv;charset=utf-8')} title="Passages, tronçons et arrêts pour Excel ou Google Sheets"><FileSpreadsheet /> Tableur (CSV)</button>
+          <button onClick={() => void copySummary()} title="Résumé texte à coller dans un message"><ClipboardCopy /> Copier le résumé</button>
+        </div>
+        {info && <p className={info.warn ? 'warn' : 'small ok-text'} role="status">{info.text}</p>}
+        {others.length > 0 && (
+          <label className="field no-print compare-pick">
+            <span className="field-label">Comparer avec une autre sortie</span>
+            <select value={compareId} onChange={(e) => setCompareId(e.target.value)} aria-label="Comparer avec une autre sortie">
+              <option value="">— aucune —</option>
+              {others.map((d) => {
+                const o = debriefReport(d)
+                return <option key={d.id} value={d.id}>{shortDay(o.start)}{o.total !== null ? ` · ${formatDuration(o.total)}` : ''}</option>
+              })}
+            </select>
+          </label>
+        )}
+        {cmp?.total && (
+          <p className="compare-total">
+            Par rapport au {otherDay} ({formatDuration(cmp.total.other)}) : <strong className={gapClass(cmp.total.diff)}>{signedGap(cmp.total.diff).replace("à l'heure", 'même temps')}</strong>
+          </p>
+        )}
       </Card>
 
       {profile.length > 1 && (
@@ -216,7 +281,7 @@ export function DebriefPage({
       )}
 
       {route.length >= 2 && (
-        <Card title="Carte" fold={false}>
+        <Card title="Carte" fold={false} className="no-print">
           {/* Carte chargée à la demande (comme sur la page assistance). */}
           <label className="check map-toggle">
             <input type="checkbox" checked={showMap} onChange={(e) => setShowMap(e.target.checked)} /> Afficher la carte
@@ -233,9 +298,10 @@ export function DebriefPage({
         <div className="scroll">
           <table className="table debrief-table">
             <thead>
-              <tr><th>Point</th><th>km</th><th>Prévu</th><th>Réel</th><th>Écart</th></tr>
+              <tr><th>Point</th><th>Prévu</th><th>Réel</th><th>Écart</th>{cmp && <th>vs {otherDay}</th>}</tr>
             </thead>
             {r.rows.map((x) => {
+              const g = cmp?.points.get(x.point.id)
               const Src = x.source ? SOURCE[x.source].icon : null
               const ravito = isRavitoKind(x.point.kind) || x.point.stop > 0
               return (
@@ -243,9 +309,11 @@ export function DebriefPage({
                   <tr>
                     <td>
                       <strong>{x.point.name}</strong>
-                      {x.point.id !== FINISH_ID && <div className="small muted">{CHECKPOINT_LABELS[x.point.kind] ?? ''}</div>}
+                      <div className="small muted">
+                        km {km(x.point.dist)}
+                        {x.point.id !== FINISH_ID && CHECKPOINT_LABELS[x.point.kind] && CHECKPOINT_LABELS[x.point.kind] !== x.point.name ? ` · ${CHECKPOINT_LABELS[x.point.kind]}` : ''}
+                      </div>
                     </td>
-                    <td>{km(x.point.dist)}</td>
                     <td>{clock(x.planned)}</td>
                     <td>
                       <button className="link time-edit" onClick={() => editPassage(x.point.id, x.point.name, x.planned, x.actual)} title="Corriger l'heure de passage">
@@ -272,10 +340,16 @@ export function DebriefPage({
                         </div>
                       )}
                     </td>
+                    {cmp && (
+                      <td className={`nowrap ${g ? gapClass(g.diff) : ''}`}>
+                        {g ? signedGap(g.diff).replace("à l'heure", '=').replace(' min', '′') : '—'}
+                        {g && <div className="small muted">{formatDuration(g.other)}</div>}
+                      </td>
+                    )}
                   </tr>
                   {/* Note du point sur toute la largeur (lisible sur téléphone). */}
                   <tr className="note-row">
-                    <td colSpan={5}>
+                    <td colSpan={cmp ? 5 : 4}>
                       <input
                         type="text"
                         className="note-input"
@@ -284,6 +358,7 @@ export function DebriefPage({
                         aria-label={`Note pour ${x.point.name}`}
                         onChange={(e) => set({ notes: { ...notes, [x.point.id]: e.target.value } })}
                       />
+                      {notes[x.point.id] && <span className="print-only">{notes[x.point.id]}</span>}
                     </td>
                   </tr>
                 </tbody>
@@ -297,7 +372,7 @@ export function DebriefPage({
         <div className="scroll">
           <table className="table">
             <thead>
-              <tr><th>Tronçon</th><th>Prévu</th><th>Réel</th><th>Écart</th><th>Allure</th></tr>
+              <tr><th>Tronçon</th><th>Prévu</th><th>Réel</th><th>Écart</th><th>Allure</th>{cmp && <th>vs {otherDay}</th>}</tr>
             </thead>
             <tbody>
               {r.legs.map((l, i) => (
@@ -315,6 +390,15 @@ export function DebriefPage({
                     {l.actual !== null && l.km > 0 ? `${formatPace(l.actual / l.km)}/km` : '—'}
                     <div className="small muted">prévu {l.km > 0 ? `${formatPace(l.planned / l.km)}/km` : '—'}</div>
                   </td>
+                  {cmp && (() => {
+                    const g = cmp.legs.get(l.id)
+                    return (
+                      <td className={`nowrap ${g ? gapClass(g.diff) : ''}`}>
+                        {g ? signedGap(g.diff).replace("à l'heure", '=').replace(' min', '′') : '—'}
+                        {g && <div className="small muted">{formatDuration(g.other)}</div>}
+                      </td>
+                    )
+                  })()}
                 </tr>
               ))}
             </tbody>
@@ -354,10 +438,11 @@ export function DebriefPage({
           aria-label="Bilan de la sortie"
           onChange={(e) => set({ note: e.target.value })}
         />
+        {debrief.note && <p className="print-only debrief-note-print">{debrief.note}</p>}
       </Card>
 
       {target !== null && plan && (
-        <Card title="Recaler mon niveau" fold={false}>
+        <Card title="Recaler mon niveau" fold={false} className="no-print">
           <Hint>
             L'app cherche le niveau qui redonne ton temps sur ce parcours, puis prédit tes prochains temps avec.
             Temps retenu : {formatDuration(target)}

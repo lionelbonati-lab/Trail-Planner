@@ -3,6 +3,7 @@ import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, 
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { awayFrom } from '../lib/live'
+import { showNotice } from '../lib/notify'
 import { shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
@@ -266,25 +267,6 @@ function useTripChoices(shareId: string | undefined): [Record<string, boolean>, 
     writeStore(key, JSON.stringify(next))
   }
   return [choices, set]
-}
-
-/** Notification système (via le service worker si possible : seule voie sur Android). */
-async function showNotice(title: string, body: string, tag: string) {
-  const opts = { body, tag, icon: './icon-192.png', badge: './icon-192.png', data: { url: location.href }, vibrate: [200, 100, 200] } as NotificationOptions
-  try {
-    const reg = await navigator.serviceWorker?.getRegistration()
-    if (reg) {
-      await reg.showNotification(title, opts)
-      return
-    }
-  } catch {
-    /* repli ci-dessous */
-  }
-  try {
-    new Notification(title, opts)
-  } catch {
-    /* notifications indisponibles */
-  }
 }
 
 /**
