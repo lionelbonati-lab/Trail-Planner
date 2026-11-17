@@ -178,4 +178,13 @@
     <string id="opt_waiting">Warten</string>
     <string id="set_trail_code">Trail-Planner-Code</string>
     <string id="set_vc_zones">CS-Zonen (% der CS)</string>
+    <!-- Unités (identiques dans toutes les langues), manquantes dans cette langue -->
+    <string id="unite_km">km</string>
+    <string id="unite_m_s">m/s</string>
+    <string id="unite_min_km">min/km</string>
+    <string id="unite_s_km">s/km</string>
+    <string id="unite_kg">kg</string>
+    <string id="unite_vide"> </string>
+    <string id="unite_mult">x</string>
+    <string id="unite_pct">%</string>
 </resources>

@@ -297,16 +297,16 @@ class CompanionMapView extends WatchUi.MapView {
             }
         }
         // La carte Garmin refuse un tracé ou une liste de repères vides (sortie libre, tracé pas encore
-        // arrivé, parcours sans ravito) : on efface alors ce qui était posé.
+        // arrivé, parcours sans ravito) : tout ce qui était posé est effacé (MapView.clear, appelée
+        // seulement si la montre la propose), puis seuls un tracé et des repères non vides sont posés.
+        if (self has :clear) {
+            method(:clear).invoke();
+        }
         if (route != null && route.size() >= 2) {
             setPolyline(line);
-        } else {
-            clearPolyline();
         }
         if (markers.size() > 0) {
             setMapMarker(markers);
-        } else {
-            clearMapMarker();
         }
     }
 

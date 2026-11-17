@@ -187,4 +187,6 @@
     <string id="opt_waiting">Aguardando</string>
     <string id="set_trail_code">C&#xf3;digo Trail Planner</string>
     <string id="set_vc_zones">Zonas VC (% da VC)</string>
+    <!-- Unités (identiques dans toutes les langues), manquantes dans cette langue -->
+    <string id="unite_pct">%</string>
 </resources>

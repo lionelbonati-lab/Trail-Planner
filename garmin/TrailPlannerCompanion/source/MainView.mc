@@ -43,7 +43,6 @@ class MainView extends WatchUi.View {
             drawDone(dc);
             return;
         }
-        var h = dc.getHeight();
         var ep = run.ep;
         var top = ep.contentTop();
         var bottom = ep.contentBottom();
