@@ -445,11 +445,11 @@ export function RacePlan({
             <div className="banner info share-banner">
               <span>
                 Lien assistance : <a href={share.url} target="_blank" rel="noreferrer">{share.url}</a>
-                <span className="muted small">
-                  {' '}— Le lien s'arrête tout seul 1 h après l'arrivée. Position plus fréquente que les 5 min de la montre : active une fois Garmin LiveTrack en démarrage automatique dans
-                  Garmin Connect (Sécurité et suivi › LiveTrack), avec l'e-mail de ton assistance. Garmin lui envoie le lien à chaque départ ;
-                  elle le colle sur sa page assistance.
-                </span>
+                <Hint label="Lien assistance">
+                  Le lien s'arrête tout seul 1 h après l'arrivée. Position plus fréquente que les 5 min de la montre : active une fois Garmin
+                  LiveTrack en démarrage automatique dans Garmin Connect (Sécurité et suivi › LiveTrack), avec l'e-mail de ton assistance.
+                  Garmin lui envoie le lien à chaque départ ; elle le colle sur sa page assistance.
+                </Hint>
               </span>
               <span className="row tight">
                 <button
@@ -472,8 +472,7 @@ export function RacePlan({
             <div className="banner info debrief-banner">
               <span>
                 <Flag className="inline" /> <strong>Sortie du {runDay(debriefStart(proposed))} terminée</strong>
-                {proposedReport?.total != null ? ` en ${formatDuration(proposedReport.total)}` : ''} : compare tes passages au plan, note tes impressions,
-                recale ton niveau.
+                {proposedReport?.total != null ? ` en ${formatDuration(proposedReport.total)}` : ''} : ton debrief est prêt.
               </span>
               <span className="row tight">
                 <button className="primary" onClick={() => onDebrief(proposed.id)}><Flag /> Voir le debrief</button>
@@ -484,8 +483,10 @@ export function RacePlan({
           {isDefaultLevel(athlete) && (
             <div className="banner info">
               <span>
-                <strong>Profil par défaut</strong> (VC 4'15/km) : ces temps ne sont pas encore les tiens. Sans test VC, estime ton niveau
-                à partir d'une course ou d'un entraînement déjà fait.
+                <strong>Profil par défaut</strong> : ces temps ne sont pas encore les tiens.
+                <Hint label="Profil par défaut">
+                  Profil par défaut (VC 4'15/km). Sans test VC, estime ton niveau à partir d'une course ou d'un entraînement déjà fait.
+                </Hint>
               </span>
               <a className="button primary" href="#/cs"><Gauge /> Estimer mon niveau</a>
             </div>
@@ -493,8 +494,8 @@ export function RacePlan({
           {showWatch && (
             <div className="banner info watch-banner">
               <span>
-                <Watch className="inline" /> <strong>{race.name}</strong> {watch?.active ? 'est sur ta montre' : ': envoi en cours…'} (le champ Trail
-                Planner la récupère tout seul). Code de synchronisation et applications : onglet Montre.
+                <Watch className="inline" /> <strong>{race.name}</strong> {watch?.active ? 'est sur ta montre' : ': envoi en cours…'}
+                <Hint label="Sur la montre">Le champ Trail Planner la récupère tout seul. Code de synchronisation et applications : onglet Montre.</Hint>
               </span>
               <span className="row tight">
                 <a className="button" href="#/montre"><Watch /> Onglet Montre</a>

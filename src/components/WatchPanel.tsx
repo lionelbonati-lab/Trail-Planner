@@ -35,97 +35,151 @@ export function WatchPanel({
       setTimeout(() => setCopied(null), 2000)
     })
   const code = athlete.epCode
+  const [tab, setTabState] = useState<WatchTab>(() => readTab())
+  const setTab = (t: WatchTab) => {
+    setTabState(t)
+    try {
+      localStorage.setItem(TAB_KEY, t)
+    } catch {
+      /* stockage indisponible */
+    }
+  }
   return (
-    <div className="grid two">
-      {signedIn && athlete.watchId && (
-        <Card title="Code pour Garmin Connect" className="span2 connect-code" fold={false}>
-          <div className="row">
-            <code className="watch-code">{athlete.watchId}</code>
-            <button className="primary" onClick={() => copy(athlete.watchId!)}>
-              {copied === athlete.watchId ? <><Check /> Copié</> : <><Copy /> Copier</>}
-            </button>
-          </div>
-          <Hint>
-            Paramètres d’une application installée depuis le Store : Garmin Connect › ta montre › Activités et applications ›
-            Trail Planner › Paramètres › Code montre ; pour l’appli Trail Planner Companion, c’est le premier réglage (Code Trail
-            Planner).
-          </Hint>
-        </Card>
-      )}
-
-      {signedIn && athlete.watchId && (
-        <Card title="Lien d’assistance permanent" className="span2 runner-link" fold={false}>
-          <p className="small">
-            À donner une seule fois à ton assistance : il montre la course que ta montre enregistre (champ Trail Planner, ou parcours
-            choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
-          </p>
-          <div className="row">
-            <button className="primary" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
-              {copied === 'runner' ? <><Check /> Copié</> : <><Copy /> Copier le lien</>}
-            </button>
-            <a href={`#/suivi/${athlete.watchId}`} target="_blank" rel="noreferrer">
-              <ExternalLink className="inline" /> Ouvrir
-            </a>
-          </div>
-        </Card>
-      )}
-
-      <WatchAppsCard />
-
-      <Card title="Code de synchronisation" fold="open">
-        {!signedIn ? (
-          <p className="warn-text">Connecte-toi : la synchronisation avec la montre passe par ton compte.</p>
-        ) : code ? (
-          <>
-            <div className="row ep-code">
-              <strong className="ep-short" aria-label={`Code ${code.split('').join(' ')}`}>{`${code.slice(0, 4)} ${code.slice(4)}`}</strong>
-              <button className="ghost" onClick={() => copy(code)}>{copied === code ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
-            </div>
-            <p className="small">Le même code pour toutes les applications, à saisir une seule fois sur la montre :</p>
-            <ul className="small">
-              <li><strong>Trail Planner</strong> : pendant une activité, appui long sur Haut › Champs Connect IQ › Trail Planner › Code montre.</li>
-              <li><strong>EndurancePro</strong> : menu du champ › Allure › Trail Planner.</li>
-              <li><strong>Trail Planner Companion</strong> (bêta) : appui long sur Haut › Propriétés › Code Trail Planner.</li>
-            </ul>
-          </>
-        ) : athlete.watchId || athlete.epSync ? (
-          <p className="muted">Création du code…</p>
-        ) : (
-          <button className="primary" onClick={() => onChange({ ...athlete, watchId: crypto.randomUUID().replace(/-/g, '') })}>
-            <Watch /> Créer mon code
+    <div className="watch-page">
+      <div className="seg watch-tabs" role="tablist" aria-label="Montre">
+        {(Object.keys(WATCH_TABS) as WatchTab[]).map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
+            {WATCH_TABS[t]}
           </button>
-        )}
-        {signedIn && athlete.watchId && (
-          <p className="muted small">Le code long pour Garmin Connect est en haut de cet onglet.</p>
-        )}
-      </Card>
+        ))}
+      </div>
 
-      <Card title="Sur la montre" fold="open">
-        {onWatch ? (
-          <div className="row">
-            <span><Watch className="inline" /> <strong>{onWatch.name}</strong> <span className="muted small">({onWatch.kind === 'route' ? 'parcours' : 'course'})</span></span>
-            <button onClick={() => onOpen(onWatch)}>Ouvrir</button>
-          </div>
-        ) : (
-          <p className="muted">Aucune course ni aucun parcours sur la montre.</p>
-        )}
-        <Hint>
-          Pour changer, touche <Watch className="inline" /> sur une ligne de la liste des courses ou des parcours (ou « Mettre sur la
-          montre » dans un plan). La montre la récupère d’elle-même ; les modifications du plan suivent automatiquement.
-        </Hint>
-        <ol className="watch-steps small">
-          <li>Avant le départ, ouvre l’activité Trail quelques minutes, téléphone à proximité : le champ télécharge le plan (contrôle toutes les 5 min).</li>
-          <li>Ensuite, tout fonctionne sans réseau. Désactive le tour automatique : le bouton Lap valide le passage aux points.</li>
-          <li>Si ton téléphone est avec toi, la montre envoie passages et position toutes les 5 min : ton assistance les voit sur le lien assistance de la course, ou sur ton lien permanent (en haut de cet onglet).</li>
-        </ol>
-      </Card>
+      {tab === 'synchro' && (
+        <div className="grid two">
+          {signedIn && athlete.watchId && (
+            <Card
+              title="Code pour Garmin Connect"
+              className="span2 connect-code"
+              fold={false}
+              actions={
+                <Hint label="Où coller le code Garmin Connect">
+                  Paramètres d’une application installée depuis le Store : Garmin Connect › ta montre › Activités et applications ›
+                  Trail Planner › Paramètres › Code montre ; pour l’appli Trail Planner Companion, c’est le premier réglage (Code Trail
+                  Planner).
+                </Hint>
+              }
+            >
+              <div className="row">
+                <code className="watch-code">{athlete.watchId}</code>
+                <button className="primary" onClick={() => copy(athlete.watchId!)}>
+                  {copied === athlete.watchId ? <><Check /> Copié</> : <><Copy /> Copier</>}
+                </button>
+              </div>
+            </Card>
+          )}
 
-      <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />
+          <Card title="Code montre" fold={false} actions={<Hint label="Où saisir le code">{CODE_HELP}</Hint>}>
+            {!signedIn ? (
+              <p className="warn-text">Connecte-toi pour synchroniser la montre.</p>
+            ) : code ? (
+              <div className="row ep-code">
+                <strong className="ep-short" aria-label={`Code ${code.split('').join(' ')}`}>{`${code.slice(0, 4)} ${code.slice(4)}`}</strong>
+                <button className="ghost" onClick={() => copy(code)}>{copied === code ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
+              </div>
+            ) : athlete.watchId || athlete.epSync ? (
+              <p className="muted">Création du code…</p>
+            ) : (
+              <button className="primary" onClick={() => onChange({ ...athlete, watchId: crypto.randomUUID().replace(/-/g, '') })}>
+                <Watch /> Créer mon code
+              </button>
+            )}
+          </Card>
 
-      <CompanionSync athlete={athlete} onChange={onChange} signedIn={signedIn} />
+          {signedIn && athlete.watchId && (
+            <Card
+              title="Lien d’assistance permanent"
+              className="runner-link"
+              fold={false}
+              actions={
+                <Hint label="Lien d’assistance permanent">
+                  À donner une seule fois à ton assistance : il montre la course que ta montre enregistre (champ Trail Planner, ou parcours
+                  choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
+                </Hint>
+              }
+            >
+              <div className="row">
+                <button className="primary" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
+                  {copied === 'runner' ? <><Check /> Copié</> : <><Copy /> Copier le lien</>}
+                </button>
+                <a href={`#/suivi/${athlete.watchId}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="inline" /> Ouvrir
+                </a>
+              </div>
+            </Card>
+          )}
+
+          <Card title="Sur la montre" fold={false} actions={<Hint label="Changer de course et préparer la montre">{ON_WATCH_HELP}</Hint>}>
+            {onWatch ? (
+              <div className="row">
+                <span><Watch className="inline" /> <strong>{onWatch.name}</strong> <span className="muted small">({onWatch.kind === 'route' ? 'parcours' : 'course'})</span></span>
+                <button onClick={() => onOpen(onWatch)}>Ouvrir</button>
+              </div>
+            ) : (
+              <p className="muted">Rien sur la montre.</p>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {tab === 'apps' && (
+        <div className="grid two">
+          <WatchAppsCard />
+          <CompanionSync athlete={athlete} onChange={onChange} signedIn={signedIn} />
+        </div>
+      )}
+
+      {tab === 'ep' && <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />}
     </div>
   )
 }
+
+type WatchTab = 'synchro' | 'apps' | 'ep'
+const WATCH_TABS: Record<WatchTab, string> = { synchro: 'Synchro', apps: 'Applications', ep: 'EndurancePro' }
+const TAB_KEY = 'tp-watch-tab'
+/** Dernière sous-page ouverte sur cet appareil (Synchro la première fois). */
+function readTab(): WatchTab {
+  try {
+    const t = localStorage.getItem(TAB_KEY)
+    return t === 'apps' || t === 'ep' ? t : 'synchro'
+  } catch {
+    return 'synchro'
+  }
+}
+
+const CODE_HELP = (
+  <>
+    <p>Le même code pour toutes les applications, à saisir une seule fois sur la montre :</p>
+    <ul>
+      <li><strong>Trail Planner</strong> : pendant une activité, appui long sur Haut › Champs Connect IQ › Trail Planner › Code montre.</li>
+      <li><strong>EndurancePro</strong> : menu du champ › Allure › Trail Planner (00000000 l'efface).</li>
+      <li><strong>Trail Planner Companion</strong> (bêta) : appui long sur Haut › Propriétés › Code Trail Planner.</li>
+    </ul>
+  </>
+)
+
+const ON_WATCH_HELP = (
+  <>
+    <p>
+      Pour changer, touche <Watch className="inline" /> sur une course ou un parcours de la liste (ou « Mettre sur la montre » dans un plan).
+      La montre la récupère d'elle-même ; les modifications du plan suivent.
+    </p>
+    <ol>
+      <li>Avant le départ, ouvre l'activité Trail quelques minutes, téléphone à proximité : le champ télécharge le plan (toutes les 5 min).</li>
+      <li>Ensuite, tout fonctionne sans réseau. Désactive le tour automatique : le bouton Lap valide le passage aux points.</li>
+      <li>Téléphone avec toi : passages et position partent toutes les 5 min vers le lien assistance de la course et ton lien permanent.</li>
+    </ol>
+  </>
+)
 
 /** Appli montre Trail Planner Companion (bêta) : synchronisation des parcours pour son écran de démarrage. */
 function CompanionSync({ athlete, onChange, signedIn }: { athlete: Athlete; onChange: (a: Athlete) => void; signedIn: boolean }) {
@@ -133,29 +187,33 @@ function CompanionSync({ athlete, onChange, signedIn }: { athlete: Athlete; onCh
   const toggle = (v: boolean) =>
     onChange({ ...athlete, appSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
   return (
-    <Card title={<>Trail Planner Companion <span className="badge beta-badge">Bêta</span></>} className="span2">
-      <Hint>
-        L’appli montre qui réunit EndurancePro, le champ Trail Planner, le profil qui te suit et la carte Garmin de ton parcours.
-        Avec la synchronisation, son écran de démarrage propose tes courses à venir et les parcours de ta bibliothèque, à jour à
-        chaque modification ici ; tu choisis, tu vois la fiche (carte, profil, distance, D+), tu démarres.
-      </Hint>
+    <Card
+      title={<>Trail Planner Companion <span className="badge beta-badge">Bêta</span></>}
+      className="span2"
+      actions={
+        <Hint label="Trail Planner Companion">
+          <p>
+            L’appli montre qui réunit EndurancePro, le champ Trail Planner, le profil qui te suit et la carte Garmin de ton parcours.
+            Avec la synchronisation, son écran de démarrage propose tes courses à venir et les parcours de ta bibliothèque, à jour à
+            chaque modification ici ; tu choisis, tu vois la fiche (carte, profil, distance, D+), tu démarres.
+          </p>
+          <p>
+            Sur la montre : appli Trail Planner Companion › appui long sur Haut › Propriétés › Code Trail Planner, saisis le code de la
+            page Synchro (le même que pour le champ et EndurancePro). La liste se met à jour à chaque lancement de l’appli, téléphone à
+            proximité.
+          </p>
+          <p>Version bêta, pas encore sur le Connect IQ Store : installation par câble du fichier compilé.</p>
+        </Hint>
+      }
+    >
       <label className="check">
         <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser mes parcours avec l’appli
       </label>
-      {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
-      {on && signedIn && (
-        <Hint>
-          Sur la montre : appli Trail Planner Companion › appui long sur Haut › Propriétés › Code Trail Planner, saisis le code de
-          synchronisation ci-dessus (le même que pour le champ et EndurancePro). La liste se met à jour à chaque lancement de l’appli,
-          téléphone à proximité.
-        </Hint>
-      )}
+      {on && !signedIn && <p className="warn-text">Connecte-toi pour synchroniser.</p>}
       <p className="small">
-        Version bêta, pas encore sur le Connect IQ Store : installation par câble du fichier compilé (
         <a href="https://github.com/lionelbonati-lab/Trail-Planner/tree/main/garmin/TrailPlannerCompanion" target="_blank" rel="noreferrer">
-          mode d’emploi
+          <ExternalLink className="inline" /> Installation par câble
         </a>
-        ).
       </p>
     </Card>
   )
@@ -229,33 +287,40 @@ function Blocks({ blocks }: { blocks: Block[] }) {
   )
 }
 
-/** Applications Garmin : textes, liens du Store et captures d'écran venant du fichier modifiable. */
+/**
+ * Applications Garmin : nom, captures d'écran et lien du Store visibles ; les textes du fichier modifiable
+ * (introduction, description de chaque application) dans une bulle (i).
+ */
 function WatchAppsCard() {
   const doc = useWatchAppsDoc()
   return (
-    <Card title="Applications Garmin" className="span2" fold="open">
-      <Blocks blocks={doc.intro} />
+    <Card title="Applications Garmin" className="span2" fold={false} actions={doc.intro.length ? <Hint label="Installer les applications"><Blocks blocks={doc.intro} /></Hint> : undefined}>
       <div className="watch-apps">
-        {doc.apps.map((app) => (
-          <div key={app.name} className="watch-app">
-            <div>
-              <strong>{app.name}</strong> {app.status && <span className="badge beta-badge">{app.status}</span>}{' '}
-              {app.type && <span className="muted small">· {app.type}</span>}
+        {doc.apps.map((app) => {
+          const text = app.body.filter((b) => !galleryImages(b))
+          const gallery = app.body.filter((b) => galleryImages(b))
+          return (
+            <div key={app.name} className="watch-app">
+              <div className="watch-app-head">
+                <strong>{app.name}</strong> {app.status && <span className="badge beta-badge">{app.status}</span>}{' '}
+                {app.type && <span className="muted small">· {app.type}</span>}
+                {text.length > 0 && <Hint label={`À propos de ${app.name}`}><Blocks blocks={text} /></Hint>}
+              </div>
+              {app.image && <img className="watch-shot" src={docUrl(app.image, BASE)} alt={`Écran de la montre : ${app.name}`} loading="lazy" />}
+              <Blocks blocks={gallery} />
+              {app.store ? (
+                <a className="button primary" href={app.store} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Connect IQ Store
+                </a>
+              ) : (
+                <span className="small">
+                  <span className="muted">Pas encore sur le Store : </span>
+                  <a href={app.guide ?? WATCH_APPS[0].guideUrl} target="_blank" rel="noreferrer">installation par câble</a>
+                </span>
+              )}
             </div>
-            {app.image && <img className="watch-shot" src={docUrl(app.image, BASE)} alt={`Écran de la montre : ${app.name}`} loading="lazy" />}
-            <Blocks blocks={app.body} />
-            {app.store ? (
-              <a className="button primary" href={app.store} target="_blank" rel="noreferrer">
-                <ExternalLink /> Connect IQ Store
-              </a>
-            ) : (
-              <span className="small">
-                <span className="muted">Pas encore sur le Connect IQ Store : </span>
-                <a href={app.guide ?? WATCH_APPS[0].guideUrl} target="_blank" rel="noreferrer">installation par câble</a>
-              </span>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
     </Card>
   )
@@ -272,28 +337,40 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
   const toggle = (v: boolean) =>
     onChange({ ...athlete, epSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
   return (
-    <Card title="EndurancePro : synchronisation du profil" className="span2">
-      <Hint>
-        EndurancePro garde la colorisation et l'alarme de son allure cible (vert dans la cible, orange et alarme quand tu vas trop
-        vite) ; la cible peut être une allure, une zone de VC ou un % de VC (réglage « Référence » du dossier Allure). Avec la
-        synchronisation, il reprend tout seul ta VC, tes zones, les équivalences montée et descente (déduites de ta VAM et de tes coefficients de descente), tes zones VAM et la zone de la séance
-        envoyée à la montre : à chaque mise à jour ici, la montre suit (au lancement d'une activité, puis toutes les 30 min, téléphone
-        connecté).
-      </Hint>
-      <label className="check">
-        <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser EndurancePro avec ce profil
-      </label>
-      {on && !signedIn && <p className="warn-text">Connecte-toi : la synchronisation passe par ton compte.</p>}
-      {on && signedIn && (
-        <Hint>
-          Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis le code de synchronisation ci-dessus
-          (00000000 l'efface). La ligne affiche ensuite « Synchro hh:mm » à chaque mise à jour. Une séance envoyée à la montre avec
-          une zone sur tout le parcours (Z1 à Z5) devient la zone cible de toutes les alarmes : allure (référence « Zone VC »), FC et VAM.
+    <Card
+      title="EndurancePro"
+      className="span2"
+      fold={false}
+      actions={
+        <Hint label="Synchronisation EndurancePro">
+          <p>
+            EndurancePro garde la colorisation et l'alarme de son allure cible (vert dans la cible, orange et alarme si tu vas trop vite) ;
+            la cible peut être une allure, une zone ou un % de VC (réglage « Référence » du dossier Allure).
+          </p>
+          <p>
+            Synchronisé, il reprend tout seul ta VC, tes zones, les équivalences montée (d'après ta VAM à VC ; défaut 100 m) et
+            descente (d'après tes coefficients de descente ; défaut 330 m), tes zones VAM et la zone de la séance envoyée à la montre.
+            La montre suit chaque mise à jour au lancement d'une activité, puis toutes les 30 min, téléphone connecté.
+          </p>
+          <p>
+            Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis le code de la page Synchro
+            (00000000 l'efface) ; la ligne affiche ensuite « Synchro hh:mm ».
+          </p>
+          <p>
+            Zone cible : une séance envoyée à la montre avec une zone sur tout le parcours (Z1 à Z{EP_TARGET_ZONES}) règle les alarmes
+            d'allure (référence « Zone VC »), de FC et de VAM ; sinon elle reste celle réglée sur la montre. VAM : pas de couleur sous la
+            première limite.
+          </p>
         </Hint>
-      )}
-      <table className="table compact">
+      }
+    >
+      <label className="check">
+        <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser avec ce profil
+      </label>
+      {on && !signedIn && <p className="warn-text">Connecte-toi pour synchroniser.</p>}
+      <table className="table compact ep-table">
         <tbody>
-          <tr><td>Vitesse critique</td><td><strong>{formatPace(1000 / athlete.cs)}/km</strong> <span className="muted">({(athlete.cs * 3.6).toFixed(2)} km/h)</span></td></tr>
+          <tr><td>VC</td><td><strong>{formatPace(1000 / athlete.cs)}/km</strong> <span className="muted">({(athlete.cs * 3.6).toFixed(2)} km/h)</span></td></tr>
           <tr>
             <td>Zones</td>
             <td>
@@ -305,19 +382,14 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
               ))}
             </td>
           </tr>
+          <tr><td>Montée</td><td>{up ? <><strong>{up} m</strong> D+ = 1 km</> : '—'}</td></tr>
           <tr>
-            <td>Équivalence montée</td>
-            <td>{up ? <><strong>{up} m</strong> de D+ = 1 km à plat <span className="muted">(d'après ta VAM à VC ; défaut EndurancePro : 100 m)</span></> : '—'}</td>
-          </tr>
-          <tr>
-            <td>Équivalence descente</td>
+            <td>Descente</td>
             <td>
               {dn ? (
                 <>
-                  <strong>{dn} m</strong> de D- = 1 km à plat{' '}
-                  <span className="muted">
-                    (d'après tes coefficients de descente{dn >= EP_DESCENT_RANGE[1] ? ' : en moyenne, la descente te ralentit peu, valeur au plafond du réglage' : dn <= EP_DESCENT_RANGE[0] ? ' : valeur au plancher du réglage' : ''} ; défaut EndurancePro : 330 m)
-                  </span>
+                  <strong>{dn} m</strong> D- = 1 km
+                  {dn >= EP_DESCENT_RANGE[1] ? <span className="muted"> (plafond)</span> : dn <= EP_DESCENT_RANGE[0] ? <span className="muted"> (plancher)</span> : null}
                 </>
               ) : (
                 '—'
@@ -325,7 +397,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
             </td>
           </tr>
           <tr>
-            <td>Couleurs VAM</td>
+            <td>VAM</td>
             <td>
               {vz ? (
                 <>
@@ -337,9 +409,8 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
                   ))}
                   <span className="ep-zone">
                     <i className="zone-swatch" style={{ background: colorForIndex(4) }} />
-                    Z5 dès {vz[4]} m/h
+                    Z5 ≥ {vz[4]} m/h
                   </span>
-                  <span className="muted"> (pas de couleur sous {vz[0]} m/h)</span>
                 </>
               ) : (
                 '—'
@@ -347,28 +418,27 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
             </td>
           </tr>
           <tr>
-            <td>Zone cible<br /><span className="muted small">allure, FC et VAM</span></td>
+            <td>Zone cible</td>
             <td>
               {k !== null && onWatch && (epTargetRank(athlete, onWatch) ?? 0) <= EP_TARGET_ZONES ? (
                 <>
-                  <strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} », envoyée à la montre) : les alarmes d'allure (référence Zone VC), de FC et de VAM se déclenchent au-dessus de cette zone</span>
+                  <strong>{athlete.zones[k].name}</strong> <span className="muted">(« {onWatch.name} »)</span>
                 </>
               ) : k !== null && onWatch ? (
-                <span className="muted">
-                  inchangée : « {onWatch.name} » est en {athlete.zones[k].name}, or la zone cible d'EndurancePro va de Z1 à Z{EP_TARGET_ZONES} (zones que la
-                  FC et la VAM ont aussi)
-                </span>
+                <span className="muted">inchangée (« {onWatch.name} » en {athlete.zones[k].name}, hors Z1–Z{EP_TARGET_ZONES})</span>
               ) : (
-                <span className="muted">
-                  inchangée (réglée sur la montre, Z1 à Z{EP_TARGET_ZONES}) : envoie à la montre une séance avec une zone sur tout le parcours pour la
-                  régler d'ici ; elle règle les alarmes d'allure, de FC et de VAM
-                </span>
+                <span className="muted">réglée sur la montre</span>
               )}
             </td>
           </tr>
         </tbody>
       </table>
-      {on && <p className="muted small">Données publiées : <code>{epPayload(athlete, onWatch)}</code></p>}
+      {on && (
+        <details className="small">
+          <summary>Données envoyées</summary>
+          <code className="watch-code">{epPayload(athlete, onWatch)}</code>
+        </details>
+      )}
     </Card>
   )
 }

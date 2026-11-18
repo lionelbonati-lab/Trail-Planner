@@ -91,11 +91,16 @@ export function LiveMode({ race, athlete, onChange, onExit }: Props) {
         <Card title={`Mode course · ${race.name}`} fold={false}>
           {free ? (
             <p>
-              Départ libre : les heures du plan se calent sur ton départ (arrivée vers {formatClock(new Date(now + sim.totalTime * 1000), tz)} si tu
-              pars maintenant). Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.
+              Départ libre : arrivée vers {formatClock(new Date(now + sim.totalTime * 1000), tz)} si tu pars maintenant.{' '}
+              <Hint label="Mode course">
+                Les heures du plan se calent sur ton départ. Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.
+              </Hint>
             </p>
           ) : (
-            <p>Départ prévu {formatClock(new Date(plannedStart), tz, true)}. Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.</p>
+            <p>
+              Départ prévu {formatClock(new Date(plannedStart), tz, true)}.{' '}
+              <Hint label="Mode course">Le chrono démarre au moment choisi ; tu notes ensuite chaque passage d'un appui.</Hint>
+            </p>
           )}
           <div className="live-actions">
             <button className="primary big" onClick={() => setLive({ startedAt: new Date().toISOString(), passages: {} })}>▶ Départ maintenant</button>

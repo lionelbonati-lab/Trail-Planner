@@ -393,12 +393,25 @@ function DurabilityNotes({ athlete }: { athlete: Athlete }) {
   const m = last?.metrics
   return (
     <>
-      <h3>Ta durabilité</h3>
-      <p className="small">
-        La durabilité, c'est la façon dont tes capacités (VC, économie de course, VO₂max) se dégradent au fil d'un effort long,
-        décrite par le moment où la dérive commence et son ampleur. Le profil ci-dessus la traduit en intensité tenable selon la durée ;
-        sur le terrain, elle se mesure par le <strong>découplage cardiaque</strong> de tes sorties longues (onglet Analyse, avec la FC).
-      </p>
+      <h3>
+        Ta durabilité{' '}
+        <Hint label="La durabilité">
+          <p>
+            La durabilité, c'est la façon dont tes capacités (VC, économie de course, VO₂max) se dégradent au fil d'un effort long,
+            décrite par le moment où la dérive commence et son ampleur. Le profil ci-dessus la traduit en intensité tenable selon la durée ;
+            sur le terrain, elle se mesure par le <strong>découplage cardiaque</strong> de tes sorties longues (onglet Analyse, avec la FC).
+          </p>
+          <p><strong>Repères des études et comment l'améliorer</strong></p>
+          <ul>
+            <li>Après 1 h 30 à 2 h de course, la vitesse au seuil baisse de 3 à 7 % et le VO₂max de 3 à 7 % (Zanini, Hunter et Muniz-Pumares, 2025).</li>
+            <li>En trail, un contre-la-montre refait après 90 min prend +7,7 % de temps, surtout dans les montées ; les descentes ne bougent pas (Lloria-Varella et al., 2025).</li>
+            <li>La baisse varie beaucoup d'un coureur à l'autre, indépendamment du VO₂max ou du volume (Barsumyan et al., 2025).</li>
+            <li>Pour la travailler : du volume sur le long terme, des sorties longues régulières, des portions à allure de course en fin de sortie longue.</li>
+            <li>Basse comme haute intensité l'améliorent : la dérive apparaît 25 à 29 min plus tard après 10 semaines (Matomäki et al., 2023).</li>
+            <li>Musculation : force maximale et pliométrie, 2 séances par semaine pendant 10 semaines, limitent la dégradation de l'économie de course (Zanini et al., 2025).</li>
+          </ul>
+        </Hint>
+      </h3>
       {m ? (
         <p className="small">
           Dernière mesure ({last!.date.slice(0, 10)}, {last!.name}) : découplage{' '}
@@ -406,19 +419,8 @@ function DurabilityNotes({ athlete }: { athlete: Athlete }) {
           {m.driftOnsetH != null ? `, dérive à partir de ${Math.floor(m.driftOnsetH)} h ${String(Math.round((m.driftOnsetH % 1) * 60)).padStart(2, '0')}` : ', sans dérive nette'}.
         </p>
       ) : (
-        <p className="muted small">Pas encore de mesure : analyse une sortie longue (1 h 30 et plus) enregistrée avec la FC.</p>
+        <p className="muted small">Pas encore de mesure : analyse une sortie longue (1 h 30 et plus) avec la FC.</p>
       )}
-      <details className="small">
-        <summary>Repères des études et comment l'améliorer</summary>
-        <ul>
-          <li>Après 1 h 30 à 2 h de course, la vitesse au seuil baisse de 3 à 7 % et le VO₂max de 3 à 7 % (Zanini, Hunter et Muniz-Pumares, 2025).</li>
-          <li>En trail, un contre-la-montre refait après 90 min prend +7,7 % de temps, surtout dans les montées ; les descentes ne bougent pas (Lloria-Varella et al., 2025).</li>
-          <li>La baisse varie beaucoup d'un coureur à l'autre, indépendamment du VO₂max ou du volume (Barsumyan et al., 2025).</li>
-          <li>Pour la travailler : du volume sur le long terme, des sorties longues régulières, des portions à allure de course en fin de sortie longue.</li>
-          <li>Basse comme haute intensité l'améliorent : la dérive apparaît 25 à 29 min plus tard après 10 semaines (Matomäki et al., 2023).</li>
-          <li>Musculation : force maximale et pliométrie, 2 séances par semaine pendant 10 semaines, limitent la dégradation de l'économie de course (Zanini et al., 2025).</li>
-        </ul>
-      </details>
     </>
   )
 }

@@ -9,22 +9,28 @@ const noop = () => {}
 describe('onglet Montre', () => {
   const race = { ...newRace('Trail du Jura', ''), id: 'r1' }
 
-  it('connecté : code à 8 chiffres, où le saisir, course sur la montre, applis', () => {
+  it('connecté : sous-page Synchro d’abord, code en haut, où le saisir dans un (i), course sur la montre', () => {
     const athlete = normalizeAthlete({ ...DEFAULT_ATHLETE, watchId: 'abc123', epCode: '12345678', watchRaceId: 'r1' })
     const html = renderToStaticMarkup(<WatchPanel athlete={athlete} onChange={noop} signedIn onWatch={race} onOpen={noop} />)
+    // Sous-pages : Synchro, Applications, EndurancePro ; Synchro ouverte.
+    expect(html).toMatch(/role="tab" aria-selected="true" class="on">Synchro</)
+    expect(html).toContain('>Applications<')
+    expect(html).toContain('>EndurancePro<')
+    // Code en premier, avant la course sur la montre.
     expect(html).toContain('1234 5678')
-    expect(html).toContain('Champs Connect IQ › Trail Planner › Code montre')
-    expect(html).toContain('Allure › Trail Planner')
+    expect(html.indexOf('1234 5678')).toBeLessThan(html.indexOf('Trail du Jura'))
+    expect(html).toContain('aria-label="Où saisir le code"')
     expect(html).toContain('abc123')
-    // Code pour Garmin Connect en tête de l'onglet, avant le lien permanent.
+    // Code pour Garmin Connect en tête de la sous-page, avant le lien permanent.
     expect(html.indexOf('Code pour Garmin Connect')).toBeGreaterThanOrEqual(0)
+    expect(html.indexOf('Code pour Garmin Connect')).toBeLessThan(html.indexOf('1234 5678'))
     expect(html.indexOf('Code pour Garmin Connect')).toBeLessThan(html.indexOf('Lien d’assistance permanent'))
-    expect(html).toContain('Trail du Jura')
-    expect(html).toContain('EndurancePro')
-    expect(html).toContain('installation par câble')
     // Lien d'assistance permanent du coureur.
-    expect(html).toContain('Lien d’assistance permanent')
     expect(html).toContain('href="#/suivi/abc123"')
+    expect(html).toContain('Trail du Jura')
+    // Consignes repliées dans les (i), plus affichées en clair.
+    expect(html).not.toContain('Champs Connect IQ › Trail Planner › Code montre')
+    expect(html).not.toContain('installation par câble')
   })
 
   it('connecté sans code : bouton pour le créer ; sans compte : invitation à se connecter', () => {
