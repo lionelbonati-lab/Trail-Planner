@@ -153,6 +153,26 @@ function mapSupported() as Boolean {
     return false;
 }
 
+// Fiche et exploration de la carte Garmin, appelées par CompanionApp : sur les montres sans cartes
+// (Forerunner 255 et 265), la vue n'est pas compilée et ces appels ne font rien.
+(:map)
+function mapSetOverview(v, on as Boolean) as Void {
+    (v as CompanionMapView).setOverview(on);
+}
+
+(:nomap)
+function mapSetOverview(v, on as Boolean) as Void {
+}
+
+(:map)
+function mapSetExploring(v, on as Boolean) as Void {
+    (v as CompanionMapView).setExploring(on);
+}
+
+(:nomap)
+function mapSetExploring(v, on as Boolean) as Void {
+}
+
 (:map)
 function createMapView(run as Run) {
     if (WatchUi has :MapView) {

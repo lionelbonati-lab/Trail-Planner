@@ -110,7 +110,7 @@ class CompanionApp extends Application.AppBase {
     function endOverview() as Void {
         overviewOn = false;
         if (mapView != null) {
-            mapView.setOverview(false);
+            mapSetOverview(mapView, false);
         }
     }
 
@@ -248,17 +248,17 @@ class CompanionApp extends Application.AppBase {
             return;
         }
         if (overviewOn) {
-            mapView.setExploring(true);
+            mapSetExploring(mapView, true);
             return;
         }
         focusBack = -1;
         showPage(MAP_PAGE);
-        mapView.setExploring(true);
+        mapSetExploring(mapView, true);
     }
 
     function stopExplore() as Void {
         if (mapView != null) {
-            mapView.setExploring(false);
+            mapSetExploring(mapView, false);
         }
     }
 

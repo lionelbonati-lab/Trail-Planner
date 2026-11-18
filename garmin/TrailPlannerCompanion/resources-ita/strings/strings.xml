@@ -35,7 +35,7 @@
     <string id="menu_colorize_dplus_dmoins">Riquadro D+/D-</string>
     <string id="menu_vam_zones_bar">Barra VAM</string>
     <string id="menu_version_label">Versione</string>
-    <string id="app_version">0.6.5 (EndurancePro 2.7.3)</string>
+    <string id="app_version">0.6.6 (EndurancePro 2.7.3)</string>
     <string id="menu_temp_corr">Correz. temp.</string>
     <string id="menu_solar_corr">Correz. solare</string>
     <string id="menu_bag_weight_title">Peso zaino (kg)</string>
@@ -178,4 +178,13 @@
     <string id="opt_waiting">In attesa</string>
     <string id="set_trail_code">Codice Trail Planner</string>
     <string id="set_vc_zones">Zone VC (% della VC)</string>
+    <!-- Unités (identiques dans toutes les langues), manquantes dans cette langue -->
+    <string id="unite_km">km</string>
+    <string id="unite_m_s">m/s</string>
+    <string id="unite_min_km">min/km</string>
+    <string id="unite_s_km">s/km</string>
+    <string id="unite_kg">kg</string>
+    <string id="unite_vide"> </string>
+    <string id="unite_mult">x</string>
+    <string id="unite_pct">%</string>
 </resources>
