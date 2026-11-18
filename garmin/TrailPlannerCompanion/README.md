@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.10, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.11, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -75,7 +75,7 @@ météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (pop
   estimée au prochain point ;
 - **dernière ligne** (à la place du chrono, dans la plus grande police qui tient le texte entier) : le
   prochain point, en alternance (5 s) avec la marge sur la
-  prochaine barrière horaire ; « Passage · nom » ou « Départ · nom » 5 s après un tour ; « Hors
+  prochaine barrière horaire ; le nom du point ou « Départ · nom » 5 s après un tour ; « Hors
   parcours » ; la note d'un point au passage ;
 - **au ravito**, jusqu'au départ : à gauche **« À consommer »** (produits sur ravito) puis **« À prendre »**
   (sac : eau, produits, sel, note du point), 5 s chacun, chaque ligne dans la plus grande police qui tient
@@ -103,7 +103,7 @@ ni pendant l'exploration de la carte ; changer d'écran à la main annule le ret
 
 **3. Profil de la course** (sans km ni nom de point) :
 - en haut, l'**écart au plan** à l'endroit où tu es (`+6'` = 6 min de retard, en rouge ; avance en
-  vert). À la place, pendant 5 s : « Passage · nom », « Départ · nom » ou « Tour N » après un tour ;
+  vert). À la place, pendant 5 s : le nom du point, « Départ · nom » ou « Tour N » après un tour ;
   « Hors parcours · N m » si tu t'écartes du tracé ; « Pause » ; rien avant le départ (pas de titre) ;
 - la portion de parcours du **zoom choisi** (parcours entier, 20, 10, 5 ou 2 km, toi au **tiers gauche**
   comme sur la page assistance : tu vois surtout ce qui t'attend), ou le **tronçon en cours** (du point de
@@ -159,13 +159,14 @@ d'anneau au bord de l'écran (celui de la FC d'EndurancePro reste).
 8 s ; **Bas** pendant ce temps annule le tour. Sinon il est enregistré à la fin du décompte (une appli Connect
 IQ ne peut pas effacer un tour déjà écrit) : le passage au point Trail Planner garde l'heure et la position de
 l'appui, le tour du fichier commence 8 s plus tard. Un nouvel appui sur Lap pendant le décompte valide le
-tour en attente ; une pause aussi. Pendant le décompte, une **icône de tour rouge** signale que Bas annule
-le tour. En **sortie libre**, l'écran du tour s'affiche : numéro, temps, distance et allure (ou vitesse) du
-tour, icône rouge en bas. Avec un parcours, l'écran reste celui affiché, avec l'anneau et, à la place de la
-dernière ligne, l'icône rouge à gauche et, **dès l'appui**, le point que le tour va valider (« Passage ·
-Courmayeur » en vert, ou « Départ · nom » au 2e tour d'un ravito), qui défile en boucle s'il ne tient pas ;
-le message reste aussi en haut du profil et de la carte. L'icône seule : le tour ne validera aucun point
-(trop loin de tout point).
+tour en attente ; une pause aussi. Pendant le décompte, comme sur les applis Garmin, un **petit arc rouge**
+sur le bord en face de la touche Bas et, à côté, l'**icône de tour et « Annuler »** en rouge. En **sortie
+libre**, l'écran du tour s'affiche : numéro, temps, distance et allure (ou vitesse) du tour, « Annuler » en
+bas à gauche. Avec un parcours, l'écran reste celui affiché, avec l'anneau, « Annuler » sur la dernière
+ligne et, **dès l'appui**, sur la ligne du dessus (écart au plan et heure d'arrivée), le **nom du point** que
+le tour va valider en vert (« Départ · nom » au 2e tour d'un ravito), qui défile en boucle s'il ne tient
+pas ; le nom reste aussi en haut du profil et de la carte, puis 5 s après la validation. Pas de nom : le tour
+ne validera aucun point (trop loin de tout point).
 
 Écran tactile : balayages haut / bas pour changer d'écran. Le balayage « retour » ne fait rien (ni tour,
 ni retour à la liste) et un tap non plus : START et BACK restent sur les boutons. « Supprimer » demande une
@@ -281,7 +282,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.10 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.11 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

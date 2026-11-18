@@ -332,7 +332,7 @@ class TrailPlannerScreen {
     }
 
     // Appli : ce qu'un tour à cet instant va valider, affiché dès l'appui pendant le décompte d'annulation :
-    // « Départ · nom » (2e tour au ravito), « Passage · nom », ou null (simple tour).
+    // « Départ · nom » (2e tour au ravito), le nom du point seul (passage), ou null (simple tour).
     function lapPreview(pressAt as Number, pressDist as Float) as String or Null {
         if (plan == null || !running || Application.Properties.getValue("lapPass") == false) {
             return null;
@@ -341,7 +341,12 @@ class TrailPlannerScreen {
             return "Départ · " + plan.cpName[bagCp];
         }
         var best = lapPoint(pressDist);
-        return best >= 0 ? "Passage · " + plan.cpName[best] : null;
+        return best >= 0 ? plan.cpName[best] : null;
+    }
+
+    // Message du dernier tour : le nom du point (passage), « Départ · nom » à la sortie d'un ravito.
+    function lapText() as String {
+        return lapTitle.equals("Départ") ? lapTitle + " · " + lapMsg : lapMsg;
     }
 
     // Bouton Lap : passage au point le plus proche pas encore validé par un tour (lapPoint). Heure de
@@ -965,7 +970,7 @@ class TrailPlannerScreen {
         } else if (offRoute) {
             bottomLine(dc, l, "Hors parcours · " + offBy + " m", red);
         } else if (now < lapMsgUntil) {
-            bottomLine(dc, l, lapTitle + " · " + lapMsg, green);
+            bottomLine(dc, l, lapText(), green);
         } else if (bagCp >= 0 && bagLeg < 0 && ravitoShown(now)) {
             bottomLine(dc, l, plan.cpNote[bagCp], fg);
         } else if (cutIdx >= 0 && (now / 5) % 2 == 1) {

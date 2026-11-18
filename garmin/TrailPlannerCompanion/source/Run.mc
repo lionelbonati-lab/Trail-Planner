@@ -47,7 +47,7 @@ class Run {
     var offRoute = false;     // hors du tracé
     var offBy = 0;            // écart au tracé (m)
     var laps = 1;             // tour en cours
-    var msg = "";             // « Passage · nom », « Départ · nom », « Tour N »...
+    var msg = "";             // nom du point passé, « Départ · nom », « Tour N »...
     var msgShort = "";        // ... forme courte si la place manque (nom du point seul)
     var msgUntil = 0;         // ... affiché jusqu'à cet instant (s Unix)
     var lastSent = 0;         // dernier envoi du suivi (s Unix)
@@ -74,7 +74,7 @@ class Run {
     var lapStartWalked = 0.0;
     var lapShownTime = 0;     // tour affiché pendant le décompte (sorties libres) : temps (ms), distance (m)
     var lapShownDist = 0.0;
-    var lapPreview = null;    // avec un parcours : « Passage · nom » que le tour va valider (ou null)
+    var lapPreview = null;    // avec un parcours : point que le tour va valider (nom, « Départ · nom ») ou null
     var lapFrame = null;      // ... qui défile : écran redessiné 10 fois par seconde (Timer.Timer ou null)
     // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
     var profLoad = null;      // [ProfileReader, GroupReader] ou null...
@@ -323,7 +323,7 @@ class Run {
         var before = tp.lapMsgUntil;
         tp.onTimerLap(at, lapPressDist);
         if (tp.lapMsgUntil != before) {
-            show(tp.lapTitle + " · " + tp.lapMsg, tp.lapMsg, now);
+            show(tp.lapText(), tp.lapMsg, now);
         } else {
             show(tpText(Rez.Strings.tp_lap) + " " + laps, "", now);
         }

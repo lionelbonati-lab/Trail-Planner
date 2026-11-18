@@ -30,6 +30,7 @@
     <string id="tp_off_route">Off course</string>
     <string id="tp_lap">Lap</string>
     <string id="tp_lap_undone">Lap cancelled</string>
+    <string id="tp_undo">Cancel</string>
     <string id="tp_passage">Checkpoint</string>
     <string id="tp_depart">Departure</string>
     <string id="tp_saved">Run saved</string>
