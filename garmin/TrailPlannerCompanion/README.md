@@ -109,8 +109,8 @@ ni pendant l'exploration de la carte ; changer d'écran à la main annule le ret
   passage précédent au suivant, **par défaut**), ou **d'un ravito à l'autre** (ravitos et bases de vie) ;
   **appui long sur Haut** depuis le profil : choix du zoom, et en fin de menu **Couleurs des pentes** ;
 - **altitudes ajustées à la portion affichée** (100 m d'écart au moins, pour ne pas grossir le plat), avec
-  la plus haute **au-dessus de sa ligne** et la plus basse **sous la ligne de base**, hors du profil, du côté
-  opposé à toi, ramenées dans l'écran rond ;
+  la plus haute **au-dessus de sa ligne** (du côté opposé à toi) et la plus basse **juste au-dessus du point
+  bas** du profil, ramenées dans l'écran rond ;
 - partie faite et partie à venir en deux gris, ou à venir en **couleurs des pentes** (option) ;
 - points de passage sans nom : ravito (rond orange), base de vie (carré rouge), autres (petit rond),
   grisés une fois passés ;

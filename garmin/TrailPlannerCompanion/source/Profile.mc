@@ -154,11 +154,13 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, a as Float, 
     var alts = [] as Array<Float>;
     var minE = 0.0;
     var maxE = 0.0;
+    var iMin = 0;         // colonne du point le plus bas
     for (var i = 0; i <= n; i++) {
         var e = plan.altAt(a + per * i);
         alts.add(e);
         if (i == 0 || e < minE) {
             minE = e;
+            iMin = i;
         }
         if (i == 0 || e > maxE) {
             maxE = e;
@@ -212,8 +214,9 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, a as Float, 
     dc.setColor(doneFill, Graphics.COLOR_TRANSPARENT);
     dc.drawLine(left, bottom, right, bottom);
 
-    // Altitudes la plus haute et la plus basse de la portion, hors du profil : la plus haute juste au-dessus
-    // de sa ligne, la plus basse sous la ligne de base ; du côté opposé au coureur (pas sur son repère).
+    // Altitudes la plus haute et la plus basse de la portion : la plus haute juste au-dessus de sa ligne, du
+    // côté opposé au coureur (pas sur son repère) ; la plus basse juste au-dessus du point bas du profil.
+    // Chacune ramenée dans le cadre et dans l'écran rond à sa hauteur.
     if (plan.realAltitude()) {
         var font = Graphics.FONT_XTINY;
         var fh = dc.getFontHeight(font);
@@ -221,12 +224,19 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, a as Float, 
         var runnerLeft = pos - a < span / 2.0;
         var lx = runnerLeft ? right - 2 : left + 2;
         var just = runnerLeft ? Graphics.TEXT_JUSTIFY_RIGHT : Graphics.TEXT_JUSTIFY_LEFT;
-        // Chaque valeur ramenée dans l'écran rond à sa hauteur (la plus basse était coupée en bas à droite).
         var yTop = yMax - fh - 1;
-        var yLow = bottom + 1;
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
         dc.drawText(insideX(dc, lx, yTop + fh / 2, font, runnerLeft), yTop, font, maxE.toNumber().toString(), just);
-        dc.drawText(insideX(dc, lx, yLow + fh / 2, font, runnerLeft), yLow, font, minE.toNumber().toString(), just);
+        var low = minE.toNumber().toString();
+        var tw = dc.getTextWidthInPixels(low, font);
+        var yLow = altY(minE, lo, hi, top, bottom) - fh - 2;
+        var half = widthAt(dc, yLow + fh / 2, font) / 2;
+        var mid = dc.getWidth() / 2;
+        var xMin = left + tw / 2 > mid - half + tw / 2 ? left + tw / 2 : mid - half + tw / 2;
+        var xMax = right - tw / 2 < mid + half - tw / 2 ? right - tw / 2 : mid + half - tw / 2;
+        var lowX = left + iMin * step;
+        lowX = lowX < xMin ? xMin : (lowX > xMax ? xMax : lowX);
+        dc.drawText(lowX, yLow, font, low, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     // Points de passage de la portion (sans nom).

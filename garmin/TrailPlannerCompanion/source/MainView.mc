@@ -80,12 +80,10 @@ class MainView extends WatchUi.View {
         var plan = run.plan;
         if (plan != null && plan.hasProfile()) {
             // Cadre du profil : il tient dans un écran rond (coins sur le cercle).
-            // Place au-dessus du cadre pour l'altitude la plus haute, en dessous pour la plus basse (et pour
+            // Place au-dessus du cadre pour l'altitude la plus haute, en dessous pour le repère du coureur (et
             // « START » avant le départ ou en pause).
             var side = isRound() ? (w * 0.11).toNumber() : (w * 0.04).toNumber();
-            var fh = dc.getFontHeight(Graphics.FONT_XTINY);
-            var under = run.state == RUNNING ? fh + 2 : 30;
-            var box = [side, top + 30, w - side, bottom - (under > 16 ? under : 16)] as Array<Number>;
+            var box = [side, top + 30, w - side, bottom - (run.state == RUNNING ? 16 : 30)] as Array<Number>;
             var pos = run.state == READY ? 0.0 : run.dist;
             var win = profileWindow(plan, pos);
             drawProfile(dc, plan, pos, win[0], win[1], slopesOn(), box);
