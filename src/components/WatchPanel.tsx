@@ -37,6 +37,23 @@ export function WatchPanel({
   const code = athlete.epCode
   return (
     <div className="grid two">
+      {signedIn && athlete.watchId && (
+        <Card title="Lien d’assistance permanent" className="span2 runner-link" fold={false}>
+          <p className="small">
+            À donner une seule fois à ton assistance : il montre la course que ta montre enregistre (champ Trail Planner, ou parcours
+            choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
+          </p>
+          <div className="row">
+            <button className="primary" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
+              {copied === 'runner' ? <><Check /> Copié</> : <><Copy /> Copier le lien</>}
+            </button>
+            <a href={`#/suivi/${athlete.watchId}`} target="_blank" rel="noreferrer">
+              <ExternalLink className="inline" /> Ouvrir
+            </a>
+          </div>
+        </Card>
+      )}
+
       <WatchAppsCard />
 
       <Card title="Code de synchronisation" fold="open">
@@ -90,24 +107,8 @@ export function WatchPanel({
         <ol className="watch-steps small">
           <li>Avant le départ, ouvre l’activité Trail quelques minutes, téléphone à proximité : le champ télécharge le plan (contrôle toutes les 5 min).</li>
           <li>Ensuite, tout fonctionne sans réseau. Désactive le tour automatique : le bouton Lap valide le passage aux points.</li>
-          <li>Si ton téléphone est avec toi, la montre envoie passages et position toutes les 5 min : ton assistance les voit sur le lien assistance de la course, ou sur ton lien permanent ci-dessous.</li>
+          <li>Si ton téléphone est avec toi, la montre envoie passages et position toutes les 5 min : ton assistance les voit sur le lien assistance de la course, ou sur ton lien permanent (en haut de cet onglet).</li>
         </ol>
-        {signedIn && athlete.watchId && (
-          <div className="runner-link">
-            <p className="small">
-              <strong>Lien d’assistance permanent</strong>, à donner une seule fois à ton assistance : il montre la course que ta montre
-              enregistre (champ Trail Planner, ou parcours choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
-            </p>
-            <div className="row">
-              <button className="ghost" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
-                {copied === 'runner' ? <><Check /> Copié</> : <><Copy /> Copier le lien</>}
-              </button>
-              <a className="small" href={`#/suivi/${athlete.watchId}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="inline" /> Ouvrir
-              </a>
-            </div>
-          </div>
-        )}
       </Card>
 
       <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />

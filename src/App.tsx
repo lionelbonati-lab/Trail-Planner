@@ -448,13 +448,14 @@ export default function App() {
 
   // Appli montre : parcours choisi dans sa liste au lieu de la course envoyée à la montre. Il devient la
   // course sur la montre dès son premier relevé (départ réel, direct, debrief, lien permanent), sauf si
-  // une course a été envoyée à la montre depuis ce relevé. Envoi daté du départ de cette activité, pour
-  // que ses relevés comptent.
+  // une course a été envoyée à la montre (⌚) depuis le départ de cette activité : le choix fait à la main
+  // reste prioritaire (sinon chaque relevé d'une sortie en cours éteignait le ⌚ tout juste choisi). Envoi
+  // daté du départ de cette activité, pour que ses relevés comptent.
   useEffect(() => {
     if (!watchReport || !loaded || !athlete.watchId) return
     const id = reportCourse(watchReport)
     if (!id || id === athlete.watchRaceId || !races.some((r) => r.id === id)) return
-    if (athlete.watchRaceAt && watchReport.t * 1000 < Date.parse(athlete.watchRaceAt)) return
+    if (athlete.watchRaceAt && watchReport.s * 1000 < Date.parse(athlete.watchRaceAt)) return
     patchAthlete({ watchRaceId: id, watchRaceAt: new Date((watchReport.s - 60) * 1000).toISOString() })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- un relevé est traité à son arrivée (et au chargement)
   }, [watchReport, loaded, races, athlete])
