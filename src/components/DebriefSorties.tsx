@@ -89,8 +89,13 @@ export function SortiesCard({
         {notifySupported() && (
           <button
             className={notify ? 'ghost on' : 'ghost'}
-            onClick={async () => setNotify(await setDebriefNotify(!notify))}
-            title="Notification de ce téléphone quand l'arrivée est relevée (appli ouverte, même en arrière-plan)"
+            onClick={async () => {
+              const on = await setDebriefNotify(!notify)
+              setNotify(on)
+              // Envoyée aussi par le serveur, même appli fermée (si en place et connecté).
+              await import('../lib/push').then((p) => (p.pushAvailable() ? p.setOwnerPush(on) : undefined)).catch(() => undefined)
+            }}
+            title="Notification de ce téléphone quand l'arrivée est relevée"
           >
             {notify ? <><Bell /> Notification à l'arrivée activée</> : <><BellOff /> Me prévenir à l'arrivée</>}
           </button>

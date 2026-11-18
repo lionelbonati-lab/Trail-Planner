@@ -75,7 +75,7 @@ const rememberSignedIn = (on: boolean) => {
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { reportCourse, watchStartMs, type WatchReport } from './lib/watchLive'
 import { debriefPoints, debriefReport, debriefStart, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
-import { debriefNotifyOn, notifiedDebriefs, rememberNotified, showNotice } from './lib/notify'
+import { debriefNotifyOn, notifiedDebriefs, ownerPushOn, rememberNotified, showNotice } from './lib/notify'
 import { formatClock, formatDuration, zonedToUtc } from './lib/time'
 import { DebriefPage } from './components/DebriefPage'
 
@@ -423,6 +423,15 @@ export default function App() {
       ? watchStartMs(watchReport, Math.max(nowSec, watchReport?.t ?? 0))
       : null
 
+  // Debrief prêt envoyé par le serveur : notification à l'arrivée déjà autorisée sur ce téléphone, abonnement
+  // fait (ou jeton renouvelé) sans rien demander une fois connecté.
+  useEffect(() => {
+    if (!user || !debriefNotifyOn()) return
+    import('./lib/push')
+      .then((p) => (p.pushAvailable() ? p.setOwnerPush(true) : undefined))
+      .catch(() => undefined)
+  }, [user])
+
   // Debrief prêt : sortie terminée proposée en haut de l'appli (quel que soit l'onglet) et, à
   // l'arrivée, notification du téléphone si elle est activée (une fois par sortie et par appareil).
   const [clockMs, setClockMs] = useState(() => Date.now())
@@ -437,7 +446,8 @@ export default function App() {
     const due = debriefsToNotify(races, notifiedDebriefs(), clockMs)
     if (!due.length) return
     rememberNotified(due.map((x) => x.debrief.id))
-    if (!debriefNotifyOn()) return
+    // Notification envoyée par le serveur sur ce téléphone (même appli fermée) : pas de doublon.
+    if (!debriefNotifyOn() || ownerPushOn()) return
     for (const { raceId, debrief, report } of due) {
       const race = races.find((r) => r.id === raceId)
       if (!race || report.finish === null || report.total === null) continue

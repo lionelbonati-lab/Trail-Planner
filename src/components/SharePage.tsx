@@ -3,13 +3,14 @@ import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, 
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { awayFrom } from '../lib/live'
-import { showNotice } from '../lib/notify'
+import { pushFlag, showNotice } from '../lib/notify'
 import { offText, reportFor, reportOffCourse, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
 import type { MapPoint, Runner } from './ShareMap'
 import { CourseProfile } from './CourseProfile'
+import { Hint } from './ui'
 
 const ShareMap = lazy(() => import('./ShareMap'))
 
@@ -191,7 +192,7 @@ export function RunnerPage({ code }: { code: string }) {
   if (!target || !snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
 
   const banner = runnerBanner(target.mode, snap, reportFor(snap, report, nowMs), nowMs)
-  return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} />
+  return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} pushTarget={`suivi:${code}`} />
 }
 
 /**
@@ -323,6 +324,8 @@ function useCrossingAlerts(
   /** Départ réel et départ prévu (ms) : l'écart au plan se compte depuis le vrai départ. */
   startMs: number,
   planStartMs: number,
+  /** Notifications envoyées par le serveur pour ce lien : pas de doublon avec celles de la page. */
+  muted = false,
 ) {
   const supported = typeof window !== 'undefined' && 'Notification' in window
   const [enabled, setEnabledFlag] = useStoredFlag(`tp-notify-${shareId ?? 'local'}`, false)
@@ -348,7 +351,7 @@ function useCrossingAlerts(
     const fresh = passed.filter((r) => !seen.includes(r.id))
     if (!fresh.length) return
     writeStore(key, JSON.stringify([...seen, ...fresh.map((r) => r.id)]))
-    if (!enabled || !supported || Notification.permission !== 'granted') return
+    if (!enabled || muted || !supported || Notification.permission !== 'granted') return
     for (const r of fresh) {
       const late = r.actual ? Math.round((Date.parse(r.actual) - startMs - (Date.parse(r.planned) - planStartMs)) / 60000) : 0
       const plan = late === 0 ? "à l'heure prévue" : `${late > 0 ? '+' : '−'}${Math.abs(late)} min sur le plan`
@@ -365,8 +368,69 @@ function useCrossingAlerts(
   return { supported, permission, enabled: enabled && permission === 'granted', enable, disable: () => setEnabledFlag(false) }
 }
 
-/** Activation des notifications de passage. */
-function NotifyBox({ alerts }: { alerts: ReturnType<typeof useCrossingAlerts> }) {
+/**
+ * Notifications envoyées par le serveur pour ce lien (même page fermée) : passages, retard, barrière.
+ * Null : pas proposées ici (pas en place, navigateur incompatible) ; la page prévient alors elle-même.
+ */
+function usePushAlerts(target: string | null) {
+  const [push, setPush] = useState<typeof import('../lib/push') | null>(null)
+  const [on, setOn] = useState(() => !!target && !!pushFlag(target))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!target || !import.meta.env.VITE_FIREBASE_VAPID_KEY) return
+    let cancelled = false
+    import('../lib/push')
+      .then((p) => {
+        if (cancelled || !p.pushAvailable()) return
+        setPush(p)
+        setOn(!!pushFlag(target))
+        // Jeton renouvelé par le navigateur : abonnement déplacé sans rien demander.
+        p.refreshPush(target).catch(() => undefined)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [target])
+  if (!push || !target) return null
+  const toggle = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      if (on) await push.unsubscribePush(target)
+      else await push.subscribePush(target)
+      setOn(!on)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return { on, busy, error, toggle }
+}
+
+/** Activation des notifications : par le serveur si possible, sinon par la page tant qu'elle est ouverte. */
+function NotifyBox({ alerts, push }: { alerts: ReturnType<typeof useCrossingAlerts>; push: ReturnType<typeof usePushAlerts> }) {
+  if (push) {
+    return (
+      <div className="notify-box row">
+        {push.on ? (
+          <>
+            <span><Bell className="inline" /> Notifications activées</span>
+            <button className="ghost" disabled={push.busy} onClick={() => void push.toggle()}>Désactiver</button>
+          </>
+        ) : (
+          <button disabled={push.busy} onClick={() => void push.toggle()}><Bell /> Me prévenir</button>
+        )}
+        <Hint label="Notifications">
+          Sur ce téléphone, même page fermée : passage à chaque point, retard (à chaque quart d'heure de plus sur le plan) et barrière
+          horaire menacée (moins de 30 min de marge estimée).
+        </Hint>
+        {push.error && <span className="warn small">{push.error}</span>}
+      </div>
+    )
+  }
   if (!alerts.supported) {
     return <p className="muted small">Notifications non disponibles sur ce navigateur (sur iPhone : ajoute d'abord cette page à l'écran d'accueil).</p>
   }
@@ -405,11 +469,14 @@ export function ShareView({
   shareId,
   initialTab,
   banner,
+  pushTarget,
 }: {
   snap: ShareSnapshot
   report: WatchReport | null
   nowMs?: number
   shareId?: string
+  /** Abonnement aux notifications du serveur (par défaut « share:<shareId> »). */
+  pushTarget?: string
   /** Lien permanent du coureur : ce que la page montre en ce moment (voir runnerBanner). */
   banner?: string
   /** Onglet affiché à l'ouverture (sinon le dernier choisi sur ce téléphone). */
@@ -537,7 +604,8 @@ export function ShareView({
         : null
   const planStartMs = Date.parse(snap.start)
   const startMs = watch && report ? report.s * 1000 : snap.live ? Date.parse(snap.live.startedAt) : planStartMs
-  const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs)
+  const push = usePushAlerts(pushTarget ?? (shareId ? `share:${shareId}` : null))
+  const alerts = useCrossingAlerts(snap.rows, snap.athleteName || 'Coureur', shareId, (iso) => clock(iso, long), startMs, planStartMs, !!push?.on)
   if (closesAt !== null && nowMs >= closesAt) {
     // Temps de course : départ relevé par la montre si l'arrivée vient d'elle.
     const runStart = report && report.s > 0 && watchFinishS !== undefined ? report.s * 1000 : startMs
@@ -656,7 +724,7 @@ export function ShareView({
         ) : (
           <p className="hint">Le suivi en direct apparaîtra ici dès le départ.</p>
         )}
-        <NotifyBox alerts={alerts} />
+        <NotifyBox alerts={alerts} push={push} />
         <LiveTrackBox shareId={shareId} />
         {snap.route && snap.route.length >= 2 && (
           <>
