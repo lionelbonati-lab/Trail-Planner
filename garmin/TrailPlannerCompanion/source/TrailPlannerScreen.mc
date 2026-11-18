@@ -685,9 +685,8 @@ class TrailPlannerScreen {
         var now = Time.now().value();
         var site = plan.site(bagLeg);
         var take = [] as Array<String>;
+        var note = (bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) ? wrapNote(plan.cpNote[bagCp]) : [] as Array<String>;
         var entries = plan.bag(bagLeg);
-        var extra = bagCp < plan.cpNote.size() ? noteExtra(plan.cpNote[bagCp], entries) : "";
-        var note = extra.length() > 0 ? wrapNote(extra) : [] as Array<String>;
         var from = plan.legFrom[bagLeg];
         var to = plan.legTo[bagLeg];
         var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
@@ -742,75 +741,6 @@ class TrailPlannerScreen {
         var up = "D+" + c[0];
         var dn = "D-" + c[1];
         return [km + " km · " + up + " · " + dn, km + " km " + up + " " + dn, km + " " + up + " " + dn] as Array<String>;
-    }
-
-    // Note du point sans ce qui est déjà dans le sac (note « frontale, veste » avec Frontale et Veste dans le
-    // sac : rien) : morceaux séparés par « , ; · + / » ou « et », retirés s'ils figurent dans un élément du sac
-    // (« gels » dans « 2 gels »), 3 lettres au moins.
-    function noteExtra(note as String, bag as Array<String>) as String {
-        if (bag.size() == 0 || note.length() == 0) {
-            return note;
-        }
-        var low = [] as Array<String>;
-        for (var i = 0; i < bag.size(); i++) {
-            low.add(bag[i].toLower());
-        }
-        var parts = notePieces(note);
-        var kept = "";
-        for (var i = 0; i < parts.size(); i++) {
-            var lp = parts[i].toLower();
-            var dup = false;
-            for (var k = 0; k < low.size() && !dup; k++) {
-                dup = lp.length() >= 3 && low[k].find(lp) != null;
-            }
-            if (!dup) {
-                kept += (kept.length() > 0 ? ", " : "") + parts[i];
-            }
-        }
-        return kept;
-    }
-
-    // Morceaux d'une note séparés par « , ; · + / » ou « et », sans les espaces autour ni les morceaux vides.
-    function notePieces(text as String) as Array<String> {
-        var raw = [] as Array<String>;
-        var cur = "";
-        var chars = text.toCharArray();
-        for (var i = 0; i < chars.size(); i++) {
-            // , ; · + /
-            var n = chars[i].toNumber();
-            if (n == 44 || n == 59 || n == 183 || n == 43 || n == 47) {
-                raw.add(cur);
-                cur = "";
-            } else {
-                cur += chars[i].toString();
-            }
-        }
-        raw.add(cur);
-        var out = [] as Array<String>;
-        for (var i = 0; i < raw.size(); i++) {
-            var rest = raw[i];
-            var cut = rest.find(" et ");
-            while (cut != null) {
-                out.add(rest.substring(0, cut) as String);
-                rest = rest.substring(cut + 4, rest.length()) as String;
-                cut = rest.find(" et ");
-            }
-            out.add(rest);
-        }
-        var trimmed = [] as Array<String>;
-        for (var i = 0; i < out.size(); i++) {
-            var t = out[i];
-            while (t.length() > 0 && (t.substring(0, 1) as String).equals(" ")) {
-                t = t.substring(1, t.length()) as String;
-            }
-            while (t.length() > 0 && (t.substring(t.length() - 1, t.length()) as String).equals(" ")) {
-                t = t.substring(0, t.length() - 1) as String;
-            }
-            if (t.length() > 0) {
-                trimmed.add(t);
-            }
-        }
-        return trimmed;
     }
 
     // Note du point coupée en deux lignes au plus (22 caractères environ).
@@ -1253,11 +1183,10 @@ class TrailPlannerScreen {
         // Gauche : liste en alternance.
         var site = plan.site(bagLeg);
         var bagItems = [] as Array<String>;
-        var entries = plan.bag(bagLeg);
-        var extra = bagCp >= 0 && bagCp < plan.cpNote.size() ? noteExtra(plan.cpNote[bagCp], entries) : "";
-        if (extra.length() > 0) {
-            bagItems.add(extra);
+        if (bagCp >= 0 && bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) {
+            bagItems.add(plan.cpNote[bagCp]);
         }
+        var entries = plan.bag(bagLeg);
         for (var i = 0; i < entries.size(); i++) {
             bagItems.add(entries[i]);
         }

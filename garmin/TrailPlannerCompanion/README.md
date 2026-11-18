@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.7.3, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.7.4, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -172,9 +172,7 @@ pendant le décompte valide le tour en attente ; une pause aussi.
 
 **Écran du ravito** (repris du champ), sur **tous les écrans**, de l'arrivée au ravito (1er Lap, ou passage
 noté par la position) jusqu'au départ (2e Lap) : ravito suivant (distance, D+, D-), puis en **alternance (5 s)**
-« **Manger ici** » (produits sur ravito) et « **À prendre** » (note du point et sac ; les morceaux de la note
-déjà dans le sac, « frontale, veste » avec Frontale et Veste, ne sont pas répétés, ici comme sur l'écran
-Trail Planner). Le temps passé est sur
+« **Manger ici** » (produits sur ravito) et « **À prendre** » (note du point et sac). Le temps passé est sur
 l'**anneau**, du haut au bas d'un **petit arc orange** en face de BACK/Lap sans passer dessous : vert, il se
 remplit jusqu'à l'arrêt prévu, puis plein en rouge une fois dépassé. À côté de l'arc orange, l'icône **→|**
 (Lap = départ du ravito) et, sur la même ligne, le **temps passé / prévu** (« 3:12 / 5:00 ») de la couleur de
@@ -296,7 +294,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.7.3 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.7.4 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
