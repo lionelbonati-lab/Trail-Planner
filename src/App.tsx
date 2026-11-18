@@ -550,14 +550,18 @@ export default function App() {
   }, [notice])
   /**
    * Liste des courses et des parcours : ⌚ met la course ou le parcours sur la montre ; un second appui l'en
-   * retire (le document du code montre ne porte plus de course ; le champ Trail Planner garde le dernier
-   * plan téléchargé, l'appli montre ne la propose plus en tête de sa liste).
+   * retire (le document du code montre ne porte plus de course ; le champ Trail Planner passe en sortie
+   * libre, l'appli montre ne la propose plus en tête de sa liste).
    */
+  /** Plus rien sur la montre : le champ Trail Planner passe en sortie libre. */
+  const removeFromWatch = (race: Race | undefined) => {
+    updateAthlete({ ...athlete, watchRaceId: undefined, watchRaceAt: undefined })
+    flash(`${race ? `« ${race.name} »` : 'La course'} n'est plus sur ta montre : sortie libre.`)
+  }
   const putOnWatch = (race: Race) => {
     if (!user) return alert('Connecte-toi pour envoyer ton plan à la montre.')
     if (athlete.watchRaceId === race.id) {
-      updateAthlete({ ...athlete, watchRaceId: undefined, watchRaceAt: undefined })
-      flash(`« ${race.name} » n'est plus sur ta montre.`)
+      removeFromWatch(race)
       return
     }
     sendToWatch(race)
@@ -806,6 +810,7 @@ export default function App() {
             signedIn={!!user}
             onWatch={races.find((r) => r.id === athlete.watchRaceId) ?? null}
             onOpen={(r) => go('parcours', r.id)}
+            onRemove={removeFromWatch}
           />
         ) : route.tab === 'cs' ? (
           <SessionsPanel athlete={athlete} races={races} onChange={updateAthlete} />
@@ -852,6 +857,7 @@ export default function App() {
                 available: !!user,
                 active: athlete.watchRaceId === current.id && !!athlete.watchId,
                 activate: () => sendToWatch(current),
+                deactivate: () => removeFromWatch(current),
               }}
             />
           </>

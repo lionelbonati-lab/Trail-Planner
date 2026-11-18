@@ -20,6 +20,7 @@ export function WatchPanel({
   signedIn,
   onWatch,
   onOpen,
+  onRemove,
 }: {
   athlete: Athlete
   onChange: (a: Athlete) => void
@@ -27,6 +28,8 @@ export function WatchPanel({
   /** Course ou parcours envoyé à la montre. */
   onWatch: Race | null
   onOpen: (r: Race) => void
+  /** Retire la course de la montre (sortie libre). */
+  onRemove?: (r: Race) => void
 }) {
   const [copied, setCopied] = useState<string | null>(null)
   const copy = (text: string, key = text) =>
@@ -132,6 +135,7 @@ export function WatchPanel({
               <div className="row">
                 <span><Watch className="inline" /> <strong>{onWatch.name}</strong> <span className="muted small">({onWatch.kind === 'route' ? 'parcours' : 'course'})</span></span>
                 <button onClick={() => onOpen(onWatch)}>Ouvrir</button>
+                {onRemove && <button className="ghost" onClick={() => onRemove(onWatch)}>Retirer</button>}
               </div>
             ) : (
               <p className="muted">Rien sur la montre : sortie libre.</p>

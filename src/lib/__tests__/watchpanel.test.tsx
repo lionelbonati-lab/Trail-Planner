@@ -31,6 +31,10 @@ describe('onglet Montre', () => {
     // Consignes repliées dans les (i), plus affichées en clair.
     expect(html).not.toContain('Champs Connect IQ › Trail Planner › Code montre')
     expect(html).not.toContain('installation par câble')
+    // Retirer la course de la montre (sortie libre) ; sortie libre : position masquée près du départ par défaut.
+    const withRemove = renderToStaticMarkup(<WatchPanel athlete={athlete} onChange={noop} signedIn onWatch={race} onOpen={noop} onRemove={noop} />)
+    expect(withRemove).toContain('>Retirer</button>')
+    expect(withRemove).toMatch(/type="checkbox" checked=""\/> Sortie libre : masquer ma position/)
   })
 
   it('connecté sans code : bouton pour le créer ; sans compte : invitation à se connecter', () => {
