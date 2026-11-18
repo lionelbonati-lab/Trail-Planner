@@ -38,7 +38,9 @@ class Run {
     var state = READY;
     var saved = false;        // DONE : sortie enregistrée (sinon supprimée)
     var session = null;       // ActivityRecording.Session
-    var gpsOk = false;
+    var gpsOk = false;        // GPS prêt : position utilisable par les événements GPS ou par l'activité...
+    var posOk = false;        // ... événements GPS (onPosition)
+    var infoOk = false;       // ... position de l'activité (Activity.Info : trajet GPX rejoué au simulateur)
     // Repris de Trail Planner chaque seconde, pour le profil et la carte.
     var dist = 0.0;           // m le long du parcours
     var offRoute = false;     // hors du tracé
@@ -97,7 +99,8 @@ class Run {
 
     function onPosition(info as Position.Info) as Void {
         var q = info.accuracy;
-        gpsOk = q != null && q >= Position.QUALITY_USABLE;
+        posOk = q != null && q >= Position.QUALITY_USABLE;
+        gpsOk = posOk || infoOk;
         if (info.position != null && q != null && q >= Position.QUALITY_POOR) {
             lastLoc = info.position;
         }
@@ -112,6 +115,17 @@ class Run {
         var now = Time.now().value();
         var info = Activity.getActivityInfo();
         if (info != null) {
+            // GPS aussi d'après la position de l'activité (au simulateur, un trajet GPX rejoué n'arrive que
+            // par là) ; elle sert alors aussi à la carte (position, cap).
+            var q = info.currentLocationAccuracy;
+            infoOk = q != null && q >= Position.QUALITY_USABLE && info.currentLocation != null;
+            gpsOk = posOk || infoOk;
+            if (infoOk && !posOk) {
+                lastLoc = info.currentLocation;
+                if (info.currentHeading != null) {
+                    heading = info.currentHeading.toFloat();
+                }
+            }
             // Comme pour des champs de données : calcul chaque seconde, chrono arrêté ou non.
             ep.compute(info);
             ep.tickPopup();
