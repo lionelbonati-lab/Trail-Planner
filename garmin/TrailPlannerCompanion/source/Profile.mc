@@ -230,10 +230,10 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, a as Float, 
         var low = minE.toNumber().toString();
         var tw = dc.getTextWidthInPixels(low, font);
         var yLow = altY(minE, lo, hi, top, bottom) - fh - 2;
-        var half = widthAt(dc, yLow + fh / 2, font) / 2;
+        var halfW = widthAt(dc, yLow + fh / 2, font) / 2;
         var screenMid = dc.getWidth() / 2;
-        var xMin = left + tw / 2 > screenMid - half + tw / 2 ? left + tw / 2 : screenMid - half + tw / 2;
-        var xMax = right - tw / 2 < screenMid + half - tw / 2 ? right - tw / 2 : screenMid + half - tw / 2;
+        var xMin = left + tw / 2 > screenMid - halfW + tw / 2 ? left + tw / 2 : screenMid - halfW + tw / 2;
+        var xMax = right - tw / 2 < screenMid + halfW - tw / 2 ? right - tw / 2 : screenMid + halfW - tw / 2;
         var lowX = left + iMin * step;
         lowX = lowX < xMin ? xMin : (lowX > xMax ? xMax : lowX);
         dc.drawText(lowX, yLow, font, low, Graphics.TEXT_JUSTIFY_CENTER);
