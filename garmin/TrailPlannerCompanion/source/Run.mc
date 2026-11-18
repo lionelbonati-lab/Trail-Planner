@@ -38,7 +38,7 @@ class Run {
     var state = READY;
     var saved = false;        // DONE : sortie enregistrée (sinon supprimée)
     var session = null;       // ActivityRecording.Session
-    var gpsOk = false;        // GPS prêt : position utilisable par les événements GPS ou par l'activité...
+    var gpsOk = false;        // GPS prêt : position (qualité « faible » au moins) par les événements GPS ou l'activité...
     var posOk = false;        // ... événements GPS (onPosition)
     var infoOk = false;       // ... position de l'activité (Activity.Info : trajet GPX rejoué au simulateur)
     // Repris de Trail Planner chaque seconde, pour le profil et la carte.
@@ -99,7 +99,8 @@ class Run {
 
     function onPosition(info as Position.Info) as Void {
         var q = info.accuracy;
-        posOk = q != null && q >= Position.QUALITY_USABLE;
+        // Qualité « faible » acceptée (simulateur, premières secondes sur la montre) : position GPS quand même.
+        posOk = q != null && q >= Position.QUALITY_POOR;
         gpsOk = posOk || infoOk;
         if (info.position != null && q != null && q >= Position.QUALITY_POOR) {
             lastLoc = info.position;
@@ -118,7 +119,7 @@ class Run {
             // GPS aussi d'après la position de l'activité (au simulateur, un trajet GPX rejoué n'arrive que
             // par là) ; elle sert alors aussi à la carte (position, cap).
             var q = info.currentLocationAccuracy;
-            infoOk = q != null && q >= Position.QUALITY_USABLE && info.currentLocation != null;
+            infoOk = q != null && q >= Position.QUALITY_POOR && info.currentLocation != null;
             gpsOk = posOk || infoOk;
             if (infoOk && !posOk) {
                 lastLoc = info.currentLocation;

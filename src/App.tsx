@@ -537,9 +537,18 @@ export default function App() {
     const id = setTimeout(() => setNotice(null), notice.link ? 15000 : 6000)
     return () => clearTimeout(id)
   }, [notice])
-  /** Liste des courses et des parcours : ⌚ met la course ou le parcours sur la montre. */
+  /**
+   * Liste des courses et des parcours : ⌚ met la course ou le parcours sur la montre ; un second appui l'en
+   * retire (le document du code montre ne porte plus de course ; le champ Trail Planner garde le dernier
+   * plan téléchargé, l'appli montre ne la propose plus en tête de sa liste).
+   */
   const putOnWatch = (race: Race) => {
     if (!user) return alert('Connecte-toi pour envoyer ton plan à la montre.')
+    if (athlete.watchRaceId === race.id) {
+      updateAthlete({ ...athlete, watchRaceId: undefined, watchRaceAt: undefined })
+      flash(`« ${race.name} » n'est plus sur ta montre.`)
+      return
+    }
     sendToWatch(race)
     flash(`« ${race.name} » est sur ta montre (le champ Trail Planner la récupère tout seul).`, { tab: 'montre' })
   }
@@ -573,9 +582,9 @@ export default function App() {
       // Dernière course passée, pour le lien permanent du coureur (document du code montre long).
       const last = athlete.watchId ? lastRace(races, new Date().toLocaleDateString('sv'))?.id : undefined
       if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId, last).catch(() => undefined)
-      else if ((athlete.epSync || wl || last) && athlete.watchId && cloud) {
-        // Pas de course sur la montre : seulement les réglages EndurancePro (et la liste de l'appli, la
-        // dernière course).
+      else if (athlete.watchId && cloud) {
+        // Pas de course sur la montre (ou retirée) : document sans course, avec les réglages EndurancePro,
+        // la liste de l'appli et la dernière course s'il y en a.
         const ep = athlete.epSync ? epPayload(athlete, null) : ''
         const key = `ep:${ep}|wl:${wl ?? ''}|${athlete.epCode ?? ''}|${last ?? ''}`
         if (lastShared.current.get(athlete.watchId) !== key) {
@@ -589,7 +598,7 @@ export default function App() {
       // Code court saisi sur la montre : plan de la course envoyée (champ Trail Planner) et réglages
       // EndurancePro, sinon réglages EndurancePro seulement.
       if (onWatch && athlete.epCode) publish(onWatch, athlete, athlete.epCode).catch(() => undefined)
-      else if ((athlete.epSync || wl) && athlete.epCode && cloud) {
+      else if (athlete.epCode && cloud) {
         const ep = athlete.epSync ? epPayload(athlete, onWatch ?? null) : ''
         const key = `ep:${ep}|wl:${wl ?? ''}`
         const code = athlete.epCode

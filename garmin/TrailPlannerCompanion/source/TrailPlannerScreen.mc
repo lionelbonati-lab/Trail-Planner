@@ -178,8 +178,9 @@ class TrailPlannerScreen {
             var since = walked - matchedAt;
             var loc = info.currentLocation;
             var q = info.currentLocationAccuracy;
-            // 3 = Position.QUALITY_USABLE (module Position non importé : pas de permission nécessaire).
-            if (loc == null || (q != null && q < 3)) {
+            // Appli : 2 = Position.QUALITY_POOR (module Position non importé : pas de permission nécessaire) ;
+            // qualité « faible » acceptée (le champ demande « utilisable », 3) : simulateur, premières secondes.
+            if (loc == null || (q != null && q < 2)) {
                 if (matched >= 0 && offCount == 0) {
                     return matched + (since < BRIDGE_MAX ? since : BRIDGE_MAX);
                 }

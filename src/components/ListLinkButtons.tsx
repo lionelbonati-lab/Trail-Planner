@@ -1,7 +1,7 @@
 import { Users, Watch } from 'lucide-react'
 import type { Race } from '../lib/types'
 
-/** Ligne d'une course ou d'un parcours : ⌚ sur la montre, 👥 lien assistance copié. */
+/** Ligne d'une course ou d'un parcours : ⌚ sur la montre (second appui : retirée), 👥 lien assistance copié. */
 export function ListLinkButtons({
   race,
   onWatchId,
@@ -20,8 +20,8 @@ export function ListLinkButtons({
       <button
         className={`ghost ${active ? 'on-watch' : ''}`}
         onClick={() => onWatch(race)}
-        title={active ? 'Sur la montre' : 'Mettre sur la montre'}
-        aria-label={active ? 'Sur la montre' : 'Mettre sur la montre'}
+        title={active ? 'Sur la montre (toucher pour la retirer)' : 'Mettre sur la montre'}
+        aria-label={active ? 'Retirer de la montre' : 'Mettre sur la montre'}
         aria-pressed={active}
       >
         <Watch />
