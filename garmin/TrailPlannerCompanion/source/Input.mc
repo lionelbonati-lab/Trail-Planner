@@ -123,9 +123,13 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
         return evt.getDirection() == WatchUi.SWIPE_RIGHT;
     }
 
+    // Bas : annule le tour en attente (8 s après Lap), sinon écran suivant.
     function onNextPage() as Boolean {
         if (getApp().exploring()) {
             return false;
+        }
+        if (run.undoLap()) {
+            return true;
         }
         getApp().nextPage(1);
         return true;

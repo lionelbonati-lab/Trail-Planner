@@ -29,6 +29,8 @@
     <string id="tp_start">START: partida</string>
     <string id="tp_off_route">Fora do percurso</string>
     <string id="tp_lap">Volta</string>
+    <string id="tp_lap_undone">Volta cancelada</string>
+    <string id="tp_lap_undo">Baixo: cancelar</string>
     <string id="tp_passage">Passagem</string>
     <string id="tp_depart">Partida</string>
     <string id="tp_saved">Saída guardada</string>

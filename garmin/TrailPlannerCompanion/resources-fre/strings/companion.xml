@@ -29,6 +29,8 @@
     <string id="tp_start">START : départ</string>
     <string id="tp_off_route">Hors parcours</string>
     <string id="tp_lap">Tour</string>
+    <string id="tp_lap_undone">Tour annulé</string>
+    <string id="tp_lap_undo">Bas : annuler</string>
     <string id="tp_passage">Passage</string>
     <string id="tp_depart">Départ</string>
     <string id="tp_saved">Sortie enregistrée</string>

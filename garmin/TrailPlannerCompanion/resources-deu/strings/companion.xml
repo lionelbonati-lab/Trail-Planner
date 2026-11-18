@@ -29,6 +29,8 @@
     <string id="tp_start">START: los</string>
     <string id="tp_off_route">Abseits der Strecke</string>
     <string id="tp_lap">Runde</string>
+    <string id="tp_lap_undone">Runde verworfen</string>
+    <string id="tp_lap_undo">Ab: verwerfen</string>
     <string id="tp_passage">Kontrollpunkt</string>
     <string id="tp_depart">Abfahrt</string>
     <string id="tp_saved">Lauf gespeichert</string>

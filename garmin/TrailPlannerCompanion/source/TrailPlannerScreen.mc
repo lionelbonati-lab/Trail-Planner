@@ -306,18 +306,21 @@ class TrailPlannerScreen {
     // la position calée sur le tracé (500 m sans tracé GPS calé). Heure de passage = maintenant,
     // position recalée sur le point, heures estimées des points suivants recalculées. Un tour loin de
     // tout point (tour auto au km…) est ignoré.
-    function onTimerLap() as Void {
+    // Appli : tour validé à la fin du décompte d'annulation (8 s, Run.commitLap) ; heure et position de
+    // l'appui (pressAt, pressDist), message affiché à partir de maintenant.
+    function onTimerLap(pressAt as Number, pressDist as Float) as Void {
         if (plan == null || !running || Application.Properties.getValue("lapPass") == false) {
             return;
         }
-        var now0 = Time.now().value();
+        var now0 = pressAt;
+        var shownAt = Time.now().value();
         // 2e tour au ravito (arrivée déjà validée par un tour, écran du ravito affiché) : départ du ravito.
         // L'écran se ferme et les heures estimées repartent du départ réel.
         if (bagCp >= 0 && bagLeg >= 0 && lapped.hasKey(bagCp) && ravitoShown(now0)) {
             departs.put(bagCp, now0);
             lapTitle = "Départ";
             lapMsg = plan.cpName[bagCp];
-            lapMsgUntil = now0 + 5;
+            lapMsgUntil = shownAt + 5;
             bagCp = -1;
             updateEstimates();
             lastSaved = 0;
@@ -337,7 +340,7 @@ class TrailPlannerScreen {
             if (lapped.hasKey(i)) {
                 continue;
             }
-            var gap = plan.cpDist[i] - dist;
+            var gap = plan.cpDist[i] - pressDist;
             if (gap > ahead) {
                 continue;
             }
@@ -352,7 +355,7 @@ class TrailPlannerScreen {
         if (best < 0) {
             return;
         }
-        var now = Time.now().value();
+        var now = pressAt;
         var at = plan.cpDist[best].toFloat();
         lapped.put(best, true);
         passes.put(best, now);
@@ -362,14 +365,14 @@ class TrailPlannerScreen {
             offCount = 0;
             offRoute = false;
         } else {
-            lapOffset += at - dist;
+            lapOffset += at - pressDist;
         }
         dist = at;
         updateEstimates();
         showBag(best, now);
         lapTitle = "Passage";
         lapMsg = plan.cpName[best];
-        lapMsgUntil = now + 5;
+        lapMsgUntil = shownAt + 5;
         lastSaved = 0; // suivi envoyé au prochain calcul
         progressDirty = true;
     }

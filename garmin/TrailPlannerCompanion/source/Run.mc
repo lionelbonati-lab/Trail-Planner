@@ -16,6 +16,7 @@ const READY = 0;    // avant le départ : START pour démarrer
 const RUNNING = 1;  // enregistrement en cours : START = pause, BACK = tour (et passage au point)
 const PAUSED = 2;   // en pause : START pour reprendre, BACK = menu Reprendre / Enregistrer / Supprimer
 const DONE = 3;     // enregistrée ou supprimée : BACK pour quitter
+const LAP_UNDO_S = 8; // s pour annuler un tour (Bas), décompte en anneau
 
 // La sortie :
 // - enregistrement (activité Trail, fichier FIT avec les champs d'EndurancePro) ;
@@ -63,6 +64,16 @@ class Run {
     var routePlan = null;     // plan dont le tracé de repli est tiré
     var routeFor = null;      // parcours de la dernière demande de tracé
     var lastLapMs = 0;        // dernier tour (System.getTimer), pour ne pas le compter deux fois (restoreCourse)
+    // Tour en attente d'annulation (8 s, lap / undoLap / commitLap).
+    var lapPending = 0;       // instant de l'appui (s Unix), 0 : aucun...
+    var lapPendingMs = 0;     // ... (System.getTimer, anneau du décompte)
+    var lapPressTimer = 0;    // ... chrono (ms), distance montre (m) et distance sur le parcours (m) à l'appui
+    var lapPressWalked = 0.0;
+    var lapPressDist = 0.0;
+    var lapStartTimer = 0;    // début du tour en cours : chrono (ms) et distance montre (m)
+    var lapStartWalked = 0.0;
+    var lapShownTime = 0;     // tour affiché pendant le décompte (sorties libres) : temps (ms), distance (m)
+    var lapShownDist = 0.0;
     // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
     var profLoad = null;      // [ProfileReader, GroupReader] ou null...
     var profLoadPlan = null;  // ... pour ce plan
@@ -114,6 +125,10 @@ class Run {
         ticks++;
         stepLoads();
         var now = Time.now().value();
+        // Tour en attente : enregistré à la fin du décompte d'annulation.
+        if (lapPending > 0 && now - lapPending >= LAP_UNDO_S) {
+            commitLap();
+        }
         var info = Activity.getActivityInfo();
         if (info != null) {
             // GPS aussi d'après la position de l'activité (au simulateur, un trajet GPX rejoué n'arrive que
@@ -169,6 +184,9 @@ class Run {
             ep.createFitFields(session);
             laps = 1;
             lastSent = 0;
+            lapPending = 0;
+            lapStartTimer = 0;
+            lapStartWalked = 0.0;
         }
         session.start();
         ep.onTimerStart();
@@ -182,6 +200,8 @@ class Run {
     }
 
     function pause() as Void {
+        // Tour en attente : enregistré avant la pause.
+        commitLap();
         session.stop();
         state = PAUSED;
         signal(Attention.TONE_STOP);
@@ -204,6 +224,7 @@ class Run {
     }
 
     function discard() as Void {
+        lapPending = 0;
         session.discard();
         ep.onTimerReset();
         session = null;
@@ -215,15 +236,58 @@ class Run {
     // d'EndurancePro (les valeurs du tour qui se termine sont déjà dans ses champs FIT), et, comme le
     // champ Trail Planner, passage au point le plus proche (2e tour au ravito = départ), réglage « Tour =
     // passage au point ». Un tour loin de tout point reste un tour (« Tour N »).
+    // BACK (Lap) pendant la sortie : tour en attente 8 s (anneau de décompte, Bas pour l'annuler), enregistré
+    // ensuite (commitLap) : un tour écrit dans l'activité ne peut plus être effacé. Un nouvel appui pendant
+    // le décompte valide le tour en attente et en lance un autre. Le temps, la distance et l'allure du tour
+    // (écran du tour des sorties libres) sont pris à l'appui.
     function lap() as Void {
         lastLapMs = System.getTimer();
+        if (lapPending > 0) {
+            commitLap();
+        }
+        var info = Activity.getActivityInfo();
+        var timer = info != null && info.timerTime != null ? info.timerTime as Number : 0;
+        var walked = info != null && info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0;
+        lapPending = Time.now().value();
+        lapPendingMs = System.getTimer();
+        lapPressTimer = timer;
+        lapPressWalked = walked;
+        lapPressDist = tp.dist;
+        lapShownTime = timer - lapStartTimer;
+        lapShownDist = walked - lapStartWalked;
+        signal(Attention.TONE_LAP);
+        WatchUi.requestUpdate();
+    }
+
+    // Bas pendant le décompte : tour annulé (rien n'est enregistré). false : pas de tour en attente.
+    function undoLap() as Boolean {
+        if (lapPending == 0) {
+            return false;
+        }
+        lapPending = 0;
+        signal(Attention.TONE_RESET);
+        show(tpText(Rez.Strings.tp_lap_undone), "", Time.now().value());
+        WatchUi.requestUpdate();
+        return true;
+    }
+
+    // Tour en attente enregistré (fin du décompte, nouvel appui, pause, fin de la sortie) : tour de
+    // l'activité, tours d'EndurancePro, passage au point Trail Planner à l'heure et à la position de l'appui.
+    function commitLap() as Void {
+        var at = lapPending;
+        if (at == 0 || session == null) {
+            lapPending = 0;
+            return;
+        }
+        lapPending = 0;
         session.addLap();
         ep.onTimerLap();
         laps++;
-        signal(Attention.TONE_LAP);
+        lapStartTimer = lapPressTimer;
+        lapStartWalked = lapPressWalked;
         var now = Time.now().value();
         var before = tp.lapMsgUntil;
-        tp.onTimerLap();
+        tp.onTimerLap(at, lapPressDist);
         if (tp.lapMsgUntil != before) {
             show(tp.lapTitle + " · " + tp.lapMsg, tp.lapMsg, now);
         } else {
