@@ -43,10 +43,10 @@ class MainView extends WatchUi.View {
             drawDone(dc);
             return;
         }
-        // Sortie libre, tour en attente d'annulation : écran du tour, avec l'anneau du décompte.
-        if (run.lapPending > 0 && run.courseId == null) {
+        // Tour en attente d'annulation : écran du tour, avec l'anneau du décompte et l'arc rouge de la touche Bas.
+        if (run.lapPending > 0) {
             drawLapScreen(dc, run);
-            drawLapCountdown(dc, run, false);
+            drawLapCountdown(dc, run);
             return;
         }
         var ep = run.ep;
@@ -74,8 +74,6 @@ class MainView extends WatchUi.View {
             drawFooter(dc, run, bottom - 32, true);
             ep.drawBands(dc);
         }
-        // Tour en attente : anneau du décompte, arc rouge de la touche Bas, « Annuler » et point que le tour va valider.
-        drawLapCountdown(dc, run, true);
     }
 
     // --- Écran du profil -------------------------------------------------------------------------------

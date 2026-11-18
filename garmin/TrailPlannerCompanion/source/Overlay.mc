@@ -12,11 +12,16 @@ function isRound() as Boolean {
     return System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_ROUND;
 }
 
-// Tour en attente d'annulation (Run.lap) : anneau du décompte sur le bord de l'écran, plein à l'appui et
-// vide au bout de LAP_UNDO_S, et petit arc rouge en face de la touche Bas ; `hint` : icône de tour et
-// « Annuler » à la place de la dernière ligne (chrono d'EndurancePro, prochain point de Trail Planner), le
-// point que le tour va valider à la place de la ligne du dessus.
-function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Void {
+// Petit arc rouge en face de la touche Bas (vers 8 h, degrés comptés depuis 3 h dans le sens inverse des
+// aiguilles d'une montre) et anneau du décompte, du haut de l'arc rouge au bas (330°), sans passer dessous.
+const UNDO_ARC_TOP = 200;
+const UNDO_ARC_BOTTOM = 230;
+const UNDO_RING = 330;
+
+// Tour en attente d'annulation (Run.lap), sur l'écran du tour (fond uni : l'anneau ne se confond pas avec
+// les bandeaux d'EP) : anneau du décompte sur le bord, du haut de l'arc rouge (fixe) dans le sens des
+// aiguilles d'une montre jusqu'au bas de l'arc rouge, qui se vide par ce bout-là en LAP_UNDO_S ; arc rouge.
+function drawLapCountdown(dc as Graphics.Dc, run as Run) as Void {
     if (run.lapPending == 0) {
         return;
     }
@@ -26,64 +31,26 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Voi
     }
     var w = dc.getWidth();
     var h = dc.getHeight();
-    // Lignes d'abord, sur un fond limité à la largeur visible à leur hauteur (les anneaux du bord restent).
-    if (hint) {
-        var l = run.ep.lay();
-        // Dernière ligne : icône de tour et « Annuler » en rouge, à gauche, à côté de l'arc de la touche Bas.
-        var y = l.TimerY;
-        var bh = dc.getFontHeight(Graphics.FONT_MEDIUM);
-        var bw = widthAt(dc, y, Graphics.FONT_MEDIUM) - 12;
-        var x0 = w / 2 - bw / 2;
-        dc.setColor(themeBg(), themeBg());
-        dc.fillRectangle(x0, y - bh / 2, bw, bh);
-        drawUndoLabel(dc, run, x0 + 4, y);
-        // Ligne du dessus (écart au plan et heure d'arrivée, distance d'EndurancePro) : le point que le tour
-        // va valider, en vert, qui défile en boucle s'il ne tient pas. Fond sur toute la ligne (l'heure
-        // d'arrivée va jusqu'au bord), au plus près des anneaux du bord.
-        var preview = run.lapPreview;
-        if (preview != null) {
-            var y2 = l.DistY;
-            var bh2 = dc.getFontHeight(Graphics.FONT_LARGE);
-            var bw2 = w - 16;
-            if (isRound()) {
-                var rr = w / 2.0 - 8;
-                var dy = (y2 - h / 2).toFloat();
-                bw2 = dy * dy < rr * rr ? (2 * Math.sqrt(rr * rr - dy * dy)).toNumber() : 0;
-            }
-            var x2 = w / 2 - bw2 / 2;
-            dc.setColor(themeBg(), themeBg());
-            dc.fillRectangle(x2, y2 - bh2 / 2, bw2, bh2);
-            drawMarquee(dc, preview as String, Graphics.FONT_MEDIUM, x2 + 4, x2 + bw2 - 4, y2, bh2, System.getTimer() - run.lapPendingMs);
-        }
-    }
-    var pen = w > 300 ? 8 : 6;
+    var pen = w > 300 ? 10 : 7;
     if (dc has :setPenWidth) {
         dc.setPenWidth(pen);
     }
-    dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
     if (isRound()) {
         var r = w / 2 - pen / 2;
-        if (left >= 0.995) {
-            dc.drawCircle(w / 2, h / 2, r);
-        } else {
-            // Du haut (90°) dans le sens des aiguilles d'une montre, sur la part qui reste.
-            var stopDeg = 90 - (360 * left).toNumber();
+        var span = (UNDO_RING * left).toNumber();
+        if (span >= 1) {
+            var stopDeg = UNDO_ARC_TOP - span;
             if (stopDeg < 0) {
                 stopDeg += 360;
             }
-            dc.drawArc(w / 2, h / 2, r, Graphics.ARC_CLOCKWISE, 90, stopDeg);
-        }
-    } else {
-        dc.fillRectangle(0, 0, (w * left).toNumber(), pen);
-    }
-    // Petit arc rouge sur le bord, en face de la touche Bas (vers 8 h), comme les applis Garmin.
-    if (isRound()) {
-        var ap = w > 300 ? 10 : 7;
-        if (dc has :setPenWidth) {
-            dc.setPenWidth(ap);
+            dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
+            dc.drawArc(w / 2, h / 2, r, Graphics.ARC_CLOCKWISE, UNDO_ARC_TOP, stopDeg);
         }
         dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
-        dc.drawArc(w / 2, h / 2, w / 2 - ap / 2, Graphics.ARC_COUNTER_CLOCKWISE, 200, 230);
+        dc.drawArc(w / 2, h / 2, r, Graphics.ARC_COUNTER_CLOCKWISE, UNDO_ARC_TOP, UNDO_ARC_BOTTOM);
+    } else {
+        dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
+        dc.fillRectangle(0, 0, (w * left).toNumber(), pen);
     }
     if (dc has :setPenWidth) {
         dc.setPenWidth(1);
@@ -124,33 +91,51 @@ function drawMarquee(dc as Graphics.Dc, text as String, font, x0 as Number, x1 a
     dc.clearClip();
 }
 
-// Sortie libre, pendant le décompte d'annulation : écran du tour qui vient de finir (numéro, temps,
-// distance, allure ou vitesse selon l'unité d'EndurancePro), icône de tour et « Annuler » en rouge.
+// Pendant le décompte d'annulation, à la place de l'écran affiché : écran du tour. Avec un point que le tour
+// va valider : son nom en vert (qui défile s'il ne tient pas), « Tour N · temps du tour », écart au plan et
+// heure d'arrivée estimée. Sinon (sortie libre, tour loin de tout point) : numéro, temps, distance, allure
+// ou vitesse selon l'unité d'EndurancePro. En bas à gauche, l'icône de tour et « Annuler » en rouge.
 function drawLapScreen(dc as Graphics.Dc, run as Run) as Void {
     var w = dc.getWidth();
     var h = dc.getHeight();
     var fg = themeFg();
     dc.setColor(fg, themeBg());
     dc.clear();
-    drawFitted(dc, (h * 0.27).toNumber(), tpText(Rez.Strings.tp_lap) + " " + run.laps, fg, Graphics.FONT_MEDIUM, false);
     var t = run.lapShownTime / 1000;
     var lapTime = t >= 3600
         ? (t / 3600) + ":" + ((t % 3600) / 60).format("%02d") + ":" + (t % 60).format("%02d")
         : (t / 60) + ":" + (t % 60).format("%02d");
-    dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-    dc.drawText(w / 2, (h * 0.47).toNumber(), Graphics.FONT_NUMBER_MEDIUM, lapTime, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-    var d = run.lapShownDist;
-    var line = (d / 1000.0).format("%.2f") + " km";
-    if (d > 20.0 && t > 0) {
-        if (isKmhMode()) {
-            line += " · " + (d / 1000.0 / (t / 3600.0)).format("%.1f") + " km/h";
-        } else {
-            var p = (t / (d / 1000.0)).toNumber();
-            line += " · " + (p / 60) + ":" + (p % 60).format("%02d") + " /km";
+    var name = run.lapPreview;
+    if (name != null) {
+        var ny = (h * 0.25).toNumber();
+        var nw = widthAt(dc, ny, Graphics.FONT_MEDIUM);
+        drawMarquee(dc, name as String, Graphics.FONT_MEDIUM, w / 2 - nw / 2, w / 2 + nw / 2, ny, dc.getFontHeight(Graphics.FONT_MEDIUM), System.getTimer() - run.lapPendingMs);
+        drawFitted(dc, (h * 0.40).toNumber(), tpText(Rez.Strings.tp_lap) + " " + run.laps + " · " + lapTime, themeDim(), Graphics.FONT_XTINY, false);
+        var gap = run.planGap();
+        if (gap != null) {
+            var color = gap > 60 ? Graphics.COLOR_RED : (gap < -60 ? (darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN) : fg);
+            drawFitted(dc, (h * 0.55).toNumber(), signedMinutes(gap), color, Graphics.FONT_LARGE, false);
         }
+        if (run.tp.finishEta > 0) {
+            drawFitted(dc, (h * 0.68).toNumber(), "Arrivée " + run.tp.clock(run.tp.finishEta), fg, Graphics.FONT_SMALL, false);
+        }
+    } else {
+        drawFitted(dc, (h * 0.27).toNumber(), tpText(Rez.Strings.tp_lap) + " " + run.laps, fg, Graphics.FONT_MEDIUM, false);
+        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(w / 2, (h * 0.47).toNumber(), Graphics.FONT_NUMBER_MEDIUM, lapTime, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        var d = run.lapShownDist;
+        var line = (d / 1000.0).format("%.2f") + " km";
+        if (d > 20.0 && t > 0) {
+            if (isKmhMode()) {
+                line += " · " + (d / 1000.0 / (t / 3600.0)).format("%.1f") + " km/h";
+            } else {
+                var p = (t / (d / 1000.0)).toNumber();
+                line += " · " + (p / 60) + ":" + (p % 60).format("%02d") + " /km";
+            }
+        }
+        drawFitted(dc, (h * 0.66).toNumber(), line, fg, Graphics.FONT_SMALL, false);
     }
-    drawFitted(dc, (h * 0.66).toNumber(), line, fg, Graphics.FONT_SMALL, false);
-    // En bas à gauche, à côté de l'arc de la touche Bas : icône de tour et « Annuler » en rouge.
+    // En bas à gauche, à côté de l'arc rouge de la touche Bas.
     var uy = (h * 0.80).toNumber();
     drawUndoLabel(dc, run, w / 2 - widthAt(dc, uy, Graphics.FONT_TINY) / 2 + 12, uy);
 }

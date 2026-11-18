@@ -444,10 +444,10 @@ class CompanionMapView extends WatchUi.MapView {
                 shownScale = -1;
             }
         }
-        // Sortie libre, tour en attente d'annulation : écran du tour à la place de la carte.
-        if (run.lapPending > 0 && run.courseId == null) {
+        // Tour en attente d'annulation : écran du tour à la place de la carte.
+        if (run.lapPending > 0) {
             drawLapScreen(dc, run);
-            drawLapCountdown(dc, run, false);
+            drawLapCountdown(dc, run);
             return;
         }
         if (!exploring) {
@@ -470,6 +470,5 @@ class CompanionMapView extends WatchUi.MapView {
         drawHeader(dc, run, top + 12, true);
         drawFooter(dc, run, bottom - 32, true);
         ep.drawBands(dc);
-        drawLapCountdown(dc, run, true);
     }
 }

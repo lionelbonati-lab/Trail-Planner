@@ -75,7 +75,7 @@ class Run {
     var lapShownTime = 0;     // tour affiché pendant le décompte (sorties libres) : temps (ms), distance (m)
     var lapShownDist = 0.0;
     var lapPreview = null;    // avec un parcours : point que le tour va valider (nom, « Départ · nom ») ou null
-    var lapFrame = null;      // ... qui défile : écran redessiné 10 fois par seconde (Timer.Timer ou null)
+    var lapFrame = null;      // décompte : écran redessiné 10 fois par seconde (Timer.Timer ou null)
     // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
     var profLoad = null;      // [ProfileReader, GroupReader] ou null...
     var profLoadPlan = null;  // ... pour ce plan
@@ -266,17 +266,17 @@ class Run {
             msg = text;
             msgShort = cut != null ? text.substring(cut + 3, text.length()) : "";
             msgUntil = lapPending + LAP_UNDO_S;
-            if (lapFrame == null) {
-                lapFrame = new Timer.Timer();
-                (lapFrame as Timer.Timer).start(method(:onLapFrame), 100, true);
-            }
+        }
+        // Anneau du décompte et nom qui défile : écran redessiné 10 fois par seconde pendant le décompte.
+        if (lapFrame == null) {
+            lapFrame = new Timer.Timer();
+            (lapFrame as Timer.Timer).start(method(:onLapFrame), 100, true);
         }
         signal(Attention.TONE_LAP);
         WatchUi.requestUpdate();
     }
 
-    // Décompte d'un tour avec un parcours : texte qui défile et anneau ; arrêt une fois le tour enregistré
-    // ou annulé.
+    // Décompte d'un tour : anneau et nom qui défile ; arrêt une fois le tour enregistré ou annulé.
     function onLapFrame() as Void {
         if (lapPending == 0) {
             stopLapFrame();

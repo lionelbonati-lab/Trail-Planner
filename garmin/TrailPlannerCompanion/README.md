@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.11, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.12, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -155,18 +155,20 @@ d'anneau au bord de l'écran (celui de la FC d'EndurancePro reste).
 | Haut / Bas | Écran suivant (EP, Trail Planner, profil, carte) | Écran suivant ; Bas dans les 8 s après Lap : tour annulé | Écran suivant |
 | Appui long sur Haut | Menu ; zoom depuis le profil, échelle depuis la carte | Idem | Idem |
 
-**Annuler un tour** (comme les applis Garmin) : après Lap, un **anneau** fait le tour de l'écran pendant
-8 s ; **Bas** pendant ce temps annule le tour. Sinon il est enregistré à la fin du décompte (une appli Connect
-IQ ne peut pas effacer un tour déjà écrit) : le passage au point Trail Planner garde l'heure et la position de
-l'appui, le tour du fichier commence 8 s plus tard. Un nouvel appui sur Lap pendant le décompte valide le
-tour en attente ; une pause aussi. Pendant le décompte, comme sur les applis Garmin, un **petit arc rouge**
-sur le bord en face de la touche Bas et, à côté, l'**icône de tour et « Annuler »** en rouge. En **sortie
-libre**, l'écran du tour s'affiche : numéro, temps, distance et allure (ou vitesse) du tour, « Annuler » en
-bas à gauche. Avec un parcours, l'écran reste celui affiché, avec l'anneau, « Annuler » sur la dernière
-ligne et, **dès l'appui**, sur la ligne du dessus (écart au plan et heure d'arrivée), le **nom du point** que
-le tour va valider en vert (« Départ · nom » au 2e tour d'un ravito), qui défile en boucle s'il ne tient
-pas ; le nom reste aussi en haut du profil et de la carte, puis 5 s après la validation. Pas de nom : le tour
-ne validera aucun point (trop loin de tout point).
+**Annuler un tour** (comme les applis Garmin) : après Lap, l'**écran du tour** remplace pendant 8 s l'écran
+affiché, sur un fond uni (l'anneau ne se confond pas avec les bandeaux d'EP). Un **petit arc rouge** sur le
+bord en face de la touche Bas, avec à côté l'icône de tour et « **Annuler** » en rouge : **Bas** pendant ce
+temps annule le tour. L'**anneau** du décompte fait le tour du bord du haut de l'arc rouge jusqu'à son bas,
+sans passer dessous, et se vide par le bas de l'arc rouge. Sinon le tour est enregistré à la fin du décompte
+(une appli Connect IQ ne peut pas effacer un tour déjà écrit) : le passage au point Trail Planner garde
+l'heure et la position de l'appui, le tour du fichier commence 8 s plus tard. Un nouvel appui sur Lap
+pendant le décompte valide le tour en attente ; une pause aussi.
+
+- Avec un **point à valider** : son **nom** en vert dès l'appui (« Départ · nom » au 2e tour d'un ravito ;
+  il défile en boucle s'il ne tient pas), « Tour N · temps du tour », **écart au plan** en grand et heure
+  d'**arrivée** estimée. Le nom reste ensuite 5 s en bas de l'écran Trail Planner et en haut du profil et
+  de la carte.
+- **Sortie libre**, ou tour loin de tout point : « Tour N », temps, distance et allure (ou vitesse) du tour.
 
 Écran tactile : balayages haut / bas pour changer d'écran. Le balayage « retour » ne fait rien (ni tour,
 ni retour à la liste) et un tap non plus : START et BACK restent sur les boutons. « Supprimer » demande une
@@ -282,7 +284,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.11 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.12 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
