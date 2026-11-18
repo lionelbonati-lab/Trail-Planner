@@ -85,7 +85,13 @@ class StartDelegate extends WatchUi.Menu2InputDelegate {
             getRun().selectCourse(null);
             app.beginCourse();
         } else if (id == :none) {
-            WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_LEFT);
+            // « Aucun parcours · Saisis le code montre » (ou « Code inconnu ») : saisie du code tout de suite ;
+            // la liste se met à jour une fois le code accepté. Sinon (pas de téléphone…) : les réglages.
+            if (!trailCodeSet() || Application.Storage.getValue("fetchError") == 404) {
+                pushTrailCodePicker();
+            } else {
+                WatchUi.pushView(new EnduranceProSettingsMenu(), new EnduranceProSettingsDelegate(), WatchUi.SLIDE_LEFT);
+            }
         } else {
             getRun().selectCourse(id);
             app.showOverview();
