@@ -13,8 +13,8 @@ function isRound() as Boolean {
 }
 
 // Tour en attente d'annulation (Run.lap) : anneau du décompte sur le bord de l'écran, plein à l'appui et
-// vide au bout de LAP_UNDO_S ; `hint` : « Bas : annuler » (et, avec un parcours, le point que le tour va
-// valider) à la place de la dernière ligne (chrono d'EndurancePro, prochain point de Trail Planner).
+// vide au bout de LAP_UNDO_S ; `hint` : icône de tour rouge et point que le tour va valider à la place de
+// la dernière ligne (chrono d'EndurancePro, prochain point de Trail Planner).
 function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Void {
     if (run.lapPending == 0) {
         return;
@@ -25,29 +25,23 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Voi
     }
     var w = dc.getWidth();
     var h = dc.getHeight();
-    // Rappel d'abord, sur un fond limité à la largeur visible à cette hauteur (les anneaux du bord restent) :
-    // le point que le tour va valider (« Passage · nom ») en alternance (2 s) avec « Bas : annuler ».
+    // Dernière ligne d'abord, sur un fond limité à la largeur visible à cette hauteur (les anneaux du bord
+    // restent) : icône de tour rouge à gauche (Bas annule le tour), puis le point que le tour va valider
+    // (« Passage · nom »), qui défile en boucle s'il ne tient pas.
     if (hint) {
         var y = run.ep.lay().TimerY;
         var bh = dc.getFontHeight(Graphics.FONT_MEDIUM);
         var bw = widthAt(dc, y, Graphics.FONT_MEDIUM) - 12;
+        var x0 = w / 2 - bw / 2;
         dc.setColor(themeBg(), themeBg());
-        dc.fillRectangle(w / 2 - bw / 2, y - bh / 2, bw, bh);
-        var text = tpText(Rez.Strings.tp_lap_undo);
-        var color = themeFg();
+        dc.fillRectangle(x0, y - bh / 2, bw, bh);
+        var icon = run.ep.lapIcon(false);
+        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+        dc.drawText(x0 + 4, y, icon[0], icon[1] as String, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
         var preview = run.lapPreview;
-        if (preview != null && ((System.getTimer() - run.lapPendingMs) / 2000) % 2 == 0) {
-            text = preview as String;
-            color = darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
+        if (preview != null) {
+            drawMarquee(dc, preview as String, x0 + 4 + (icon[2] as Number) + 6, x0 + bw - 4, y, bh, System.getTimer() - run.lapPendingMs);
         }
-        // Police la plus grande qui tient dans le fond ; trop long même en très petit : le nom du point seul.
-        var font = bandFont(dc, text, bw - 8);
-        var cut = text.find(" · ");
-        if (font == null && cut != null) {
-            text = text.substring(cut + 3, text.length());
-            font = bandFont(dc, text, bw - 8);
-        }
-        drawFitted(dc, y, text, color, font != null ? font : Graphics.FONT_XTINY, false);
     }
     var pen = w > 300 ? 8 : 6;
     if (dc has :setPenWidth) {
@@ -74,19 +68,35 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Voi
     }
 }
 
-// Police la plus grande (petite, très petite, minuscule) où le texte tient dans `width`, null : aucune.
-function bandFont(dc as Graphics.Dc, text as String, width as Number) {
-    var fonts = [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
-    for (var i = 0; i < fonts.size(); i++) {
-        if (dc.getTextWidthInPixels(text, fonts[i]) <= width) {
-            return fonts[i];
-        }
+// Texte en vert entre x0 et x1 : centré s'il tient, sinon il défile en boucle (50 px/s, 40 px entre deux
+// passages) ; `ms` : temps écoulé depuis le début du défilement.
+function drawMarquee(dc as Graphics.Dc, text as String, x0 as Number, x1 as Number, y as Number, bh as Number, ms as Number) as Void {
+    var font = Graphics.FONT_SMALL;
+    var room = x1 - x0;
+    var tw = dc.getTextWidthInPixels(text, font);
+    dc.setColor(darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN, Graphics.COLOR_TRANSPARENT);
+    if (tw <= room) {
+        dc.drawText((x0 + x1) / 2, y, font, text, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+        return;
     }
-    return null;
+    if (!(dc has :setClip)) {
+        var t = text;
+        while (t.length() > 1 && dc.getTextWidthInPixels(t, font) > room) {
+            t = t.substring(0, t.length() - 1) as String;
+        }
+        dc.drawText(x0, y, font, t, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+        return;
+    }
+    var period = tw + 40;
+    var shift = (ms * 50 / 1000) % period;
+    dc.setClip(x0, y - bh / 2, room, bh);
+    dc.drawText(x0 - shift, y, font, text, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+    dc.drawText(x0 - shift + period, y, font, text, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+    dc.clearClip();
 }
 
 // Sortie libre, pendant le décompte d'annulation : écran du tour qui vient de finir (numéro, temps,
-// distance, allure ou vitesse selon l'unité d'EndurancePro), « Bas : annuler ».
+// distance, allure ou vitesse selon l'unité d'EndurancePro), icône de tour rouge.
 function drawLapScreen(dc as Graphics.Dc, run as Run) as Void {
     var w = dc.getWidth();
     var h = dc.getHeight();
@@ -111,7 +121,10 @@ function drawLapScreen(dc as Graphics.Dc, run as Run) as Void {
         }
     }
     drawFitted(dc, (h * 0.66).toNumber(), line, fg, Graphics.FONT_SMALL, false);
-    drawFitted(dc, (h * 0.80).toNumber(), tpText(Rez.Strings.tp_lap_undo), themeDim(), Graphics.FONT_XTINY, false);
+    // Icône de tour rouge : Bas annule le tour.
+    var icon = run.ep.lapIcon(true);
+    dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+    dc.drawText(w / 2, (h * 0.80).toNumber(), icon[0], icon[1] as String, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
 }
 
 // Avant START, en bas de chaque écran (pas d'anneau d'état) : « GPS... » en rouge tant que le GPS n'est

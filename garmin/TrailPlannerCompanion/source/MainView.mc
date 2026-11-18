@@ -74,7 +74,7 @@ class MainView extends WatchUi.View {
             drawFooter(dc, run, bottom - 32, true);
             ep.drawBands(dc);
         }
-        // Tour en attente : anneau du décompte et « Bas : annuler ».
+        // Tour en attente : anneau du décompte, icône de tour rouge et point que le tour va valider.
         drawLapCountdown(dc, run, true);
     }
 

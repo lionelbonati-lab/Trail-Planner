@@ -1415,6 +1415,12 @@ if (diffDist > 0.5f) {
         return [iconsMed, paramIcons];
     }
 
+    // Appli : icône de tour [police, caractère, largeur], moyenne (dernière ligne) ou grande (écran du
+    // tour), pour le décompte d'annulation d'un tour.
+    function lapIcon(big as Boolean) as Array {
+        return big ? [notifIcons, ICON_LAP_XL, iconLapXLW] : [iconsMed, ICON_LAP, iconLapW];
+    }
+
     // Appli : zone libre entre les bandeaux (y du haut et du bas).
     function contentTop() as Number {
         return layout.hrZoneBarY + layout.hrZoneBarTickH + 3;
