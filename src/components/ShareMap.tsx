@@ -202,21 +202,33 @@ export default function ShareMap({
     }
   }, [lat, lon, label, follow, stable])
 
-  // Plein écran : la carte occupe tout l'écran (Échap ou le bouton pour revenir).
+  // Plein écran : la carte occupe tout l'écran, barres du navigateur comprises quand il le permet
+  // (API Fullscreen ; sinon carte fixée sur toute la fenêtre). Échap, geste retour ou bouton pour revenir.
+  const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const m = map.current
-    const t = setTimeout(() => m?.invalidateSize(), 60)
+    const t = setTimeout(() => m?.invalidateSize(), 80)
     if (!full) return () => clearTimeout(t)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    const el = box.current
+    if (el?.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => undefined)
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setFull(false)
     }
+    // Sortie du plein écran par le système (Échap, geste retour) : on revient à la carte normale.
+    const onFs = () => {
+      if (!document.fullscreenElement) setFull(false)
+      setTimeout(() => map.current?.invalidateSize(), 80)
+    }
     window.addEventListener('keydown', onKey)
+    document.addEventListener('fullscreenchange', onFs)
     return () => {
       clearTimeout(t)
       document.body.style.overflow = prev
       window.removeEventListener('keydown', onKey)
+      document.removeEventListener('fullscreenchange', onFs)
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => undefined)
     }
   }, [full])
 
@@ -230,22 +242,27 @@ export default function ShareMap({
   }
 
   return (
-    <section className={`share-map-wrap ${full ? 'full' : ''}`}>
+    <section className="share-map-wrap">
       <div className="share-map-head">
         <h3>{title}</h3>
-        <span className="row tight">
+      </div>
+      <div ref={box} className={`share-map-box ${full ? 'full' : ''}`}>
+        <div ref={el} className="share-map" role="region" aria-label="Carte du parcours et position du coureur" />
+        {/* Boutons ronds, icône seule, en colonne à droite sous le choix du fond de carte. */}
+        <div className="map-fabs">
           {runner && (
-            <button className={follow ? 'ghost on' : 'ghost'} onClick={centerOnRunner} title="Garder le coureur au centre de la carte">
-              <LocateFixed /> Suivre le coureur
+            <button className={`map-fab ${follow ? 'on' : ''}`} onClick={centerOnRunner} title="Suivre le coureur" aria-label="Suivre le coureur" aria-pressed={follow}>
+              <LocateFixed />
             </button>
           )}
-          <button className="ghost" onClick={showAll}><Maximize2 /> Tout le parcours</button>
-          <button className="ghost" onClick={() => setFull(!full)} aria-pressed={full} title={full ? 'Quitter le plein écran' : 'Carte en plein écran'}>
-            {full ? <Shrink /> : <Expand />} {full ? 'Réduire' : 'Plein écran'}
+          <button className="map-fab" onClick={showAll} title="Tout le parcours" aria-label="Tout le parcours">
+            <Maximize2 />
           </button>
-        </span>
+          <button className="map-fab" onClick={() => setFull(!full)} title={full ? 'Quitter le plein écran' : 'Plein écran'} aria-label={full ? 'Quitter le plein écran' : 'Plein écran'} aria-pressed={full}>
+            {full ? <Shrink /> : <Expand />}
+          </button>
+        </div>
       </div>
-      <div ref={el} className="share-map" role="region" aria-label="Carte du parcours et position du coureur" />
       <p className="muted small map-tip">
         {passageAt ? "Touche le tracé : heure de passage estimée et itinéraire jusqu'à ce point." : "Touche le tracé : km et itinéraire jusqu'à ce point."}
       </p>
