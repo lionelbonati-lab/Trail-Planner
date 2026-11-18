@@ -24,7 +24,7 @@ import { analyzeSession, cardiacDrift, DRIFT_MIN_SECONDS, type CardiacDrift } fr
 import { VAM_MIN_GRADE } from '../lib/vam'
 import type { ActivityRecord, Athlete, GradeStat, Race } from '../lib/types'
 import { colorForIndex } from '../lib/zones'
-import { Card, Hint, Kpi } from './ui'
+import { Card, Hint, Kpi, Kpis } from './ui'
 
 interface Props {
   athlete: Athlete
@@ -130,7 +130,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
       {analysis && (
         <>
           <Card title={analysis.record.name} fold="open">
-            <div className="kpis">
+            <Kpis summary={`${(analysis.record.dist / 1000).toFixed(1).replace('.', ',')} km · +${Math.round(analysis.record.dPlus)} m · ${formatDuration(analysis.record.moving)} en mouvement · prévu ${formatDuration(analysis.record.predicted)}`}>
               <Kpi label="Distance" value={`${(analysis.record.dist / 1000).toFixed(1)} km`} sub={`+${Math.round(analysis.record.dPlus)} m`} />
               <Kpi label="Temps total" value={formatDuration(analysis.record.elapsed)} sub={`${formatDuration(analysis.record.elapsed - analysis.record.moving)} d'arrêt`} />
               <Kpi label="En mouvement" value={formatDuration(analysis.record.moving)} />
@@ -139,7 +139,7 @@ export function ActivityPanel({ athlete, races, onChange }: Props) {
                 value={formatDuration(analysis.record.predicted)}
                 sub={`écart ${pct(analysis.record.predicted / analysis.record.moving - 1)}`}
               />
-            </div>
+            </Kpis>
             <h3>Avance (−) ou retard (+) sur la prévision, en mouvement</h3>
             <GapChart curve={analysis.curve} />
             {analysis.activity.laps.length > 1 && <LapPicker activity={analysis.activity} keep={lapKeep} onChange={chooseLaps} />}

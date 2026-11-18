@@ -97,6 +97,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   `public/montre/` (« Add file › Upload files »). Le site se met à jour environ une minute après.
 - **En-tête d'un plan** : sur téléphone, icônes seules (Course, Modifier, Lien assistance, Montre) ; impressions
   (Feuille A4, Bande, Fiche assistance) et exports (Garmin FIT, GPX) dans deux menus, Imprimer et Exporter.
+- **Chiffres clés** (plan, debrief, analyse d'une séance) : sur téléphone, résumé en une ligne (par exemple
+  « 30,0 km · +898 m · 2h50 · sam. 08:50 ») ; un toucher déplie les cartes détaillées.
 - **Explications** : derrière une icône (i) à leur place (en tête de cadre, à côté du titre, quand elles le
   concernent tout entier) ; un toucher ouvre une bulle par-dessus la page, fermée par son X, un toucher à côté
   ou Échap. Les pages n'affichent plus que l'essentiel.

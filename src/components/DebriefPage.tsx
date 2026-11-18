@@ -13,7 +13,7 @@ import { formatClock, formatDuration, formatPace } from '../lib/time'
 import type { Athlete, Debrief, Race } from '../lib/types'
 import { CourseProfile } from './CourseProfile'
 import type { MapPoint } from './ShareMap'
-import { Card, Hint } from './ui'
+import { Card, Hint, Kpis } from './ui'
 
 const ShareMap = lazy(() => import('./ShareMap'))
 
@@ -204,7 +204,7 @@ export function DebriefPage({
           Sortie du {new Intl.DateTimeFormat('fr-FR', { timeZone: tz, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(r.start))}, départ{' '}
           {formatClock(new Date(r.start), tz)} · {km(r.rows[r.rows.length - 1]?.point.dist ?? 0)} km
         </p>
-        <div className="kpis">
+        <Kpis summary={[r.finish !== null ? `arrivée ${clock(r.finish)}` : 'arrivée non relevée', r.total !== null ? formatDuration(r.total) : '', r.total !== null ? signedGap(r.total - r.plannedTotal) : '', stopsKnown.length ? `arrêts ${formatDuration(stopsKnown.reduce((a, s) => a + s.actual!, 0))}` : ''].filter(Boolean).join(' · ')}>
           <div className="kpi">
             <div className="kpi-label">Arrivée</div>
             <div className="kpi-value">{r.finish !== null ? clock(r.finish) : '—'}</div>
@@ -229,7 +229,7 @@ export function DebriefPage({
               <div className="kpi-sub">prévu {formatDuration(stopsKnown.reduce((a, s) => a + s.planned, 0))} ({stopsKnown.length} ravito{stopsKnown.length > 1 ? 's' : ''})</div>
             </div>
           )}
-        </div>
+        </Kpis>
         <p className="small muted">
           {sources.size
             ? `Passages ${[...sources].map((s) => SOURCE[s].many).join(', ')}. Touche une heure pour la corriger.`
