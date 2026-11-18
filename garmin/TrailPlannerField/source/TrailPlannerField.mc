@@ -68,6 +68,10 @@ class TrailPlannerField extends WatchUi.DataField {
     var lapMsg = "";          // nom du point validé par le dernier tour
     var lapMsgUntil = 0;      // s Unix : affichage du passage jusqu'à cet instant
     var free = false;         // rien sur la montre : sortie libre (suivi sans parcours)
+    var msgId = null;         // message de l'assistance affiché (identifiant)...
+    var msgText = "";         // ... son texte...
+    var msgUntil = 0;         // ... affiché jusqu'à cet instant (s Unix), ou jusqu'au prochain tour Lap
+    var msgAlert = false;     // alerte plein écran du message à montrer au prochain calcul
     var home = null;          // départ de la sortie libre [lat, lon] (degrés), null : pas encore connu
 
     function initialize() {
@@ -294,6 +298,16 @@ class TrailPlannerField extends WatchUi.DataField {
     // position recalée sur le point, heures estimées des points suivants recalculées. Un tour loin de
     // tout point (tour auto au km…) est ignoré.
     function onTimerLap() as Void {
+        // Message de l'assistance affiché : le tour le ferme (sans valider de passage) et le note « lu ».
+        var tLap = Time.now().value();
+        if (msgId != null && tLap < msgUntil) {
+            msgUntil = 0;
+            var pend = Application.Storage.getValue("msgAck");
+            var got = pend instanceof Dictionary && msgId.equals(pend["id"]) && pend["got"] != null ? pend["got"] : tLap;
+            Application.Storage.setValue("msgAck", { "id" => msgId, "got" => got, "read" => tLap });
+            WatchUi.requestUpdate();
+            return;
+        }
         if (plan == null || !running || Application.Properties.getValue("lapPass") == false) {
             return;
         }
@@ -432,6 +446,18 @@ class TrailPlannerField extends WatchUi.DataField {
     }
 
     function compute(info as Activity.Info) as Void {
+        // Message de l'assistance arrivé : alerte plein écran (par-dessus l'écran de l'activité en cours),
+        // montrée depuis compute() comme les rappels nutrition. Le message reste aussi dans le champ.
+        if (msgAlert) {
+            msgAlert = false;
+            if (self has :showAlert) {
+                try {
+                    showAlert(new MessageAlert(wrapText(msgText, 16, 4)));
+                } catch (e) {
+                    // Alerte refusée (une autre est affichée) : le message reste dans le champ.
+                }
+            }
+        }
         if (plan == null) {
             if (free) {
                 computeFree(info);
@@ -881,6 +907,41 @@ class TrailPlannerField extends WatchUi.DataField {
     }
 
     // Note d'un point sur une ou deux lignes (coupée à un espace).
+    // Message de l'assistance reçu (tâche de fond) : vibration, alerte plein écran au prochain calcul,
+    // et affichage dans le champ jusqu'au tour Lap, 2 min au plus.
+    function showMessage(id as String, text as String) as Void {
+        msgId = id;
+        msgText = text;
+        msgUntil = Time.now().value() + 120;
+        msgAlert = true;
+        vibrate(true);
+        WatchUi.requestUpdate();
+    }
+
+    // Texte coupé aux espaces en lignes d'au plus `max` caractères, `rows` lignes au plus.
+    function wrapText(text as String, max as Number, rows as Number) as Array<String> {
+        var out = [] as Array<String>;
+        var rest = text;
+        while (rest.length() > max && out.size() < rows - 1) {
+            var cut = -1;
+            for (var k = 1; k < rest.length() && k <= max; k++) {
+                if ((rest.substring(k, k + 1) as String).equals(" ")) {
+                    cut = k;
+                }
+            }
+            if (cut < 0) {
+                cut = max;
+                out.add(rest.substring(0, cut) as String);
+                rest = rest.substring(cut, rest.length()) as String;
+            } else {
+                out.add(rest.substring(0, cut) as String);
+                rest = rest.substring(cut + 1, rest.length()) as String;
+            }
+        }
+        out.add(rest);
+        return out;
+    }
+
     function wrapNote(text as String) as Array<String> {
         var max = 22;
         if (text.length() <= max) {
@@ -1097,6 +1158,19 @@ class TrailPlannerField extends WatchUi.DataField {
         dc.setColor(fg, bg);
         dc.clear();
 
+        // Message de l'assistance : en grand sur fond bleu, jusqu'au tour Lap (2 min au plus).
+        if (msgId != null && Time.now().value() < msgUntil) {
+            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLUE);
+            dc.clear();
+            var mlines = [["Message assistance", Graphics.FONT_XTINY, Graphics.COLOR_WHITE, 2]];
+            var rows = wrapText(msgText, 16, 4);
+            for (var i = 0; i < rows.size(); i++) {
+                mlines.add([rows[i], Graphics.FONT_MEDIUM, Graphics.COLOR_WHITE, 0]);
+            }
+            mlines.add([["Lap pour fermer", "Lap : fermer"], Graphics.FONT_XTINY, Graphics.COLOR_WHITE, 3]);
+            drawLines(dc, mlines);
+            return;
+        }
         if (plan == null) {
             drawLines(dc, [[status, Graphics.FONT_XTINY, fg]]);
             return;
@@ -1201,6 +1275,36 @@ class TrailPlannerField extends WatchUi.DataField {
 
 // Notification « Manger / boire » : produit prévu et eau à boire d'ici le rappel suivant, en blanc sur
 // orange comme le rappel du champ, affichée par la montre par-dessus l'écran de l'activité.
+// Message de l'assistance en plein écran (alerte du champ de données), fond bleu.
+class MessageAlert extends WatchUi.DataFieldAlert {
+    private var _rows as Array<String>;
+
+    function initialize(rows as Array<String>) {
+        DataFieldAlert.initialize();
+        _rows = rows;
+    }
+
+    function onUpdate(dc as Graphics.Dc) as Void {
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLUE);
+        dc.clear();
+        // Titre puis lignes du message, en MEDIUM si elles tiennent, sinon en SMALL.
+        var font = Graphics.FONT_MEDIUM;
+        var title = Graphics.FONT_XTINY;
+        var h = dc.getHeight();
+        if (dc.getFontHeight(font) * _rows.size() + dc.getFontHeight(title) > h * 0.7) {
+            font = Graphics.FONT_SMALL;
+        }
+        var total = dc.getFontHeight(title) + dc.getFontHeight(font) * _rows.size();
+        var y = (h - total) / 2;
+        dc.drawText(dc.getWidth() / 2, y, title, "Message assistance", Graphics.TEXT_JUSTIFY_CENTER);
+        y += dc.getFontHeight(title);
+        for (var i = 0; i < _rows.size(); i++) {
+            dc.drawText(dc.getWidth() / 2, y, font, _rows[i], Graphics.TEXT_JUSTIFY_CENTER);
+            y += dc.getFontHeight(font);
+        }
+    }
+}
+
 class FoodAlert extends WatchUi.DataFieldAlert {
     private var _label as String or Null;
     private var _water as Float;

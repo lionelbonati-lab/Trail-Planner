@@ -26,6 +26,7 @@ import {
   onSnapshot,
   persistentLocalCache,
   persistentMultipleTabManager,
+  serverTimestamp,
   setDoc,
   terminate,
   writeBatch,
@@ -36,6 +37,7 @@ import { normalizeAthlete, normalizeRace } from './defaults'
 import { decodeFromFirestore, encodeForFirestore } from './firestoreCodec'
 import type { TrackDoc } from './freeRun'
 import type { ShareSnapshot } from './share'
+import type { WatchMessage } from './watchMessage'
 import type { WatchReport } from './watchLive'
 import type { Store } from './storage'
 import type { Athlete, Race } from './types'
@@ -332,6 +334,29 @@ export function subscribeShare(shareId: string, cb: (s: ShareSnapshot | null) =>
     doc(db, 'shares', shareId),
     (d) => cb(d.exists() ? decodeFromFirestore<ShareSnapshot>(d.data()) : null),
     (e) => onError(e),
+  )
+}
+
+/**
+ * Message de l'assistance vers la montre (msg/{code}) : écrit pour chaque code montre (long et court,
+ * la montre lit celui qu'on lui a saisi). Réussi si au moins un document est écrit.
+ */
+export async function sendWatchMessage(codes: string[], msg: Pick<WatchMessage, 'id' | 'text' | 't'>): Promise<void> {
+  if (!db) throw new Error('Envoi indisponible : Firebase non configuré.')
+  const results = await Promise.allSettled(codes.map((c) => setDoc(doc(db!, 'msg', c), { ...msg, at: serverTimestamp() })))
+  if (!results.some((r) => r.status === 'fulfilled')) {
+    const err = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')?.reason as Error | undefined
+    throw err ?? new Error('Envoi impossible.')
+  }
+}
+
+/** Dernier message envoyé à la montre (et accusés reçu / lu) pour un code montre. */
+export function subscribeWatchMessage(code: string, cb: (m: WatchMessage | null) => void) {
+  if (!db) return () => {}
+  return onSnapshot(
+    doc(db, 'msg', code),
+    (d) => cb(d.exists() ? (d.data() as WatchMessage) : null),
+    () => cb(null),
   )
 }
 

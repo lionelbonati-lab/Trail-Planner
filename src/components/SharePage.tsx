@@ -2,6 +2,7 @@ import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { WatchMessageBox } from './WatchMessageBox'
 import { freeRunShown, freeStats, paceText, trackRoute, type TrackDoc } from '../lib/freeRun'
 import { awayFrom } from '../lib/live'
 import { pushFlag, showNotice } from '../lib/notify'
@@ -199,7 +200,17 @@ export function RunnerPage({ code }: { code: string }) {
   if (!target || !snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
 
   const banner = runnerBanner(target.mode, snap, reportFor(snap, report, nowMs), nowMs)
-  return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} pushTarget={`suivi:${code}`} />
+  return (
+    <ShareView
+      snap={snap}
+      report={report}
+      nowMs={nowMs}
+      shareId={`${code}-${snap.courseId ?? ''}`}
+      banner={banner}
+      pushTarget={`suivi:${code}`}
+      watchCodes={[code, base.liveRefShort].filter((c): c is string => !!c)}
+    />
+  )
 }
 
 /**
@@ -545,6 +556,7 @@ export function ShareView({
   initialTab,
   banner,
   pushTarget,
+  watchCodes,
 }: {
   snap: ShareSnapshot
   report: WatchReport | null
@@ -556,6 +568,8 @@ export function ShareView({
   banner?: string
   /** Onglet affiché à l'ouverture (sinon le dernier choisi sur ce téléphone). */
   initialTab?: 'suivi' | 'trajets'
+  /** Codes montre pour les messages à la montre (par défaut ceux du partage, si la course est sur la montre). */
+  watchCodes?: string[]
 }) {
   const [choices, setChoice] = useTripChoices(shareId)
   const [tab, setTabState] = useState<'suivi' | 'trajets'>(() => initialTab ?? (readStore('tp-share-tab') === 'trajets' ? 'trajets' : 'suivi'))
@@ -564,6 +578,8 @@ export function ShareView({
     writeStore('tp-share-tab', t)
   }
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
+  // Message à la montre : codes montre de cette course (long et court).
+  const msgCodes = [...new Set(watchCodes ?? [input.liveRef, input.liveRefShort].filter((c): c is string => !!c))]
   let snap = input
   // Relevé d'une autre activité (autre course choisie dans l'appli montre, fait avant l'envoi de cette
   // course à la montre, ou au-delà de son arrivée) : ignoré, sinon tout le parcours paraît fait dès
@@ -799,6 +815,7 @@ export function ShareView({
         ) : (
           <p className="hint">Le suivi en direct apparaîtra ici dès le départ.</p>
         )}
+        {msgCodes.length > 0 && <WatchMessageBox codes={msgCodes} timeZone={tz} nowMs={nowMs} />}
         <NotifyBox alerts={alerts} push={push} />
         <LiveTrackBox shareId={shareId} />
         {snap.route && snap.route.length >= 2 && (

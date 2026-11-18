@@ -28,6 +28,31 @@ service cloud.firestore {
                    && (!('lon' in request.resource.data) || request.resource.data.lon is number)
                    && (!('bat' in request.resource.data) || request.resource.data.bat is int);
     }
+    // Message de l'assistance vers la montre (sans compte, comme le lien d'assistance) : pour un code
+    // montre existant, texte court, un message par minute au plus. La montre n'y écrit que ses accusés
+    // « reçu » (got) et « lu » (read), pour le même message (id inchangé).
+    match /msg/{code} {
+      function sent() {
+        return request.resource.data.keys().hasOnly(['id', 'text', 't', 'at'])
+          && request.resource.data.id is string
+          && request.resource.data.id.size() >= 4
+          && request.resource.data.id.size() <= 24
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 60
+          && request.resource.data.t is int
+          && request.resource.data.at == request.time;
+      }
+      function acked() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['got', 'read'])
+          && (!('got' in request.resource.data) || request.resource.data.got is int)
+          && (!('read' in request.resource.data) || request.resource.data.read is int);
+      }
+      allow read: if true;
+      allow create: if exists(/databases/$(database)/documents/shares/$(code)) && sent();
+      allow update: if exists(/databases/$(database)/documents/shares/$(code))
+                    && ((sent() && request.time > resource.data.at + duration.value(60, 's')) || acked());
+    }
     // Trace d'une sortie libre (rien sur la montre), écrite par le serveur : lisible comme le relevé.
     match /live/{code}/track/{id} {
       allow read: if true;
