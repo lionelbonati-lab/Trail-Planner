@@ -24,7 +24,7 @@ import { CourseProfile } from './CourseProfile'
 import { SortableList } from './SortableList'
 import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY, RAVITO_BRAND } from '../lib/productLibrary'
 import { ZonePicker, ZonesCard } from './Zones'
-import { Card, Hint, Kpi, MenuButton, Num, Toggle } from './ui'
+import { Card, Hint, Kpi, Kpis, MenuButton, Num, Toggle } from './ui'
 
 /** Vrai si la requête média correspond (mise à jour au redimensionnement). */
 function useMediaQuery(q: string): boolean {
@@ -522,7 +522,9 @@ export function RacePlan({
               </span>
             </div>
           )}
-          <div className="kpis">
+          <Kpis
+            summary={`${(track.totalDist / 1000).toFixed(1).replace('.', ',')} km · +${Math.round(track.dPlus)} m · ${formatDuration(sim.totalTime)} · ${formatClock(new Date(startMs + sim.totalTime * 1000), race.env.timeZone, true)}`}
+          >
             <Kpi label="Distance" value={`${(track.totalDist / 1000).toFixed(1)} km`} sub={`${sim.totalKme.toFixed(1)} km-e`} />
             <Kpi label="Dénivelé" value={`+${Math.round(track.dPlus)} m`} sub={`−${Math.round(track.dMinus)} m`} />
             <Kpi label="Temps prévu" value={formatDuration(sim.totalTime)} sub={`dont ${formatDuration(totalStops)} d'arrêts`} />
@@ -542,7 +544,7 @@ export function RacePlan({
                 sub={`${Math.round(sim.minWbal)} m sur ${Math.round(athlete.dPrime)} m`}
               />
             )}
-          </div>
+          </Kpis>
           <CourseProfile
             profile={profilePts}
             rows={profileRows}
