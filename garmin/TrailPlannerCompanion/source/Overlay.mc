@@ -17,6 +17,23 @@ function isRound() as Boolean {
 const UNDO_ARC_TOP = 200;
 const UNDO_ARC_BOTTOM = 230;
 const UNDO_RING = 330;
+// Au ravito, en symétrique : petit arc orange en face de BACK/Lap (vers 4 h), anneau du temps passé au ravito
+// du haut de l'arc orange, dans le sens inverse des aiguilles d'une montre, jusqu'à son bas (330°).
+const RAVITO_ARC_TOP = 340;
+const RAVITO_ARC_BOTTOM = 310;
+
+// Arc sur le bord de l'écran, de `from` à `to` (degrés) dans le sens inverse des aiguilles d'une montre.
+function drawEdgeArc(dc as Graphics.Dc, from as Number, to as Number, color, pen as Number) as Void {
+    var w = dc.getWidth();
+    if (dc has :setPenWidth) {
+        dc.setPenWidth(pen);
+    }
+    dc.setColor(color, Graphics.COLOR_TRANSPARENT);
+    dc.drawArc(w / 2, dc.getHeight() / 2, w / 2 - pen / 2, Graphics.ARC_COUNTER_CLOCKWISE, from, to);
+    if (dc has :setPenWidth) {
+        dc.setPenWidth(1);
+    }
+}
 
 // Tour en attente d'annulation (Run.lap), sur l'écran du tour (fond uni : l'anneau ne se confond pas avec
 // les bandeaux d'EP) : anneau du décompte sur le bord, du haut de l'arc rouge (fixe) dans le sens des
@@ -30,35 +47,64 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run) as Void {
         return;
     }
     var w = dc.getWidth();
-    var h = dc.getHeight();
     var pen = w > 300 ? 10 : 7;
-    if (dc has :setPenWidth) {
-        dc.setPenWidth(pen);
-    }
     if (isRound()) {
-        var r = w / 2 - pen / 2;
         var span = (UNDO_RING * left).toNumber();
         if (span >= 1) {
             var stopDeg = UNDO_ARC_TOP - span;
             if (stopDeg < 0) {
                 stopDeg += 360;
             }
-            dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
-            dc.drawArc(w / 2, h / 2, r, Graphics.ARC_CLOCKWISE, UNDO_ARC_TOP, stopDeg);
+            drawEdgeArc(dc, stopDeg, UNDO_ARC_TOP, 0x00AACC, pen);
         }
         // Arc rouge plus épais que l'anneau, sur le bord.
-        var ap = w > 300 ? 16 : 12;
-        if (dc has :setPenWidth) {
-            dc.setPenWidth(ap);
-        }
-        dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
-        dc.drawArc(w / 2, h / 2, w / 2 - ap / 2, Graphics.ARC_COUNTER_CLOCKWISE, UNDO_ARC_TOP, UNDO_ARC_BOTTOM);
+        drawEdgeArc(dc, UNDO_ARC_TOP, UNDO_ARC_BOTTOM, Graphics.COLOR_RED, w > 300 ? 16 : 12);
     } else {
         dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(0, 0, (w * left).toNumber(), pen);
     }
-    if (dc has :setPenWidth) {
-        dc.setPenWidth(1);
+}
+
+// Au ravito (Run.ravitoOn), sur tous les écrans jusqu'au départ : écran du ravito du champ ; anneau du temps
+// passé sur l'arrêt prévu (vert, plein et rouge une fois dépassé) ; arc orange en face de BACK/Lap avec, à
+// côté, l'icône ravito et « Fin de ravitaillement » : le 2e Lap note le départ du ravito.
+function drawRavitoOverlay(dc as Graphics.Dc, run as Run) as Void {
+    var w = dc.getWidth();
+    var h = dc.getHeight();
+    var red = darkTheme() ? Graphics.COLOR_RED : Graphics.COLOR_DK_RED;
+    dc.setColor(themeFg(), themeBg());
+    dc.clear();
+    // En bas à droite, à côté de l'arc orange : icône ravito et « Fin de ravitaillement », dans la plus
+    // grande police qui tient.
+    var ly = (h * 0.80).toNumber();
+    var food = run.ep.foodIcon();
+    var iw = dc.getTextWidthInPixels(food[1] as String, food[0]);
+    var label = tpText(Rez.Strings.tp_ravito_end);
+    var fonts = [Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
+    var font = Graphics.FONT_XTINY;
+    for (var i = 0; i < fonts.size(); i++) {
+        if (dc.getTextWidthInPixels(label, fonts[i]) + iw + 4 <= widthAt(dc, ly, fonts[i]) - 24) {
+            font = fonts[i];
+            break;
+        }
+    }
+    var xr = w / 2 + widthAt(dc, ly, font) / 2 - 12;
+    var tw = dc.getTextWidthInPixels(label, font);
+    dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
+    dc.drawText(xr, ly, font, label, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+    dc.drawText(xr - tw - 4, ly + run.ep.lay().iconSmallOffsetY, food[0], food[1] as String, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+    // Écran du ravito au-dessus.
+    run.tp.drawRavitoFull(dc, (h * 0.12).toNumber(), ly - dc.getFontHeight(font) / 2 - 4, themeFg(), red);
+    if (isRound()) {
+        var t = run.tp.ravitoTimes(Time.now().value());
+        if (t[1] > 0) {
+            var over = t[0] > t[1];
+            var span = over ? UNDO_RING : UNDO_RING * t[0] / t[1];
+            if (span >= 1) {
+                drawEdgeArc(dc, RAVITO_ARC_TOP, (RAVITO_ARC_TOP + span) % 360, over ? red : (darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN), w > 300 ? 10 : 7);
+            }
+        }
+        drawEdgeArc(dc, RAVITO_ARC_BOTTOM, RAVITO_ARC_TOP, Graphics.COLOR_ORANGE, w > 300 ? 16 : 12);
     }
 }
 
@@ -67,7 +113,7 @@ function drawUndoLabel(dc as Graphics.Dc, run as Run, x as Number, y as Number) 
     var icon = run.ep.lapIcon();
     dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
     dc.drawText(x, y + run.ep.lay().iconSmallOffsetY, icon[0], icon[1] as String, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-    dc.drawText(x + (icon[2] as Number) + 4, y, Graphics.FONT_TINY, tpText(Rez.Strings.tp_undo), Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
+    dc.drawText(x + (icon[2] as Number) + 4, y, Graphics.FONT_MEDIUM, tpText(Rez.Strings.tp_undo), Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
 }
 
 // Texte en vert entre x0 et x1 : centré s'il tient, sinon il défile en boucle (50 px/s, 40 px entre deux
@@ -142,7 +188,7 @@ function drawLapScreen(dc as Graphics.Dc, run as Run) as Void {
     }
     // En bas à gauche, à côté de l'arc rouge de la touche Bas.
     var uy = (h * 0.80).toNumber();
-    drawUndoLabel(dc, run, w / 2 - widthAt(dc, uy, Graphics.FONT_TINY) / 2 + 12, uy);
+    drawUndoLabel(dc, run, w / 2 - widthAt(dc, uy, Graphics.FONT_MEDIUM) / 2 + 12, uy);
 }
 
 // Avant START, en bas de chaque écran (pas d'anneau d'état) : « GPS... » en rouge tant que le GPS n'est

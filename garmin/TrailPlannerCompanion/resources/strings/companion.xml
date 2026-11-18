@@ -31,6 +31,7 @@
     <string id="tp_lap">Lap</string>
     <string id="tp_lap_undone">Lap cancelled</string>
     <string id="tp_undo">Cancel</string>
+    <string id="tp_ravito_end">End of aid station</string>
     <string id="tp_passage">Checkpoint</string>
     <string id="tp_depart">Departure</string>
     <string id="tp_saved">Run saved</string>

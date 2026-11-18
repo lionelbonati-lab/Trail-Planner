@@ -1420,6 +1420,11 @@ if (diffDist > 0.5f) {
         return [iconsMed, ICON_LAP, iconLapW];
     }
 
+    // Appli : icône ravito [police, caractère], pour l'écran du ravito.
+    function foodIcon() as Array {
+        return [iconsMed, ICON_FOOD];
+    }
+
     // Appli : zone libre entre les bandeaux (y du haut et du bas).
     function contentTop() as Number {
         return layout.hrZoneBarY + layout.hrZoneBarTickH + 3;

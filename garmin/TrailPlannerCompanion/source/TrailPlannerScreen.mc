@@ -665,6 +665,202 @@ class TrailPlannerScreen {
         lastSaved = now;
     }
 
+    // --- Écran du ravito plein écran (repris du champ), sur tous les écrans de l'appli ----------------
+
+    // Au ravito (sac ou produits du tronçon qui en part, pas une simple note), jusqu'au départ.
+    function ravitoScreen(now as Number) as Boolean {
+        return plan != null && running && bagCp >= 0 && bagLeg >= 0 && ravitoShown(now);
+    }
+
+    // Temps passé au ravito [écoulé depuis l'arrivée (passage noté), arrêt prévu] (s).
+    function ravitoTimes(now as Number) as Array<Number> {
+        var arrived = passes.hasKey(bagCp) ? passes[bagCp] as Number : now;
+        return [now - arrived, plan.cpStop[bagCp]] as Array<Number>;
+    }
+
+    // Écran du ravito du champ, entre top et bottom : pause en cours / prévue (rouge une fois dépassée),
+    // ravito suivant (distance, D+, D-), à manger sur place, puis « À emporter » : note du point et contenu
+    // du sac, un élément par ligne si la hauteur le permet, sinon deux voisins réunis.
+    function drawRavitoFull(dc as Graphics.Dc, top as Number, bottom as Number, fg, red) as Void {
+        var now = Time.now().value();
+        var entries = plan.bag(bagLeg);
+        var site = plan.site(bagLeg);
+        var note = (bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) ? wrapNote(plan.cpNote[bagCp]) : [] as Array<String>;
+        var from = plan.legFrom[bagLeg];
+        var to = plan.legTo[bagLeg];
+        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
+        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
+        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
+        var t = ravitoTimes(now);
+        var paused = t[0];
+        var stop = t[1];
+        var pause = "Pause " + mmss(paused) + (stop > 0 ? " / " + mmss(stop) : "");
+        var lines = [
+            [pause, Graphics.FONT_SMALL, stop > 0 && paused > stop ? red : fg, 0],
+            [toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, Graphics.FONT_XTINY, fg, 2],
+            [remaining(d0, d1), Graphics.FONT_XTINY, fg, 0]
+        ];
+        // À manger ou boire ici (produits « sur ravito » du plan).
+        if (site.size() > 0) {
+            lines.add(["Manger ici", Graphics.FONT_XTINY, Graphics.COLOR_ORANGE, 0]);
+            var siteRows = packItems(dc, site, Graphics.FONT_XTINY, 2);
+            for (var i = 0; i < siteRows.size(); i++) {
+                lines.add([siteRows[i], Graphics.FONT_XTINY, fg, 0]);
+            }
+        }
+        var title = "À emporter";
+        lines.add([from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, Graphics.COLOR_ORANGE, 1]);
+        for (var i = 0; i < note.size(); i++) {
+            lines.add([note[i], Graphics.FONT_XTINY, fg, 0]);
+        }
+        // Place restante pour le sac : SMALL si chaque élément tient sur sa ligne, sinon XTINY et voisins
+        // réunis (« Vers… », facultatif, non compté : retiré d'abord s'il le faut).
+        var avail = bottom - top;
+        for (var i = 0; i < lines.size(); i++) {
+            if (lines[i][3] < 2) {
+                avail -= dc.getFontHeight(lines[i][1]);
+            }
+        }
+        var font = Graphics.FONT_SMALL;
+        if (entries.size() * dc.getFontHeight(font) > bottom - top - linesHeight(dc, lines)) {
+            font = Graphics.FONT_XTINY;
+        }
+        var rows = avail / dc.getFontHeight(font);
+        if (rows < 1) {
+            rows = 1;
+        }
+        var items = packItems(dc, entries, font, rows);
+        for (var i = 0; i < items.size(); i++) {
+            lines.add([items[i], font, fg, 0]);
+        }
+        fullLines(dc, lines, top, bottom);
+    }
+
+    // Distance, D+ et D- de `from` à `to` (m), en variantes de plus en plus courtes (voir pick).
+    function remaining(from as Float, to as Float) as Array<String> {
+        var m = to - from;
+        var km = ((m > 0 ? m : 0.0) / 1000.0).format("%.1f");
+        if (!plan.hasClimb()) {
+            return [km + " km"] as Array<String>;
+        }
+        var c = plan.climbBetween(from, to);
+        var up = "D+" + c[0];
+        var dn = "D-" + c[1];
+        return [km + " km · " + up + " · " + dn, km + " km " + up + " " + dn, km + " " + up + " " + dn] as Array<String>;
+    }
+
+    // Note du point coupée en deux lignes au plus (22 caractères environ).
+    function wrapNote(text as String) as Array<String> {
+        var max = 22;
+        if (text.length() <= max) {
+            return [text] as Array<String>;
+        }
+        var cut = -1;
+        for (var k = 1; k < text.length() && k <= max; k++) {
+            if ((text.substring(k, k + 1) as String).equals(" ")) {
+                cut = k;
+            }
+        }
+        if (cut < 0) {
+            return [text] as Array<String>;
+        }
+        return [text.substring(0, cut) as String, text.substring(cut + 1, text.length()) as String] as Array<String>;
+    }
+
+    // Première variante qui tient dans maxW, sinon la dernière coupée.
+    function pick(dc as Graphics.Dc, text, font, maxW as Number) as String {
+        var opts = text instanceof Array ? text as Array : [text];
+        var last = opts.size() - 1;
+        for (var k = 0; k < last; k++) {
+            if (dc.getTextWidthInPixels(opts[k] as String, font) <= maxW) {
+                return opts[k] as String;
+            }
+        }
+        return fit(dc, opts[last] as String, font, maxW);
+    }
+
+    function fontRank(font) as Number {
+        if (font == Graphics.FONT_LARGE) {
+            return 4;
+        }
+        if (font == Graphics.FONT_MEDIUM) {
+            return 3;
+        }
+        if (font == Graphics.FONT_SMALL) {
+            return 2;
+        }
+        if (font == Graphics.FONT_TINY) {
+            return 1;
+        }
+        return 0;
+    }
+
+    function linesHeight(dc as Graphics.Dc, lines as Array) as Number {
+        var total = 0;
+        for (var i = 0; i < lines.size(); i++) {
+            total += dc.getFontHeight(lines[i][1]);
+        }
+        return total;
+    }
+
+    // Lignes [texte, police, couleur, rang] centrées entre top et bottom, en évitant les bords arrondis,
+    // comme le champ : si tout ne tient pas, lignes facultatives retirées (rang le plus élevé d'abord), puis
+    // polices réduites, les plus grandes d'abord.
+    function fullLines(dc as Graphics.Dc, all as Array, top as Number, bottom as Number) as Void {
+        var lines = all;
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var fonts = [Graphics.FONT_XTINY, Graphics.FONT_TINY, Graphics.FONT_SMALL, Graphics.FONT_MEDIUM];
+        var total = linesHeight(dc, lines);
+        while (total > bottom - top) {
+            var big = -1;
+            var bigRank = 0;
+            var drop = -1;
+            var dropRank = 0;
+            for (var i = 0; i < lines.size(); i++) {
+                var fr = fontRank(lines[i][1]);
+                if (fr > bigRank) {
+                    big = i;
+                    bigRank = fr;
+                }
+                var r = lines[i].size() > 3 ? lines[i][3] as Number : 0;
+                if (r > dropRank) {
+                    drop = i;
+                    dropRank = r;
+                }
+            }
+            if (bigRank == 4 || (drop < 0 && big >= 0)) {
+                for (var i = 0; i < lines.size(); i++) {
+                    if (fontRank(lines[i][1]) == bigRank) {
+                        lines[i][1] = fonts[bigRank - 1];
+                    }
+                }
+            } else if (drop >= 0) {
+                var kept = [];
+                for (var i = 0; i < lines.size(); i++) {
+                    if (i != drop) {
+                        kept.add(lines[i]);
+                    }
+                }
+                lines = kept;
+            } else {
+                break;
+            }
+            total = linesHeight(dc, lines);
+        }
+        var y = top + (bottom - top - total) / 2;
+        for (var i = 0; i < lines.size(); i++) {
+            var font = lines[i][1];
+            var fh = dc.getFontHeight(font);
+            var a = halfChord(y, w, h);
+            var b = halfChord(y + fh, w, h);
+            var maxW = 2 * (a < b ? a : b) - 12;
+            dc.setColor(lines[i][2], Graphics.COLOR_TRANSPARENT);
+            dc.drawText(w / 2, y, font, pick(dc, lines[i][0], font, maxW), Graphics.TEXT_JUSTIFY_CENTER);
+            y += fh;
+        }
+    }
+
     // --- Mise en forme ------------------------------------------------------
 
     function clock(sec as Number) as String {

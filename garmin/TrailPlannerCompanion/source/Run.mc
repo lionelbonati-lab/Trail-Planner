@@ -76,6 +76,7 @@ class Run {
     var lapShownDist = 0.0;
     var lapPreview = null;    // avec un parcours : point que le tour va valider (nom, « Départ · nom ») ou null
     var lapFrame = null;      // décompte : écran redessiné 10 fois par seconde (Timer.Timer ou null)
+    var ravitoHiddenCp = -1;  // ravito dont l'écran a été caché (Haut / Bas), jusqu'au prochain Lap
     // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
     var profLoad = null;      // [ProfileReader, GroupReader] ou null...
     var profLoadPlan = null;  // ... pour ce plan
@@ -245,6 +246,7 @@ class Run {
     // (écran du tour des sorties libres) sont pris à l'appui.
     function lap() as Void {
         lastLapMs = System.getTimer();
+        ravitoHiddenCp = -1;
         if (lapPending > 0) {
             commitLap();
         }
@@ -289,6 +291,22 @@ class Run {
             (lapFrame as Timer.Timer).stop();
             lapFrame = null;
         }
+    }
+
+    // Écran du ravito (sur tous les écrans, sortie en cours) : de l'arrivée au ravito jusqu'au départ (2e Lap),
+    // sauf s'il a été caché par Haut / Bas (il revient au prochain Lap).
+    function ravitoOn() as Boolean {
+        return state == RUNNING && plan != null && tp.ravitoScreen(Time.now().value()) && tp.bagCp != ravitoHiddenCp;
+    }
+
+    // Haut / Bas sur l'écran du ravito : il est caché, l'écran d'avant reparaît. false : pas d'écran du ravito.
+    function hideRavito() as Boolean {
+        if (!ravitoOn()) {
+            return false;
+        }
+        ravitoHiddenCp = tp.bagCp;
+        WatchUi.requestUpdate();
+        return true;
     }
 
     // Bas pendant le décompte : tour annulé (rien n'est enregistré). false : pas de tour en attente.

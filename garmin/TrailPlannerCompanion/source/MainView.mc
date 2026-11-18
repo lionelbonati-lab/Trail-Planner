@@ -49,6 +49,11 @@ class MainView extends WatchUi.View {
             drawLapCountdown(dc, run);
             return;
         }
+        // Au ravito, jusqu'au départ : écran du ravito (Haut / Bas le cachent).
+        if (run.ravitoOn()) {
+            drawRavitoOverlay(dc, run);
+            return;
+        }
         var ep = run.ep;
         var top = ep.contentTop();
         var bottom = ep.contentBottom();

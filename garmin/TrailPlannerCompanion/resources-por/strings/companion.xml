@@ -31,6 +31,7 @@
     <string id="tp_lap">Volta</string>
     <string id="tp_lap_undone">Volta cancelada</string>
     <string id="tp_undo">Cancelar</string>
+    <string id="tp_ravito_end">Fim do abastecimento</string>
     <string id="tp_passage">Passagem</string>
     <string id="tp_depart">Partida</string>
     <string id="tp_saved">Saída guardada</string>

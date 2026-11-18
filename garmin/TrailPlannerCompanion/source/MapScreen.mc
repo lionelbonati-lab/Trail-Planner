@@ -450,6 +450,11 @@ class CompanionMapView extends WatchUi.MapView {
             drawLapCountdown(dc, run);
             return;
         }
+        // Au ravito, jusqu'au départ : écran du ravito (Haut / Bas le cachent).
+        if (run.ravitoOn()) {
+            drawRavitoOverlay(dc, run);
+            return;
+        }
         if (!exploring) {
             follow();
         }
