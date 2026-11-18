@@ -118,8 +118,8 @@ Si le parcours change (modifié dans l'app web), la montre reçoit le nouveau pl
 recale sur tout le parcours, en gardant les passages déjà notés. Plan d'une ancienne version (sans
 tracé) : navigation du parcours FIT si elle est active, sinon distance parcourue.
 
-**Message de l'assistance.** Depuis la page assistance (encadré « Message à la montre » : messages tout
-prêts ou texte libre de 60 caractères, un par minute au plus), le message arrive au prochain contrôle de la
+**Message de l'assistance.** Depuis la page assistance (encadré « Message à la montre » : « On est au ravito »,
+« Bien joué ! » ou texte libre de 60 caractères, un par minute au plus), le message arrive au prochain contrôle de la
 montre (toutes les 5 min) : vibration, alerte plein écran « Message assistance », puis le message reste en
 grand dans le champ jusqu'au **tour Lap** (qui le ferme sans valider de passage), 2 min au plus. La page
 assistance affiche « reçu par la montre » puis « lu ». Un message de plus d'une heure est ignoré. Les

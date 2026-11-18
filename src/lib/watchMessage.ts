@@ -12,7 +12,7 @@ export const MESSAGE_GAP_S = 60
 export const MESSAGE_STALE_S = 3600
 
 /** Messages tout prêts, lisibles d'un coup d'œil. */
-export const QUICK_MESSAGES = ['On est au ravito', 'Bien joué !', 'Appelle-nous', 'Retard, on arrive']
+export const QUICK_MESSAGES = ['On est au ravito', 'Bien joué !']
 
 export interface WatchMessage {
   id: string
