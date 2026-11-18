@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.7.5, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.7.6, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -65,7 +65,7 @@ s'affiche par-dessus, quel que soit l'écran.
 **1. EndurancePro** : l'écran du champ EndurancePro 2.7.3, sans changement sauf la distance restante, qui
 vient du plan Trail Planner (prochain point, arrivée). FC dans un cercle et sa
 barre de zones, D+, D- et altitude, VAM, allure effort instantanée et moyenne colorées par zone, sac,
-météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (popup ou notification).
+météo, batterie, distance, chrono, heure, 2e métrique, circuits, alarmes (popup seul : la notification et le réglage « Type d'affichage » sont retirés).
 
 **2. Trail Planner** : les calculs du champ Trail Planner, avec les éléments graphiques d'EndurancePro :
 - **colonne gauche** : vers le prochain point (distance, D+, D-) ; **colonne droite** : vers l'arrivée ;
@@ -291,7 +291,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.7.5 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.7.6 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

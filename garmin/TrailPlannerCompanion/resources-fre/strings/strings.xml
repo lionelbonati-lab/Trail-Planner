@@ -35,7 +35,7 @@
     <string id="menu_colorize_dplus_dmoins">Encadré D+/D-</string>
     <string id="menu_vam_zones_bar">Barre VAM</string>
     <string id="menu_version_label">Version</string>
-    <string id="app_version">0.7.5 (EndurancePro 2.7.3)</string>
+    <string id="app_version">0.7.6 (EndurancePro 2.7.3)</string>
     <string id="menu_temp_corr">Correction temp.</string>
     <string id="menu_solar_corr">Correction solaire</string>
     <string id="menu_bag_weight_title">Poids du sac (kg)</string>
@@ -85,9 +85,6 @@
     <string id="set_vam_zone4_max">Zone 4 max</string>
     <string id="set_alarm">Alarme</string>
     <string id="set_alarm_popup">Alarme</string>
-    <string id="set_alarm_display_type">Type d&apos;affichage</string>
-    <string id="opt_popup">Popup</string>
-    <string id="opt_notification">Notification</string>
     <string id="set_alarm_type">Type d&apos;alarme</string>
     <string id="set_metric_slot">M&#xe9;trique secondaire (haut gauche)</string>
     <string id="set_hr_display">Affichage zone FC</string>

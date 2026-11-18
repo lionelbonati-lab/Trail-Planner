@@ -62,14 +62,9 @@
         <property id="circuit_distance_prop" type="boolean">true</property>
         <property id="circuit_chrono_prop" type="boolean">true</property>
         <!-- v1.9.17 : Durée alarme visuelle (0=OFF, 3=3s, 5=5s, 10=10s). v2.2.11 : redevient
-             la source unique du on/off "Alarme" (vibration+son inclus) ET, en mode Popup, la
-             durée d'affichage du popup dessiné par l'app — voir alarm_display_type_prop -->
+             la source unique du on/off "Alarme" (vibration+son inclus) ET la durée d'affichage
+             du popup dessiné par l'app (appli : popup seul, plus de notification) -->
         <property id="alarm_popup_duration_prop" type="number">5</property>
-        <!-- v2.2.11 : Type d'affichage visuel de l'alarme — 0=Popup (dessiné par l'app, centré
-             écran, durée garantie par alarm_popup_duration_prop), 1=Notification (WatchUi.showToast
-             natif montre — sur certains modèles ne respecte pas la durée système et nécessite un
-             appui bouton pour se fermer, voir trail_datafield_notes.md) -->
-        <property id="alarm_display_type_prop" type="number">0</property>
         <!-- v1.9.36 : Unité allure (0=min/km, 1=km/h) -->
         <property id="pace_unit_prop" type="number">0</property>
         <!-- v1.9.36 : Affichage batterie (0=Appareil, 1=Body Battery) -->

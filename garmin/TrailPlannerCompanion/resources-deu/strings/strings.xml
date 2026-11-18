@@ -35,7 +35,7 @@
     <string id="menu_colorize_dplus_dmoins">D+/D- Umrandung</string>
     <string id="menu_vam_zones_bar">VAM-Balken</string>
     <string id="menu_version_label">Version</string>
-    <string id="app_version">0.7.5 (EndurancePro 2.7.3)</string>
+    <string id="app_version">0.7.6 (EndurancePro 2.7.3)</string>
     <string id="menu_temp_corr">Temp.-Korrektur</string>
     <string id="menu_solar_corr">Solar-Korrektur</string>
     <string id="menu_bag_weight_title">Rucksackgewicht (kg)</string>
@@ -85,9 +85,6 @@
     <string id="set_vam_zone4_max">Zone 4 Max</string>
     <string id="set_alarm">Alarm</string>
     <string id="set_alarm_popup">Alarm</string>
-    <string id="set_alarm_display_type">Anzeigetyp</string>
-    <string id="opt_popup">Popup</string>
-    <string id="opt_notification">Benachrichtigung</string>
     <string id="set_alarm_type">Alarmtyp</string>
     <string id="set_metric_slot">Sekund&#xe4;rmetrik (oben links)</string>
     <string id="set_hr_display">HF-Zonenanzeige</string>

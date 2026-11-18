@@ -56,7 +56,7 @@
     <string id="menu_vam_circuit">Volta</string>
     <string id="menu_vam_circuit_off">Volta inativa</string>
     <string id="menu_battery_mode">Modo bateria</string>
-    <string id="app_version">0.7.5 (EndurancePro 2.7.3)</string>
+    <string id="app_version">0.7.6 (EndurancePro 2.7.3)</string>
 
     <!-- Settings titles -->
     <string id="set_dark_mode">Modo escuro</string>
@@ -85,9 +85,6 @@
     <string id="set_vam_zone4_max">Zona 4 m&#xe1;x</string>
     <string id="set_alarm">Alarme</string>
     <string id="set_alarm_popup">Alarme</string>
-    <string id="set_alarm_display_type">Tipo de exibi&#xe7;&#xe3;o</string>
-    <string id="opt_popup">Popup</string>
-    <string id="opt_notification">Notifica&#xe7;&#xe3;o</string>
     <string id="set_alarm_type">Tipo de alarme</string>
     <string id="set_metric_slot">M&#xe9;trica secund&#xe1;ria (canto sup. esq.)</string>
     <string id="set_hr_display">Exibi&#xe7;&#xe3;o zona FC</string>

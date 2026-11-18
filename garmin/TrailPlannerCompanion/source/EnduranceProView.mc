@@ -207,10 +207,8 @@ class EnduranceProView {
     private var globalAlarmCooldown = 0;  // v1.9.25 : bloque tous les types pendant ALARM_REPEAT après un déclenchement
     private var alarmEnabled  as Boolean = false;  // v2.2.1 : gate ON/OFF. v2.2.11 : coupe désormais TOUTE
         // l'alarme (popup + vibration + son), plus seulement le popup — voir triggerAlarm()
-    // v2.2.11 : popup alarme dessiné par l'app (alternative à WatchUi.showToast, natif montre,
-    // qui ne respecte pas toujours la durée système et peut nécessiter un appui bouton pour se
-    // fermer selon le modèle — voir trail_datafield_notes.md). Choix Popup/Notification via
-    // alarm_display_type_prop
+    // v2.2.11 : popup alarme dessiné par l'app. Appli : popup seul (plus de notification
+    // WatchUi.showToast ni de réglage « Type d'affichage »).
     private var alarmPopupLabel       as String = "";
     private var alarmPopupValue       as String = "";
     private var alarmPopupTicks       as Number = 0;   // secondes restantes d'affichage
@@ -219,7 +217,6 @@ class EnduranceProView {
     private var alarmPopupFont = null;                  // null : notifIcons (alarmes d'EP)
     private var alarmPopupValueFont = Graphics.FONT_NUMBER_MILD;
     private var popupOwnTicks as Number = 0;
-    private var alarmDisplayType      as Number = 0;   // 0=Popup (dessiné par l'app), 1=Notification (showToast)
     // v1.9.21 : Booleans alarme pré-calculés (OPT 7)
     private var vamAlarmEnabled  as Boolean = false;
     private var paceAlarmEnabled as Boolean = false;
@@ -699,8 +696,6 @@ class EnduranceProView {
             var pPopupDur = appProps.getValue("alarm_popup_duration_prop");
             alarmPopupDurationSec = (pPopupDur != null) ? pPopupDur.toNumber() : 0;
             alarmEnabled = alarmPopupDurationSec > 0;
-            var pDisplayType = appProps.getValue("alarm_display_type_prop");
-            alarmDisplayType = (pDisplayType != null) ? pDisplayType.toNumber() : 0;
             // 18. Allure circuit en cours
             var pCurLap = appProps.getValue("cur_lap_pace_prop");
             if (pCurLap != null) { showCurLapPace = pCurLap as Boolean; }
@@ -2087,19 +2082,14 @@ private function drawBottomSection(dc, info, txtColor) as Void {
         }
     }
 
-    // v2.2.11 : Affichage visuel de l'alarme — Popup (dessiné par l'app, durée garantie par
-    // alarmPopupDurationSec) ou Notification (WatchUi.showToast natif montre — durée hors
-    // contrôle de l'app, voir alarm_display_type_prop et trail_datafield_notes.md)
+    // v2.2.11 : Affichage visuel de l'alarme — popup dessiné par l'app, durée garantie par
+    // alarmPopupDurationSec. Appli : popup seul (toastText, texte de l'ancienne notification, inutilisé).
     private function showAlarmVisual(iconLabel as String, value as String, toastText as String) as Void {
-        if (alarmDisplayType == 1) {
-            WatchUi.showToast(toastText, null);
-        } else {
-            alarmPopupLabel = iconLabel;
-            alarmPopupValue = value;
-            alarmPopupTicks = alarmPopupDurationSec;
-            alarmPopupFont = null;
-            alarmPopupValueFont = Graphics.FONT_NUMBER_MILD;
-        }
+        alarmPopupLabel = iconLabel;
+        alarmPopupValue = value;
+        alarmPopupTicks = alarmPopupDurationSec;
+        alarmPopupFont = null;
+        alarmPopupValueFont = Graphics.FONT_NUMBER_MILD;
     }
 
     // v1.8.0 : Déclenchement alarme (vibration / son / les deux)

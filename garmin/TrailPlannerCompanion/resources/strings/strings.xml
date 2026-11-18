@@ -82,9 +82,6 @@
          the whole alarm (popup or notification + vibration + sound), not just the popup.
          See EnduranceProView. -->
     <string id="set_alarm_popup">Alarm</string>
-    <string id="set_alarm_display_type">Display type</string>
-    <string id="opt_popup">Popup</string>
-    <string id="opt_notification">Notification</string>
     <string id="set_alarm_type">Alarm type</string>
     <string id="set_metric_slot">Metrics</string>
     <string id="set_hr_display">HR zone display</string>

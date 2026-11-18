@@ -797,8 +797,7 @@ class VamSettingsMenu extends WatchUi.Menu2 {
 // v1.9.48 : dossier FC supprimé — "Affichage zone FC" déplacé dans le menu principal
 // (sous "Circuit"), "Seuil Zone FC" déplacé dans le dossier Alarmes ci-dessous
 // v2.2.11 : Durée de l'alarme visuelle — 0=OFF (coupe aussi vibration+son, voir alarmEnabled
-// dans EnduranceProView), 3/5/10=secondes. Sert aussi de durée d'affichage au popup dessiné
-// par l'app quand alarm_display_type_prop=0 (Popup).
+// dans EnduranceProView), 3/5/10=secondes : durée d'affichage du popup dessiné par l'app.
 function alarmPopupOptions() as Array {
     return [
         [WatchUi.loadResource(Rez.Strings.opt_off) as String, 0],
@@ -806,18 +805,8 @@ function alarmPopupOptions() as Array {
     ];
 }
 
-// v2.2.11 : Popup (dessiné par l'app, durée garantie) vs Notification (WatchUi.showToast,
-// natif montre — sur certains modèles ne respecte pas la durée système, voir notes)
-function alarmDisplayTypeOptions() as Array {
-    return [
-        [WatchUi.loadResource(Rez.Strings.opt_popup) as String, 0],
-        [WatchUi.loadResource(Rez.Strings.opt_notification) as String, 1]
-    ];
-}
-
 class AlarmSettingsMenu extends WatchUi.Menu2 {
     private var _alarmPopupDurationItem as WatchUi.MenuItem;
-    private var _alarmDisplayTypeItem as WatchUi.MenuItem;
     private var _alarmItem as WatchUi.MenuItem;
     private var _vamAlarmTypeItem as WatchUi.MenuItem;
     private var _targetZoneItem as WatchUi.MenuItem;
@@ -827,8 +816,6 @@ class AlarmSettingsMenu extends WatchUi.Menu2 {
         Menu2.initialize({:title => WatchUi.loadResource(Rez.Strings.menu_alarm_folder) as String});
         _alarmPopupDurationItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.set_alarm_popup) as String, null, :alarmPopupDuration, {});
         addItem(_alarmPopupDurationItem);
-        _alarmDisplayTypeItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.set_alarm_display_type) as String, null, :alarmDisplayType, {});
-        addItem(_alarmDisplayTypeItem);
         _alarmItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.menu_alarm) as String, null, :alarm, {});
         addItem(_alarmItem);
         _vamAlarmTypeItem = new WatchUi.MenuItem(WatchUi.loadResource(Rez.Strings.set_alarm_type) as String, null, :vamAlarmType, {});
@@ -849,9 +836,6 @@ class AlarmSettingsMenu extends WatchUi.Menu2 {
         _fuelItem.setSubLabel(labelForValue(fuelOptions(), fuelValue()));
         var apd = Properties.getValue("alarm_popup_duration_prop");
         _alarmPopupDurationItem.setSubLabel(labelForValue(alarmPopupOptions(), (apd != null) ? apd as Number : 5));
-
-        var adt = Properties.getValue("alarm_display_type_prop");
-        _alarmDisplayTypeItem.setSubLabel(labelForValue(alarmDisplayTypeOptions(), (adt != null) ? adt as Number : 0));
 
         var al = Properties.getValue("alarm");
         var alFlags = flagsOf3((al != null) ? al as Number : 0);
@@ -1297,10 +1281,6 @@ class EnduranceProSettingsDelegate extends WatchUi.Menu2InputDelegate {
         } else if (id == :alarmPopupDuration) {
             WatchUi.pushView(new PropertyListMenu(WatchUi.loadResource(Rez.Strings.set_alarm_popup) as String, alarmPopupOptions(), "alarm_popup_duration_prop"),
                 new PropertyListDelegate("alarm_popup_duration_prop"), WatchUi.SLIDE_LEFT);
-
-        } else if (id == :alarmDisplayType) {
-            WatchUi.pushView(new PropertyListMenu(WatchUi.loadResource(Rez.Strings.set_alarm_display_type) as String, alarmDisplayTypeOptions(), "alarm_display_type_prop"),
-                new PropertyListDelegate("alarm_display_type_prop"), WatchUi.SLIDE_LEFT);
 
         } else if (id == :vamAlarmType) {
             var tcur = Properties.getValue("vam_alarm_type_prop");
