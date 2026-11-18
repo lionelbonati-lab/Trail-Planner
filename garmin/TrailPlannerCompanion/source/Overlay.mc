@@ -46,8 +46,13 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run) as Void {
             dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
             dc.drawArc(w / 2, h / 2, r, Graphics.ARC_CLOCKWISE, UNDO_ARC_TOP, stopDeg);
         }
+        // Arc rouge plus épais que l'anneau, sur le bord.
+        var ap = w > 300 ? 16 : 12;
+        if (dc has :setPenWidth) {
+            dc.setPenWidth(ap);
+        }
         dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
-        dc.drawArc(w / 2, h / 2, r, Graphics.ARC_COUNTER_CLOCKWISE, UNDO_ARC_TOP, UNDO_ARC_BOTTOM);
+        dc.drawArc(w / 2, h / 2, w / 2 - ap / 2, Graphics.ARC_COUNTER_CLOCKWISE, UNDO_ARC_TOP, UNDO_ARC_BOTTOM);
     } else {
         dc.setColor(0x00AACC, Graphics.COLOR_TRANSPARENT);
         dc.fillRectangle(0, 0, (w * left).toNumber(), pen);

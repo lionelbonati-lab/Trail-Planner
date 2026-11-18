@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.12, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.13, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -156,8 +156,8 @@ d'anneau au bord de l'écran (celui de la FC d'EndurancePro reste).
 | Appui long sur Haut | Menu ; zoom depuis le profil, échelle depuis la carte | Idem | Idem |
 
 **Annuler un tour** (comme les applis Garmin) : après Lap, l'**écran du tour** remplace pendant 8 s l'écran
-affiché, sur un fond uni (l'anneau ne se confond pas avec les bandeaux d'EP). Un **petit arc rouge** sur le
-bord en face de la touche Bas, avec à côté l'icône de tour et « **Annuler** » en rouge : **Bas** pendant ce
+affiché, sur un fond uni (l'anneau ne se confond pas avec les bandeaux d'EP). Un **petit arc rouge**, plus épais que
+l'anneau, sur le bord en face de la touche Bas, avec à côté l'icône de tour et « **Annuler** » en rouge : **Bas** pendant ce
 temps annule le tour. L'**anneau** du décompte fait le tour du bord du haut de l'arc rouge jusqu'à son bas,
 sans passer dessous, et se vide par le bas de l'arc rouge. Sinon le tour est enregistré à la fin du décompte
 (une appli Connect IQ ne peut pas effacer un tour déjà écrit) : le passage au point Trail Planner garde
@@ -284,7 +284,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.12 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.13 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
