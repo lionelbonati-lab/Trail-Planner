@@ -665,7 +665,7 @@ class TrailPlannerScreen {
         lastSaved = now;
     }
 
-    // --- Écran du ravito plein écran (repris du champ), sur tous les écrans de l'appli ----------------
+    // --- Écran du ravito (repris du champ), à la place de l'écran Trail Planner -----------------------
 
     // Au ravito (sac ou produits du tronçon qui en part, pas une simple note), jusqu'au départ.
     function ravitoScreen(now as Number) as Boolean {
@@ -1170,78 +1170,6 @@ class TrailPlannerScreen {
         }
     }
 
-    // Au ravito, jusqu'au départ : à gauche « À consommer » (produits sur ravito) puis « À prendre » (sac,
-    // note du point), 5 s chacun ; à droite le tronçon suivant ; barre = temps passé sur l'arrêt prévu.
-    function drawRavito(dc as Graphics.Dc, l, fg, red, green) as Void {
-        var now = Time.now().value();
-        var w = dc.getWidth();
-        var h = dc.getHeight();
-        var xr = l.PiconX2;
-        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        dc.drawLine(xr, l.ParamBarY1, xr, l.ParamBarY2);
-
-        // Gauche : liste en alternance.
-        var site = plan.site(bagLeg);
-        var bagItems = [] as Array<String>;
-        if (bagCp >= 0 && bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) {
-            bagItems.add(plan.cpNote[bagCp]);
-        }
-        var entries = plan.bag(bagLeg);
-        for (var i = 0; i < entries.size(); i++) {
-            bagItems.add(entries[i]);
-        }
-        var eat = site.size() > 0 && (now / 5) % 2 == 0;
-        var title = eat ? "À consommer" : "À prendre";
-        var items = eat ? site : bagItems;
-        var tf = Graphics.FONT_XTINY;
-        var lf = Graphics.FONT_SMALL;
-        var y = l.ParamBarY1 + dc.getFontHeight(tf) / 2 + 2;
-        dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(xr - 6, y, tf, title, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
-        var lh = dc.getFontHeight(lf);
-        y += dc.getFontHeight(tf) / 2 + lh / 2 + 2;
-        var rows = packItems(dc, items, lf, 3);
-        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        for (var i = 0; i < rows.size() && i < 3; i++) {
-            var maxW = xr - 6 - (w / 2 - halfChord(y, w, h)) - 4;
-            var rf = lineFont(dc, rows[i], maxW);
-            dc.drawText(xr - 6, y, rf, fit(dc, rows[i], rf, maxW), Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
-            y += lh;
-        }
-
-        // Droite : tronçon suivant, jusqu'au prochain ravito (ou à l'arrivée).
-        var from = plan.legFrom[bagLeg];
-        var to = plan.legTo[bagLeg];
-        var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
-        var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
-        legColumn(dc, l, l.axisRightX, d0, d1, to >= 0 ? ICON_WAYPOINT : ICON_FLAG, fg);
-
-        // Barre : temps passé au ravito sur l'arrêt prévu (rouge une fois dépassé).
-        var arrived = passes.hasKey(bagCp) ? passes[bagCp] as Number : now;
-        var stop = plan.cpStop[bagCp];
-        var paused = now - arrived;
-        var over = stop > 0 && paused > stop;
-        barFrame(dc, l, stop > 0 ? paused.toFloat() / stop : 1.0, over ? red : green, fg);
-
-        // Sous la barre : pause réelle / prévue à gauche ; durée prévue du tronçon suivant (corrigée du
-        // rythme du moment) à droite.
-        var pf = Graphics.FONT_MEDIUM;
-        dc.setColor(over ? red : fg, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(l.axisLeftX, l.DistY, pf, mmss(paused) + (stop > 0 ? "/" + mmss(stop) : ""), Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        var dep = (from >= 0 && from < plan.cpPlan.size()) ? plan.cpPlan[from] + plan.cpStop[from] : 0;
-        var arr = (to >= 0 && to < plan.cpPlan.size()) ? plan.cpPlan[to] : plan.finishTime();
-        var legTime = shortDuration(((arr - dep > 0 ? arr - dep : 0) * paceRatio).toNumber());
-        var font = l.fontSecondary;
-        var lx = rightX(dc, l, l.DistY, dc.getFontHeight(font), dc.getTextWidthInPixels(legTime, font));
-        dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(lx, l.DistY, font, legTime, Graphics.TEXT_JUSTIFY_LEFT | Graphics.TEXT_JUSTIFY_VCENTER);
-        dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(lx - 5, l.DistY + l.iconSmallOffsetY, getRun().ep.iconFonts()[0], ICON_FOOD, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
-
-        var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
-        bottomLine(dc, l, toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, fg);
-    }
-
     function onUpdate(dc as Graphics.Dc) as Void {
         var bg = getBackgroundColor();
         var dark = bg == Graphics.COLOR_BLACK;
@@ -1255,8 +1183,11 @@ class TrailPlannerScreen {
         if (plan == null) {
             dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
             dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_SMALL, status, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
-        } else if (running && bagLeg >= 0 && ravitoShown(Time.now().value())) {
-            drawRavito(dc, l, fg, red, green);
+        } else if (ravitoScreen(Time.now().value())) {
+            // Au ravito, jusqu'au départ : écran du ravito à la place de l'écran Trail Planner (plein écran,
+            // sans les bandeaux d'EP).
+            drawRavitoOverlay(dc, getRun());
+            return;
         } else {
             drawMain(dc, l, fg, red, green);
         }

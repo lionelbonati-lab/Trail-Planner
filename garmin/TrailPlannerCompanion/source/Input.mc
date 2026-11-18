@@ -123,25 +123,21 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
         return evt.getDirection() == WatchUi.SWIPE_RIGHT;
     }
 
-    // Bas : annule le tour en attente (8 s après Lap) ; sur l'écran du ravito, le cache ; sinon écran suivant.
+    // Bas : annule le tour en attente (8 s après Lap), sinon écran suivant.
     function onNextPage() as Boolean {
         if (getApp().exploring()) {
             return false;
         }
-        if (run.undoLap() || run.hideRavito()) {
+        if (run.undoLap()) {
             return true;
         }
         getApp().nextPage(1);
         return true;
     }
 
-    // Haut : sur l'écran du ravito, le cache ; sinon écran précédent.
     function onPreviousPage() as Boolean {
         if (getApp().exploring()) {
             return false;
-        }
-        if (run.lapPending == 0 && run.hideRavito()) {
-            return true;
         }
         getApp().nextPage(-1);
         return true;

@@ -65,7 +65,7 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run) as Void {
     }
 }
 
-// Au ravito (Run.ravitoOn), sur tous les écrans jusqu'au départ : écran du ravito du champ ; anneau du temps
+// Au ravito, jusqu'au départ, à la place de l'écran Trail Planner : écran du ravito du champ ; anneau du temps
 // passé sur l'arrêt prévu (vert, plein et rouge une fois dépassé) ; arc orange en face de BACK/Lap avec, à
 // côté, l'icône →| (le 2e Lap note le départ du ravito) et, sur la même ligne, le temps passé / prévu de la
 // couleur de l'anneau.
