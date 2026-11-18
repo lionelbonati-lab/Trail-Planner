@@ -212,7 +212,8 @@ export function reportFor(
   report: WatchReport | null,
   nowMs: number,
 ): WatchReport | null {
-  if (!report) return null
+  // Sortie libre (rien sur la montre, `v` = 2) : distance de l'activité, pas le long d'un parcours.
+  if (!report || report.v === 2) return null
   if (snap.totalDist > 0 && report.d > snap.totalDist + 1000) return null
   if (snap.courseId !== undefined) {
     const course = reportCourse(report)

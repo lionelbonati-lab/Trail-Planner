@@ -179,6 +179,11 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   (direct, carte affichée par une case à cocher, lien « Y aller » Google Maps vers chaque point, son accès s'il
   est placé) et **Trajets** (tous les points à cocher, ceux d'assistance cochés d'office, gardés sur le
   téléphone ; itinéraire Google Maps entre les points cochés pas encore passés, découpé par 3 étapes).
+- **Sortie libre sur le lien permanent** : rien sur la montre (course retirée avec ⌚), le champ Trail Planner
+  envoie quand même distance, D+, position et batterie toutes les 5 min ; le lien permanent montre la carte
+  avec la trace (un point par relevé, gardé par le serveur), la distance, le temps, le D+ et l'allure
+  moyenne, jusqu'à 12 h après la sortie. Position masquée à moins de 500 m du départ par défaut (réglage
+  dans l'onglet Montre), par la montre elle-même.
 - **Notifications pour l'assistance**, même page fermée (envoyées par le serveur, voir
   [docs/notifications.md](docs/notifications.md)) : « Me prévenir » sur le lien assistance ou le lien permanent.
   Passage à chaque point (heure, km, écart au plan compté depuis le vrai départ), retard (à chaque quart d'heure de

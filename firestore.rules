@@ -28,6 +28,11 @@ service cloud.firestore {
                    && (!('lon' in request.resource.data) || request.resource.data.lon is number)
                    && (!('bat' in request.resource.data) || request.resource.data.bat is int);
     }
+    // Trace d'une sortie libre (rien sur la montre), écrite par le serveur : lisible comme le relevé.
+    match /live/{code}/track/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
     // Abonnements aux notifications d'un lien (assistance « share:<id> », lien permanent « suivi:<code> »),
     // sans compte : un jeton de téléphone par document, pour un lien existant. Lus par le serveur seul ;
     // l'identifiant du document vient du jeton (introuvable sans lui).

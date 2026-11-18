@@ -10,6 +10,7 @@ import { getMessaging } from 'firebase-admin/messaging'
 import { setGlobalOptions } from 'firebase-functions/v2'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { decodeFromFirestore } from '../../src/lib/firestoreCodec'
+import { appendTrack, isFreeRun, type TrackDoc } from '../../src/lib/freeRun'
 import { liveNotices, pushTargets, runnerDoc, tokenKey, watchNotices, type Notice, type PushState } from '../../src/lib/pushRules'
 import type { ShareSnapshot } from '../../src/lib/share'
 import type { WatchReport } from '../../src/lib/watchLive'
@@ -131,6 +132,15 @@ async function notify(
   return items
 }
 
+/** Sortie libre : position du relevé ajoutée à la trace (live/{code}/track/current, lisible par le lien permanent). */
+async function saveTrack(db: Firestore, code: string, report: WatchReport) {
+  const ref = db.collection('live').doc(code).collection('track').doc('current')
+  await db.runTransaction(async (tx) => {
+    const next = appendTrack(((await tx.get(ref)).data() as TrackDoc | undefined) ?? null, report)
+    if (next) tx.set(ref, next)
+  })
+}
+
 /** Relevé de la montre : chaque lien qui suit ce code montre (code long ou court). */
 export const onWatchReport = onDocumentWritten('live/{code}', async (event) => {
   const after = event.data?.after.data() as WatchReport | undefined
@@ -141,6 +151,11 @@ export const onWatchReport = onDocumentWritten('live/{code}', async (event) => {
   if (after.t * 1000 < now - STALE_MS) return
   const code = event.params.code
   const db = getFirestore()
+  // Sortie libre (rien sur la montre) : trace seulement, pas de notification.
+  if (isFreeRun(after)) {
+    await saveTrack(db, code, after)
+    return
+  }
   const [long, short] = await Promise.all([
     db.collection('shares').where('liveRef', '==', code).get(),
     db.collection('shares').where('liveRefShort', '==', code).get(),

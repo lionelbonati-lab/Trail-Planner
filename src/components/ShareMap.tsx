@@ -246,7 +246,9 @@ export default function ShareMap({
         </span>
       </div>
       <div ref={el} className="share-map" role="region" aria-label="Carte du parcours et position du coureur" />
-      <p className="muted small map-tip">Touche le tracé : heure de passage estimée et itinéraire jusqu'à ce point.</p>
+      <p className="muted small map-tip">
+        {passageAt ? "Touche le tracé : heure de passage estimée et itinéraire jusqu'à ce point." : "Touche le tracé : km et itinéraire jusqu'à ce point."}
+      </p>
     </section>
   )
 }

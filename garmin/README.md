@@ -181,7 +181,17 @@ Puis, sur la montre : activité **Trail → Paramètres → Écrans de données*
    « 👥 Lien assistance »).
 
 Messages possibles : « Saisis le code montre », « Plan en attente... » (pas encore téléchargé : téléphone
-connecté ?), « Code inconnu » (code erroné ou course pas encore envoyée), « Plan : erreur N ».
+connecté ?), « Code inconnu » (code erroné ou course pas encore envoyée), « Plan : erreur N »,
+« Sortie libre » (rien sur la montre, voir ci-dessous).
+
+## Sortie libre (sans parcours)
+
+Course retirée de la montre (nouveau toucher sur ⌚ dans l'app web) : le champ affiche « Sortie libre » et
+envoie quand même, toutes les 5 min avec le téléphone, la distance de l'activité, le D+, la position et la
+batterie (relevé `v` = 2). Ton lien d'assistance permanent montre alors la carte, la trace et les chiffres.
+Par défaut, la position n'est pas envoyée à moins de 500 m du départ (souvent chez soi) : réglage dans
+l'onglet Montre de l'app web, reçu par le champ avec le plan (`fh` : rayon en m, 0 pour tout envoyer).
+Les versions précédentes du champ gardent leur dernier plan quand la course est retirée.
 
 ## Limites connues
 

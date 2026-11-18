@@ -133,3 +133,26 @@ describe('fonctions Cloud : notifications', () => {
     expect(sent.map((m) => [m.token, m.data.title])).toEqual([['tok-aide', 'Lionel · Ravito A']])
   })
 })
+
+describe('fonctions Cloud : sortie libre', () => {
+  beforeEach(() => {
+    store.clear()
+    sent.length = 0
+  })
+
+  it('relevé sans course : trace gardée, aucune notification', async () => {
+    const nowS = Math.round(Date.now() / 1000)
+    const r = { t: nowS, s: nowS - 1800, d: 5000, lat: 45.2, lon: 6.1, p: 'a=210', v: 2 }
+    store.set('push/x1', { token: 'tok', target: 'suivi:code1', ref: 'code1', at: 1 })
+    await fns.onWatchReport(event(null, r, { code: 'code1' }))
+    await fns.onWatchReport(event(r, { ...r, t: nowS + 300, d: 6000, lat: 45.21 }, { code: 'code1' }))
+    expect(store.get('live/code1/track/current')).toEqual({
+      s: r.s,
+      pts: [
+        { t: nowS, lat: 45.2, lon: 6.1, d: 5000 },
+        { t: nowS + 300, lat: 45.21, lon: 6.1, d: 6000 },
+      ],
+    })
+    expect(sent).toEqual([])
+  })
+})

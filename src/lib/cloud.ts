@@ -34,6 +34,7 @@ import {
 import { gunzipBase64, gzipBase64 } from './compress'
 import { normalizeAthlete, normalizeRace } from './defaults'
 import { decodeFromFirestore, encodeForFirestore } from './firestoreCodec'
+import type { TrackDoc } from './freeRun'
 import type { ShareSnapshot } from './share'
 import type { WatchReport } from './watchLive'
 import type { Store } from './storage'
@@ -275,18 +276,22 @@ export async function publishShare(shareId: string, snap: ShareSnapshot) {
 /**
  * Document du code montre sans course envoyée : réglages EndurancePro (`ep`), liste de l'appli montre, et
  * pour le lien permanent du coureur le code court et la dernière course passée.
- * `w` vide : le champ Trail Planner garde son dernier plan.
+ * `w` vide : rien sur la montre, le champ Trail Planner passe en sortie libre (`fh` : position masquée
+ * autour du départ) ; ses anciennes versions gardent leur dernier plan.
  */
 export async function publishWatchProfile(
   watchId: string,
   owner: string,
-  { ep, wl, liveRefShort, last }: { ep: string; wl?: string; liveRefShort?: string; last?: string },
+  { ep, wl, liveRefShort, last, fh, athleteName }: { ep: string; wl?: string; liveRefShort?: string; last?: string; fh: number; athleteName?: string },
 ) {
   if (!db) throw new Error('Synchronisation indisponible : Firebase non configuré.')
   await setDoc(doc(db, 'shares', watchId), {
     owner,
     updatedAt: new Date().toISOString(),
     w: '',
+    // Sortie libre (rien sur la montre) : rayon autour du départ où la montre n'envoie pas sa position (m).
+    fh,
+    ...(athleteName ? { athleteName } : {}),
     ep,
     ...(wl ? { wl } : {}),
     // Lien permanent du coureur : relevés envoyés avec le code court, dernière course passée.
@@ -331,6 +336,16 @@ export function subscribeShare(shareId: string, cb: (s: ShareSnapshot | null) =>
 }
 
 /** Suivi envoyé par la montre (document live/{code montre}). */
+/** Trace de la sortie libre en cours ou récente du code montre (écrite par le serveur). */
+export function subscribeTrack(code: string, cb: (t: TrackDoc | null) => void) {
+  if (!db) return () => {}
+  return onSnapshot(
+    doc(db, 'live', code, 'track', 'current'),
+    (d) => cb(d.exists() ? (d.data() as TrackDoc) : null),
+    () => cb(null),
+  )
+}
+
 export function subscribeLive(code: string, cb: (r: WatchReport | null) => void) {
   if (!db) return () => {}
   return onSnapshot(
