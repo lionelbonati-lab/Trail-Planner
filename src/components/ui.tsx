@@ -233,17 +233,13 @@ export function Hint({ children, label = 'Explications' }: { children: ReactNode
 }
 
 /**
- * Chiffres clés : cartes grises sur ordinateur ; sur téléphone, résumé en une ligne qui déplie les
- * cartes d'un toucher (elles prennent sinon la moitié de l'écran).
+ * Chiffres clés : cartes grises sur ordinateur ; sur téléphone, seulement un résumé en une ligne (les
+ * cartes y prendraient la moitié de l'écran).
  */
 export function Kpis({ summary, children }: { summary: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false)
   return (
-    <div className={`kpis-wrap ${open ? 'open' : ''}`}>
-      <button type="button" className="kpis-summary" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>{summary}</span>
-        <ChevronDown className="fold-chevron" aria-hidden />
-      </button>
+    <div className="kpis-wrap">
+      <p className="kpis-summary">{summary}</p>
       <div className="kpis">{children}</div>
     </div>
   )
