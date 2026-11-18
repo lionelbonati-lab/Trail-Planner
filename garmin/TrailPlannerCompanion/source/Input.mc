@@ -18,10 +18,61 @@ import Toybox.WatchUi;
 // ne fait rien (START et BACK restent sur les boutons).
 class MainDelegate extends WatchUi.BehaviorDelegate {
     var run as Run;
+    var lastAction = 0;       // dernière action START ou BACK (System.getTimer), contre un double envoi
 
     function initialize(r as Run) {
         BehaviorDelegate.initialize();
         run = r;
+    }
+
+    // Selon la montre, START et BACK arrivent comme touches (onKey) ou comme comportements (onSelect,
+    // onBack) : sur l'Enduro 3, START arrivait par onSelect, qui ne démarrait rien. Les deux chemins mènent
+    // à startAction / backAction ; un second envoi du même appui (moins de 0,4 s) est ignoré.
+    function twice() as Boolean {
+        var now = System.getTimer();
+        if (now - lastAction < 400) {
+            return true;
+        }
+        lastAction = now;
+        return false;
+    }
+
+    // START : départ, pause (menu Reprendre / Enregistrer / Supprimer), reprise.
+    function startAction() as Boolean {
+        if (run.state == DONE || twice()) {
+            return true;
+        }
+        if (run.state == READY) {
+            run.start();
+        } else if (run.state == RUNNING) {
+            run.pause();
+            pushPauseMenu();
+        } else if (run.state == PAUSED) {
+            run.resume();
+        }
+        WatchUi.requestUpdate();
+        return true;
+    }
+
+    // BACK (Lap) : tour pendant la sortie, menu de pause en pause, sortie de l'appli une fois la sortie
+    // enregistrée ; avant le départ, retour à la liste des parcours (false : la montre retire l'écran).
+    function backAction() as Boolean {
+        if (run.state == READY) {
+            getApp().leaveCourse();
+            return false;
+        }
+        if (twice()) {
+            return true;
+        }
+        if (run.state == RUNNING) {
+            run.lap();
+            WatchUi.requestUpdate();
+        } else if (run.state == PAUSED) {
+            pushPauseMenu();
+        } else {
+            System.exit();
+        }
+        return true;
     }
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
@@ -34,53 +85,42 @@ class MainDelegate extends WatchUi.BehaviorDelegate {
             return false;
         }
         if (key == WatchUi.KEY_ENTER) {
-            if (run.state == READY) {
-                run.start();
-            } else if (run.state == RUNNING) {
-                run.pause();
-                pushPauseMenu();
-            } else if (run.state == PAUSED) {
-                run.resume();
-            }
-            WatchUi.requestUpdate();
-            return true;
+            return startAction();
         }
-        if (key == WatchUi.KEY_ESC || key == WatchUi.KEY_LAP) {
-            if (run.state == RUNNING) {
-                run.lap();
-                WatchUi.requestUpdate();
-                return true;
-            }
-            if (run.state == PAUSED) {
-                pushPauseMenu();
-                return true;
-            }
-            // Sortie terminée : BACK quitte l'appli. Avant le départ : retour à la liste des parcours.
-            if (run.state == DONE) {
-                System.exit();
-            }
-            return BehaviorDelegate.onKey(evt);
+        if (key == WatchUi.KEY_LAP || (key == WatchUi.KEY_ESC && run.state != READY)) {
+            return backAction();
         }
-        // Haut, Bas, Menu : comportements habituels (onNextPage, onPreviousPage, onMenu).
+        // Haut, Bas, Menu, BACK avant le départ : comportements habituels (onNextPage, onPreviousPage,
+        // onMenu, onBack).
         return BehaviorDelegate.onKey(evt);
     }
 
-    // Balayage « retour » (écran tactile) : ignoré pendant la sortie ; en exploration, retour au suivi ;
-    // avant le départ, retour à la liste des parcours.
+    function onSelect() as Boolean {
+        if (getApp().exploring()) {
+            return false;
+        }
+        return startAction();
+    }
+
     function onBack() as Boolean {
         if (getApp().exploring()) {
             getApp().stopExplore();
             return true;
         }
-        if (run.state == READY) {
-            getApp().leaveCourse();
-            return false;
-        }
-        return run.state == RUNNING || run.state == PAUSED;
+        return backAction();
     }
 
-    function onSelect() as Boolean {
+    // Écran tactile : un tap ne démarre rien (START reste sur le bouton) ; le balayage « retour » ne fait
+    // ni tour ni retour à la liste ; haut / bas changent d'écran.
+    function onTap(evt as WatchUi.ClickEvent) as Boolean {
         return !getApp().exploring();
+    }
+
+    function onSwipe(evt as WatchUi.SwipeEvent) as Boolean {
+        if (getApp().exploring()) {
+            return false;
+        }
+        return evt.getDirection() == WatchUi.SWIPE_RIGHT;
     }
 
     function onNextPage() as Boolean {

@@ -71,6 +71,17 @@ function widthAt(dc as Graphics.Dc, y as Number, font) as Number {
     return (2 * half - 8).toNumber();
 }
 
+// Plus grande police de la liste (de la plus grande à la plus petite) dans laquelle le texte tient entier
+// à cette hauteur de l'écran ; la plus petite sinon.
+function fitFont(dc as Graphics.Dc, y as Number, text as String, fonts as Array) {
+    for (var i = 0; i < fonts.size() - 1; i++) {
+        if (dc.getTextWidthInPixels(text, fonts[i]) <= widthAt(dc, y, fonts[i])) {
+            return fonts[i];
+        }
+    }
+    return fonts[fonts.size() - 1];
+}
+
 // Une ligne centrée, raccourcie à la largeur de l'écran à cette hauteur ; `boxed` : sur un fond aux
 // couleurs du thème (lisible par-dessus la carte).
 function drawFitted(dc as Graphics.Dc, y as Number, text as String, color, font, boxed as Boolean) as Void {

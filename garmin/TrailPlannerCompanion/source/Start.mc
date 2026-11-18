@@ -97,8 +97,23 @@ class StartDelegate extends WatchUi.Menu2InputDelegate {
 // En exploration (menu « Explorer la carte ») : les boutons vont à la carte Garmin, BACK revient à la vue
 // d'ensemble.
 class OverviewDelegate extends WatchUi.BehaviorDelegate {
+    var started = false;      // START déjà pris (touche puis comportement du même appui : une seule fois)
+
     function initialize() {
         BehaviorDelegate.initialize();
+    }
+
+    function begin() as Boolean {
+        if (!started) {
+            started = true;
+            getApp().beginCourse();
+        }
+        return true;
+    }
+
+    // Écran tactile : un tap ne démarre rien (START reste sur le bouton).
+    function onTap(evt as WatchUi.ClickEvent) as Boolean {
+        return !getApp().overviewExploring();
     }
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
@@ -111,8 +126,7 @@ class OverviewDelegate extends WatchUi.BehaviorDelegate {
             return false;
         }
         if (key == WatchUi.KEY_ENTER) {
-            getApp().beginCourse();
-            return true;
+            return begin();
         }
         return BehaviorDelegate.onKey(evt);
     }
@@ -121,8 +135,7 @@ class OverviewDelegate extends WatchUi.BehaviorDelegate {
         if (getApp().overviewExploring()) {
             return false;
         }
-        getApp().beginCourse();
-        return true;
+        return begin();
     }
 
     function onBack() as Boolean {

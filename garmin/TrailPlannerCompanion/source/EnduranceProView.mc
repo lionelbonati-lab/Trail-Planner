@@ -2037,7 +2037,9 @@ private function drawBottomSection(dc, info, txtColor) as Void {
     var run = getRun();
     if (run.state == READY) {
         var hint = startHint(run);
-        drawFitted(dc, yTimer, hint[0] as String, hint[1], Graphics.FONT_MEDIUM, false);
+        var text = hint[0] as String;
+        var font = fitFont(dc, yTimer, text, [Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY]);
+        drawFitted(dc, yTimer, text, hint[1], font, false);
         return;
     }
     if (run.state == PAUSED) {

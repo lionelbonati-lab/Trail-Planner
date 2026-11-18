@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.6, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.7, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -132,7 +132,9 @@ au zoom 10 km), pour que les petites bosses ne zèbrent pas une montée.
   base de vie carré rouge ;
 - **échelle** choisie par **appui long sur Haut** depuis la carte (ou dans le menu : largeur de l'écran,
   200 m, 500 m, 1 km par défaut, 2 km, 5 km), rappelée en bas ; pas de titre en haut ; à chaque retour sur
-  la carte, elle se pose tout de suite sur toi ;
+  la carte, elle se pose tout de suite sur toi ; elle n'est recentrée que quand tu t'éloignes du centre
+  d'un tiers de la demi-largeur (chaque recentrage fait redessiner tout le fond par la montre), la flèche
+  suivant ta vraie position entre deux ;
 - **Explorer la carte** (menu, montres à cartes) : la carte passe en mode exploration Garmin pour la
   déplacer et zoomer avec les boutons ; BACK revient au suivi ;
 - en haut, comme sur le profil : écart au plan, passages, « Hors parcours ».
@@ -153,8 +155,10 @@ d'anneau au bord de l'écran (celui de la FC d'EndurancePro reste).
 | Haut / Bas | Écran suivant (EP, Trail Planner, profil, carte) | Écran suivant | Écran suivant |
 | Appui long sur Haut | Menu ; zoom depuis le profil, échelle depuis la carte | Idem | Idem |
 
-Écran tactile : balayages pour changer d'écran. Un balayage « retour » ne coupe pas la sortie, et un tap
-ne fait rien : START et BACK restent sur les boutons. « Supprimer » demande une confirmation.
+Écran tactile : balayages haut / bas pour changer d'écran. Le balayage « retour » ne fait rien (ni tour,
+ni retour à la liste) et un tap non plus : START et BACK restent sur les boutons. « Supprimer » demande une
+confirmation. START et BACK sont pris qu'ils arrivent comme touches ou comme « Sélectionner » / « Retour »
+(selon la montre ; sur l'Enduro 3, START arrive en « Sélectionner »).
 
 **Tour = passage au point** (comme le champ, réglage activé par défaut). Chaque tour crée un tour dans le
 fichier FIT et un nouveau circuit EndurancePro. Il valide aussi le passage au point le plus proche pas
@@ -265,7 +269,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.6 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.7 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

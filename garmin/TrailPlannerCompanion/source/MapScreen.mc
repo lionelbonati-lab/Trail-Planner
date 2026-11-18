@@ -371,7 +371,10 @@ class CompanionMapView extends WatchUi.MapView {
         shownScale = -1;
     }
 
-    // Zone affichée centrée sur le coureur, à l'échelle du menu ; recentrée dès qu'il a bougé de 5 m.
+    // Zone affichée autour du coureur, à l'échelle du menu. Recentrée seulement quand il s'éloigne du centre
+    // d'un tiers de la demi-largeur (ou à un changement d'échelle) : chaque nouvelle zone fait redessiner
+    // tout le fond de carte par la montre (écran noir, clignotement à chaque pas avec un recentrage tous
+    // les 5 m). Entre deux, la flèche suit sa vraie position (arrowXY).
     function follow() as Void {
         var center = runnerDegrees(run);
         if (center == null) {
@@ -383,7 +386,7 @@ class CompanionMapView extends WatchUi.MapView {
         var ky = 111320.0d;
         var kx = 111320.0d * Math.cos(lat * Math.PI / 180.0d);
         var moved = Math.sqrt(Math.pow((lat - cLat) * ky, 2) + Math.pow((lon - cLon) * kx, 2));
-        if (z == shownScale && moved < 5) {
+        if (z == shownScale && moved < MAP_SCALES[z] / 6.0) {
             return;
         }
         cLat = lat;
@@ -396,6 +399,21 @@ class CompanionMapView extends WatchUi.MapView {
             new Position.Location({ :latitude => lat + dLat, :longitude => lon - dLon, :format => :degrees }),
             new Position.Location({ :latitude => lat - dLat, :longitude => lon + dLon, :format => :degrees })
         );
+    }
+
+    // Position de la flèche du coureur à l'écran : décalée du centre de la zone affichée (cLat, cLon), la
+    // largeur de l'écran couvrant l'échelle choisie.
+    function arrowXY(w as Number, h as Number) as Array<Number> {
+        var center = runnerDegrees(run);
+        if (center == null || shownScale < 0) {
+            return [w / 2, h / 2] as Array<Number>;
+        }
+        var ky = 111320.0d;
+        var kx = 111320.0d * Math.cos(cLat * Math.PI / 180.0d);
+        var pxPerM = w / MAP_SCALES[shownScale].toFloat();
+        var x = w / 2 + ((center[1] - cLon) * kx * pxPerM).toNumber();
+        var y = h / 2 - ((center[0] - cLat) * ky * pxPerM).toNumber();
+        return [x, y] as Array<Number>;
     }
 
     function onUpdate(dc as Graphics.Dc) as Void {
@@ -439,7 +457,8 @@ class CompanionMapView extends WatchUi.MapView {
         dc.setColor(themeBg(), themeBg());
         dc.fillRectangle(0, 0, w, top);
         if (!exploring) {
-            drawRunnerArrow(dc, w / 2, h / 2, run.heading, w > 300 ? 13 : 9);
+            var a = arrowXY(w, h);
+            drawRunnerArrow(dc, a[0], a[1], run.heading, w > 300 ? 13 : 9);
             drawScale(dc, bottom - 10, true);
         }
         drawHeader(dc, run, top + 12, true);
