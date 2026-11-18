@@ -241,3 +241,87 @@ export function Kpi({ label, value, sub }: { label: string; value: string; sub?:
     </div>
   )
 }
+
+/**
+ * Bouton qui ouvre un petit menu (impressions, exports…) : un toucher ouvre la liste sous le bouton,
+ * un choix ou un toucher à côté la referme. Libellé masqué sur téléphone (icône seule) si le
+ * parent le demande (classe `btn-text`).
+ */
+export function MenuButton({
+  icon,
+  label,
+  items,
+  className,
+}: {
+  icon: ReactNode
+  label: string
+  items: { label: string; icon?: ReactNode; title?: string; onClick: () => void }[]
+  className?: string
+}) {
+  const btn = useRef<HTMLButtonElement>(null)
+  const pop = useRef<HTMLDivElement>(null)
+  const [at, setAt] = useState<{ top: number; left: number } | null>(null)
+  const open = () => {
+    const r = btn.current?.getBoundingClientRect()
+    if (!r) return
+    const vw = document.documentElement.clientWidth
+    setAt({ top: r.bottom + 4, left: Math.max(8, Math.min(r.left, vw - 220 - 8)) })
+  }
+  useEffect(() => {
+    if (!at) return
+    const close = () => setAt(null)
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node
+      if (!pop.current?.contains(t) && !btn.current?.contains(t)) close()
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [at])
+  return (
+    <>
+      <button
+        ref={btn}
+        type="button"
+        className={className}
+        aria-haspopup="menu"
+        aria-expanded={!!at}
+        aria-label={label}
+        title={label}
+        onClick={() => (at ? setAt(null) : open())}
+      >
+        {icon}
+        <span className="btn-text">{label}</span>
+        <ChevronDown className="menu-caret" aria-hidden />
+      </button>
+      {at &&
+        createPortal(
+          <div ref={pop} className="menu-pop" role="menu" aria-label={label} style={{ top: at.top, left: at.left }}>
+            {items.map((it) => (
+              <button
+                key={it.label}
+                type="button"
+                role="menuitem"
+                title={it.title}
+                onClick={() => {
+                  setAt(null)
+                  it.onClick()
+                }}
+              >
+                {it.icon} {it.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  )
+}
