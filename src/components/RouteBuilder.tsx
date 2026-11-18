@@ -68,7 +68,7 @@ import { formatDuration, formatPace } from '../lib/time'
 import type { Athlete, Checkpoint, CheckpointKind, GeoPoint, PaceZone, Race, RaceKind, SimResult, Track } from '../lib/types'
 import { colorForIndex, MODEL_COLOR, wholeRoute, wholeRouteZone, zoneTarget, type Target } from '../lib/zones'
 import { addLayers, ROUTE_COLOR, routeCasing } from './mapLayers'
-import { Num } from './ui'
+import { Hint, Num } from './ui'
 import { AssistControls } from './AssistControls'
 import { assistAllowed } from '../lib/assist'
 import { checkpointName, CHECKPOINT_LABELS, computeAutoPoints, defaultStop, isRavitoKind, mergeAutoPoints, METHOD_LABELS, waypointKind, withKind, type AutoSplitMethod } from '../lib/splits'
@@ -1710,12 +1710,12 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                     })
                   })()}
                 </ol>
-                <p className="muted small">
+                <Hint label="Points de parcours">
                   Points de parcours (R ravito, BV base de vie, P point inter, C chrono, B barrière) dans l’ordre du parcours. Sur la carte :
                   toucher le tracé ouvre le tronçon (point de parcours ou point de tracé ici) ; appuyer, glisser et lâcher sur le tracé pose un
                   point de parcours ; un point de parcours glisse le long du tracé sans le changer ; un point de tracé devient un point de
                   parcours au même endroit (et inversement) depuis sa fenêtre.
-                </p>
+                </Hint>
               </>
             )}
 
@@ -1729,12 +1729,15 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
               </label>
             )}
             <p className="muted small draw-help">
-              Pour poser un point : appui maintenu un instant sur la carte (clic sur ordinateur) ; un toucher bref ne pose rien, pour
-              déplacer la carte librement. Sur un chemin, le tracé le suit ; hors d'un chemin, il passe automatiquement en ligne droite.
-              Touche un point ou un tronçon pour le supprimer, en faire un point de parcours, ajouter un point ou forcer son mode ; glisse un
-              point pour le déplacer. La liste montre le départ, les points de parcours et l'arrivée.
-              Itinéraires : routeur public BRouter (OpenStreetMap).
-              {race && ' Les points de passage au-delà de la nouvelle arrivée sont retirés ; la technicité OSM est à recharger.'}
+              Appui maintenu sur la carte pour poser un point.{' '}
+              <Hint label="Tracer">
+                Pour poser un point : appui maintenu un instant sur la carte (clic sur ordinateur) ; un toucher bref ne pose rien, pour
+                déplacer la carte librement. Sur un chemin, le tracé le suit ; hors d'un chemin, il passe automatiquement en ligne droite.
+                Touche un point ou un tronçon pour le supprimer, en faire un point de parcours, ajouter un point ou forcer son mode ; glisse un
+                point pour le déplacer. La liste montre le départ, les points de parcours et l'arrivée.
+                Itinéraires : routeur public BRouter (OpenStreetMap).
+                {race && ' Les points de passage au-delà de la nouvelle arrivée sont retirés ; la technicité OSM est à recharger.'}
+              </Hint>
             </p>
           </div>
         </div>
@@ -1754,7 +1757,7 @@ export default function RouteBuilder({ athlete, race, onSave, onBack }: Props) {
                   <button className="primary" onClick={generateAuto} disabled={!estimate}><WandSparkles /> Générer</button>
                   <button className="ghost" onClick={() => editCps(cps.filter((c) => !c.auto))} disabled={!cps.some((c) => c.auto)}>Effacer les auto</button>
                 </div>
-                <p className="muted small">Générer remplace les points auto précédents ; les points posés ou modifiés à la main restent.</p>
+                <Hint label="Points automatiques">Générer remplace les points auto précédents ; les points posés ou modifiés à la main restent.</Hint>
               </div>
             )}
             <button onClick={openAuto}><WandSparkles /> Créer une boucle automatiquement</button>

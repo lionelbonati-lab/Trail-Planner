@@ -233,7 +233,7 @@ export function DebriefPage({
         <p className="small muted">
           {sources.size
             ? `Passages ${[...sources].map((s) => SOURCE[s].many).join(', ')}. Touche une heure pour la corriger.`
-            : 'Aucun passage relevé : note-les à la main (touche « — » dans les temps de passage) ou importe l’enregistrement de ta montre.'}
+            : 'Aucun passage relevé : saisis-les ou importe l’enregistrement.'}
         </p>
         <div className="row no-print debrief-tools">
           <label className="button" title="FIT ou GPX de ta montre : passages manquants et arrêts aux ravitos (rien n'est écrasé)">

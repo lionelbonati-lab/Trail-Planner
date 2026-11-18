@@ -1,5 +1,6 @@
-import { ChevronDown } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { ChevronDown, Info, X } from 'lucide-react'
+import { Children, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { formatPace, parseDuration } from '../lib/time'
 
 interface NumProps {
@@ -123,6 +124,9 @@ export function Card({
   const foldable = typeof title === 'string' && fold !== false
   const [folded, setFolded] = useState(foldable && fold === 'closed')
   const toggle = () => setFolded(!folded)
+  // Explication en tête du cadre : son (i) va dans l'en-tête, à côté du titre.
+  const kids = Children.toArray(children)
+  const headHint = title && isValidElement(kids[0]) && kids[0].type === Hint ? kids[0] : null
   return (
     <section className={`card ${foldable ? 'foldable' : ''} ${foldable && foldDesktop ? 'fold-desktop' : ''} ${folded ? 'folded' : ''} ${className ?? ''}`}>
       {(title || actions) && (
@@ -136,16 +140,96 @@ export function Card({
             ) : (
               <h2>{title}</h2>
             ))}
+          {headHint}
           {actions && <div className="card-actions">{actions}</div>}
         </header>
       )}
-      <div className="card-body">{children}</div>
+      <div className="card-body">{headHint ? kids.slice(1) : children}</div>
     </section>
   )
 }
 
-export function Hint({ children }: { children: ReactNode }) {
-  return <p className="hint">{children}</p>
+/** Une seule bulle d'explication ouverte à la fois : l'ouverture d'une bulle ferme les autres. */
+const HINT_OPEN = 'tp-hint-open'
+
+/**
+ * Explication repliée derrière une icône (i), à sa place dans la page : un toucher ouvre une bulle
+ * par-dessus la page, fermée par son X (ou un toucher à côté, Échap).
+ */
+export function Hint({ children, label = 'Explications' }: { children: ReactNode; label?: string }) {
+  const id = useId()
+  const btn = useRef<HTMLButtonElement>(null)
+  const bubble = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const open = pos !== null
+  // Sous l'icône, dans la largeur de l'écran (16 px de marge) ; au-dessus si la place manque en bas.
+  const place = (height = 0) => {
+    const r = btn.current?.getBoundingClientRect()
+    if (!r) return
+    const vw = document.documentElement.clientWidth
+    const width = Math.min(340, vw - 32)
+    const left = Math.max(16, Math.min(r.left - 12, vw - width - 16)) + window.scrollX
+    const below = r.bottom + 6
+    const top = height && below + height > window.innerHeight - 8 && r.top - height - 6 > 8 ? r.top - height - 6 : below
+    setPos({ top: top + window.scrollY, left, width })
+  }
+  const toggle = () => {
+    if (open) return setPos(null)
+    window.dispatchEvent(new CustomEvent(HINT_OPEN, { detail: id }))
+    place()
+  }
+  const height = useRef(0)
+  useLayoutEffect(() => {
+    const h = bubble.current?.offsetHeight ?? 0
+    if (open && h && h !== height.current) {
+      height.current = h
+      place(h)
+    }
+    if (!open) height.current = 0
+  })
+  useEffect(() => {
+    if (!open) return
+    const close = () => setPos(null)
+    const onOther = (e: Event) => (e as CustomEvent<string>).detail !== id && close()
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node
+      if (!bubble.current?.contains(t) && !btn.current?.contains(t)) close()
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      close()
+      btn.current?.focus()
+    }
+    const onResize = () => place(height.current)
+    window.addEventListener(HINT_OPEN, onOther)
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener(HINT_OPEN, onOther)
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('resize', onResize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- abonnements le temps que la bulle est ouverte
+  }, [open, id])
+  return (
+    <>
+      <button ref={btn} type="button" className={`hint-btn no-print ${open ? 'on' : ''}`} aria-label={label} title={label} aria-expanded={open} onClick={toggle}>
+        <Info />
+      </button>
+      {open &&
+        createPortal(
+          <div ref={bubble} className="hint-bubble" role="dialog" aria-label={label} style={{ top: pos.top, left: pos.left, width: pos.width }}>
+            <button type="button" className="ghost hint-close" aria-label="Fermer" onClick={() => setPos(null)}>
+              <X />
+            </button>
+            <div className="hint-body">{children}</div>
+          </div>,
+          document.body,
+        )}
+    </>
+  )
 }
 
 export function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {

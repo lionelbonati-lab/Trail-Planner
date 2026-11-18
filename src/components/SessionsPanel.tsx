@@ -52,12 +52,18 @@ export function SessionsPanel({ athlete, races, onChange }: Props) {
 
   return (
     <div className="grid">
-      <Card title="Test de vitesse critique" fold="open">
-        <p>
-          De temps à autre, un test mesure ta VC et ton D′. Télécharge l'entraînement pour ta montre, fais la séance, puis
-          importe son enregistrement (GPX ou FIT) : l'app en tire la distance, calcule VC et D′ et propose de mettre ton profil
-          à jour. Sans la montre, saisis la distance de chaque test dans « Mes tests ».
-        </p>
+      <Card
+        title="Test de vitesse critique"
+        fold="open"
+        actions={
+          <Hint label="Le test VC">
+            De temps à autre, un test mesure ta VC et ton D′. Télécharge l'entraînement pour ta montre, fais la séance, puis importe son
+            enregistrement (GPX ou FIT) : l'app en tire la distance, calcule VC et D′ et propose de mettre ton profil à jour. Sans la
+            montre, saisis la distance de chaque test dans « Mes tests ».
+          </Hint>
+        }
+      >
+        <p className="small">Télécharge la séance, fais-la, puis importe son enregistrement.</p>
         {error && <p className="warn">{error}</p>}
       </Card>
       <LevelCard athlete={athlete} races={races} onChange={onChange} />
@@ -114,7 +120,7 @@ export function SessionsPanel({ athlete, races, onChange }: Props) {
               <ol className="steps">{describeSteps(s.steps(athlete), athlete).map((d) => <li key={d}>{d}</li>)}</ol>
               {s.key === 'csTest' && <CsTrials athlete={athlete} onChange={onChange} />}
               <ul className="tips">{s.tips.map((t) => <li key={t}>{t}</li>)}</ul>
-              {last && <Hint>Dernière séance : {last.date.slice(0, 10)} ({formatDuration(last.elapsed)}).</Hint>}
+              {last && <p className="small muted">Dernière séance : {last.date.slice(0, 10)} ({formatDuration(last.elapsed)}).</p>}
             </Card>
           )
         })}
