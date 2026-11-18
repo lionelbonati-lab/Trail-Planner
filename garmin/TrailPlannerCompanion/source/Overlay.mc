@@ -67,26 +67,45 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run) as Void {
 
 // Au ravito (Run.ravitoOn), sur tous les écrans jusqu'au départ : écran du ravito du champ ; anneau du temps
 // passé sur l'arrêt prévu (vert, plein et rouge une fois dépassé) ; arc orange en face de BACK/Lap avec, à
-// côté, l'icône →| : le 2e Lap note le départ du ravito.
+// côté, l'icône →| (le 2e Lap note le départ du ravito) et, sur la même ligne, le temps passé / prévu de la
+// couleur de l'anneau.
 function drawRavitoOverlay(dc as Graphics.Dc, run as Run) as Void {
     var w = dc.getWidth();
     var h = dc.getHeight();
     var red = darkTheme() ? Graphics.COLOR_RED : Graphics.COLOR_DK_RED;
+    var green = darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
+    var t = run.tp.ravitoTimes(Time.now().value());
+    var over = t[1] > 0 && t[0] > t[1];
+    var ringColor = over ? red : green;
     dc.setColor(themeFg(), themeBg());
     dc.clear();
-    // En bas à droite, à côté de l'arc orange : →|.
+    // En bas, à côté de l'arc orange : →| à droite, temps passé / prévu (« 3:12 / 5:00 ») centré sur la
+    // place qui reste à gauche, dans la plus grande police qui tient.
     var ly = (h * 0.80).toNumber();
     var s = w > 300 ? 34 : 26;
-    drawGoIcon(dc, w / 2 + widthAt(dc, ly, Graphics.FONT_MEDIUM) / 2 - 14, ly, s);
+    var xr = w / 2 + widthAt(dc, ly, Graphics.FONT_MEDIUM) / 2 - 14;
+    drawGoIcon(dc, xr, ly, s);
+    var time = run.tp.mmss(t[0]) + (t[1] > 0 ? " / " + run.tp.mmss(t[1]) : "");
+    var fonts = [Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
+    var font = Graphics.FONT_XTINY;
+    var x0 = w / 2 - widthAt(dc, ly, Graphics.FONT_MEDIUM) / 2 + 8;
+    var room = xr - s - 8 - x0;
+    for (var i = 0; i < fonts.size(); i++) {
+        if (dc.getTextWidthInPixels(time, fonts[i]) <= room) {
+            font = fonts[i];
+            break;
+        }
+    }
+    dc.setColor(t[1] > 0 ? ringColor : themeFg(), Graphics.COLOR_TRANSPARENT);
+    dc.drawText(x0 + room / 2, ly, font, time, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     // Écran du ravito au-dessus.
-    run.tp.drawRavitoFull(dc, (h * 0.12).toNumber(), ly - s / 2 - 6, themeFg());
+    var fh = dc.getFontHeight(font);
+    run.tp.drawRavitoFull(dc, (h * 0.12).toNumber(), ly - (fh > s ? fh : s) / 2 - 6, themeFg());
     if (isRound()) {
-        var t = run.tp.ravitoTimes(Time.now().value());
         if (t[1] > 0) {
-            var over = t[0] > t[1];
             var span = over ? UNDO_RING : UNDO_RING * t[0] / t[1];
             if (span >= 1) {
-                drawEdgeArc(dc, RAVITO_ARC_TOP, (RAVITO_ARC_TOP + span) % 360, over ? red : (darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN), w > 300 ? 10 : 7);
+                drawEdgeArc(dc, RAVITO_ARC_TOP, (RAVITO_ARC_TOP + span) % 360, ringColor, w > 300 ? 10 : 7);
             }
         }
         drawEdgeArc(dc, RAVITO_ARC_BOTTOM, RAVITO_ARC_TOP, Graphics.COLOR_ORANGE, w > 300 ? 16 : 12);
