@@ -74,6 +74,7 @@ const rememberSignedIn = (on: boolean) => {
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
 import { reportCourse, watchStartMs, type WatchReport } from './lib/watchLive'
+import { FREE_HIDE_M } from './lib/freeRun'
 import { debriefPoints, debriefReport, debriefStart, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
 import { debriefNotifyOn, notifiedDebriefs, ownerPushOn, rememberNotified, showNotice } from './lib/notify'
 import { formatClock, formatDuration, zonedToUtc } from './lib/time'
@@ -591,16 +592,18 @@ export default function App() {
       const wl = athlete.appSync && appWl ? appWl : undefined
       // Dernière course passée, pour le lien permanent du coureur (document du code montre long).
       const last = athlete.watchId ? lastRace(races, new Date().toLocaleDateString('sv'))?.id : undefined
+      // Sortie libre : rayon autour du départ où la montre n'envoie pas sa position.
+      const fh = athlete.freeHide === false ? 0 : FREE_HIDE_M
       if (onWatch && athlete.watchId) publish(onWatch, athlete, athlete.watchId, last).catch(() => undefined)
       else if (athlete.watchId && cloud) {
         // Pas de course sur la montre (ou retirée) : document sans course, avec les réglages EndurancePro,
         // la liste de l'appli et la dernière course s'il y en a.
         const ep = athlete.epSync ? epPayload(athlete, null) : ''
-        const key = `ep:${ep}|wl:${wl ?? ''}|${athlete.epCode ?? ''}|${last ?? ''}`
+        const key = `ep:${ep}|wl:${wl ?? ''}|${athlete.epCode ?? ''}|${last ?? ''}|${fh}|${athlete.name}`
         if (lastShared.current.get(athlete.watchId) !== key) {
           const watchId = athlete.watchId
           cloud
-            .publishWatchProfile(watchId, user.uid, { ep, wl, liveRefShort: athlete.epCode, last })
+            .publishWatchProfile(watchId, user.uid, { ep, wl, liveRefShort: athlete.epCode, last, fh, athleteName: athlete.name })
             .then(() => lastShared.current.set(watchId, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }
@@ -610,11 +613,11 @@ export default function App() {
       if (onWatch && athlete.epCode) publish(onWatch, athlete, athlete.epCode).catch(() => undefined)
       else if (athlete.epCode && cloud) {
         const ep = athlete.epSync ? epPayload(athlete, onWatch ?? null) : ''
-        const key = `ep:${ep}|wl:${wl ?? ''}`
+        const key = `ep:${ep}|wl:${wl ?? ''}|${fh}`
         const code = athlete.epCode
         if (lastShared.current.get(code) !== key) {
           cloud
-            .publishWatchProfile(code, user.uid, { ep, wl })
+            .publishWatchProfile(code, user.uid, { ep, wl, fh })
             .then(() => lastShared.current.set(code, key))
             .catch((e) => setError(`Synchronisation EndurancePro impossible : ${(e as Error).message}`))
         }

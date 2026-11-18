@@ -42,7 +42,12 @@ class TrailPlannerApp extends Application.AppBase {
     }
 
     function onBackgroundData(data) as Void {
-        if (data instanceof String && data.length() > 4) {
+        if (data instanceof String && data.length() > 1 && data.substring(0, 1).equals("-")) {
+            // Rien sur la montre : sortie libre (plan vide), position masquée à moins de ce rayon du départ.
+            Application.Storage.setValue("plan", "");
+            Application.Storage.setValue("freeHide", data.substring(1, data.length()).toNumber());
+            Application.Storage.setValue("fetchError", null);
+        } else if (data instanceof String && data.length() > 4) {
             Application.Storage.setValue("plan", data);
             Application.Storage.setValue("fetchError", null);
         } else if (data instanceof Number) {

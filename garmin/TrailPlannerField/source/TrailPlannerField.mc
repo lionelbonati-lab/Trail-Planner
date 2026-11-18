@@ -67,6 +67,8 @@ class TrailPlannerField extends WatchUi.DataField {
     var lastWalked = 0.0;     // distance montre au dernier calcul (m)
     var lapMsg = "";          // nom du point validé par le dernier tour
     var lapMsgUntil = 0;      // s Unix : affichage du passage jusqu'à cet instant
+    var free = false;         // rien sur la montre : sortie libre (suivi sans parcours)
+    var home = null;          // départ de la sortie libre [lat, lon] (degrés), null : pas encore connu
 
     function initialize() {
         DataField.initialize();
@@ -78,7 +80,8 @@ class TrailPlannerField extends WatchUi.DataField {
     // déjà notés sont gardés (rapportés aux points du nouveau plan).
     function reload() as Void {
         var text = Application.Storage.getValue("plan");
-        if (!(text instanceof String)) {
+        free = text instanceof String && text.length() == 0;
+        if (!(text instanceof String) || free) {
             plan = null;
             planText = null;
         } else if (planText == null || !text.equals(planText)) {
@@ -115,7 +118,9 @@ class TrailPlannerField extends WatchUi.DataField {
         if (!(code instanceof String) || code.length() < 8) {
             status = "Saisis le code montre";
         } else if (plan == null) {
-            if (err == 404) {
+            if (free) {
+                status = "Sortie libre";
+            } else if (err == 404) {
                 status = "Code inconnu";
             } else if (err != null) {
                 status = "Plan : erreur " + err;
@@ -428,6 +433,9 @@ class TrailPlannerField extends WatchUi.DataField {
 
     function compute(info as Activity.Info) as Void {
         if (plan == null) {
+            if (free) {
+                computeFree(info);
+            }
             return;
         }
         var elapsed = info.elapsedTime != null ? info.elapsedTime / 1000.0 : 0.0;
@@ -592,21 +600,74 @@ class TrailPlannerField extends WatchUi.DataField {
         }
     }
 
+    // Sortie libre (rien sur la montre) : distance de l'activité, D+ et position envoyées au lien permanent
+    // du coureur (toutes les minutes au plus), position gardée pour soi près du départ (voir nearHome).
+    function computeFree(info as Activity.Info) as Void {
+        var elapsed = info.elapsedTime != null ? info.elapsedTime / 1000.0 : 0.0;
+        running = elapsed > 0;
+        if (!running) {
+            return;
+        }
+        if (elapsed < lastElapsed - 5) {
+            home = null;
+        }
+        lastElapsed = elapsed;
+        var now = Time.now().value();
+        startUnix = now - elapsed.toNumber();
+        var loc = info.currentLocation;
+        var q = info.currentLocationAccuracy;
+        // 3 = Position.QUALITY_USABLE : départ pris à la première position fiable.
+        if (home == null && loc != null && (q == null || q >= 3)) {
+            home = loc.toDegrees();
+        }
+        if (now - lastSaved >= 60) {
+            saveProgress(info, now, info.elapsedDistance != null ? info.elapsedDistance.toFloat() : 0.0);
+        }
+    }
+
+    // Position à moins du rayon masqué autour du départ (réglage du coureur, 500 m par défaut), ou départ
+    // pas encore connu : pas envoyée.
+    function nearHome(deg as Array) as Boolean {
+        var r = Application.Storage.getValue("freeHide");
+        if (!(r instanceof Number)) {
+            r = 500;
+        }
+        if (r <= 0) {
+            return false;
+        }
+        if (home == null) {
+            return true;
+        }
+        var dy = (deg[0] - home[0]) * 111195.0;
+        var dx = (deg[1] - home[1]) * 111195.0 * Math.cos(Math.toRadians(home[0]));
+        return dx * dx + dy * dy < r * r;
+    }
+
     // Suivi lu par la tâche de fond, qui l'envoie à l'assistance via le téléphone.
     function saveProgress(info as Activity.Info, now as Number, d as Float) as Void {
         // Passages « indice:arrivée », et « indice:arrivée:départ » pour un ravito quitté (temps passé au
         // ravito) : même champ, accepté tel quel par les règles Firestore et lu par les anciennes pages.
+        // Sortie libre : D+ de l'activité (« a=123 »).
         var p = "";
-        var keys = passes.keys();
-        for (var k = 0; k < keys.size(); k++) {
-            p += (k > 0 ? "," : "") + keys[k] + ":" + passes[keys[k]];
-            if (departs.hasKey(keys[k])) {
-                p += ":" + departs[keys[k]];
+        if (free) {
+            if (info.totalAscent != null) {
+                p = "a=" + info.totalAscent.toNumber();
+            }
+        } else {
+            var keys = passes.keys();
+            for (var k = 0; k < keys.size(); k++) {
+                p += (k > 0 ? "," : "") + keys[k] + ":" + passes[keys[k]];
+                if (departs.hasKey(keys[k])) {
+                    p += ":" + departs[keys[k]];
+                }
             }
         }
         var progress = { "t" => now, "s" => startUnix, "d" => d.toNumber(), "p" => p };
+        if (free) {
+            progress.put("f", 1);
+        }
         var loc = info.currentLocation;
-        if (loc != null) {
+        if (loc != null && !(free && nearHome(loc.toDegrees()))) {
             var deg = loc.toDegrees();
             progress.put("lat", deg[0].toFloat());
             progress.put("lon", deg[1].toFloat());

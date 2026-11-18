@@ -2,6 +2,7 @@ import { CHECKPOINT_LABELS, isRavitoKind } from '../lib/splits'
 import { Activity, Bell, BellOff, Check, Flag, Hourglass, Info, Map as MapIcon, MapPin, Mountain, Navigation, Radio, Route, Tent, Utensils } from 'lucide-react'
 import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { freeRunShown, freeStats, paceText, trackRoute, type TrackDoc } from '../lib/freeRun'
 import { awayFrom } from '../lib/live'
 import { pushFlag, showNotice } from '../lib/notify'
 import { offText, reportFor, reportOffCourse, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
@@ -10,7 +11,7 @@ import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatu
 
 import type { MapPoint, Runner } from './ShareMap'
 import { CourseProfile } from './CourseProfile'
-import { Hint } from './ui'
+import { Hint, Kpi, Kpis } from './ui'
 
 const ShareMap = lazy(() => import('./ShareMap'))
 
@@ -184,8 +185,14 @@ export function RunnerPage({ code }: { code: string }) {
   const course = useShareDoc(docId)
 
   if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
-  if (base === undefined || (docId && course.snap === undefined && !course.error)) return <main><p className="muted">Chargement…</p></main>
+  if (base === undefined) return <main><p className="muted">Chargement…</p></main>
   if (base === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
+  // Sortie libre (rien sur la montre) : carte, trace et chiffres.
+  if (freeRunShown(report, nowMs)) {
+    const codes = [code, base.liveRefShort].filter((c): c is string => !!c)
+    return <FreeRunView codes={codes} name={base.athleteName} report={report} nowMs={nowMs} />
+  }
+  if (docId && course.snap === undefined && !course.error) return <main><p className="muted">Chargement…</p></main>
   // Course montrée : celle du document du code montre (course envoyée à la montre) ou son document <code>-<id>.
   const full = (s: ShareSnapshot | null | undefined) => (s && Array.isArray(s.rows) && s.rows.length ? s : null)
   const snap = target ? (docId ? full(course.snap) : full(base)) : null
@@ -193,6 +200,74 @@ export function RunnerPage({ code }: { code: string }) {
 
   const banner = runnerBanner(target.mode, snap, reportFor(snap, report, nowMs), nowMs)
   return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} pushTarget={`suivi:${code}`} />
+}
+
+/**
+ * Lien permanent pendant une sortie libre (rien sur la montre) : chiffres de l'activité, carte avec la
+ * trace (un point par relevé, toutes les 5 min environ) et la dernière position, sauf près du départ si le
+ * coureur la masque.
+ */
+export function FreeRunView({ codes, name, report, nowMs }: { codes: string[]; name?: string; report: WatchReport; nowMs: number }) {
+  const [tracks, setTracks] = useState<Record<string, TrackDoc | null>>({})
+  const key = codes.join(',')
+  useEffect(() => {
+    let cancelled = false
+    const unsubs: (() => void)[] = []
+    import('../lib/cloud')
+      .then((c) => {
+        if (cancelled) return
+        for (const code of key.split(',')) unsubs.push(c.subscribeTrack(code, (t) => setTracks((m) => ({ ...m, [code]: t }))))
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+      unsubs.forEach((u) => u())
+    }
+  }, [key])
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const st = freeStats(report, nowMs)
+  const route = trackRoute(Object.values(tracks), report)
+  const km = (m: number) => (m / 1000).toFixed(1).replace('.', ',')
+  const hasPos = typeof report.lat === 'number' && typeof report.lon === 'number'
+  const ago = Math.round(st.age / 60)
+  const summary = [`${km(st.dist)} km`, formatDuration(st.elapsed), st.ascent !== null ? `+${st.ascent} m` : '', st.pace !== null ? paceText(st.pace) : '']
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <div className="app">
+      <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
+      <main className="share free-run">
+        <RunnerBanner text={st.live ? 'Sortie libre en cours' : 'Dernière sortie libre'} live={st.live} />
+        <h1>{name ? `Sortie de ${name}` : 'Sortie libre'}</h1>
+        <p className="muted">
+          Départ {formatClock(new Date(report.s * 1000), tz)} · relevé de {formatClock(new Date(report.t * 1000), tz)} (il y a {ago} min)
+          {st.bat !== null ? ` · batterie ${Math.round(st.bat)} %` : ''}
+        </p>
+        <Kpis summary={summary}>
+          <Kpi label="Distance" value={`${km(st.dist)} km`} />
+          <Kpi label="Temps" value={formatDuration(st.elapsed)} />
+          {st.ascent !== null && <Kpi label="D+" value={`${st.ascent} m`} />}
+          {st.pace !== null && <Kpi label="Allure moyenne" value={paceText(st.pace)} />}
+        </Kpis>
+        {route.length >= 2 ? (
+          <Suspense fallback={<div className="share-map share-map-loading" />}>
+            <ShareMap
+              title="Trace"
+              route={route}
+              points={[]}
+              runner={hasPos ? { dist: 0, lat: report.lat, lon: report.lon, label: `Dernier relevé : km ${km(report.d)} · il y a ${ago} min` } : null}
+            />
+          </Suspense>
+        ) : (
+          <p className="hint">
+            {hasPos ? 'La trace se dessine au fil des relevés de la montre (un toutes les 5 min environ).' : 'Position masquée près du départ : la carte apparaîtra plus loin.'}
+          </p>
+        )}
+        {!hasPos && route.length >= 2 && <p className="muted small">Position masquée près du départ.</p>}
+        <p className="muted small">Cette page se met à jour toute seule.</p>
+      </main>
+    </div>
+  )
 }
 
 /**
@@ -453,9 +528,9 @@ function NotifyBox({ alerts, push }: { alerts: ReturnType<typeof useCrossingAler
 }
 
 /** Bandeau du lien permanent du coureur. */
-function RunnerBanner({ text }: { text: string }) {
+function RunnerBanner({ text, live = text === 'En course' }: { text: string; live?: boolean }) {
   return (
-    <p className={`runner-banner${text === 'En course' ? ' live' : ''}`}>
+    <p className={`runner-banner${live ? ' live' : ''}`}>
       <span>Lien permanent</span> {text}
     </p>
   )

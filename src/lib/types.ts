@@ -126,6 +126,11 @@ export interface Athlete {
    * bibliothèque publiées pour son écran de démarrage, via le code montre.
    */
   appSync?: boolean
+  /**
+   * Sortie libre (rien sur la montre) : la montre n'envoie pas sa position à moins de 500 m du départ
+   * (défaut : oui ; false pour tout montrer).
+   */
+  freeHide?: boolean
   /** Dernière modification (ISO), pour départager les appareils. */
   updatedAt?: string
 }

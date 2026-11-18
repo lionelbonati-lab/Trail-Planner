@@ -17,8 +17,9 @@ export interface WatchReport {
   /** Passages : « indice:instant Unix » (« indice:arrivée:départ » pour un ravito quitté) séparés par des virgules. */
   p?: string
   /**
-   * Version du relevé (1) ; l'appli montre Trail Planner Companion y met l'id du parcours choisi dans sa
-   * liste quand ce n'est pas la course envoyée à la montre (voir reportCourse).
+   * Version du relevé (1) ; 2 : sortie libre, rien sur la montre (voir freeRun.ts) ; l'appli montre Trail
+   * Planner Companion y met l'id du parcours choisi dans sa liste quand ce n'est pas la course envoyée à la
+   * montre (voir reportCourse).
    */
   v?: number | string
 }

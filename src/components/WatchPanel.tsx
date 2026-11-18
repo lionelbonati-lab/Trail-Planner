@@ -104,6 +104,7 @@ export function WatchPanel({
                 <Hint label="Lien d’assistance permanent">
                   À donner une seule fois à ton assistance : il montre la course que ta montre enregistre (champ Trail Planner, ou parcours
                   choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
+                  Sortie avec le champ Trail Planner sans rien sur la montre : carte, trace et chiffres (distance, temps, D+, allure).
                 </Hint>
               }
             >
@@ -115,6 +116,14 @@ export function WatchPanel({
                   <ExternalLink className="inline" /> Ouvrir
                 </a>
               </div>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={athlete.freeHide !== false}
+                  onChange={(e) => onChange({ ...athlete, freeHide: e.target.checked ? undefined : false })}
+                />{' '}
+                Sortie libre : masquer ma position à moins de 500&nbsp;m du départ
+              </label>
             </Card>
           )}
 
@@ -125,7 +134,7 @@ export function WatchPanel({
                 <button onClick={() => onOpen(onWatch)}>Ouvrir</button>
               </div>
             ) : (
-              <p className="muted">Rien sur la montre.</p>
+              <p className="muted">Rien sur la montre : sortie libre.</p>
             )}
           </Card>
         </div>
@@ -178,6 +187,10 @@ const ON_WATCH_HELP = (
       <li>Ensuite, tout fonctionne sans réseau. Désactive le tour automatique : le bouton Lap valide le passage aux points.</li>
       <li>Téléphone avec toi : passages et position partent toutes les 5 min vers le lien assistance de la course et ton lien permanent.</li>
     </ol>
+    <p>
+      Sortie libre : retire la course (nouveau toucher sur <Watch className="inline" />). Le champ envoie alors distance, D+ et position
+      toutes les 5 min vers ton lien permanent.
+    </p>
   </>
 )
 

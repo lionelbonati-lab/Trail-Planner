@@ -37,7 +37,8 @@ class PlanService extends System.ServiceDelegate {
             "s" => { "integerValue" => progress["s"].toString() },
             "d" => { "integerValue" => progress["d"].toString() },
             "p" => { "stringValue" => progress["p"] },
-            "v" => { "integerValue" => "1" }
+            // 2 : sortie libre (rien sur la montre), distance de l'activité et D+ dans p (« a=123 »).
+            "v" => { "integerValue" => progress["f"] != null ? "2" : "1" }
         };
         if (progress["lat"] != null && progress["lon"] != null) {
             fields.put("lat", { "doubleValue" => progress["lat"] });
@@ -64,12 +65,13 @@ class PlanService extends System.ServiceDelegate {
         fetchPlan(code as String);
     }
 
+    // Plan (`w`) et, pour une sortie libre, rayon masqué autour du départ (`fh`).
     function fetchPlan(code as String) as Void {
         var url = "https://firestore.googleapis.com/v1/projects/" + PROJECT +
-            "/databases/%28default%29/documents/shares/" + code;
+            "/databases/%28default%29/documents/shares/" + code + "?mask.fieldPaths=w&mask.fieldPaths=fh";
         Communications.makeWebRequest(
             url,
-            { "mask.fieldPaths" => "w" },
+            null,
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON
@@ -86,6 +88,12 @@ class PlanService extends System.ServiceDelegate {
                 var w = fields["w"];
                 if (w instanceof Dictionary) {
                     text = w["stringValue"];
+                }
+                // `w` vide : rien sur la montre, sortie libre. Transmis comme « -<rayon masqué en m> ».
+                if (text instanceof String && text.length() == 0) {
+                    var fh = fields["fh"];
+                    var r = fh instanceof Dictionary ? fh["integerValue"] : null;
+                    text = "-" + (r != null ? r.toString() : "500");
                 }
             }
         }

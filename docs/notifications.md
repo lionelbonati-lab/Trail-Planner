@@ -84,3 +84,5 @@ l'arrivée » (carte *Sorties et debriefs*) passe par le serveur pour un coureur
   désabonne ou que son jeton n'est plus valable.
 - `users/{uid}/push/{id}` : téléphones du coureur pour « Debrief prêt ».
 - `push_state/{id}` : ce qui a déjà été notifié pour un lien (serveur seul).
+- `live/{code}/track/current` : trace de la sortie libre en cours ou récente (rien sur la montre), un point
+  par relevé de la montre. Écrite par la même fonction, lisible par le lien permanent.
