@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes propres à l'appli Trail Planner Companion (ceux d'EndurancePro sont dans strings.xml). -->
+<strings>
+    <string id="AppName">Trail Planner Companion</string>
+    <string id="tp_fuel">Promemoria nutrizione</string>
+    <string id="tp_fuel_plan">Secondo il piano</string>
+    <string id="tp_zoom">Zoom del profilo</string>
+    <string id="tp_zoom_all">Percorso intero</string>
+    <string id="tp_zoom_20">20 km</string>
+    <string id="tp_zoom_10">10 km</string>
+    <string id="tp_zoom_5">5 km</string>
+    <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Tratto in corso</string>
+    <string id="tp_zoom_ravito">Da ristoro a ristoro</string>
+    <string id="tp_slopes">Colori delle pendenze</string>
+    <string id="tp_slopes_sub">Dal verde al viola</string>
+    <string id="tp_slopes_prompt">Profilo colorato secondo la pendenza: salita verde &lt; 5 %, giallo 5-10 %, arancione 10-15 %, rosso 15-25 %, viola 25 % e oltre; discesa azzurro fino a -15 %, blu scuro oltre</string>
+    <string id="tp_lap_pass">Giro = passaggio</string>
+    <string id="tp_lap_pass_prompt">Il tasto Lap convalida il passaggio al punto più vicino (2° giro al ristoro = partenza); da disattivare con Auto Lap</string>
+    <string id="tp_reload">Ricarica il piano</string>
+    <string id="tp_resume">Riprendi</string>
+    <string id="tp_save">Salva</string>
+    <string id="tp_discard">Elimina</string>
+    <string id="tp_discard_ask">Eliminare l'uscita?</string>
+    <string id="tp_no">No</string>
+    <string id="tp_yes">Sì, elimina</string>
+    <string id="tp_paused">Pausa</string>
+    <string id="tp_resume_hint">START: riprendi</string>
+    <string id="tp_start">START: via</string>
+    <string id="tp_off_route">Fuori percorso</string>
+    <string id="tp_lap">Giro</string>
+    <string id="tp_lap_undone">Giro annullato</string>
+    <string id="tp_undo">Annulla</string>
+    <string id="tp_passage">Passaggio</string>
+    <string id="tp_depart">Partenza</string>
+    <string id="tp_saved">Uscita salvata</string>
+    <string id="tp_discarded">Uscita eliminata</string>
+    <string id="tp_quit">BACK: esci</string>
+    <string id="tp_no_code">Inserisci il codice</string>
+    <string id="tp_unknown_code">Codice sconosciuto</string>
+    <string id="tp_no_phone">Telefono non connesso</string>
+    <string id="tp_too_big">Piano troppo grande per l'orologio</string>
+    <string id="tp_plan_error">Piano: errore</string>
+    <string id="tp_no_course">Nessuna gara inviata</string>
+    <string id="tp_waiting">Piano in attesa...</string>
+    <string id="tp_no_profile">Nessun profilo</string>
+    <string id="tp_map_scale">Scala della mappa</string>
+    <string id="tp_explore">Esplora la mappa</string>
+    <string id="tp_no_route">Nessun tracciato</string>
+    <string id="tp_fuel_prompt">Promemoria nutrizione (min): -1 = prodotti del piano distribuiti tra i ristori, 0 = disattivato</string>
+    <string id="tp_vibrate">Vibrazioni dei promemoria</string>
+    <string id="tp_free_run">Uscita libera</string>
+    <string id="tp_free_sub">Senza piano</string>
+    <string id="tp_settings">Impostazioni</string>
+    <string id="tp_on_watch">Inviata all'orologio</string>
+    <string id="tp_loading">Caricamento...</string>
+    <string id="tp_choose">START: via</string>
+    <string id="tp_no_courses">Nessun percorso</string>
+</strings>

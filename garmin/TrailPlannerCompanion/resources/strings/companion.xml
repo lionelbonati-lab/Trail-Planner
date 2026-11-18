@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes propres à l'appli Trail Planner Companion (ceux d'EndurancePro sont dans strings.xml). -->
+<strings>
+    <string id="AppName">Trail Planner Companion</string>
+    <string id="tp_fuel">Fuel reminders</string>
+    <string id="tp_fuel_plan">Per plan</string>
+    <string id="tp_zoom">Profile zoom</string>
+    <string id="tp_zoom_all">Whole course</string>
+    <string id="tp_zoom_20">20 km</string>
+    <string id="tp_zoom_10">10 km</string>
+    <string id="tp_zoom_5">5 km</string>
+    <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Current leg</string>
+    <string id="tp_zoom_ravito">Aid station to aid station</string>
+    <string id="tp_slopes">Slope colours</string>
+    <string id="tp_slopes_sub">Green to purple</string>
+    <string id="tp_slopes_prompt">Profile coloured by slope: uphill green &lt; 5 %, yellow 5-10 %, orange 10-15 %, red 15-25 %, purple 25 % and more; downhill light blue to -15 %, dark blue beyond</string>
+    <string id="tp_lap_pass">Lap = checkpoint</string>
+    <string id="tp_lap_pass_prompt">Lap button marks the nearest checkpoint as passed (2nd lap at an aid station = departure); disable if you use Auto Lap</string>
+    <string id="tp_reload">Reload plan</string>
+    <string id="tp_resume">Resume</string>
+    <string id="tp_save">Save</string>
+    <string id="tp_discard">Discard</string>
+    <string id="tp_discard_ask">Discard run?</string>
+    <string id="tp_no">No</string>
+    <string id="tp_yes">Yes, discard</string>
+    <string id="tp_paused">Paused</string>
+    <string id="tp_resume_hint">START: resume</string>
+    <string id="tp_start">START: go</string>
+    <string id="tp_off_route">Off course</string>
+    <string id="tp_lap">Lap</string>
+    <string id="tp_lap_undone">Lap cancelled</string>
+    <string id="tp_undo">Cancel</string>
+    <string id="tp_passage">Checkpoint</string>
+    <string id="tp_depart">Departure</string>
+    <string id="tp_saved">Run saved</string>
+    <string id="tp_discarded">Run discarded</string>
+    <string id="tp_quit">BACK: exit</string>
+    <string id="tp_no_code">Enter the watch code</string>
+    <string id="tp_unknown_code">Unknown code</string>
+    <string id="tp_no_phone">Phone not connected</string>
+    <string id="tp_too_big">Plan too big for the watch</string>
+    <string id="tp_plan_error">Plan: error</string>
+    <string id="tp_no_course">No race sent</string>
+    <string id="tp_waiting">Waiting for plan...</string>
+    <string id="tp_no_profile">No profile</string>
+    <string id="tp_map_scale">Map scale</string>
+    <string id="tp_explore">Explore map</string>
+    <string id="tp_no_route">No route</string>
+    <string id="tp_fuel_prompt">Fuel reminder (min): -1 = plan products spread between aid stations, 0 = off</string>
+    <string id="tp_vibrate">Reminder vibrations</string>
+    <string id="tp_free_run">Free run</string>
+    <string id="tp_free_sub">No plan</string>
+    <string id="tp_settings">Settings</string>
+    <string id="tp_on_watch">Sent to the watch</string>
+    <string id="tp_loading">Loading...</string>
+    <string id="tp_choose">START: go</string>
+    <string id="tp_no_courses">No courses</string>
+</strings>

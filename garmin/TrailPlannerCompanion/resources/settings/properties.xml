@@ -1,0 +1,123 @@
+<!-- properties.xml — EndurancePro 2.7.3 + appli Trail Planner Companion (fin du fichier) -->
+<resources>
+    <properties>
+        <!-- v1.0 -->
+        <property id="dark_mode_prop" type="boolean">true</property>
+        <!-- v1.1.0 -->
+        <property id="buffer_size_prop" type="number">20</property>
+        <!-- v1.5.0 : Zones VAM. v2.2.4 : ajout du choix "Police" (3) — 0=Off, 1=Barre, 2=Fond, 3=Police -->
+        <property id="vam_zones_enabled_prop" type="number">2</property>
+        <property id="vam_zone1_min" type="number">300</property>
+        <property id="vam_zone1_max" type="number">600</property>
+        <property id="vam_zone2_max" type="number">800</property>
+        <property id="vam_zone3_max" type="number">1000</property>
+        <property id="vam_zone4_max" type="number">1200</property>
+        <!-- v1.6.0 : Choix VAM -->
+        <property id="vam_display_mode_prop" type="number">6</property>
+        <!-- v1.7.1 : Mode allure (0=Normale, 1=Effort Std, 2=Effort Mtn) -->
+        <property id="pace_mode_prop" type="number">1</property>
+        <!-- v1.9.2 : Colorisation FC bitmask (bit0=Valeur, bit1=Cercle, bit2=Barre) — 0..7 -->
+        <property id="hr_display_mode_prop" type="number">7</property>
+        <!-- v1.9.48 : 2nd métrique — 2 slots indépendants (0=Aucun, 1=Fatigue, 2=Calories, 3=Km Effort)
+             identiques si non nuls affichage fixe, différents alternance 5s, un seul non-nul affichage fixe -->
+        <property id="metric_slot_a_prop" type="number">7</property>
+        <property id="metric_slot_b_prop" type="number">0</property>
+        <!-- v2.2.5 : Autonomie batterie — affichage on/off à côté de l'horloge (remplace
+             les 2 anciens slots A/B avec choix multiple) -->
+        <property id="clock_metric_enabled_prop" type="boolean">true</property>
+        <!-- v2.2.5 : Afficher ou non l'heure dans l'onglet horloge -->
+        <property id="show_clock_prop" type="boolean">true</property>
+        <!-- v2.2.4 : Colorisation allure/vitesse — 2 réglages indépendants (remplace l'ancien
+             colorize_pace_prop, bitmask "quand"). 0=Off, 1=Barre, 2=Fond, 3=Police. -->
+        <property id="colorize_pace_inst_prop" type="number">2</property>
+        <property id="colorize_pace_avg_prop" type="number">3</property>
+        <!-- v2.2.8 : Encadré 1px D+/D- selon la tendance (montée/descente) -->
+        <property id="colorize_dplus_dmoins_prop" type="boolean">true</property>
+        <property id="target_pace_prop" type="number">330</property>
+        <property id="pace_fast_threshold_prop" type="number">10</property>
+        <!-- v1.8.0 : Alarme (0=Off, 1=VAM, 2=Allure, 3=FC, 4=VAM+Allure, 5=VAM+FC, 6=Allure+FC, 7=Tout) -->
+        <property id="alarm" type="number">1</property>
+        <!-- Type : 1=Vibration, 2=Son, 3=Vibration+Son -->
+        <property id="vam_alarm_type_prop" type="number">3</property>
+        <!-- v1.9.0 : Distance to (0=Désactivé, 1=Prochain waypoint, 2=Fin du parcours, 3=Alterné) -->
+        <property id="dist_to_type_prop" type="number">3</property>
+        <!-- v1.9.4 : Coefficients de correction (température, poids du sac, grimpeur, descendeur) -->
+        <property id="temp_enabled_prop" type="boolean">false</property>
+        <property id="solar_enabled_prop" type="boolean">false</property>
+        <property id="bag_weight_prop" type="number">0</property>
+        <!-- v2.2.5 : Mode de calcul bagFactor (0=Forfaitaire 1%/kg, 1=Relatif au poids corporel) -->
+        <property id="bag_weight_mode_prop" type="number">0</property>
+        <!-- v2.4.0 : climb_coeff_prop/descent_coeff_prop (facteur abstrait 0.5–1.5, stocké ×10)
+             remplacés par une saisie directe en mètres de D+/D- équivalents à 1km plat — pas de
+             migration de l'ancien réglage, réinitialisation propre (voir trail_datafield_notes.md) -->
+        <property id="climb_grade_mkm_prop" type="number">100</property>
+        <property id="descent_grade_mkm_prop" type="number">330</property>
+        <!-- Allure circuit en cours (alternance avec allure moyenne session) -->
+        <property id="cur_lap_pace_prop" type="boolean">true</property>
+        <!-- v2.2.8 : Menu Circuit — toggles indépendants par donnée (n'ont d'effet que si
+             cur_lap_pace_prop est actif). Tous à true par défaut pour préserver le comportement
+             existant. -->
+        <property id="circuit_dplus_dmoins_prop" type="boolean">true</property>
+        <property id="circuit_allure_prop" type="boolean">true</property>
+        <property id="circuit_distance_prop" type="boolean">true</property>
+        <property id="circuit_chrono_prop" type="boolean">true</property>
+        <!-- v1.9.17 : Durée alarme visuelle (0=OFF, 3=3s, 5=5s, 10=10s). v2.2.11 : redevient
+             la source unique du on/off "Alarme" (vibration+son inclus) ET la durée d'affichage
+             du popup dessiné par l'app (appli : popup seul, plus de notification) -->
+        <property id="alarm_popup_duration_prop" type="number">5</property>
+        <!-- v1.9.36 : Unité allure (0=min/km, 1=km/h) -->
+        <property id="pace_unit_prop" type="number">0</property>
+        <!-- v1.9.36 : Affichage batterie (0=Appareil, 1=Body Battery) -->
+        <property id="battery_display_prop" type="number">0</property>
+        <!-- v2.1.2 : Affichage circuit dans la rotation VAM (n'a d'effet que si cur_lap_pace_prop est actif) -->
+        <property id="vam_circuit_display_prop" type="boolean">true</property>
+        <!-- v2.1.2 : Refonte FIT — 8 toggles indépendants (voir matrice), un par groupe de
+             champs. Tous à true par défaut pour préserver le comportement existant. -->
+        <property id="fit_pace_speed_prop" type="boolean">true</property>
+        <property id="fit_temp_bag_corr_prop" type="boolean">true</property>
+        <property id="fit_bag_weight_prop" type="boolean">true</property>
+        <property id="fit_avg_pace_speed_prop" type="boolean">true</property>
+        <property id="fit_effort_dist_prop" type="boolean">true</property>
+        <property id="fit_vam_lap_prop" type="boolean">true</property>
+        <property id="fit_temp_coeff_prop" type="boolean">true</property>
+        <property id="fit_coefficients_prop" type="boolean">true</property>
+        <!-- v2.1.3 : Unité allure/vitesse pour l'ENREGISTREMENT FIT (indépendante de l'unité
+             d'affichage montre, réglage téléphone uniquement, figée au lancement de l'activité).
+             0=min/km, 1=km/h. v2.2.9 : tentative de suppression (toujours les deux ensemble) —
+             causait un crash "STRING sur RECORD" puis "Out of memory" une fois combiné aux
+             autres champs optionnels ; rétabli. -->
+        <property id="fit_pace_unit_prop" type="number">0</property>
+        <!-- v2.7.0 : Référence de la cible d'allure (colorisation et alarme de l'allure cible
+             dans tous les cas) : 0=allure cible brute, 1=zone VC (vc_target_zone_prop),
+             2=% de VC (vc_target_pct_prop). -->
+        <property id="pace_ref_prop" type="number">0</property>
+        <!-- v2.4.0 : Vitesse critique, en secondes/km (comme target_pace_prop) -->
+        <property id="cs_pace_prop" type="number">300</property>
+        <!-- v2.4.0 : Bornes des zones VC en % de VC (N+1 valeurs pour N zones, 7 zones max) —
+             défaut : zones du bilan VC (Z1 60-70 ... Z5 96-105, Z6 105-115, Z7 >115) -->
+        <property id="vc_zones_prop" type="string">60,70,80,88,96,105,115,150</property>
+        <!-- v2.7.0 : Zone cible commune (1-5) — allure en référence Zone VC (vert dans la zone,
+             orange au-dessus) et alarmes FC et VAM au-dessus de cette zone (remplace
+             vam_alarm_zone_prop et fc_alarm_zone_prop) ; % de VC cible (50-130 ; seuil rapide habituel) -->
+        <property id="vc_target_zone_prop" type="number">2</property>
+        <property id="vc_target_pct_prop" type="number">80</property>
+        <!-- v2.4.0 : Code Trail Planner (code montre du site) — si renseigné, VC, zones, équivalence
+             montée et zone d'alarme de la séance envoyée à la montre sont synchronisés en
+             arrière-plan (réglage téléphone uniquement) -->
+        <property id="trail_code_prop" type="string"></property>
+        <!-- Appli Trail Planner Companion. Le code montre est trail_code_prop (celui d'EndurancePro,
+             ci-dessus) : plan, profil, réglages EndurancePro et suivi de l'assistance. -->
+        <!-- Zoom du profil : 0 parcours entier, 1 = 20 km, 2 = 10 km, 3 = 5 km, 4 = 2 km autour du coureur. -->
+        <property id="zoom" type="number">5</property>
+        <!-- Profil coloré selon la pente (désactivé par défaut). -->
+        <property id="slopes" type="boolean">false</property>
+        <!-- Bouton Lap = passage au point le plus proche (désactiver si le tour automatique est utilisé). -->
+        <property id="lapPass" type="boolean">true</property>
+        <!-- Échelle de l'écran Carte (largeur de l'écran) : 0 = 200 m, 1 = 500 m, 2 = 1 km, 3 = 2 km, 4 = 5 km. -->
+        <property id="mapScale" type="number">2</property>
+        <!-- Écran Trail Planner (réglages du champ) : rappel nutrition (-1 = produits du plan, N = toutes les
+             N minutes, 0 = aucun), vibrations, distance / D+ / D- jusqu'à l'arrivée. -->
+        <property id="fuelMin" type="number">-1</property>
+        <property id="vibrate" type="boolean">true</property>
+    </properties>
+</resources>

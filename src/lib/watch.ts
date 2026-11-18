@@ -289,12 +289,20 @@ const ROUTE_TOLS = [8, 12, 18, 25, 35, 50, 70, 85, 100, 115, 130, 150, 200]
 
 /** Ligne G : tracé simplifié, écarts d'un point au suivant ; null s'il ne tient pas dans `budget` caractères. */
 export function routeLine(points: { dist: number; lat: number; lon: number }[], budget: number): string | null {
+  return encodeRoute(points, budget, ROUTE_TOLS, 'G')
+}
+
+/**
+ * Tracé `<tag>|<tolérance m>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,…` (lat / lon en 1e-5 degré, puis
+ * écarts d'un point au suivant), à la plus fine des tolérances `tols` qui tient dans `budget` caractères.
+ */
+function encodeRoute(points: { dist: number; lat: number; lon: number }[], budget: number, tols: number[], tag: string): string | null {
   if (points.length < 2 || budget < 100) return null
   const e5 = (x: number) => Math.round(x * 1e5)
-  for (const tol of ROUTE_TOLS) {
+  for (const tol of tols) {
     const r = simplifyRoute(points, tol, Infinity)
     let [d0, la, lo] = [r[0][0], e5(r[0][1]), e5(r[0][2])]
-    const head = `G|${tol}|${d0}:${la}:${lo}|`
+    const head = `${tag}|${tol}|${d0}:${la}:${lo}|`
     const parts: number[] = []
     for (const [d, lat, lon] of r.slice(1)) {
       const a = e5(lat)
@@ -310,7 +318,115 @@ export function routeLine(points: { dist: number; lat: number; lon: number }[], 
   return null
 }
 
+/**
+ * Place maximale du tracé de la carte de l'appli montre (caractères, champ `wr`), lu au premier plan
+ * dans une requête à part (réponses de taille raisonnable pour la montre).
+ */
+export const MAP_ROUTE_MAX = 10000
+
+/** Tolérances essayées pour le tracé de la carte (m) : la plus fine qui tient dans sa place. */
+const MAP_ROUTE_TOLS = [3, 5, 8, 12, 18, 25, 35, 50, 70, 100]
+
+/**
+ * Tracé pour l'écran Carte de l'appli montre Trail Planner Companion (champ `wr` du document du code
+ * montre) : même codage que la ligne G du plan (`TPR1|<tolérance>|<d0>:<lat0>:<lon0>|<dd>,<dlat>,<dlon>,…`),
+ * mais à part et plus fin (3 m sur une course normale) : sur un ultra, la ligne G, faite pour caler le
+ * GPS dans 8 Ko, coupe les lacets. null si même la plus grosse tolérance ne tient pas.
+ */
+export function watchRoute(points: { dist: number; lat: number; lon: number }[], budget = MAP_ROUTE_MAX): string | null {
+  return encodeRoute(points, budget, MAP_ROUTE_TOLS, 'TPR1')
+}
+
+/**
+ * Place maximale du profil de l'appli montre (caractères, champ `wp`). L'appli lit le document au
+ * premier plan, sans la limite de 8 Ko de la tâche de fond du champ de données.
+ */
+export const PROFILE_MAX = 6000
+
+/** Tolérances essayées pour simplifier le profil (m) : la plus fine qui tient dans sa place. */
+const PROFILE_TOLS = [2, 3, 5, 8, 12, 20, 30, 50, 80]
+
+/**
+ * Profil pour l'appli montre Trail Planner Companion (champ `wp` du document du code montre) :
+ *
+ *   TPP1|<tolérance m>|<d0>:<alt0>|<dd>,<dz>,<dd>,<dz>,…
+ *
+ * altitude (m) le long du parcours, simplifiée à ± tolérance près (la plus fine qui tient dans `budget`
+ * caractères) : premier point (distance m : altitude m), puis écarts de distance et d'altitude d'un
+ * point au suivant. À part du plan `w`, où le dénivelé (ligne E) laisse la place au tracé GPS sur les
+ * ultras : le profil zoomable de l'appli garde ainsi ses bosses. null si même la plus grosse
+ * tolérance ne tient pas.
+ */
+export function watchProfile(points: { dist: number; ele: number }[], budget = PROFILE_MAX): string | null {
+  if (points.length < 2) return null
+  const curve = points.map((p) => [p.dist, p.ele] as [number, number])
+  for (const tol of PROFILE_TOLS) {
+    const keep = simplify(curve, tol)
+    let d0 = Math.round(keep[0][0])
+    let a0 = Math.round(keep[0][1])
+    const head = `TPP1|${tol}|${d0}:${a0}|`
+    const parts: number[] = []
+    for (const [d, a] of keep.slice(1)) {
+      const dd = Math.round(d)
+      const aa = Math.round(a)
+      parts.push(dd - d0, aa - a0)
+      d0 = dd
+      a0 = aa
+    }
+    const line = head + parts.join(',')
+    if (line.length <= budget) return line
+  }
+  return null
+}
+
 /** URL lue par la montre : seul le champ `w` du lien assistance (réponse de quelques Ko). */
 export function watchUrl(projectId: string, shareId: string): string {
   return `https://firestore.googleapis.com/v1/projects/${projectId}/databases/%28default%29/documents/shares/${shareId}?mask.fieldPaths=w`
 }
+
+/** Parcours proposés par l'écran de démarrage de l'appli montre (Trail Planner Companion). */
+export interface AppCourse {
+  id: string
+  kind: 'race' | 'route'
+  name: string
+  /** Départ prévu (s Unix), 0 pour un parcours d'entraînement ou un départ inconnu. */
+  start: number
+  /** Distance (m) et D+ (m) du parcours. */
+  dist: number
+  dPlus: number
+}
+
+/**
+ * Courses et parcours à proposer sur l'appli montre : courses à venir (départ aujourd'hui ou plus tard,
+ * `today` au format AAAA-MM-JJ), par date, puis parcours de la bibliothèque, par nom.
+ */
+export function appCourses(races: Race[], today: string): Race[] {
+  const upcoming = races.filter((r) => r.kind === 'race' && r.env.start.slice(0, 10) >= today).sort((a, b) => a.env.start.localeCompare(b.env.start))
+  const routes = races.filter((r) => r.kind === 'route').sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  return [...upcoming, ...routes]
+}
+
+/**
+ * Champ `wl` du document du code montre : liste des parcours de l'appli montre, une ligne par parcours
+ * après l'en-tête, dans l'ordre de l'écran de démarrage :
+ *
+ *   TPL1
+ *   <id>|<c course, p parcours>|<nom>|<départ s Unix ou 0>|<distance m>|<D+ m>[|*]
+ *
+ * « * » : parcours envoyé à la montre (touche ⌚), proposé en premier. Le plan de chaque parcours
+ * (champs w, wp, wr) est dans le document `<code>-<id>` (appDocId).
+ */
+export function watchList(courses: AppCourse[], onWatchId?: string): string {
+  return [
+    'TPL1',
+    ...courses.map((c) =>
+      [c.id, c.kind === 'race' ? 'c' : 'p', clean(c.name, 24), Math.round(c.start), Math.round(c.dist), Math.round(c.dPlus), ...(c.id === onWatchId ? ['*'] : [])].join('|'),
+    ),
+  ].join('\n')
+}
+
+/** Document du plan d'un parcours de l'appli montre, pour un code montre. */
+export function appDocId(code: string, raceId: string): string {
+  return `${code}-${raceId}`
+}
+

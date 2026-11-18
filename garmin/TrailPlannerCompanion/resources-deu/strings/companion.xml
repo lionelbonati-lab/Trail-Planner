@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes propres à l'appli Trail Planner Companion (ceux d'EndurancePro sont dans strings.xml). -->
+<strings>
+    <string id="AppName">Trail Planner Companion</string>
+    <string id="tp_fuel">Ernährungserinnerungen</string>
+    <string id="tp_fuel_plan">Laut Plan</string>
+    <string id="tp_zoom">Profil-Zoom</string>
+    <string id="tp_zoom_all">Ganze Strecke</string>
+    <string id="tp_zoom_20">20 km</string>
+    <string id="tp_zoom_10">10 km</string>
+    <string id="tp_zoom_5">5 km</string>
+    <string id="tp_zoom_2">2 km</string>
+    <string id="tp_zoom_leg">Aktueller Abschnitt</string>
+    <string id="tp_zoom_ravito">Von Verpflegung zu Verpflegung</string>
+    <string id="tp_slopes">Steigungsfarben</string>
+    <string id="tp_slopes_sub">Grün bis Violett</string>
+    <string id="tp_slopes_prompt">Profil nach Steigung gefärbt: bergauf grün &lt; 5 %, gelb 5-10 %, orange 10-15 %, rot 15-25 %, violett ab 25 %; bergab hellblau bis -15 %, dunkelblau darüber</string>
+    <string id="tp_lap_pass">Runde = Kontrollpunkt</string>
+    <string id="tp_lap_pass_prompt">Die Lap-Taste bestätigt den nächsten Kontrollpunkt (2. Runde an der Verpflegung = Abfahrt); bei Auto Lap deaktivieren</string>
+    <string id="tp_reload">Plan neu laden</string>
+    <string id="tp_resume">Fortsetzen</string>
+    <string id="tp_save">Speichern</string>
+    <string id="tp_discard">Verwerfen</string>
+    <string id="tp_discard_ask">Lauf verwerfen?</string>
+    <string id="tp_no">Nein</string>
+    <string id="tp_yes">Ja, verwerfen</string>
+    <string id="tp_paused">Pause</string>
+    <string id="tp_resume_hint">START: fortsetzen</string>
+    <string id="tp_start">START: los</string>
+    <string id="tp_off_route">Abseits der Strecke</string>
+    <string id="tp_lap">Runde</string>
+    <string id="tp_lap_undone">Runde verworfen</string>
+    <string id="tp_undo">Verwerfen</string>
+    <string id="tp_passage">Kontrollpunkt</string>
+    <string id="tp_depart">Abfahrt</string>
+    <string id="tp_saved">Lauf gespeichert</string>
+    <string id="tp_discarded">Lauf verworfen</string>
+    <string id="tp_quit">BACK: beenden</string>
+    <string id="tp_no_code">Uhr-Code eingeben</string>
+    <string id="tp_unknown_code">Unbekannter Code</string>
+    <string id="tp_no_phone">Telefon nicht verbunden</string>
+    <string id="tp_too_big">Plan zu groß für die Uhr</string>
+    <string id="tp_plan_error">Plan: Fehler</string>
+    <string id="tp_no_course">Kein Rennen gesendet</string>
+    <string id="tp_waiting">Plan wird geladen...</string>
+    <string id="tp_no_profile">Kein Profil</string>
+    <string id="tp_map_scale">Kartenmaßstab</string>
+    <string id="tp_explore">Karte erkunden</string>
+    <string id="tp_no_route">Keine Strecke</string>
+    <string id="tp_fuel_prompt">Verpflegungserinnerung (min): -1 = Produkte des Plans zwischen den Verpflegungen verteilt, 0 = aus</string>
+    <string id="tp_vibrate">Vibration bei Erinnerungen</string>
+    <string id="tp_free_run">Freier Lauf</string>
+    <string id="tp_free_sub">Ohne Plan</string>
+    <string id="tp_settings">Einstellungen</string>
+    <string id="tp_on_watch">An die Uhr gesendet</string>
+    <string id="tp_loading">Wird geladen...</string>
+    <string id="tp_choose">START: los</string>
+    <string id="tp_no_courses">Keine Strecken</string>
+</strings>

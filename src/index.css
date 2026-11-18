@@ -250,6 +250,7 @@ button.danger { color: var(--danger); }
 .live-delta { font-size: 18px; font-weight: 650; margin-top: 4px; }
 .live-delta.late { color: var(--warn); }
 .live-delta.early { color: var(--ok); }
+.live-delta.off { color: var(--warn); }
 .live-sub { color: var(--muted); margin-top: 4px; }
 .live-next-name { font-size: 22px; font-weight: 700; margin: 2px 0; }
 .live-at { border: 2px solid var(--series-1); }
@@ -262,6 +263,9 @@ button.inline-btn { padding: 0 4px; vertical-align: middle; }
 button.inline-btn svg { width: 13px; height: 13px; }
 .share-banner a { word-break: break-all; }
 .share h1 { font-size: 22px; margin-bottom: 4px; }
+.runner-banner { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin: 0 0 6px; padding: 3px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.runner-banner span { font-weight: 400; color: var(--muted); }
+.runner-banner.live { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .share .live-hero { margin: 12px 0; }
 .share-closed { margin-top: 12px; }
 .share-closed h2 { font-size: 18px; margin: 0 0 8px; }
@@ -769,6 +773,7 @@ button svg.lucide, .button svg.lucide { margin: 0 1px; }
 .mp-legend .lg-night { background: #8a8f98; opacity: 0.4; border-radius: 2px; }
 
 .race-badge { margin-left: 8px; vertical-align: 2px; }
+.beta-badge { margin-left: 6px; vertical-align: 2px; background: #fde8c8; color: #8a4b00; }
 
 .lib-brands { flex-wrap: wrap; margin-bottom: 8px; }
 

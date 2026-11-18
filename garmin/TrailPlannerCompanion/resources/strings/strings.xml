@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- v1.9.44 : On-watch settings menu (getSettingsView) -->
+    <!-- FIX 23/08/2026 : ces 44 clés menu_* + unite_km_h/unite_m_h n'existaient que dans les -->
+    <!-- resources-xxx (fre/deu/ita/por/spa) et jamais dans ce fichier de base — un device en -->
+    <!-- anglais (ou toute langue non traduite) n'avait donc AUCUNE valeur pour tout le menu -->
+    <!-- de réglages on-watch. Root cause identique au bug label_* du 15/08/2026, en plus -->
+    <!-- large. Voir trail_datafield_notes.md. -->
+    <string id="menu_settings_title">Settings</string>
+    <string id="menu_bag_weight">Pack weight</string>
+    <!-- v2.2.11 : "Triggers" (was implicitly "Alarm", renamed to disambiguate from the new
+         set_alarm_popup master toggle below, also renamed to simply "Alarm") -->
+    <string id="menu_alarm">Triggers</string>
+    <string id="menu_hr_display">HR zone display</string>
+    <string id="menu_vam_mode">VAM display mode</string>
+    <string id="menu_metric_slot">2nd metric</string>
+    <string id="menu_metric_slot1">Metric 1</string>
+    <string id="menu_metric_slot2">Metric 2</string>
+    <string id="menu_metric_fatigue">Fatigue</string>
+    <string id="menu_metric_cal">Calories</string>
+    <string id="menu_metric_km">Effort km</string>
+    <string id="menu_metric_body_battery">Body Battery</string>
+    <string id="menu_clock_metric_folder">Battery life</string>
+    <string id="menu_show_clock">Show time</string>
+    <string id="menu_colorize_dplus_dmoins">D+/D- outline</string>
+    <string id="menu_vam_zones_bar">VAM bar</string>
+    <string id="menu_version_label">Version</string>
+    <string id="menu_temp_corr">Temp. correction</string>
+    <string id="menu_solar_corr">Solar correction</string>
+    <string id="menu_bag_weight_title">Pack weight (kg)</string>
+    <string id="menu_dark_mode">Dark mode</string>
+    <string id="menu_pace_folder">Pace</string>
+    <string id="menu_speed_folder">Speed</string>
+    <string id="menu_vam_folder">VAM zones</string>
+    <string id="menu_hr_folder">HR</string>
+    <string id="menu_alarm_folder">Alarms</string>
+    <string id="menu_coeff_folder">Coeffs</string>
+    <string id="menu_properties_folder">Properties</string>
+    <string id="menu_buffer_size">Smoothing</string>
+    <string id="menu_buffer_size_title">Smoothing (5-60s)</string>
+    <string id="menu_display_folder">Display</string>
+    <string id="menu_colorize_folder">Colorization</string>
+    <string id="menu_zone_fc">HR zone</string>
+    <string id="menu_vam_mode_short">VAM mode</string>
+    <string id="menu_vam_colorize">VAM</string>
+    <string id="menu_vam_circuit">Lap</string>
+    <string id="menu_vam_circuit_off">Lap inactive</string>
+    <string id="menu_battery_mode">Battery mode</string>
+    <string id="menu_circuit_folder">Lap</string>
+    <string id="menu_circuit_dplus_dmoins">D+/D-</string>
+    <string id="menu_circuit_allure">Avg pace</string>
+    <string id="menu_circuit_distance">Distance</string>
+    <string id="menu_circuit_chrono">Timer</string>
+
+    <!-- Units used in alarm toast strings (composed at runtime, not just FIT labels) -->
+    <string id="unite_km_h">km/h</string>
+    <string id="unite_m_h">m/h</string>
+
+    <!-- Settings titles -->
+    <string id="set_dark_mode">Dark mode</string>
+    <string id="set_buffer_size">VAM/Pace smoothing (5-60s)</string>
+    <string id="set_dist_to_type">Remaining distance</string>
+    <string id="set_pace_mode">Pace mode</string>
+    <string id="set_speed_mode">Speed mode</string>
+    <string id="set_colorize_pace">Pace colorization</string>
+    <string id="set_colorize_speed">Speed colorization</string>
+    <string id="set_target_pace">Target pace</string>
+    <string id="set_target_speed">Target speed</string>
+    <string id="set_pace_fast_threshold">Too fast threshold</string>
+    <string id="set_cur_lap_pace">Lap</string>
+    <string id="set_pace_unit">Pace unit</string>
+    <string id="set_vam_display_mode">VAM display mode</string>
+    <string id="set_vam_zones">VAM zones</string>
+    <string id="set_vam_zone1_min">Zone 1 min</string>
+    <string id="set_vam_zone1_max">Zone 1 max</string>
+    <string id="set_vam_zone2_max">Zone 2 max</string>
+    <string id="set_vam_zone3_max">Zone 3 max</string>
+    <string id="set_vam_zone4_max">Zone 4 max</string>
+    <string id="set_alarm">Alarm</string>
+    <!-- v2.2.11 : renamed from "Alarm notification" — this on/off + duration list now gates
+         the whole alarm (popup or notification + vibration + sound), not just the popup.
+         See EnduranceProView. -->
+    <string id="set_alarm_popup">Alarm</string>
+    <string id="set_alarm_type">Alarm type</string>
+    <string id="set_metric_slot">Metrics</string>
+    <string id="set_hr_display">HR zone display</string>
+    <string id="set_temp_enabled">Temperature correction</string>
+    <string id="set_bag_weight">Pack weight (0-20 kg)</string>
+    <string id="set_climb_coeff">Climb equiv.</string>
+    <string id="set_descent_coeff">Descent equiv.</string>
+    <string id="set_battery_display">Battery display</string>
+    <string id="menu_bag_weight_mode">Bag weight mode</string>
+    <string id="set_bag_weight_mode">Bag weight calculation</string>
+    <string id="opt_bag_weight_flat">Flat rate (1%/kg)</string>
+    <string id="opt_bag_weight_relative">Relative to body weight</string>
+
+    <!-- v2.1.2 : Refonte FIT — 8 toggles (Garmin Connect only) -->
+    <!-- v2.1.3 : unité FIT indépendante de l'unité d'affichage montre (pace_unit_prop) -->
+    <!-- v2.2.9 : tentative de retrait (allure+vitesse toujours ensemble) → crash OOM, rétabli -->
+    <string id="set_fit_pace_unit">Pace/Speed unit (FIT recording)</string>
+    <string id="set_fit_pace_speed">Pace/Speed effort</string>
+    <string id="set_fit_temp_bag_corr">Temp.+pack correction applied</string>
+    <string id="set_fit_bag_weight">Pack weight</string>
+    <string id="set_fit_avg_pace_speed">Avg pace/speed effort</string>
+    <string id="set_fit_effort_dist">Effort distance</string>
+    <string id="set_fit_vam_lap">Lap avg VAM</string>
+    <string id="set_fit_temp_coeff">Temp. coeff.</string>
+    <string id="set_fit_coefficients">Coefficients</string>
+
+    <!-- FIT custom field labels (developer fields, sent to Garmin Connect) -->
+    <!-- FIX 15/08/2026 : ces 15 clés label_* n'existaient que dans les resources-xxx -->
+    <!-- (fre/deu/ita/por/spa) et jamais dans ce fichier de base — un device en anglais -->
+    <!-- (ou toute langue non traduite) n'avait donc AUCUNE valeur pour ces libellés. -->
+    <!-- Probablement la cause racine du bug "libellés FIT restent en anglais" : voir -->
+    <!-- trail_datafield_notes.md pour le détail et l'étape de vérification restante. -->
+    <string id="label_eff_generic">Effort Pace</string>
+    <string id="label_eff_temp_factor">Temp Factor</string>
+    <string id="label_eff_speed_kmh">Effort Speed</string>
+    <string id="label_fit_temp_bag_corr">Temp+Pack Corr</string>
+    <string id="label_fit_lap_pace">Lap Pace</string>
+    <string id="label_fit_lap_vam">Avg VAM</string>
+    <string id="label_fit_temp_corr">Temp Corr.</string>
+    <string id="label_fit_bag_kg">Pack Weight</string>
+    <string id="label_fit_climb_coeff">Climb Equiv.</string>
+    <string id="label_fit_descent_coeff">Descent Equiv.</string>
+    <string id="label_fit_avg_pace_std">Avg Pace Std</string>
+    <string id="label_fit_avg_pace_mtn">Avg Pace Mtn</string>
+    <string id="label_fit_avg_speed_std">Avg Speed Std</string>
+    <string id="label_fit_avg_speed_mtn">Avg Speed Mtn</string>
+    <string id="label_fit_effort_dist">Effort Dist.</string>
+
+    <!-- List options -->
+    <string id="opt_disabled">Disabled</string>
+    <string id="opt_off">OFF</string>
+    <string id="opt_on">ON</string>
+    <string id="opt_next_waypoint">Next waypoint</string>
+    <string id="opt_end_course">End of course</string>
+    <string id="opt_alternating">Alternating</string>
+    <string id="opt_pace_normal">Normal (flat)</string>
+    <string id="opt_pace_standard">Standard effort</string>
+    <string id="opt_pace_mountain">Mountain effort</string>
+    <string id="opt_pace_below_target">Average</string>
+    <string id="opt_pace_too_fast">Instant</string>
+    <string id="opt_pace_both">Below target + too fast</string>
+    <string id="opt_vam_only">VAM only</string>
+    <string id="opt_grade_only">Grade</string>
+    <string id="opt_lap_avg_only">Lap avg</string>
+    <string id="opt_vam_grade">VAM + Grade %</string>
+    <string id="opt_vam_lap">VAM + Lap avg</string>
+    <string id="opt_lap_grade">Lap avg + Grade %</string>
+    <string id="opt_vam_lap_grade">VAM + Lap avg + Grade %</string>
+    <string id="opt_bar">Bar</string>
+    <string id="opt_background">Background</string>
+    <string id="opt_font">Font</string>
+    <string id="opt_alarm_pace">Pace</string>
+    <string id="opt_alarm_speed">Speed</string>
+    <string id="opt_alarm_hr">HR</string>
+    <string id="opt_vam_pace">VAM + Pace</string>
+    <string id="opt_vam_hr">VAM + HR</string>
+    <string id="opt_pace_hr">Pace + HR</string>
+    <string id="opt_all">All</string>
+    <string id="opt_vib">Vibration</string>
+    <string id="opt_sound">Sound</string>
+    <string id="opt_vib_sound">Vibration + Sound</string>
+    <string id="opt_fatigue_only">Fatigue only</string>
+    <string id="opt_calories_only">Calories only</string>
+    <string id="opt_effort_km_only">Effort km only</string>
+    <string id="opt_version_only">Version only</string>
+    <string id="opt_fatigue_cal">Fatigue+Calories</string>
+    <string id="opt_fatigue_km">Fatigue+Eff. km</string>
+    <string id="opt_cal_km">Calories+Eff. km</string>
+    <string id="opt_hr_value">Value</string>
+    <string id="opt_hr_circle">Circle</string>
+    <string id="opt_hr_val_circle">Value + Circle</string>
+    <string id="opt_hr_val_bar">Value + Bar</string>
+    <string id="opt_hr_circle_bar">Circle + Bar</string>
+    <string id="opt_coeff_default">1.0 (default)</string>
+    <string id="opt_battery">Battery</string>
+
+    <!-- v2.4.0 : Zones VC (colorisation/alarme d'allure) et synchro Trail Planner -->
+    <string id="set_pace_ref">Reference</string>
+    <string id="opt_ref_vc">CS zone</string>
+    <string id="opt_ref_vc_pct">% of CS</string>
+    <string id="set_cs">Critical speed</string>
+    <string id="set_vc_target_zone">Target zone</string>
+    <string id="set_vc_target_pct">Target % of CS</string>
+    <string id="opt_no_code">No code</string>
+    <string id="opt_synced">Synced</string>
+    <string id="opt_waiting">Waiting</string>
+    <string id="set_trail_code">Trail Planner code</string>
+    <string id="set_vc_zones">CS zones (% of CS)</string>
+</resources>

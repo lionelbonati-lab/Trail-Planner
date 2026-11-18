@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Labels FIT -->
+    <string id="label_eff_generic">Allure Eff.</string>
+    <string id="label_eff_temp_factor">Coeff. Temp&#xe9;rature</string>
+    <string id="label_eff_speed_kmh">Vitesse Eff.</string>
+    <string id="label_fit_temp_bag_corr">Corr. Temp+Sac</string>
+    <string id="label_fit_lap_pace">Allure Effort</string>
+    <string id="label_fit_lap_vam">VAM Moyenne</string>
+    <string id="label_fit_temp_corr">Corr. Temp</string>
+    <string id="label_fit_bag_kg">Poids Sac</string>
+    <string id="label_fit_climb_coeff">&#xc9;quiv. Mont&#xe9;e</string>
+    <string id="label_fit_descent_coeff">&#xc9;quiv. Descente</string>
+    <string id="label_fit_avg_pace_std">All. Moy. Std</string>
+    <string id="label_fit_avg_pace_mtn">All. Moy. Mtn</string>
+    <string id="label_fit_avg_speed_std">Vit. Moy. Std</string>
+    <string id="label_fit_avg_speed_mtn">Vit. Moy. Mtn</string>
+    <string id="label_fit_effort_dist">Dist. Effort</string>
+
+    <!-- v1.9.44 : Menu de réglages on-watch (getSettingsView) -->
+    <string id="menu_settings_title">R&#xe9;glages</string>
+    <string id="menu_bag_weight">Poids du sac</string>
+    <string id="menu_alarm">D&#xe9;clencheurs</string>
+    <string id="menu_hr_display">Affichage zone FC</string>
+    <string id="menu_vam_mode">Mode affichage VAM</string>
+    <string id="menu_metric_slot">2nd m&#xe9;trique</string>
+    <string id="menu_metric_slot1">M&#xe9;trique 1</string>
+    <string id="menu_metric_slot2">M&#xe9;trique 2</string>
+    <string id="menu_metric_fatigue">Fatigue</string>
+    <string id="menu_metric_cal">Calories</string>
+    <string id="menu_metric_km">Km Effort</string>
+    <string id="menu_metric_body_battery">Body Battery</string>
+    <string id="menu_clock_metric_folder">Autonomie batterie</string>
+    <string id="menu_show_clock">Afficher l'heure</string>
+    <string id="menu_colorize_dplus_dmoins">Encadré D+/D-</string>
+    <string id="menu_vam_zones_bar">Barre VAM</string>
+    <string id="menu_version_label">Version</string>
+    <string id="app_version">0.7.8 (EndurancePro 2.7.3)</string>
+    <string id="menu_temp_corr">Correction temp.</string>
+    <string id="menu_solar_corr">Correction solaire</string>
+    <string id="menu_bag_weight_title">Poids du sac (kg)</string>
+    <string id="menu_dark_mode">Mode sombre</string>
+    <string id="menu_pace_folder">Allure</string>
+    <string id="menu_speed_folder">Vitesse</string>
+    <string id="menu_vam_folder">Zones VAM</string>
+    <string id="menu_hr_folder">FC</string>
+    <string id="menu_alarm_folder">Alarmes</string>
+    <string id="menu_coeff_folder">Coeffs</string>
+    <string id="menu_properties_folder">Propri&#xe9;t&#xe9;s</string>
+    <string id="menu_buffer_size">Lissage</string>
+    <string id="menu_buffer_size_title">Lissage (5-60s)</string>
+    <string id="menu_display_folder">Affichage</string>
+    <string id="menu_colorize_folder">Colorisation</string>
+    <string id="menu_zone_fc">Zone FC</string>
+    <string id="menu_vam_mode_short">Mode VAM</string>
+    <string id="menu_vam_colorize">VAM</string>
+    <string id="menu_vam_circuit">Circuit</string>
+    <string id="menu_vam_circuit_off">Circuit inactif</string>
+    <string id="menu_battery_mode">Mode batterie</string>
+
+    <!-- Settings titles -->
+    <string id="set_dark_mode">Mode sombre</string>
+    <string id="set_buffer_size">Lissage VAM/Allure (5-60s)</string>
+    <string id="set_dist_to_type">Distance restante</string>
+    <string id="set_pace_mode">Mode allure</string>
+    <string id="set_speed_mode">Mode vitesse</string>
+    <string id="set_colorize_pace">Allure</string>
+    <string id="set_colorize_speed">Vitesse</string>
+    <string id="set_target_pace">Allure cible</string>
+    <string id="set_target_speed">Vitesse cible</string>
+    <string id="set_pace_fast_threshold">Seuil trop rapide</string>
+    <string id="set_cur_lap_pace">Circuit</string>
+    <string id="menu_circuit_folder">Circuit</string>
+    <string id="menu_circuit_dplus_dmoins">D+/D-</string>
+    <string id="menu_circuit_allure">Allure moy.</string>
+    <string id="menu_circuit_distance">Distance</string>
+    <string id="menu_circuit_chrono">Chrono</string>
+    <string id="set_pace_unit">Unit&#xe9; allure</string>
+    <string id="set_vam_display_mode">Mode affichage VAM</string>
+    <string id="set_vam_zones">Zones VAM</string>
+    <string id="set_vam_zone1_min">Zone 1 min</string>
+    <string id="set_vam_zone1_max">Zone 1 max</string>
+    <string id="set_vam_zone2_max">Zone 2 max</string>
+    <string id="set_vam_zone3_max">Zone 3 max</string>
+    <string id="set_vam_zone4_max">Zone 4 max</string>
+    <string id="set_alarm">Alarme</string>
+    <string id="set_alarm_popup">Alarme</string>
+    <string id="set_alarm_type">Type d&apos;alarme</string>
+    <string id="set_metric_slot">M&#xe9;trique secondaire (haut gauche)</string>
+    <string id="set_hr_display">Affichage zone FC</string>
+    <string id="set_temp_enabled">Correction temp&#xe9;rature</string>
+    <string id="set_bag_weight">Poids du sac (0-20 kg)</string>
+    <string id="set_climb_coeff">&#xc9;quiv. mont&#xe9;e</string>
+    <string id="set_descent_coeff">&#xc9;quiv. descente</string>
+    <string id="set_battery_display">Affichage batterie</string>
+    <string id="menu_bag_weight_mode">Mode poids sac</string>
+    <string id="set_bag_weight_mode">Calcul poids du sac</string>
+    <string id="opt_bag_weight_flat">Forfaitaire (1%/kg)</string>
+    <string id="opt_bag_weight_relative">Relatif au poids</string>
+
+    <!-- v2.1.2 : Refonte FIT — 8 toggles (uniquement Garmin Connect) -->
+    <!-- v2.1.3 : unité FIT indépendante de l'unité d'affichage montre (pace_unit_prop) —
+         libellé précisé "enregistrement FIT" pour éviter toute confusion -->
+    <!-- v2.2.9 : tentative de retrait (allure+vitesse toujours ensemble) → crash OOM, rétabli -->
+    <string id="set_fit_pace_unit">Unit&#xe9; allure/vitesse (enregistrement FIT)</string>
+    <string id="set_fit_pace_speed">Allure/vitesse effort</string>
+    <string id="set_fit_temp_bag_corr">Correction temp&#xe9;rature et poid du sac appliqu&#xe9;e</string>
+    <string id="set_fit_bag_weight">Poids du sac</string>
+    <string id="set_fit_avg_pace_speed">Allure/vitesse effort moyen</string>
+    <string id="set_fit_effort_dist">Distance effort</string>
+    <string id="set_fit_vam_lap">Vam moyenne circuit</string>
+    <string id="set_fit_temp_coeff">Coeff temp&#xe9;rature</string>
+    <string id="set_fit_coefficients">Coefficients</string>
+
+    <!-- List options -->
+    <string id="opt_off">OFF</string>
+    <string id="opt_on">ON</string>
+    <string id="opt_disabled">D&#xe9;sactiv&#xe9;</string>
+    <string id="opt_next_waypoint">Prochain waypoint</string>
+    <string id="opt_end_course">Fin du parcours</string>
+    <string id="opt_alternating">Altern&#xe9;</string>
+    <string id="opt_pace_normal">Normale (plat)</string>
+    <string id="opt_pace_standard">Effort standard</string>
+    <string id="opt_pace_mountain">Effort montagne</string>
+    <string id="opt_pace_below_target">Moyenne</string>
+    <string id="opt_pace_too_fast">Instantan&#xe9;e</string>
+    <string id="opt_pace_both">Sous cible + trop rapide</string>
+    <string id="opt_vam_only">VAM seule</string>
+    <string id="opt_grade_only">Pente</string>
+    <string id="opt_lap_avg_only">Circuit</string>
+    <string id="opt_vam_grade">VAM + % Pente</string>
+    <string id="opt_vam_lap">VAM + Moy. tour</string>
+    <string id="opt_lap_grade">Moy. tour + % Pente</string>
+    <string id="opt_vam_lap_grade">VAM + Moy. tour + % Pente</string>
+    <string id="opt_bar">Barre</string>
+    <string id="opt_background">Fond</string>
+    <string id="opt_font">Police</string>
+    <string id="opt_alarm_pace">Allure</string>
+    <string id="opt_alarm_speed">Vitesse</string>
+    <string id="opt_alarm_hr">FC</string>
+    <string id="opt_vam_pace">VAM + Allure</string>
+    <string id="opt_vam_hr">VAM + FC</string>
+    <string id="opt_pace_hr">Allure + FC</string>
+    <string id="opt_all">Tout</string>
+    <string id="opt_vib">Vibration</string>
+    <string id="opt_sound">Son</string>
+    <string id="opt_vib_sound">Vibration + Son</string>
+    <string id="opt_fatigue_only">Fatigue seul</string>
+    <string id="opt_calories_only">Calories seul</string>
+    <string id="opt_effort_km_only">Km Effort seul</string>
+    <string id="opt_version_only">Version seul</string>
+    <string id="opt_fatigue_cal">Fatigue+Calories</string>
+    <string id="opt_fatigue_km">Fatigue+Km Eff.</string>
+    <string id="opt_cal_km">Calories+Km Eff.</string>
+    <string id="opt_hr_value">Valeur</string>
+    <string id="opt_hr_circle">Cercle</string>
+    <string id="opt_hr_val_circle">Valeur + Cercle</string>
+    <string id="opt_hr_val_bar">Valeur + Barre</string>
+    <string id="opt_hr_circle_bar">Cercle + Barre</string>
+    <string id="opt_coeff_default">1.0 (d&#xe9;faut)</string>
+    <string id="opt_battery">Batterie</string>
+
+    <!-- FIX 23/08/2026 : unités manquantes, utilisées dans les toasts d'alarme -->
+    <string id="unite_km_h">km/h</string>
+    <string id="unite_m_h">m/h</string>
+
+    <!-- v2.4.0 : Zones VC (colorisation/alarme d'allure) et synchro Trail Planner -->
+    <string id="set_pace_ref">R&#xe9;f&#xe9;rence</string>
+    <string id="opt_ref_vc">Zone VC</string>
+    <string id="opt_ref_vc_pct">% de VC</string>
+    <string id="set_cs">Vitesse critique</string>
+    <string id="set_vc_target_zone">Zone cible</string>
+    <string id="set_vc_target_pct">% de VC cible</string>
+    <string id="opt_no_code">Pas de code</string>
+    <string id="opt_synced">Synchro</string>
+    <string id="opt_waiting">En attente</string>
+    <string id="set_trail_code">Code Trail Planner</string>
+    <string id="set_vc_zones">Zones VC (% de VC)</string>
+    <!-- Unités (identiques dans toutes les langues), manquantes dans cette langue -->
+    <string id="unite_km">km</string>
+    <string id="unite_m_s">m/s</string>
+    <string id="unite_min_km">min/km</string>
+    <string id="unite_s_km">s/km</string>
+    <string id="unite_kg">kg</string>
+    <string id="unite_vide"> </string>
+    <string id="unite_mult">x</string>
+    <string id="unite_pct">%</string>
+</resources>

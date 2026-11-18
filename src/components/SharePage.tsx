@@ -4,7 +4,7 @@ import { navUrl, tripLegs } from '../lib/assist'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { awayFrom } from '../lib/live'
 import { showNotice } from '../lib/notify'
-import { shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
+import { offText, reportFor, reportOffCourse, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
@@ -93,29 +93,39 @@ function signedMin(sec: number): string {
   return `${m > 0 ? '+' : m < 0 ? '−' : ''}${Math.abs(m)} min`
 }
 
-/** Page publique pour l'assistance : plan, fenêtres de passage et suivi en direct. */
-export function SharePage({ shareId }: { shareId: string }) {
-  const [snap, setSnap] = useState<ShareSnapshot | null | undefined>(undefined)
-  const [error, setError] = useState<string | null>(null)
-  const [report, setReport] = useState<WatchReport | null>(null)
-  const [, tick] = useState(0)
+/** Document partagé (lien assistance, code montre), chargé avec Firebase à la demande. */
+function useShareDoc(id: string | null): { snap: ShareSnapshot | null | undefined; error: string | null } {
+  const [state, setState] = useState<{ id: string | null; snap: ShareSnapshot | null | undefined; error: string | null }>({ id, snap: undefined, error: null })
   useEffect(() => {
+    if (!id) return
     let unsub: (() => void) | undefined
     let cancelled = false
     import('../lib/cloud')
       .then((c) => {
-        if (!cancelled) unsub = c.subscribeShare(shareId, setSnap, (e) => setError(e.message))
+        if (!cancelled)
+          unsub = c.subscribeShare(
+            id,
+            (snap) => setState({ id, snap, error: null }),
+            (e) => setState({ id, snap: undefined, error: e.message }),
+          )
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => setState({ id, snap: undefined, error: e.message }))
     return () => {
       cancelled = true
       unsub?.()
     }
-  }, [shareId])
-  // Suivi envoyé par la montre, si cette course est sur la montre : avec le code montre long
-  // ou le code court (8 chiffres) ; le relevé le plus récent l'emporte.
-  const liveRef = snap?.liveRef ?? null
-  const liveRefShort = snap?.liveRefShort ?? null
+  }, [id])
+  return state.id === id ? { snap: state.snap, error: state.error } : { snap: undefined, error: null }
+}
+
+/**
+ * Suivi envoyé par la montre (document live/{code}) : avec le code montre long ou le code court
+ * (8 chiffres) ; le relevé le plus récent l'emporte. La page se redessine toutes les 15 s : la position
+ * estimée avance entre deux relevés de la montre.
+ */
+function useWatchReport(liveRef: string | null, liveRefShort: string | null): { report: WatchReport | null; nowMs: number } {
+  const [report, setReport] = useState<WatchReport | null>(null)
+  const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
     const refs = [liveRef, liveRefShort].filter((r): r is string => !!r)
     if (!refs.length) return
@@ -140,16 +150,48 @@ export function SharePage({ shareId }: { shareId: string }) {
     }
   }, [liveRef, liveRefShort])
   useEffect(() => {
-    // Toutes les 15 s : la position estimée avance entre deux relevés de la montre.
-    const id = setInterval(() => tick((x) => x + 1), 15000)
+    const id = setInterval(() => setNowMs(Date.now()), 15000)
     return () => clearInterval(id)
   }, [])
+  return { report, nowMs }
+}
+
+/** Page publique pour l'assistance : plan, fenêtres de passage et suivi en direct. */
+export function SharePage({ shareId }: { shareId: string }) {
+  const { snap, error } = useShareDoc(shareId)
+  // Suivi envoyé par la montre, si cette course est sur la montre (ou dans la liste de l'appli montre).
+  const { report } = useWatchReport(snap?.liveRef ?? null, snap?.liveRefShort ?? null)
 
   if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
   if (snap === undefined) return <main><p className="muted">Chargement…</p></main>
   if (snap === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
 
   return <ShareView snap={snap} report={report} shareId={shareId} />
+}
+
+/**
+ * Lien d'assistance permanent du coureur (#/suivi/<code montre>) : la course que la montre enregistre
+ * (parcours choisi dans l'appli montre, sinon la course envoyée à la montre) et, entre deux sorties, la
+ * prochaine course (voir runnerCourse). Le document du code montre porte la course envoyée à la montre ;
+ * les autres parcours de l'appli montre sont dans les documents <code>-<id>.
+ */
+export function RunnerPage({ code }: { code: string }) {
+  const { snap: base, error } = useShareDoc(code)
+  const { report, nowMs } = useWatchReport(code, base?.liveRefShort ?? null)
+  const target = base === undefined ? null : runnerCourse(base, report, nowMs)
+  const docId = target && target.id !== base?.courseId ? `${code}-${target.id}` : null
+  const course = useShareDoc(docId)
+
+  if (error) return <main><p className="warn">Lien indisponible : {error}</p></main>
+  if (base === undefined || (docId && course.snap === undefined && !course.error)) return <main><p className="muted">Chargement…</p></main>
+  if (base === null) return <main><p className="warn">Ce lien n'existe plus.</p></main>
+  // Course montrée : celle du document du code montre (course envoyée à la montre) ou son document <code>-<id>.
+  const full = (s: ShareSnapshot | null | undefined) => (s && Array.isArray(s.rows) && s.rows.length ? s : null)
+  const snap = target ? (docId ? full(course.snap) : full(base)) : null
+  if (!target || !snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
+
+  const banner = runnerBanner(target.mode, snap, reportFor(snap, report, nowMs), nowMs)
+  return <ShareView snap={snap} report={report} nowMs={nowMs} shareId={`${code}-${snap.courseId ?? ''}`} banner={banner} />
 }
 
 /**
@@ -346,6 +388,15 @@ function NotifyBox({ alerts }: { alerts: ReturnType<typeof useCrossingAlerts> })
   )
 }
 
+/** Bandeau du lien permanent du coureur. */
+function RunnerBanner({ text }: { text: string }) {
+  return (
+    <p className={`runner-banner${text === 'En course' ? ' live' : ''}`}>
+      <span>Lien permanent</span> {text}
+    </p>
+  )
+}
+
 /** Affichage du lien assistance (séparé du chargement, pour pouvoir le tester). */
 export function ShareView({
   snap: input,
@@ -353,11 +404,14 @@ export function ShareView({
   nowMs = Date.now(),
   shareId,
   initialTab,
+  banner,
 }: {
   snap: ShareSnapshot
   report: WatchReport | null
   nowMs?: number
   shareId?: string
+  /** Lien permanent du coureur : ce que la page montre en ce moment (voir runnerBanner). */
+  banner?: string
   /** Onglet affiché à l'ouverture (sinon le dernier choisi sur ce téléphone). */
   initialTab?: 'suivi' | 'trajets'
 }) {
@@ -369,14 +423,10 @@ export function ShareView({
   }
   const [showMap, setShowMap] = useStoredFlag('tp-share-map', false)
   let snap = input
-  // Relevé d'une autre activité (fait avant l'envoi de cette course à la montre, ou au-delà de son
-  // arrivée) : ignoré, sinon tout le parcours paraît fait dès l'ouverture d'un nouveau parcours.
-  const report =
-    rawReport &&
-    !(input.watchSince && rawReport.t * 1000 < Date.parse(input.watchSince)) &&
-    !(input.totalDist > 0 && rawReport.d > input.totalDist + 1000)
-      ? rawReport
-      : null
+  // Relevé d'une autre activité (autre course choisie dans l'appli montre, fait avant l'envoi de cette
+  // course à la montre, ou au-delà de son arrivée) : ignoré, sinon tout le parcours paraît fait dès
+  // l'ouverture d'un nouveau parcours.
+  const report = reportFor(input, rawReport, nowMs)
   const nowSec0 = nowMs / 1000
   // Heures recalées sur le départ réel (montre, sinon mode course) s'il diffère du départ officiel ;
   // les barrières horaires suivent le même décalage. Départ libre pas encore parti : heures pour un
@@ -406,6 +456,8 @@ export function ShareView({
   const plan = snap.w ? parseWatchPlan(snap.w) : null
   const nowSec = nowMs / 1000
   const watch = report && plan && nowSec - report.t < WATCH_FRESH_S ? watchStatus(report, plan, nowSec) : null
+  // Position GPS du relevé loin du tracé : hors parcours (ou pas encore dessus), sans avancée estimée.
+  const offCourse = watch ? reportOffCourse(snap, report) : null
   if (watch && plan && plan.cps.length === snap.rows.length) {
     snap = {
       ...snap,
@@ -445,7 +497,9 @@ export function ShareView({
   // Coureur au ravito : arrivé (passage noté), pas encore reparti. Montre : position à moins de 150 m
   // après le point (300 m après une base de vie). Mode course : dernier passage saisi, sans « Reparti ».
   const atRavito = watch
-    ? [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayFrom(r.kind) && watch.dist > r.dist - 2 * awayFrom(r.kind))
+    ? offCourse
+      ? undefined
+      : [...snap.rows].reverse().find((r) => isRavitoKind(r.kind) && r.actual && !r.left && watch.dist < r.dist + awayFrom(r.kind) && watch.dist > r.dist - 2 * awayFrom(r.kind))
     : snap.live && lastDone && isRavitoKind(lastDone.kind) && !lastDone.left
       ? lastDone
       : undefined
@@ -466,14 +520,16 @@ export function ShareView({
   )
   // Carte : position GPS de la montre (sinon sa distance le long du parcours), ou dernier passage saisi.
   const km = (d: number) => (d / 1000).toFixed(1).replace('.', ',')
-  const estimate = watch && report && plan ? estimatedDist(report, plan, nowSec) : null
+  const estimate = watch && report && plan && !offCourse ? estimatedDist(report, plan, nowSec) : null
   const runner: Runner | null =
     watch && report
       ? {
           dist: watch.dist,
           lat: report.lat,
           lon: report.lon,
-          label: `Dernier relevé : km ${km(watch.dist)} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
+          label: offCourse
+            ? `${offCourse.notStarted ? 'Pas encore sur le parcours' : 'Hors parcours'} : à ${offText(offCourse.off)} du tracé · il y a ${Math.max(0, Math.round(watch.age / 60))} min`
+            : `Dernier relevé : km ${km(watch.dist)} · il y a ${Math.max(0, Math.round(watch.age / 60))} min`,
           estimate: !atRavito && estimate !== null ? { dist: estimate, label: `Estimé maintenant : km ${km(estimate)}` } : null,
         }
       : snap.live && lastDone
@@ -489,6 +545,7 @@ export function ShareView({
       <div className="app">
         <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
         <main className="share">
+          {banner && <RunnerBanner text={banner} />}
           <h1>{snap.raceName}</h1>
           <section className="card share-closed">
             <h2><Flag className="inline" /> Suivi terminé</h2>
@@ -498,10 +555,14 @@ export function ShareView({
                 {finishedAt > runStart ? ` en ${formatDuration((finishedAt - runStart) / 1000)}` : ''}.
               </p>
             )}
-            <p className="muted">
-              Ce lien assistance s'est arrêté automatiquement 1 h après {finishedAt !== null ? "l'arrivée" : 'la fin prévue de la course'} : plus de
-              position ni de suivi en direct.
-            </p>
+            {banner ? (
+              <p className="muted">Lien permanent : la prochaine course{snap.athleteName ? ` de ${snap.athleteName}` : ''} s'affichera ici, avec son suivi en direct.</p>
+            ) : (
+              <p className="muted">
+                Ce lien assistance s'est arrêté automatiquement 1 h après {finishedAt !== null ? "l'arrivée" : 'la fin prévue de la course'} : plus de
+                position ni de suivi en direct.
+              </p>
+            )}
           </section>
         </main>
       </div>
@@ -524,6 +585,7 @@ export function ShareView({
     <div className="app">
       <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
       <main className="share">
+        {banner && <RunnerBanner text={banner} />}
         <h1>{snap.raceName}</h1>
         <p className="muted">
           {snap.athleteName} ·{' '}
@@ -549,14 +611,23 @@ export function ShareView({
         ) : (
         <>
         {/* Pointeur : position estimée entre deux relevés (sinon celle du dernier relevé). */}
-        <CourseProfile profile={snap.profile} rows={snap.rows} atId={atRavito?.id ?? null} position={watch ? (atRavito ? watch.dist : (estimate ?? watch.dist)) : null} />
+        <CourseProfile profile={snap.profile} rows={snap.rows} atId={atRavito?.id ?? null} position={watch && !offCourse?.notStarted ? (atRavito ? watch.dist : (estimate ?? watch.dist)) : null} />
         {watch && report ? (
           <section className="live-hero">
             <div className="live-label">Montre · en course depuis</div>
             <div className="live-clock">{formatDuration(watch.elapsed)}</div>
-            <div className={`live-delta ${watch.delta > 60 ? 'late' : 'early'}`}>
-              km {(watch.dist / 1000).toFixed(1)} · {signedMin(watch.delta)} sur le plan
-            </div>
+            {offCourse ? (
+              <>
+                <div className="live-delta off">
+                  {offCourse.notStarted ? 'Pas encore sur le parcours' : 'Hors parcours'} · à {offText(offCourse.off)} du tracé
+                </div>
+                {!offCourse.notStarted && <div className="live-sub">Dernière position sur le parcours : km {km(watch.dist)}</div>}
+              </>
+            ) : (
+              <div className={`live-delta ${watch.delta > 60 ? 'late' : 'early'}`}>
+                km {(watch.dist / 1000).toFixed(1)} · {signedMin(watch.delta)} sur le plan
+              </div>
+            )}
             {!atRavito && estimate !== null && estimate > watch.dist + 50 && (
               <div className="live-sub">≈ km {km(estimate)} maintenant (estimé d'après son rythme, entre deux relevés)</div>
             )}

@@ -1,0 +1,74 @@
+project.manifest = manifest.xml
+
+# Comme EndurancePro : sans ces lignes, le sourcePath par défaut du SDK est tout le projet et les
+# fichiers layouts/ seraient compilés ensemble (module DeviceLayout en double). Chaque montre reçoit
+# la mise en page EndurancePro de sa résolution (layouts/) et ses polices d'icônes (resources-WxH).
+base.sourcePath = source
+base.resourcePath = resources
+
+# Écran Carte : fond de carte Garmin (WatchUi.MapView, code annoté (:map)) sur les montres à cartes ;
+# tracé seul (code (:nomap)) sur les autres. Si la compilation d'une montre échoue sur MapView, lui
+# ajouter une ligne « <montre>.excludeAnnotations = map » comme ci-dessous.
+base.excludeAnnotations = nomap
+fr255.excludeAnnotations = map
+fr265.excludeAnnotations = map
+
+# ── 240×240 MIP ───────────────────────────────────────────────────────────────────────────
+fenix6spro.resourcePath         = resources;resources-240x240
+fenix6spro.sourcePath           = source;layouts/Layout_240x240.mc
+fenix7s.resourcePath            = resources;resources-240x240
+fenix7s.sourcePath              = source;layouts/Layout_240x240.mc
+fenix7spro.resourcePath         = resources;resources-240x240
+fenix7spro.sourcePath           = source;layouts/Layout_240x240.mc
+
+# ── 260×260 MIP ───────────────────────────────────────────────────────────────────────────
+fenix6pro.resourcePath          = resources;resources-260x260
+fenix6pro.sourcePath            = source;layouts/Layout_260x260.mc
+fenix7.resourcePath             = resources;resources-260x260
+fenix7.sourcePath               = source;layouts/Layout_260x260.mc
+fenix7pro.resourcePath          = resources;resources-260x260
+fenix7pro.sourcePath            = source;layouts/Layout_260x260.mc
+fenix7pronowifi.resourcePath    = resources;resources-260x260
+fenix7pronowifi.sourcePath      = source;layouts/Layout_260x260.mc
+fenix8solar47mm.resourcePath    = resources;resources-260x260
+fenix8solar47mm.sourcePath      = source;layouts/Layout_260x260.mc
+fr255.resourcePath              = resources;resources-260x260
+fr255.sourcePath                = source;layouts/Layout_260x260.mc
+fr955.resourcePath              = resources;resources-260x260
+fr955.sourcePath                = source;layouts/Layout_260x260.mc
+
+# ── 280×280 MIP ───────────────────────────────────────────────────────────────────────────
+fenix6xpro.resourcePath         = resources;resources-280x280
+fenix6xpro.sourcePath           = source;layouts/Layout_280x280.mc
+fenix7x.resourcePath            = resources;resources-280x280
+fenix7x.sourcePath              = source;layouts/Layout_280x280.mc
+fenix7xpro.resourcePath         = resources;resources-280x280
+fenix7xpro.sourcePath           = source;layouts/Layout_280x280.mc
+fenix7xpronowifi.resourcePath   = resources;resources-280x280
+fenix7xpronowifi.sourcePath     = source;layouts/Layout_280x280.mc
+fenix8solar51mm.resourcePath    = resources;resources-280x280
+fenix8solar51mm.sourcePath      = source;layouts/Layout_280x280.mc
+
+# ── 280×280 MIP (Enduro 3) ────────────────────────────────────────────────────────────────
+enduro3.resourcePath            = resources;resources-280x280
+enduro3.sourcePath              = source;layouts/Layout_enduro3.mc
+
+# ── 416×416 AMOLED ────────────────────────────────────────────────────────────────────────
+epix2.resourcePath              = resources;resources-416x416
+epix2.sourcePath                = source;layouts/Layout_416x416.mc
+fenix843mm.resourcePath         = resources;resources-416x416
+fenix843mm.sourcePath           = source;layouts/Layout_416x416.mc
+fenixe.resourcePath             = resources;resources-416x416
+fenixe.sourcePath               = source;layouts/Layout_416x416.mc
+fr265.resourcePath              = resources;resources-416x416
+fr265.sourcePath                = source;layouts/Layout_416x416.mc
+
+# ── 454×454 AMOLED ────────────────────────────────────────────────────────────────────────
+epix2pro51mm.resourcePath       = resources;resources-454x454
+epix2pro51mm.sourcePath         = source;layouts/Layout_454x454.mc
+fenix847mm.resourcePath         = resources;resources-454x454
+fenix847mm.sourcePath           = source;layouts/Layout_454x454.mc
+fenix8pro47mm.resourcePath      = resources;resources-454x454
+fenix8pro47mm.sourcePath        = source;layouts/Layout_454x454.mc
+fr965.resourcePath              = resources;resources-454x454
+fr965.sourcePath                = source;layouts/Layout_454x454.mc

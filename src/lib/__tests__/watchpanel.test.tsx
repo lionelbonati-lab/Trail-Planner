@@ -21,6 +21,12 @@ describe('onglet Montre', () => {
     expect(html.indexOf('1234 5678')).toBeLessThan(html.indexOf('Trail du Jura'))
     expect(html).toContain('aria-label="Où saisir le code"')
     expect(html).toContain('abc123')
+    // Code pour Garmin Connect en tête de la sous-page, avant le lien permanent.
+    expect(html.indexOf('Code pour Garmin Connect')).toBeGreaterThanOrEqual(0)
+    expect(html.indexOf('Code pour Garmin Connect')).toBeLessThan(html.indexOf('1234 5678'))
+    expect(html.indexOf('Code pour Garmin Connect')).toBeLessThan(html.indexOf('Lien d’assistance permanent'))
+    // Lien d'assistance permanent du coureur.
+    expect(html).toContain('href="#/suivi/abc123"')
     expect(html).toContain('Trail du Jura')
     // Consignes repliées dans les (i), plus affichées en clair.
     expect(html).not.toContain('Champs Connect IQ › Trail Planner › Code montre')
@@ -38,7 +44,8 @@ describe('onglet Montre', () => {
   it('ligne de liste : ⌚ actif pour la course sur la montre, lien assistance', () => {
     const on = renderToStaticMarkup(<ListLinkButtons race={race} onWatchId="r1" onWatch={noop} onShare={noop} />)
     expect(on).toContain('on-watch')
-    expect(on).toContain('aria-label="Sur la montre"')
+    // Actif : un second appui la retire de la montre.
+    expect(on).toContain('aria-label="Retirer de la montre"')
     expect(on).toContain('Copier le lien assistance')
     const off = renderToStaticMarkup(<ListLinkButtons race={race} onWatchId="autre" onWatch={noop} onShare={noop} />)
     expect(off).not.toContain('on-watch')

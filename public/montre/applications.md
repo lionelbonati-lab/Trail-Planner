@@ -11,6 +11,7 @@
       Store : lien Connect IQ Store (https://apps.garmin.com/…) ; vide = pas encore publiée
       Image : nom d'un fichier de ce dossier (capture de l'écran de la montre)
       Guide : lien du guide d'installation par câble (sinon celui du dépôt)
+      Statut : badge affiché à côté du nom (« Bêta »)
   - Ensuite, du texte libre : paragraphes, listes « - », **gras**, [liens](https://…), images ![texte](fichier.png).
   - Plusieurs images à la suite (une par ligne, sans texte entre elles) : galerie qui défile, chaque image
     s'ouvre en grand d'un clic.
@@ -19,7 +20,8 @@
 -->
 
 Les applications pour ta montre Garmin, à installer depuis le Connect IQ Store (application Connect IQ sur ton
-téléphone), puis à ajouter à un écran de ton activité Trail (Paramètres › Écrans de données › Connect IQ).
+téléphone) : les champs de données s'ajoutent à un écran de ton activité Trail (Paramètres › Écrans de données ›
+Connect IQ), l'appli Trail Planner Companion se lance comme une activité.
 
 ## Trail Planner
 Type : Champ de données
@@ -52,3 +54,27 @@ Store :
 
 Allure cible colorée avec alarme (allure, zone ou % de VC), vitesse ascensionnelle par zone, équivalences
 montée et descente. Avec la synchronisation, il reprend ta VC, tes zones et la zone de la séance envoyée.
+
+## Trail Planner Companion
+Type : Appli (activité)
+Statut : Bêta
+Store :
+Image : companion-trail-planner.png
+Guide : https://github.com/lionelbonati-lab/Trail-Planner/tree/main/garmin/TrailPlannerCompanion
+
+L'appli qui réunit tout pour la course, à lancer à la place de l'activité Trail :
+
+- **écran de démarrage** : tes courses à venir et les parcours de ta bibliothèque (synchronisation ci-dessous), fiche du parcours avec la carte et le profil, réglages ;
+- **EndurancePro** et **Trail Planner** au même style : allure effort, VAM, zones, écart au plan, prochain point, arrivée, ravitos (« À consommer », « À prendre »), rappels nutrition en popup ;
+- **profil** de la course qui te suit, zoomable, couleurs des pentes en option ;
+- **carte Garmin** avec ton parcours, centrée sur toi ;
+- passages et position envoyés à ton **assistance**, sur le lien de la course choisie et sur ton lien d’assistance permanent (onglet Montre).
+
+Bêta : à installer par câble (fichier compilé), le même code de synchronisation que les champs.
+
+Aperçus (polices simulées, Enduro 3) :
+
+![Écran Trail Planner](companion-trail-planner.png)
+![Au ravito : à consommer](companion-ravito-consommer.png)
+![Au ravito : à prendre](companion-ravito-prendre.png)
+![Rappel nutrition](companion-rappel.png)

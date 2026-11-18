@@ -16,6 +16,19 @@ export interface WatchReport {
   bat?: number
   /** Passages : « indice:instant Unix » (« indice:arrivée:départ » pour un ravito quitté) séparés par des virgules. */
   p?: string
+  /**
+   * Version du relevé (1) ; l'appli montre Trail Planner Companion y met l'id du parcours choisi dans sa
+   * liste quand ce n'est pas la course envoyée à la montre (voir reportCourse).
+   */
+  v?: number | string
+}
+
+/**
+ * Course enregistrée par la montre : l'id du parcours choisi dans l'appli montre, ou null pour la course
+ * envoyée à la montre (champ Trail Planner, appli sur cette course).
+ */
+export function reportCourse(report: WatchReport | null): string | null {
+  return report && typeof report.v === 'string' && report.v ? report.v : null
 }
 
 export interface WatchPlan {

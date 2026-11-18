@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Labels FIT -->
+    <string id="label_eff_generic">Ritmo Esfuerzo</string>
+    <string id="label_eff_temp_factor">Factor Temp.</string>
+    <string id="label_eff_speed_kmh">Vel. Esfuerzo</string>
+    <string id="label_fit_temp_bag_corr">Corr. Temp+Mochila</string>
+    <string id="label_fit_lap_pace">Ritmo Esfuerzo</string>
+    <string id="label_fit_lap_vam">VAM Media</string>
+    <string id="label_fit_temp_corr">Corr. Temp</string>
+    <string id="label_fit_bag_kg">Peso Mochila</string>
+    <string id="label_fit_climb_coeff">Equiv. Subida</string>
+    <string id="label_fit_descent_coeff">Equiv. Bajada</string>
+    <string id="label_fit_avg_pace_std">Ritmo M. Est&#xe1;n</string>
+    <string id="label_fit_avg_pace_mtn">Ritmo M. Mtn</string>
+    <string id="label_fit_avg_speed_std">Vel. M. Est&#xe1;n</string>
+    <string id="label_fit_avg_speed_mtn">Vel. M. Mtn</string>
+    <string id="label_fit_effort_dist">Dist. Esfuerzo</string>
+
+    <!-- v1.9.44 : Men&#xfa; de ajustes on-watch (getSettingsView) -->
+    <string id="menu_settings_title">Ajustes</string>
+    <string id="menu_bag_weight">Peso mochila</string>
+    <string id="menu_alarm">Disparadores</string>
+    <string id="menu_hr_display">Vis. zona FC</string>
+    <string id="menu_vam_mode">Modo visual. VAM</string>
+    <string id="menu_metric_slot">2&#xaa; m&#xe9;trica</string>
+    <string id="menu_metric_slot1">M&#xe9;trica 1</string>
+    <string id="menu_metric_slot2">M&#xe9;trica 2</string>
+    <string id="menu_metric_fatigue">Fatiga</string>
+    <string id="menu_metric_cal">Calor&#xed;as</string>
+    <string id="menu_metric_km">Km Esfuerzo</string>
+    <string id="menu_metric_body_battery">Body Battery</string>
+    <string id="menu_clock_metric_folder">Autonom&#xed;a bater&#xed;a</string>
+    <string id="menu_show_clock">Mostrar hora</string>
+    <string id="menu_colorize_dplus_dmoins">Recuadro D+/D-</string>
+    <string id="menu_vam_zones_bar">Barra VAM</string>
+    <string id="menu_version_label">Versi&#xf3;n</string>
+    <string id="app_version">0.7.8 (EndurancePro 2.7.3)</string>
+    <string id="menu_temp_corr">Corr. temp.</string>
+    <string id="menu_solar_corr">Corr. solar</string>
+    <string id="menu_bag_weight_title">Peso mochila (kg)</string>
+    <string id="menu_dark_mode">Modo oscuro</string>
+    <string id="menu_pace_folder">Ritmo</string>
+    <string id="menu_speed_folder">Velocidad</string>
+    <string id="menu_vam_folder">Zonas VAM</string>
+    <string id="menu_hr_folder">FC</string>
+    <string id="menu_alarm_folder">Alarmas</string>
+    <string id="menu_coeff_folder">Coefs.</string>
+    <string id="menu_properties_folder">Propiedades</string>
+    <string id="menu_buffer_size">Suavizado</string>
+    <string id="menu_buffer_size_title">Suavizado (5-60s)</string>
+    <string id="menu_display_folder">Pantalla</string>
+    <string id="menu_colorize_folder">Coloraci&#xf3;n</string>
+    <string id="menu_zone_fc">Zona FC</string>
+    <string id="menu_vam_mode_short">Modo VAM</string>
+    <string id="menu_vam_colorize">VAM</string>
+    <string id="menu_vam_circuit">Vuelta</string>
+    <string id="menu_vam_circuit_off">Vuelta inactiva</string>
+    <string id="menu_battery_mode">Modo bater&#xed;a</string>
+
+    <!-- Settings titles -->
+    <string id="set_dark_mode">Modo oscuro</string>
+    <string id="set_buffer_size">Suavizado VAM/Ritmo (5-60s)</string>
+    <string id="set_dist_to_type">Distancia restante</string>
+    <string id="set_pace_mode">Modo ritmo</string>
+    <string id="set_speed_mode">Modo velocidad</string>
+    <string id="set_colorize_pace">Ritmo</string>
+    <string id="set_colorize_speed">Velocidad</string>
+    <string id="set_target_pace">Ritmo objetivo</string>
+    <string id="set_target_speed">Velocidad objetivo</string>
+    <string id="set_pace_fast_threshold">Umbral r&#xe1;pido</string>
+    <string id="set_cur_lap_pace">Vuelta</string>
+    <string id="menu_circuit_folder">Vuelta</string>
+    <string id="menu_circuit_dplus_dmoins">D+/D-</string>
+    <string id="menu_circuit_allure">Ritmo medio</string>
+    <string id="menu_circuit_distance">Distancia</string>
+    <string id="menu_circuit_chrono">Cron&#xf3;metro</string>
+    <string id="set_pace_unit">Unidad de ritmo</string>
+    <string id="set_vam_display_mode">Modo visualizaci&#xf3;n VAM</string>
+    <string id="set_vam_zones">Zonas VAM</string>
+    <string id="set_vam_zone1_min">Zona 1 m&#xed;n</string>
+    <string id="set_vam_zone1_max">Zona 1 m&#xe1;x</string>
+    <string id="set_vam_zone2_max">Zona 2 m&#xe1;x</string>
+    <string id="set_vam_zone3_max">Zona 3 m&#xe1;x</string>
+    <string id="set_vam_zone4_max">Zona 4 m&#xe1;x</string>
+    <string id="set_alarm">Alarma</string>
+    <string id="set_alarm_popup">Alarma</string>
+    <string id="set_alarm_type">Tipo de alarma</string>
+    <string id="set_metric_slot">M&#xe9;trica secundaria (arriba izq.)</string>
+    <string id="set_hr_display">Visualizaci&#xf3;n zona FC</string>
+    <string id="set_temp_enabled">Correcci&#xf3;n temperatura</string>
+    <string id="set_bag_weight">Peso de la mochila (0-20 kg)</string>
+    <string id="set_climb_coeff">Equiv. subida</string>
+    <string id="set_descent_coeff">Equiv. bajada</string>
+    <string id="set_battery_display">Vis. bater&#xed;a</string>
+    <string id="menu_bag_weight_mode">Modo peso mochila</string>
+    <string id="set_bag_weight_mode">C&#xe1;lculo peso mochila</string>
+    <string id="opt_bag_weight_flat">Fijo (1%/kg)</string>
+    <string id="opt_bag_weight_relative">Relativo al peso corporal</string>
+
+    <!-- v2.1.2 : Refonte FIT — 8 interruptores (solo Garmin Connect) -->
+    <!-- v2.1.3 : unidad FIT independiente de la unidad de visualizaci&#xf3;n (pace_unit_prop) -->
+    <!-- v2.2.9 : intento de eliminaci&#xf3;n → crash OOM, restaurado -->
+    <string id="set_fit_pace_unit">Unidad ritmo/velocidad (grabaci&#xf3;n FIT)</string>
+    <string id="set_fit_pace_speed">Ritmo/velocidad esfuerzo</string>
+    <string id="set_fit_temp_bag_corr">Correcci&#xf3;n temp.+mochila aplicada</string>
+    <string id="set_fit_bag_weight">Peso mochila</string>
+    <string id="set_fit_avg_pace_speed">Ritmo/velocidad esfuerzo medio</string>
+    <string id="set_fit_effort_dist">Distancia esfuerzo</string>
+    <string id="set_fit_vam_lap">VAM media vuelta</string>
+    <string id="set_fit_temp_coeff">Coef. temperatura</string>
+    <string id="set_fit_coefficients">Coeficientes</string>
+
+    <!-- List options -->
+    <string id="opt_off">OFF</string>
+    <string id="opt_on">ON</string>
+    <string id="opt_disabled">Desactivado</string>
+    <string id="opt_next_waypoint">Siguiente waypoint</string>
+    <string id="opt_end_course">Fin del recorrido</string>
+    <string id="opt_alternating">Alternado</string>
+    <string id="opt_pace_normal">Normal (llano)</string>
+    <string id="opt_pace_standard">Esfuerzo est&#xe1;ndar</string>
+    <string id="opt_pace_mountain">Esfuerzo monta&#xf1;a</string>
+    <string id="opt_pace_below_target">Media</string>
+    <string id="opt_pace_too_fast">Instant&#xe1;neo</string>
+    <string id="opt_pace_both">Por debajo + demasiado r&#xe1;pido</string>
+    <string id="opt_vam_only">Solo VAM</string>
+    <string id="opt_grade_only">Pendiente</string>
+    <string id="opt_lap_avg_only">Vuelta</string>
+    <string id="opt_vam_grade">VAM + % Pendiente</string>
+    <string id="opt_vam_lap">VAM + Media vuelta</string>
+    <string id="opt_lap_grade">Media vuelta + % Pendiente</string>
+    <string id="opt_vam_lap_grade">VAM + Media vuelta + % Pendiente</string>
+    <string id="opt_bar">Barra</string>
+    <string id="opt_background">Fondo</string>
+    <string id="opt_font">Fuente</string>
+    <string id="opt_alarm_pace">Ritmo</string>
+    <string id="opt_alarm_speed">Velocidad</string>
+    <string id="opt_alarm_hr">FC</string>
+    <string id="opt_vam_pace">VAM + Ritmo</string>
+    <string id="opt_vam_hr">VAM + FC</string>
+    <string id="opt_pace_hr">Ritmo + FC</string>
+    <string id="opt_all">Todo</string>
+    <string id="opt_vib">Vibraci&#xf3;n</string>
+    <string id="opt_sound">Sonido</string>
+    <string id="opt_vib_sound">Vibraci&#xf3;n + Sonido</string>
+    <string id="opt_fatigue_only">Fatiga solo</string>
+    <string id="opt_calories_only">Calor&#xed;as solo</string>
+    <string id="opt_effort_km_only">Km Esfuerzo solo</string>
+    <string id="opt_version_only">Versi&#xf3;n solo</string>
+    <string id="opt_fatigue_cal">Fatiga+Calor&#xed;as</string>
+    <string id="opt_fatigue_km">Fatiga+Km Esf.</string>
+    <string id="opt_cal_km">Calor&#xed;as+Km Esf.</string>
+    <string id="opt_hr_value">Valor</string>
+    <string id="opt_hr_circle">C&#xed;rculo</string>
+    <string id="opt_hr_val_circle">Valor + C&#xed;rculo</string>
+    <string id="opt_hr_val_bar">Valor + Barra</string>
+    <string id="opt_hr_circle_bar">C&#xed;rculo + Barra</string>
+    <string id="opt_coeff_default">1.0 (defecto)</string>
+    <string id="opt_battery">Bater&#xed;a</string>
+
+    <!-- FIX 23/08/2026 : unidades faltantes, usadas en los toasts de alarma -->
+    <string id="unite_km_h">km/h</string>
+    <string id="unite_m_h">m/h</string>
+
+    <!-- v2.4.0 : Zones VC (colorisation/alarme d'allure) et synchro Trail Planner -->
+    <string id="set_pace_ref">Referencia</string>
+    <string id="opt_ref_vc">Zona VC</string>
+    <string id="opt_ref_vc_pct">% de VC</string>
+    <string id="set_cs">Velocidad cr&#xed;tica</string>
+    <string id="set_vc_target_zone">Zona objetivo</string>
+    <string id="set_vc_target_pct">% VC objetivo</string>
+    <string id="opt_no_code">Sin c&#xf3;digo</string>
+    <string id="opt_synced">Sincr.</string>
+    <string id="opt_waiting">En espera</string>
+    <string id="set_trail_code">C&#xf3;digo Trail Planner</string>
+    <string id="set_vc_zones">Zonas VC (% de la VC)</string>
+    <!-- Unités (identiques dans toutes les langues), manquantes dans cette langue -->
+    <string id="unite_km">km</string>
+    <string id="unite_m_s">m/s</string>
+    <string id="unite_min_km">min/km</string>
+    <string id="unite_s_km">s/km</string>
+    <string id="unite_kg">kg</string>
+    <string id="unite_vide"> </string>
+    <string id="unite_mult">x</string>
+    <string id="unite_pct">%</string>
+</resources>

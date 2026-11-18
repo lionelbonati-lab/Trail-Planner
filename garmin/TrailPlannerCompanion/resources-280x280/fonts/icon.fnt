@@ -1,0 +1,20 @@
+info face="icon" size=-20 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=1,1 outline=0
+common lineHeight=20 base=20 scaleW=328 scaleH=20 pages=1 packed=0 alphaChnl=1 redChnl=0 greenChnl=0 blueChnl=0
+page id=0 file="icon_0.png"
+chars count=15
+char id=59690   x=0     y=0   width=14   height=20   xoffset=0   yoffset=-0   xadvance=14   page=0   chnl=15
+char id=59691   x=22    y=0   width=18   height=20   xoffset=0   yoffset=-0   xadvance=18   page=0   chnl=15
+char id=59692   x=44    y=0   width=13   height=20   xoffset=0   yoffset=-0   xadvance=13   page=0   chnl=15
+char id=59693   x=66    y=0   width=18   height=20   xoffset=0   yoffset=-0   xadvance=18   page=0   chnl=15
+char id=59694   x=88    y=0   width=20   height=20   xoffset=0   yoffset=-0   xadvance=20   page=0   chnl=15
+char id=59695   x=110   y=0   width=14   height=20   xoffset=0   yoffset=-0   xadvance=14   page=0   chnl=15
+char id=59696   x=132   y=0   width=14   height=20   xoffset=0   yoffset=-0   xadvance=14   page=0   chnl=15
+char id=59697   x=154   y=0   width=14   height=20   xoffset=0   yoffset=-0   xadvance=14   page=0   chnl=15
+char id=59698   x=176   y=0   width=14   height=20   xoffset=0   yoffset=-0   xadvance=14   page=0   chnl=15
+char id=59699   x=198   y=0   width=20   height=20   xoffset=0   yoffset=-0   xadvance=20   page=0   chnl=15
+char id=59700   x=220   y=0   width=20   height=20   xoffset=0   yoffset=-0   xadvance=20   page=0   chnl=15
+char id=59701   x=242   y=0   width=20   height=20   xoffset=0   yoffset=-0   xadvance=20   page=0   chnl=15
+char id=59702   x=264   y=0   width=20   height=20   xoffset=0   yoffset=0    xadvance=20   page=0   chnl=15
+char id=59703   x=286   y=0   width=20   height=20   xoffset=0   yoffset=0    xadvance=20   page=0   chnl=15
+char id=59704   x=308   y=0   width=20   height=20   xoffset=0   yoffset=0    xadvance=20   page=0   chnl=15
+kernings count=0

@@ -19,6 +19,8 @@ export interface DocApp {
   /** Capture de l'écran de la montre (nom de fichier du dossier, ou lien). */
   image: string | null
   guide: string | null
+  /** État affiché en badge (« Bêta »), ou null. */
+  status: string | null
   body: Block[]
 }
 
@@ -27,7 +29,7 @@ export interface WatchAppsDoc {
   apps: DocApp[]
 }
 
-const FIELD = /^(type|store|image|guide)\s*:\s*(.*)$/i
+const FIELD = /^(type|store|image|guide|statut)\s*:\s*(.*)$/i
 
 /** Gras, liens et images dans une ligne de texte. */
 export function parseInline(text: string): Inline[] {
@@ -104,6 +106,7 @@ export function parseWatchAppsDoc(md: string): WatchAppsDoc {
       store: a.fields.store || null,
       image: a.fields.image || null,
       guide: a.fields.guide || null,
+      status: a.fields.statut || null,
       body: parseBlocks(a.body),
     })),
   }

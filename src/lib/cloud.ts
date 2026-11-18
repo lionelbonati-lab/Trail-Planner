@@ -271,13 +271,28 @@ export async function publishShare(shareId: string, snap: ShareSnapshot) {
 }
 
 /**
- * Document du code montre sans course envoyée : seulement les réglages EndurancePro (`ep`).
+ * Document du code montre sans course envoyée : réglages EndurancePro (`ep`), liste de l'appli montre, et
+ * pour le lien permanent du coureur le code court et la dernière course passée.
  * `w` vide : le champ Trail Planner garde son dernier plan.
  */
-export async function publishWatchProfile(watchId: string, owner: string, ep: string) {
+export async function publishWatchProfile(
+  watchId: string,
+  owner: string,
+  { ep, wl, liveRefShort, last }: { ep: string; wl?: string; liveRefShort?: string; last?: string },
+) {
   if (!db) throw new Error('Synchronisation indisponible : Firebase non configuré.')
-  await setDoc(doc(db, 'shares', watchId), { owner, updatedAt: new Date().toISOString(), w: '', ep })
+  await setDoc(doc(db, 'shares', watchId), {
+    owner,
+    updatedAt: new Date().toISOString(),
+    w: '',
+    ep,
+    ...(wl ? { wl } : {}),
+    // Lien permanent du coureur : relevés envoyés avec le code court, dernière course passée.
+    ...(liveRefShort ? { liveRefShort } : {}),
+    ...(last ? { last } : {}),
+  })
 }
+
 
 /**
  * Réserve un code à 8 chiffres pour EndurancePro (saisi sur la montre) : un document de

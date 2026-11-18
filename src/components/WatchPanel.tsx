@@ -2,6 +2,7 @@ import { Check, Copy, ExternalLink, Watch } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, EP_TARGET_ZONES, epPayload, epTargetRank } from '../lib/endurancepro'
 import { APPS_DOC_PATH, WATCH_APPS } from '../lib/garminApps'
+import { runnerUrl } from '../lib/share'
 import { formatPace } from '../lib/time'
 import type { Athlete, Race } from '../lib/types'
 import { epVamThresholds } from '../lib/vam'
@@ -28,9 +29,9 @@ export function WatchPanel({
   onOpen: (r: Race) => void
 }) {
   const [copied, setCopied] = useState<string | null>(null)
-  const copy = (text: string) =>
+  const copy = (text: string, key = text) =>
     navigator.clipboard?.writeText(text).then(() => {
-      setCopied(text)
+      setCopied(key)
       setTimeout(() => setCopied(null), 2000)
     })
   const code = athlete.epCode
@@ -55,6 +56,28 @@ export function WatchPanel({
 
       {tab === 'synchro' && (
         <div className="grid two">
+          {signedIn && athlete.watchId && (
+            <Card
+              title="Code pour Garmin Connect"
+              className="span2 connect-code"
+              fold={false}
+              actions={
+                <Hint label="Où coller le code Garmin Connect">
+                  Paramètres d’une application installée depuis le Store : Garmin Connect › ta montre › Activités et applications ›
+                  Trail Planner › Paramètres › Code montre ; pour l’appli Trail Planner Companion, c’est le premier réglage (Code Trail
+                  Planner).
+                </Hint>
+              }
+            >
+              <div className="row">
+                <code className="watch-code">{athlete.watchId}</code>
+                <button className="primary" onClick={() => copy(athlete.watchId!)}>
+                  {copied === athlete.watchId ? <><Check /> Copié</> : <><Copy /> Copier</>}
+                </button>
+              </div>
+            </Card>
+          )}
+
           <Card title="Code montre" fold={false} actions={<Hint label="Où saisir le code">{CODE_HELP}</Hint>}>
             {!signedIn ? (
               <p className="warn-text">Connecte-toi pour synchroniser la montre.</p>
@@ -70,17 +93,30 @@ export function WatchPanel({
                 <Watch /> Créer mon code
               </button>
             )}
-            {signedIn && athlete.watchId && (
-              <details className="small">
-                <summary>Code long (Garmin Connect)</summary>
-                <div className="row">
-                  <code className="watch-code">{athlete.watchId}</code>
-                  <button className="ghost" onClick={() => copy(athlete.watchId!)}>{copied === athlete.watchId ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
-                  <Hint label="Où saisir le code long">Garmin Connect › ta montre › Activités et applications › le champ › Paramètres › Code.</Hint>
-                </div>
-              </details>
-            )}
           </Card>
+
+          {signedIn && athlete.watchId && (
+            <Card
+              title="Lien d’assistance permanent"
+              className="runner-link"
+              fold={false}
+              actions={
+                <Hint label="Lien d’assistance permanent">
+                  À donner une seule fois à ton assistance : il montre la course que ta montre enregistre (champ Trail Planner, ou parcours
+                  choisi dans l’appli Companion) et, entre deux sorties, ta prochaine course (sinon ta dernière course et son résultat).
+                </Hint>
+              }
+            >
+              <div className="row">
+                <button className="primary" onClick={() => copy(runnerUrl(athlete.watchId!), 'runner')}>
+                  {copied === 'runner' ? <><Check /> Copié</> : <><Copy /> Copier le lien</>}
+                </button>
+                <a href={`#/suivi/${athlete.watchId}`} target="_blank" rel="noreferrer">
+                  <ExternalLink className="inline" /> Ouvrir
+                </a>
+              </div>
+            </Card>
+          )}
 
           <Card title="Sur la montre" fold={false} actions={<Hint label="Changer de course et préparer la montre">{ON_WATCH_HELP}</Hint>}>
             {onWatch ? (
@@ -95,7 +131,12 @@ export function WatchPanel({
         </div>
       )}
 
-      {tab === 'apps' && <WatchAppsCard />}
+      {tab === 'apps' && (
+        <div className="grid two">
+          <WatchAppsCard />
+          <CompanionSync athlete={athlete} onChange={onChange} signedIn={signedIn} />
+        </div>
+      )}
 
       {tab === 'ep' && <EndurancePro athlete={athlete} onChange={onChange} signedIn={signedIn} onWatch={onWatch} />}
     </div>
@@ -117,10 +158,11 @@ function readTab(): WatchTab {
 
 const CODE_HELP = (
   <>
-    <p>Le même code pour les deux applications, à saisir une seule fois sur la montre :</p>
+    <p>Le même code pour toutes les applications, à saisir une seule fois sur la montre :</p>
     <ul>
       <li><strong>Trail Planner</strong> : pendant une activité, appui long sur Haut › Champs Connect IQ › Trail Planner › Code montre.</li>
       <li><strong>EndurancePro</strong> : menu du champ › Allure › Trail Planner (00000000 l'efface).</li>
+      <li><strong>Trail Planner Companion</strong> (bêta) : appui long sur Haut › Propriétés › Code Trail Planner.</li>
     </ul>
   </>
 )
@@ -134,17 +176,55 @@ const ON_WATCH_HELP = (
     <ol>
       <li>Avant le départ, ouvre l'activité Trail quelques minutes, téléphone à proximité : le champ télécharge le plan (toutes les 5 min).</li>
       <li>Ensuite, tout fonctionne sans réseau. Désactive le tour automatique : le bouton Lap valide le passage aux points.</li>
-      <li>Téléphone avec toi : passages et position partent toutes les 5 min vers le lien assistance.</li>
+      <li>Téléphone avec toi : passages et position partent toutes les 5 min vers le lien assistance de la course et ton lien permanent.</li>
     </ol>
   </>
 )
+
+/** Appli montre Trail Planner Companion (bêta) : synchronisation des parcours pour son écran de démarrage. */
+function CompanionSync({ athlete, onChange, signedIn }: { athlete: Athlete; onChange: (a: Athlete) => void; signedIn: boolean }) {
+  const on = !!athlete.appSync
+  const toggle = (v: boolean) =>
+    onChange({ ...athlete, appSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
+  return (
+    <Card
+      title={<>Trail Planner Companion <span className="badge beta-badge">Bêta</span></>}
+      className="span2"
+      actions={
+        <Hint label="Trail Planner Companion">
+          <p>
+            L’appli montre qui réunit EndurancePro, le champ Trail Planner, le profil qui te suit et la carte Garmin de ton parcours.
+            Avec la synchronisation, son écran de démarrage propose tes courses à venir et les parcours de ta bibliothèque, à jour à
+            chaque modification ici ; tu choisis, tu vois la fiche (carte, profil, distance, D+), tu démarres.
+          </p>
+          <p>
+            Sur la montre : appli Trail Planner Companion › appui long sur Haut › Propriétés › Code Trail Planner, saisis le code de la
+            page Synchro (le même que pour le champ et EndurancePro). La liste se met à jour à chaque lancement de l’appli, téléphone à
+            proximité.
+          </p>
+          <p>Version bêta, pas encore sur le Connect IQ Store : installation par câble du fichier compilé.</p>
+        </Hint>
+      }
+    >
+      <label className="check">
+        <input type="checkbox" checked={on} onChange={(e) => toggle(e.target.checked)} /> Synchroniser mes parcours avec l’appli
+      </label>
+      {on && !signedIn && <p className="warn-text">Connecte-toi pour synchroniser.</p>}
+      <p className="small">
+        <a href="https://github.com/lionelbonati-lab/Trail-Planner/tree/main/garmin/TrailPlannerCompanion" target="_blank" rel="noreferrer">
+          <ExternalLink className="inline" /> Installation par câble
+        </a>
+      </p>
+    </Card>
+  )
+}
 
 const BASE = import.meta.env.BASE_URL
 
 /** Contenu de secours (fichier injoignable, hors ligne sans cache) : textes intégrés à l'app. */
 const FALLBACK_DOC: WatchAppsDoc = {
   intro: [],
-  apps: WATCH_APPS.map((a) => ({ name: a.name, type: a.kind, store: a.storeUrl, image: null, guide: a.guideUrl, body: [{ kind: 'p', parts: [{ kind: 'text', text: a.what }] }] })),
+  apps: WATCH_APPS.map((a) => ({ name: a.name, type: a.kind, store: a.storeUrl, image: null, guide: a.guideUrl, status: null, body: [{ kind: 'p', parts: [{ kind: 'text', text: a.what }] }] })),
 }
 
 /** Contenu du cadre, lu dans public/montre/applications.md (modifiable sur GitHub). */
@@ -222,7 +302,8 @@ function WatchAppsCard() {
           return (
             <div key={app.name} className="watch-app">
               <div className="watch-app-head">
-                <strong>{app.name}</strong> {app.type && <span className="muted small">· {app.type}</span>}
+                <strong>{app.name}</strong> {app.status && <span className="badge beta-badge">{app.status}</span>}{' '}
+                {app.type && <span className="muted small">· {app.type}</span>}
                 {text.length > 0 && <Hint label={`À propos de ${app.name}`}><Blocks blocks={text} /></Hint>}
               </div>
               {app.image && <img className="watch-shot" src={docUrl(app.image, BASE)} alt={`Écran de la montre : ${app.name}`} loading="lazy" />}

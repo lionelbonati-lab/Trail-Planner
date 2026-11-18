@@ -3,12 +3,15 @@ import { describe, expect, it } from 'vitest'
 import { docUrl, galleryImages, parseInline, parseWatchAppsDoc } from '../watchAppsDoc'
 
 describe('page « Applications Garmin » modifiable sur GitHub', () => {
-  it('fichier du dépôt : introduction, deux applications, champs, image et liste', () => {
+  it('fichier du dépôt : introduction, trois applications, champs, image et liste', () => {
     const doc = parseWatchAppsDoc(readFileSync('public/montre/applications.md', 'utf8'))
     expect(doc.intro.length).toBeGreaterThan(0)
-    expect(doc.apps.map((a) => a.name)).toEqual(['Trail Planner', 'EndurancePro'])
+    expect(doc.apps.map((a) => a.name)).toEqual(['Trail Planner', 'EndurancePro', 'Trail Planner Companion'])
     const tp = doc.apps[0]
-    expect(tp).toMatchObject({ type: 'Champ de données', store: null, image: 'ecran-trail-planner.png' })
+    expect(tp).toMatchObject({ type: 'Champ de données', store: null, image: 'ecran-trail-planner.png', status: null })
+    // Appli bêta : badge « Bêta », guide d'installation vers son dossier du dépôt.
+    expect(doc.apps[2]).toMatchObject({ type: 'Appli (activité)', status: 'Bêta', store: null })
+    expect(doc.apps[2].guide).toContain('garmin/TrailPlannerCompanion')
     expect(tp.body.some((b) => b.kind === 'list' && b.items.length === 5)).toBe(true)
     // L'en-tête d'aide (commentaire) ne s'affiche pas.
     expect(JSON.stringify(doc)).not.toContain('Commit changes')
