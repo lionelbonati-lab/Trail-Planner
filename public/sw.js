@@ -75,6 +75,30 @@ self.addEventListener('fetch', (e) => {
   )
 })
 
+// Notification envoyée par le serveur (Firebase Cloud Messaging, données seules) : passage, retard,
+// barrière, debrief prêt. `path` : lien dans l'appli (#/share/…, #/suivi/…, #/debrief/…).
+self.addEventListener('push', (e) => {
+  let msg = {}
+  try {
+    msg = e.data ? e.data.json() : {}
+  } catch {
+    msg = {}
+  }
+  const d = msg.data || msg.notification || {}
+  const url = new URL(d.path || '', self.registration.scope).href
+  e.waitUntil(
+    self.registration.showNotification(d.title || 'Trail Planner', {
+      body: d.body || '',
+      tag: d.tag || undefined,
+      renotify: !!d.tag,
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      vibrate: [200, 100, 200],
+      data: { url },
+    }),
+  )
+})
+
 // Notification de passage (page assistance) : la toucher ramène sur la page.
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()

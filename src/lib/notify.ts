@@ -70,3 +70,22 @@ export function notifiedDebriefs(): string[] {
 export function rememberNotified(ids: string[]) {
   write(NOTIFIED, JSON.stringify([...new Set([...notifiedDebriefs(), ...ids])].slice(-50)))
 }
+
+// --- Notifications push (serveur) : abonnements de cet appareil (voir push.ts) ------------
+
+/** Abonnement du coureur (« uid|jeton ») : debrief prêt envoyé par le serveur. */
+export const OWNER_PUSH = 'owner'
+
+/** Jeton de l'abonnement de cet appareil à une cible (« share:<id> », « suivi:<code> », OWNER_PUSH), ou null. */
+export function pushFlag(target: string): string | null {
+  return read(`tp-push-${target}`)
+}
+
+export function setPushFlag(target: string, value: string | null) {
+  write(`tp-push-${target}`, value)
+}
+
+/** Debrief prêt envoyé par le serveur sur cet appareil : la notification locale de l'appli n'est plus utile. */
+export function ownerPushOn(): boolean {
+  return notifySupported() && Notification.permission === 'granted' && !!pushFlag(OWNER_PUSH)
+}

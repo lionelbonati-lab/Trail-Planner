@@ -1,0 +1,75 @@
+name: Deploy Firebase (notifications, règles)
+
+# Fonctions Cloud (notifications push) et règles Firestore, à chaque modification sur main.
+# Sans le secret FIREBASE_SERVICE_ACCOUNT, rien n'est déployé (voir docs/notifications.md).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'functions/**'
+      - 'src/lib/**'
+      - 'firestore.rules'
+      - 'firebase.json'
+      - '.github/workflows/firebase.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - name: Clé de déploiement absente
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::Secret FIREBASE_SERVICE_ACCOUNT absent, déploiement Firebase sauté (voir docs/notifications.md)."
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - name: Fonctions (assemblage)
+        if: env.HAS_KEY == 'true'
+        working-directory: functions
+        run: |
+          npm ci
+          npm run build
+      - name: Clé du compte de service
+        if: env.HAS_KEY == 'true'
+        env:
+          KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$KEY" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - name: Région (celle de la base Firestore)
+        if: env.HAS_KEY == 'true'
+        env:
+          REGION: ${{ vars.FUNCTIONS_REGION }}
+        run: |
+          if [ -z "$REGION" ]; then
+            LOC=$(npx --yes firebase-tools@14 firestore:databases:get "(default)" --project trail-planner-814f6 --json 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).result.locationId||'')}catch{console.log('')}})")
+            case "$LOC" in
+              nam5) REGION=us-central1 ;;
+              eur3) REGION=europe-west1 ;;
+              '') REGION=europe-west1 ;;
+              *) REGION=$LOC ;;
+            esac
+            echo "Base Firestore : ${LOC:-inconnue}"
+          fi
+          echo "Région des fonctions : $REGION"
+          echo "TP_REGION=$REGION" > functions/.env
+      - name: Déploiement
+        if: env.HAS_KEY == 'true'
+        run: npx --yes firebase-tools@14 deploy --only functions,firestore:rules --project trail-planner-814f6 --non-interactive --force
+      - name: Nettoyage de la clé
+        if: always() && env.HAS_KEY == 'true'
+        run: rm -f "$RUNNER_TEMP/sa.json"

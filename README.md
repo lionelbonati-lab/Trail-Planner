@@ -179,8 +179,12 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   (direct, carte affichée par une case à cocher, lien « Y aller » Google Maps vers chaque point, son accès s'il
   est placé) et **Trajets** (tous les points à cocher, ceux d'assistance cochés d'office, gardés sur le
   téléphone ; itinéraire Google Maps entre les points cochés pas encore passés, découpé par 3 étapes).
-- **Notifications de passage** pour l'assistance (page ouverte, même en arrière-plan) : nom du point, heure,
-  écart au plan compté depuis le vrai départ ; un toucher ramène sur la page.
+- **Notifications pour l'assistance**, même page fermée (envoyées par le serveur, voir
+  [docs/notifications.md](docs/notifications.md)) : « Me prévenir » sur le lien assistance ou le lien permanent.
+  Passage à chaque point (heure, km, écart au plan compté depuis le vrai départ), retard (à chaque quart d'heure de
+  plus sur le plan), barrière horaire menacée (moins de 30 min de marge estimée) ; un toucher ouvre la page.
+  Sans serveur en place ou sur un navigateur qui ne le permet pas : notification de passage par la page, tant
+  qu'elle reste ouverte.
 
 - **Départ libre** (parcours : toujours ; course : option) : heures du plan calculées pour un départ maintenant (mises à jour chaque
   minute), puis calées sur le vrai départ — mode course, sinon départ donné par la montre (page du plan et
@@ -208,8 +212,8 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   si le départ du ravito n'est pas connu) ; arrêts aux ravitos ; **niveau recalé** d'après la sortie (arrêts réels
   remplacés par les arrêts prévus), à appliquer au profil.
 - **Debrief prêt** : bandeau en haut de l'appli quel que soit l'onglet (sortie des 7 derniers jours pas encore
-  ouverte) et, si activée sur le téléphone (« Me prévenir à l'arrivée »), notification à l'arrivée relevée (appli
-  ouverte, même en arrière-plan ; une fois par sortie).
+  ouverte) et, si activée sur le téléphone (« Me prévenir à l'arrivée »), notification à l'arrivée relevée (une fois
+  par sortie) : envoyée par le serveur même appli fermée quand on est connecté, sinon par l'appli ouverte.
 - **Comparer les sorties** d'un même parcours : dans le debrief, « Comparer avec » une autre sortie (écart à chaque
   point, par tronçon et à l'arrivée) ; sur le parcours, temps écoulé à chaque point des 6 dernières sorties (meilleur en
   gras) et graphique d'évolution du temps d'arrivée.
@@ -276,3 +280,8 @@ Les GPX sont compressés (gzip) et découpés si besoin pour respecter la limite
 
 Le workflow `.github/workflows/deploy.yml` publie sur GitHub Pages à chaque push sur `main`
 (activer Pages avec la source « GitHub Actions » dans les paramètres du dépôt).
+
+Le workflow `.github/workflows/firebase.yml` déploie les fonctions Cloud (notifications push, dossier
+`functions/`) et les règles Firestore à chaque modification sur `main`, une fois le secret
+`FIREBASE_SERVICE_ACCOUNT` en place : mise en route dans [docs/notifications.md](docs/notifications.md).
+Sans ce secret, il ne fait rien.

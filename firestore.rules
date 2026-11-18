@@ -28,5 +28,25 @@ service cloud.firestore {
                    && (!('lon' in request.resource.data) || request.resource.data.lon is number)
                    && (!('bat' in request.resource.data) || request.resource.data.bat is int);
     }
+    // Abonnements aux notifications d'un lien (assistance « share:<id> », lien permanent « suivi:<code> »),
+    // sans compte : un jeton de téléphone par document, pour un lien existant. Lus par le serveur seul ;
+    // l'identifiant du document vient du jeton (introuvable sans lui).
+    match /push/{id} {
+      allow read: if false;
+      allow create, update: if request.resource.data.keys().hasOnly(['token', 'target', 'ref', 'at'])
+                            && request.resource.data.token is string
+                            && request.resource.data.token.size() > 20
+                            && request.resource.data.token.size() < 1000
+                            && request.resource.data.ref is string
+                            && request.resource.data.ref.size() < 120
+                            && request.resource.data.target in ['share:' + request.resource.data.ref, 'suivi:' + request.resource.data.ref]
+                            && request.resource.data.at is int
+                            && exists(/databases/$(database)/documents/shares/$(request.resource.data.ref));
+      allow delete: if true;
+    }
+    // Ce qui a déjà été notifié (serveur seul).
+    match /push_state/{id} {
+      allow read, write: if false;
+    }
   }
 }

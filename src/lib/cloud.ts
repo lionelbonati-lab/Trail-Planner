@@ -48,9 +48,11 @@ const firebaseConfig = {
   projectId: (env.VITE_FIREBASE_PROJECT_ID as string | undefined) || 'trail-planner-814f6',
   appId: (env.VITE_FIREBASE_APP_ID as string | undefined) || '1:923627677636:web:266ccd39d9ed69d2c1a691',
 }
+// Notifications push : numéro d'expéditeur, deuxième partie de l'identifiant d'appli (1:<numéro>:web:…).
+const messagingSenderId = firebaseConfig.appId.split(':')[1] ?? ''
 
-const app: FirebaseApp | null =
-  firebaseConfig.apiKey && firebaseConfig.projectId ? initializeApp(firebaseConfig) : null
+export const app: FirebaseApp | null =
+  firebaseConfig.apiKey && firebaseConfig.projectId ? initializeApp({ ...firebaseConfig, messagingSenderId }) : null
 
 export const auth: Auth | null = app ? getAuth(app) : null
 // Cache local persistant : les données synchronisées restent consultables hors ligne.

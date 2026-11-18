@@ -34,5 +34,8 @@ Contrôle visuel des écrans modifiés (vue téléphone) quand c'est de l'interf
   (relevés de la montre) : un nouveau champ bloque tous les envois tant que les règles ne sont pas
   redéployées. Préférer étendre un champ existant de façon compatible (ex. `p` :
   `indice:arrivée:départ`).
+- Notifications push : fonctions Cloud dans `functions/` (règles d'envoi partagées dans `src/lib/pushRules.ts`),
+  déployées avec les règles Firestore par `.github/workflows/firebase.yml` une fois le secret
+  `FIREBASE_SERVICE_ACCOUNT` en place (voir `docs/notifications.md`). Vérifier aussi `npx tsc -p functions`.
 - Le plan envoyé à la montre (format TP1, `src/lib/watch.ts`) est lu par d'anciennes versions du
   champ : n'ajouter que des champs optionnels en fin de ligne.
