@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.3, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.4, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -264,7 +264,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.3 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.4 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 
@@ -275,7 +275,8 @@ Comme le champ (voir `garmin/README.md`, sections 2 et 3) :
 2. « Monkey C: Build for Device », choisis ta montre : un `.prg` est créé dans `bin/`.
 3. Copie-le dans `GARMIN/APPS/` (montre branchée en USB). L'appli apparaît dans la liste des activités et
    applis.
-4. Saisis le code montre dans le menu de l'appli (appui long sur Haut › Propriétés › Code Trail Planner).
+4. Saisis le code montre dans le menu de l'appli (appui long sur Haut › Propriétés › Code Trail Planner) :
+   la liste des parcours se met à jour dès leur téléchargement, sans relancer l'appli.
 
 **Simulateur** : le GPS n'y est capté qu'avec une position simulée (menu Simulation › Activity Data, en
 lecture d'un fichier FIT ou GPX, ou Set Position) ; sans elle, « GPS... » reste affiché en rouge. L'appli

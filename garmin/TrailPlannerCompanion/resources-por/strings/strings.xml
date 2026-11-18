@@ -56,7 +56,7 @@
     <string id="menu_vam_circuit">Volta</string>
     <string id="menu_vam_circuit_off">Volta inativa</string>
     <string id="menu_battery_mode">Modo bateria</string>
-    <string id="app_version">0.6.3 (EndurancePro 2.7.3)</string>
+    <string id="app_version">0.6.4 (EndurancePro 2.7.3)</string>
 
     <!-- Settings titles -->
     <string id="set_dark_mode">Modo escuro</string>

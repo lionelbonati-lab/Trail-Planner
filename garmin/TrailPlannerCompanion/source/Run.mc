@@ -357,12 +357,11 @@ class Run {
                 needRoute = courseId != null && courseId.equals("") && Application.Storage.getValue("route") == null;
             }
             // Liste des parcours de l'écran de démarrage.
-            var oldList = Application.Storage.getValue("list");
             Application.Storage.setValue("list", wl);
             Application.Storage.setValue("listCode", fetchCode);
-            if (!sameText(oldList, wl)) {
-                getApp().refreshStart();
-            }
+            // Liste ou course envoyée changée (nouveau code compris) : écran de démarrage refait s'il est
+            // affiché, sinon à son retour.
+            getApp().refreshStart();
             Application.Storage.setValue("fetchError", null);
             // Réglages EndurancePro (VC, zones, équivalences, zone de la séance), comme la synchro du champ.
             if (epText != null && applyTrailSync(epText)) {
@@ -653,6 +652,16 @@ class Run {
 
     // Réglages changés (Garmin Connect, ou code saisi sur la montre) : avec un autre code, l'ancien plan
     // est oublié et le nouveau téléchargé (avec les réglages EndurancePro).
+    // Contenu de l'écran de démarrage (liste des parcours et son code, code en vigueur, course envoyée à la
+    // montre) : la liste affichée est refaite quand il change (CompanionApp.refreshStart).
+    function startSignature() as String {
+        var list = Application.Storage.getValue("list");
+        var lc = Application.Storage.getValue("listCode");
+        var name = mainCourseName();
+        return (list instanceof String ? list as String : "") + "#" + (lc instanceof String ? lc as String : "") + "#" +
+            (lastCode instanceof String ? lastCode as String : "") + "#" + (name != null ? name : "");
+    }
+
     function settingsChanged() as Void {
         var code = codeSetting();
         if (sameText(code, lastCode)) {

@@ -25,7 +25,9 @@ class CompanionApp extends Application.AppBase {
     var startShown = false;   // liste de l'écran de démarrage au premier plan
     var overviewOn = false;   // fiche d'un parcours sur la carte Garmin (écran de démarrage)
     var courseOn = false;     // écrans de course affichés (entre « Démarrer » et le retour à la liste)
-    var restoreTimer = null;  // retour à la course si la liste apparaît pendant une sortie (restoreCourse)
+    var restoreTimer = null;  // retour à la course différé (restoreCourse)
+    var refreshTimer = null;  // liste refaite différée (refreshStart)
+    var startSig = null;      // contenu de la liste affichée (Run.startSignature) : refaite s'il a changé
     var focusKey = null;      // dernier événement qui a affiché l'écran Trail Planner
     var focusBack = -1;       // écran à retrouver une fois l'événement passé (-1 : aucun)
 
@@ -50,9 +52,13 @@ class CompanionApp extends Application.AppBase {
         return [new StartMenu(), new StartDelegate()];
     }
 
-    // Liste des parcours changée (téléchargée) : la liste affichée est refaite (jamais pendant une sortie).
+    // Contenu de l'écran de démarrage changé (nouveau code saisi, liste ou course téléchargée) : la liste
+    // affichée est refaite (jamais pendant une sortie). Liste cachée par un menu : refaite à son retour
+    // (onStartShown), sans relancer l'appli.
     function refreshStart() as Void {
-        if (startShown && !(run as Run).active()) {
+        refreshTimer = null;
+        var r = run as Run;
+        if (startShown && !r.active() && !r.startSignature().equals(startSig)) {
             WatchUi.switchToView(new StartMenu(), new StartDelegate(), WatchUi.SLIDE_IMMEDIATE);
         }
     }
@@ -66,9 +72,16 @@ class CompanionApp extends Application.AppBase {
     // Liste à l'écran (StartMenu.onShow) : pendant une sortie, elle ne doit pas rester affichée. Si la
     // montre a retiré l'écran de course (bouton BACK / Lap traité par le système), il revient aussitôt.
     function onStartShown() as Void {
-        if (run != null && (run as Run).active()) {
+        if (run == null) {
+            return;
+        }
+        var r = run as Run;
+        if (r.active()) {
             restoreTimer = new Timer.Timer();
             (restoreTimer as Timer.Timer).start(method(:restoreCourse), 50, false);
+        } else if (startSig != null && !r.startSignature().equals(startSig)) {
+            refreshTimer = new Timer.Timer();
+            (refreshTimer as Timer.Timer).start(method(:refreshStart), 50, false);
         }
     }
 

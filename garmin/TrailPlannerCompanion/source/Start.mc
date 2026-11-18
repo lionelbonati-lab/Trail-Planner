@@ -29,6 +29,7 @@ class StartMenu extends WatchUi.Menu2 {
     function initialize() {
         Menu2.initialize({ :title => "Trail Planner" });
         var run = getRun();
+        getApp().startSig = run.startSignature();
         var list = run.courses();
         var focus = -1;
         for (var i = 0; i < list.size(); i++) {
