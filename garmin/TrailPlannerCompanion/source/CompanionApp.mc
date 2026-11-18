@@ -201,7 +201,7 @@ class CompanionApp extends Application.AppBase {
     // false (menu complet d'EndurancePro).
     function quickMenu() as Boolean {
         if (page == PROFILE_PAGE) {
-            pushZoomMenu();
+            pushZoomMenu(true);
             return true;
         }
         if (page == MAP_PAGE) {

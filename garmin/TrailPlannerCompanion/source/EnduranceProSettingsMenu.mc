@@ -1363,7 +1363,7 @@ class EnduranceProSettingsDelegate extends WatchUi.Menu2InputDelegate {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
 
         } else if (id == :tpZoom) {
-            pushZoomMenu();
+            pushZoomMenu(false);
 
         } else if (id == :mapScale) {
             pushMapScaleMenu();

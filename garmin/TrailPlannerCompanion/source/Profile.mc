@@ -55,6 +55,17 @@ function profileWindow(plan as Plan, pos as Float) as Array<Float> {
     return [start, span] as Array<Float>;
 }
 
+// Abscisse d'un texte calé à droite (right) ou à gauche, ramenée dans la largeur de l'écran rond à la
+// hauteur y (milieu de la ligne).
+function insideX(dc as Graphics.Dc, x as Number, y as Number, font, right as Boolean) as Number {
+    var half = widthAt(dc, y, font) / 2;
+    var c = dc.getWidth() / 2;
+    if (right) {
+        return x > c + half ? c + half : x;
+    }
+    return x < c - half ? c - half : x;
+}
+
 function slopesOn() as Boolean {
     return Application.Properties.getValue("slopes") == true;
 }
@@ -210,9 +221,12 @@ function drawProfile(dc as Graphics.Dc, plan as Plan, pos as Float, a as Float, 
         var runnerLeft = pos - a < span / 2.0;
         var lx = runnerLeft ? right - 2 : left + 2;
         var just = runnerLeft ? Graphics.TEXT_JUSTIFY_RIGHT : Graphics.TEXT_JUSTIFY_LEFT;
+        // Chaque valeur ramenée dans l'écran rond à sa hauteur (la plus basse était coupée en bas à droite).
+        var yTop = yMax - fh - 1;
+        var yLow = bottom + 1;
         dc.setColor(fg, Graphics.COLOR_TRANSPARENT);
-        dc.drawText(lx, yMax - fh - 1, font, maxE.toNumber().toString(), just);
-        dc.drawText(lx, bottom + 1, font, minE.toNumber().toString(), just);
+        dc.drawText(insideX(dc, lx, yTop + fh / 2, font, runnerLeft), yTop, font, maxE.toNumber().toString(), just);
+        dc.drawText(insideX(dc, lx, yLow + fh / 2, font, runnerLeft), yLow, font, minE.toNumber().toString(), just);
     }
 
     // Points de passage de la portion (sans nom).

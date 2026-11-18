@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.2, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.3, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -107,10 +107,10 @@ ni pendant l'exploration de la carte ; changer d'écran à la main annule le ret
 - la portion de parcours du **zoom choisi** (parcours entier, 20, 10, 5 ou 2 km, toi au **tiers gauche**
   comme sur la page assistance : tu vois surtout ce qui t'attend), ou le **tronçon en cours** (du point de
   passage précédent au suivant, **par défaut**), ou **d'un ravito à l'autre** (ravitos et bases de vie) ;
-  **appui long sur Haut** depuis le profil : choix du zoom ;
+  **appui long sur Haut** depuis le profil : choix du zoom, et en fin de menu **Couleurs des pentes** ;
 - **altitudes ajustées à la portion affichée** (100 m d'écart au moins, pour ne pas grossir le plat), avec
   la plus haute **au-dessus de sa ligne** et la plus basse **sous la ligne de base**, hors du profil, du côté
-  opposé à toi ;
+  opposé à toi, ramenées dans l'écran rond ;
 - partie faite et partie à venir en deux gris, ou à venir en **couleurs des pentes** (option) ;
 - points de passage sans nom : ravito (rond orange), base de vie (carré rouge), autres (petit rond),
   grisés une fois passés ;
@@ -264,7 +264,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.2 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.3 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

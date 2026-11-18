@@ -177,11 +177,15 @@ function zoomLabel(z as Number) as String {
         Rez.Strings.tp_zoom_leg, Rez.Strings.tp_zoom_ravito][z]);
 }
 
-// Choix du zoom du profil (appui long sur Haut depuis le profil, ou Affichage › Zoom du profil).
-function pushZoomMenu() as Void {
+// Choix du zoom du profil (appui long sur Haut depuis le profil, ou Affichage › Zoom du profil) ; depuis
+// le profil (slopes), « Couleurs des pentes » en fin de menu.
+function pushZoomMenu(slopes as Boolean) as Void {
     var menu = new WatchUi.Menu2({ :title => tpText(Rez.Strings.tp_zoom) });
     for (var z = 0; z < ZOOM_SPANS.size(); z++) {
         menu.addItem(new WatchUi.MenuItem(zoomLabel(z), null, z, {}));
+    }
+    if (slopes) {
+        menu.addItem(new WatchUi.ToggleMenuItem(tpText(Rez.Strings.tp_slopes), tpText(Rez.Strings.tp_slopes_sub), :slopes, slopesOn(), {}));
     }
     menu.setFocus(zoomLevel());
     WatchUi.pushView(menu, new ZoomDelegate(), WatchUi.SLIDE_UP);
@@ -202,8 +206,15 @@ class ZoomDelegate extends WatchUi.Menu2InputDelegate {
         Menu2InputDelegate.initialize();
     }
 
+    // Un zoom : choisi, menu fermé ; « Couleurs des pentes » : bascule, menu laissé ouvert.
     function onSelect(item as WatchUi.MenuItem) as Void {
-        Application.Properties.setValue("zoom", item.getId() as Number);
+        var id = item.getId();
+        if (id == :slopes) {
+            Application.Properties.setValue("slopes", (item as WatchUi.ToggleMenuItem).isEnabled());
+            WatchUi.requestUpdate();
+            return;
+        }
+        Application.Properties.setValue("zoom", id as Number);
         WatchUi.popView(WatchUi.SLIDE_RIGHT);
     }
 }
