@@ -104,6 +104,18 @@ export function epTargetRank(a: Athlete, onWatch: Race | null): number | null {
 }
 
 /** Chaîne publiée pour EndurancePro. `onWatch` : course ou séance envoyée à la montre. */
+/**
+ * Zones FC pour EndurancePro (`hz`), au format des zones Garmin : min de Z1 puis max de Z1 à Z5 (6 bpm
+ * croissants). Avec la synchro, EndurancePro les utilise à la place de celles du profil Garmin
+ * (colorisation et alarme FC). Null s'il n'y a pas exactement 5 zones valides.
+ */
+export function epHrThresholds(a: Pick<Athlete, 'hrZones'>): number[] | null {
+  const z = a.hrZones ?? []
+  if (z.length !== 5) return null
+  const v = [z[0].low, ...z.map((x) => x.high)].map((x) => Math.round(x))
+  return v.every((x, i) => x >= 30 && x <= 240 && (i === 0 || x > v[i - 1])) ? v : null
+}
+
 export function epPayload(a: Athlete, onWatch: Race | null): string {
   const { order, pct } = zoneBounds(a)
   const up = climbEquivalence(a)
@@ -112,7 +124,8 @@ export function epPayload(a: Athlete, onWatch: Race | null): string {
   const z = k === null ? 0 : order.indexOf(k) + 1
   const zt = z >= 1 && z <= EP_TARGET_ZONES ? z : 0
   const vz = epVamThresholds(a)
-  return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', dn ? `dn=${dn}` : '', vz ? `vz=${vz.join(',')}` : '', `zt=${zt}`]
+  const hz = epHrThresholds(a)
+  return ['EP1', `cs=${Math.round(1000 / a.cs)}`, pct.length >= 2 ? `z=${pct.join(',')}` : '', up ? `up=${up}` : '', dn ? `dn=${dn}` : '', vz ? `vz=${vz.join(',')}` : '', hz ? `hz=${hz.join(',')}` : '', `zt=${zt}`]
     .filter(Boolean)
     .join('|')
 }

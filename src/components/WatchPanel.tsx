@@ -1,6 +1,6 @@
 import { Check, Copy, ExternalLink, Watch } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, EP_TARGET_ZONES, epPayload, epTargetRank } from '../lib/endurancepro'
+import { climbEquivalence, descentEquivalence, EP_DESCENT_RANGE, EP_TARGET_ZONES, epHrThresholds, epPayload, epTargetRank } from '../lib/endurancepro'
 import { APPS_DOC_PATH, WATCH_APPS } from '../lib/garminApps'
 import { runnerUrl } from '../lib/share'
 import { formatPace } from '../lib/time'
@@ -334,6 +334,7 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
   const k = onWatch && onWatch.kind !== 'race' ? wholeRouteZone(onWatch.zones, athlete) : null
   const sorted = [...athlete.zones].sort((a, b) => a.low - b.low).slice(0, 7)
   const vz = epVamThresholds(athlete)
+  const hz = epHrThresholds(athlete)
   const toggle = (v: boolean) =>
     onChange({ ...athlete, epSync: v, watchId: athlete.watchId ?? (v ? crypto.randomUUID().replace(/-/g, '') : undefined) })
   return (
@@ -355,6 +356,10 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
           <p>
             Sur la montre : menu d'EndurancePro › Allure › <strong>Trail Planner</strong>, saisis le code de la page Synchro
             (00000000 l'efface) ; la ligne affiche ensuite « Synchro hh:mm ».
+          </p>
+          <p>
+            Zones FC : celles de ton profil (onglet Profil athlète) remplacent celles du profil Garmin pour la colorisation et l'alarme FC ;
+            sans synchronisation (ou sans code saisi), EndurancePro garde celles du profil Garmin. Il faut EndurancePro 2.7.3 ou plus récent.
           </p>
           <p>
             Zone cible : une séance envoyée à la montre avec une zone sur tout le parcours (Z1 à Z{EP_TARGET_ZONES}) règle les alarmes
@@ -414,6 +419,21 @@ function EndurancePro({ athlete, onChange, signedIn, onWatch }: { athlete: Athle
                 </>
               ) : (
                 '—'
+              )}
+            </td>
+          </tr>
+          <tr>
+            <td>FC</td>
+            <td>
+              {hz ? (
+                ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'].map((name, i) => (
+                  <span key={name} className="ep-zone">
+                    <i className="zone-swatch" style={{ background: colorForIndex(i) }} />
+                    {name} {i === 4 ? `≥ ${hz[4]} bpm` : `${hz[i]}–${hz[i + 1]}`}
+                  </span>
+                ))
+              ) : (
+                <span className="muted">zones du profil Garmin</span>
               )}
             </td>
           </tr>

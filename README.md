@@ -95,13 +95,17 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   [`public/montre/applications.md`](public/montre/applications.md), **modifiable directement sur GitHub**
   (crayon « Edit », puis « Commit changes » sur main ; mode d'emploi en tête du fichier). Images à déposer dans
   `public/montre/` (« Add file › Upload files »). Le site se met à jour environ une minute après.
+- **En-tête d'un plan** : sur téléphone, icônes seules (Course, Modifier, Lien assistance, Montre) ; impressions
+  (Feuille A4, Bande, Fiche assistance) et exports (Garmin FIT, GPX) dans deux menus, Imprimer et Exporter.
 - **Explications** : derrière une icône (i) à leur place (en tête de cadre, à côté du titre, quand elles le
   concernent tout entier) ; un toucher ouvre une bulle par-dessus la page, fermée par son X, un toucher à côté
   ou Échap. Les pages n'affichent plus que l'essentiel.
 - **Listes des courses et des parcours** : sur chaque ligne, ⌚ met la course ou le parcours sur la montre et 👥
   copie le lien assistance (créé au besoin). Sur téléphone, résumé sous le nom (date, distance, D+) pour
   tenir dans l'écran.
-- **Synchronisation EndurancePro** (datafield Garmin) : depuis l'onglet Montre, VC, zones, équivalence montée
+- **Synchronisation EndurancePro** (datafield Garmin) : depuis l'onglet Montre, VC, zones, **zones FC** (EndurancePro 2.7.3 :
+  elles remplacent celles du profil Garmin pour la colorisation et l'alarme FC ; sans synchro, il garde celles du profil
+  Garmin), équivalence montée
   (déduite de la VAM à VC), équivalence descente (déduite des coefficients de descente), zones VAM et zone de la séance envoyée à la montre sont publiés dans le document du code
   montre (champ `ep`) ; EndurancePro les lit en arrière-plan. Sa cible d'allure peut être une zone ou un % de VC
   (colorisation et alarme de l'allure cible inchangées) ; la zone d'une séance envoyée à la montre (Z1 à Z5) devient

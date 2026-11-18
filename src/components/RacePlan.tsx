@@ -1,4 +1,4 @@
-import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Droplets, FileDown, Flag, Gauge, Map as MapIcon, MapPin, Moon, Pencil, Plus, Printer, Scissors, Trash2, Users, Watch } from 'lucide-react'
+import { ArrowLeftToLine, ArrowRightToLine, Check, CloudSun, Copy, Download, Droplets, FileDown, FileText, Flag, Gauge, Map as MapIcon, MapPin, Moon, Pencil, Plus, Printer, Scissors, ScrollText, Trash2, Users, Watch } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { buildCourseGpx, download } from '../lib/exportGpx'
 import { buildCourseFit } from '../lib/fit'
@@ -24,7 +24,7 @@ import { CourseProfile } from './CourseProfile'
 import { SortableList } from './SortableList'
 import { LIBRARY_BRANDS, libraryProduct, PRODUCT_LIBRARY, RAVITO_BRAND } from '../lib/productLibrary'
 import { ZonePicker, ZonesCard } from './Zones'
-import { Card, Hint, Kpi, Num, Toggle } from './ui'
+import { Card, Hint, Kpi, MenuButton, Num, Toggle } from './ui'
 
 /** Vrai si la requête média correspond (mise à jour au redimensionnement). */
 function useMediaQuery(q: string): boolean {
@@ -397,24 +397,27 @@ export function RacePlan({
             <input className="title-input" value={race.name} onChange={(e) => set({ name: e.target.value })} />
           }
           actions={
-            <>
+            // Sur téléphone : icônes seules (libellés masqués) ; impressions et exports dans deux menus.
+            <div className="plan-actions">
               <button
                 className={isRoute ? '' : 'on-watch'}
                 onClick={() => set({ kind: isRoute ? 'race' : 'route' })}
                 title={isRoute ? 'En faire une course : date et heure de départ dans « Départ et calcul », barrières horaires' : 'Course : revenir à un parcours d’entraînement (départ libre, zones d’allure)'}
+                aria-label={isRoute ? 'En faire une course' : 'Course (revenir à un parcours)'}
                 aria-pressed={!isRoute}
               >
-                <Flag /> Course{!isRoute && <> <Check /></>}
+                <Flag /><span className="btn-text">Course{!isRoute && <> <Check className="inline" /></>}</span>
               </button>
               {onRedraw && (
-                <button onClick={() => onRedraw()} title="Modifier le tracé et les points de passage"><Pencil /> Modifier</button>
+                <button onClick={() => onRedraw()} title="Modifier le tracé et les points de passage" aria-label="Modifier"><Pencil /><span className="btn-text">Modifier</span></button>
               )}
               {share && (
                 <button
                   onClick={() => (share.available ? share.create() : alert("Connecte-toi pour partager ton plan avec ton assistance."))}
                   title="Lien en lecture seule pour ton assistance, mis à jour en direct"
+                  aria-label="Lien assistance"
                 >
-                  <Users /> Lien assistance
+                  <Users /><span className="btn-text">Lien assistance</span>
                 </button>
               )}
               {watch && (
@@ -426,19 +429,35 @@ export function RacePlan({
                     if (!watch.active) watch.activate()
                   }}
                   title="Envoie cette course au champ de données Trail Planner de ta montre Garmin"
+                  aria-label={watch.active ? 'Sur la montre' : 'Mettre sur la montre'}
                 >
-                  {watch.active ? <><Watch /> Sur la montre <Check /></> : <><Watch /> Mettre sur la montre</>}
+                  <Watch /><span className="btn-text">{watch.active ? <>Sur la montre <Check className="inline" /></> : 'Mettre sur la montre'}</span>
                 </button>
               )}
               {/* Feuille A4 (sacs de ravito…) et fiche assistance : courses uniquement. */}
-              {!isRoute && <button onClick={() => setPrintFormat('a4')}><Printer /> Feuille A4</button>}
-              <button onClick={() => setPrintFormat('strip')}><Printer /> Bande</button>
-              {!isRoute && <button onClick={() => setPrintFormat('crew')}><Printer /> Assistance</button>}
-              <button className="primary" onClick={exportFit} title="Parcours FIT pour Garmin Connect / PacePro (points de ravito, heures prévues)">
-                <Watch /> Export Garmin (FIT)
-              </button>
-              <button onClick={exportGpx} title="Parcours GPX horodaté avec waypoints"><FileDown /> GPX</button>
-            </>
+              {isRoute ? (
+                <button onClick={() => setPrintFormat('strip')} title="Imprimer la bande" aria-label="Imprimer la bande"><Printer /><span className="btn-text">Bande</span></button>
+              ) : (
+                <MenuButton
+                  icon={<Printer />}
+                  label="Imprimer"
+                  items={[
+                    { label: 'Feuille A4', icon: <FileText />, onClick: () => setPrintFormat('a4') },
+                    { label: 'Bande', icon: <ScrollText />, onClick: () => setPrintFormat('strip') },
+                    { label: 'Fiche assistance', icon: <Users />, onClick: () => setPrintFormat('crew') },
+                  ]}
+                />
+              )}
+              <MenuButton
+                className="primary"
+                icon={<Download />}
+                label="Exporter"
+                items={[
+                  { label: 'Garmin (FIT)', icon: <Watch />, title: 'Parcours FIT pour Garmin Connect / PacePro (points de ravito, heures prévues)', onClick: exportFit },
+                  { label: 'GPX', icon: <FileDown />, title: 'Parcours GPX horodaté avec waypoints', onClick: exportGpx },
+                ]}
+              />
+            </div>
           }
         >
           {share?.url && (

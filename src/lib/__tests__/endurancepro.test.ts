@@ -26,6 +26,17 @@ describe('réglages EndurancePro', () => {
     expect(epValue(ep, 'zt')).toBe('0')
   })
 
+  it('zones FC au format Garmin (min de Z1 puis max de Z1 à Z5), absentes si les zones sont incomplètes', async () => {
+    const { epHrThresholds } = await import('../endurancepro')
+    const hz = epValue(epPayload(A, null), 'hz')!.split(',').map(Number)
+    expect(hz).toHaveLength(6)
+    expect(hz).toEqual(epHrThresholds(A))
+    for (let k = 1; k < hz.length; k++) expect(hz[k]).toBeGreaterThan(hz[k - 1])
+    expect(hz[0]).toBe(Math.round(A.hrZones[0].low))
+    expect(hz[5]).toBe(Math.round(A.hrZones[4].high))
+    expect(epValue(epPayload({ ...A, hrZones: A.hrZones.slice(0, 4) }, null), 'hz')).toBeNull()
+  })
+
   it('équivalence montée déduite de la VAM à VC (plage du réglage, pas de 10 m)', () => {
     // VAM par défaut 950/1100/1100/950 m/h à 10/20/30/45 % et VC 4,04 m/s : ≈ 110 m.
     expect(climbEquivalence(A)).toBe(110)
