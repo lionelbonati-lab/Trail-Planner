@@ -38,6 +38,21 @@ export function WatchPanel({
   return (
     <div className="grid two">
       {signedIn && athlete.watchId && (
+        <Card title="Code pour Garmin Connect" className="span2 connect-code" fold={false}>
+          <div className="row">
+            <code className="watch-code">{athlete.watchId}</code>
+            <button className="primary" onClick={() => copy(athlete.watchId!)}>
+              {copied === athlete.watchId ? <><Check /> Copié</> : <><Copy /> Copier</>}
+            </button>
+          </div>
+          <Hint>
+            Paramètres d’une application installée depuis le Store : Garmin Connect › ta montre › Activités et applications ›
+            Trail Planner › Paramètres › Code montre.
+          </Hint>
+        </Card>
+      )}
+
+      {signedIn && athlete.watchId && (
         <Card title="Lien d’assistance permanent" className="span2 runner-link" fold={false}>
           <p className="small">
             À donner une seule fois à ton assistance : il montre la course que ta montre enregistre (champ Trail Planner, ou parcours
@@ -80,14 +95,7 @@ export function WatchPanel({
           </button>
         )}
         {signedIn && athlete.watchId && (
-          <details className="small">
-            <summary>Code long, pour les paramètres dans Garmin Connect (application installée depuis le Store)</summary>
-            <div className="row">
-              <code className="watch-code">{athlete.watchId}</code>
-              <button className="ghost" onClick={() => copy(athlete.watchId!)}>{copied === athlete.watchId ? <><Check /> Copié</> : <><Copy /> Copier</>}</button>
-            </div>
-            <Hint>Garmin Connect › ta montre › Activités et applications › le champ › Paramètres › Code.</Hint>
-          </details>
+          <p className="muted small">Le code long pour Garmin Connect est en haut de cet onglet.</p>
         )}
       </Card>
 

@@ -16,6 +16,9 @@ describe('onglet Montre', () => {
     expect(html).toContain('Champs Connect IQ › Trail Planner › Code montre')
     expect(html).toContain('Allure › Trail Planner')
     expect(html).toContain('abc123')
+    // Code pour Garmin Connect en tête de l'onglet, avant le lien permanent.
+    expect(html.indexOf('Code pour Garmin Connect')).toBeGreaterThanOrEqual(0)
+    expect(html.indexOf('Code pour Garmin Connect')).toBeLessThan(html.indexOf('Lien d’assistance permanent'))
     expect(html).toContain('Trail du Jura')
     expect(html).toContain('EndurancePro')
     expect(html).toContain('installation par câble')
