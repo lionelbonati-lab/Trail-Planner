@@ -13,8 +13,8 @@ function isRound() as Boolean {
 }
 
 // Tour en attente d'annulation (Run.lap) : anneau du décompte sur le bord de l'écran, plein à l'appui et
-// vide au bout de LAP_UNDO_S ; `hint` : « Bas : annuler » à la place de la dernière ligne (chrono
-// d'EndurancePro, prochain point de Trail Planner), sur un fond de toute la largeur.
+// vide au bout de LAP_UNDO_S ; `hint` : « Bas : annuler » (et, avec un parcours, le point que le tour va
+// valider) à la place de la dernière ligne (chrono d'EndurancePro, prochain point de Trail Planner).
 function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Void {
     if (run.lapPending == 0) {
         return;
@@ -25,14 +25,29 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Voi
     }
     var w = dc.getWidth();
     var h = dc.getHeight();
-    // Rappel d'abord, sur un fond limité à la largeur visible à cette hauteur (les anneaux du bord restent).
+    // Rappel d'abord, sur un fond limité à la largeur visible à cette hauteur (les anneaux du bord restent) :
+    // le point que le tour va valider (« Passage · nom ») en alternance (2 s) avec « Bas : annuler ».
     if (hint) {
         var y = run.ep.lay().TimerY;
         var bh = dc.getFontHeight(Graphics.FONT_MEDIUM);
         var bw = widthAt(dc, y, Graphics.FONT_MEDIUM) - 12;
         dc.setColor(themeBg(), themeBg());
         dc.fillRectangle(w / 2 - bw / 2, y - bh / 2, bw, bh);
-        drawFitted(dc, y, tpText(Rez.Strings.tp_lap_undo), themeFg(), Graphics.FONT_SMALL, false);
+        var text = tpText(Rez.Strings.tp_lap_undo);
+        var color = themeFg();
+        var preview = run.lapPreview;
+        if (preview != null && ((System.getTimer() - run.lapPendingMs) / 2000) % 2 == 0) {
+            text = preview as String;
+            color = darkTheme() ? Graphics.COLOR_GREEN : Graphics.COLOR_DK_GREEN;
+        }
+        // Police la plus grande qui tient dans le fond ; trop long même en très petit : le nom du point seul.
+        var font = bandFont(dc, text, bw - 8);
+        var cut = text.find(" · ");
+        if (font == null && cut != null) {
+            text = text.substring(cut + 3, text.length());
+            font = bandFont(dc, text, bw - 8);
+        }
+        drawFitted(dc, y, text, color, font != null ? font : Graphics.FONT_XTINY, false);
     }
     var pen = w > 300 ? 8 : 6;
     if (dc has :setPenWidth) {
@@ -57,6 +72,17 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run, hint as Boolean) as Voi
     if (dc has :setPenWidth) {
         dc.setPenWidth(1);
     }
+}
+
+// Police la plus grande (petite, très petite, minuscule) où le texte tient dans `width`, null : aucune.
+function bandFont(dc as Graphics.Dc, text as String, width as Number) {
+    var fonts = [Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
+    for (var i = 0; i < fonts.size(); i++) {
+        if (dc.getTextWidthInPixels(text, fonts[i]) <= width) {
+            return fonts[i];
+        }
+    }
+    return null;
 }
 
 // Sortie libre, pendant le décompte d'annulation : écran du tour qui vient de finir (numéro, temps,

@@ -74,6 +74,7 @@ class Run {
     var lapStartWalked = 0.0;
     var lapShownTime = 0;     // tour affiché pendant le décompte (sorties libres) : temps (ms), distance (m)
     var lapShownDist = 0.0;
+    var lapPreview = null;    // avec un parcours : « Passage · nom » que le tour va valider (ou null)
     // Lectures en cours, une tranche par seconde (stepLoads) : profil fin du plan et tracé fin de la carte.
     var profLoad = null;      // [ProfileReader, GroupReader] ou null...
     var profLoadPlan = null;  // ... pour ce plan
@@ -255,6 +256,15 @@ class Run {
         lapPressDist = tp.dist;
         lapShownTime = timer - lapStartTimer;
         lapShownDist = walked - lapStartWalked;
+        // Avec un parcours : point que le tour va valider, affiché dès l'appui (pendant le décompte).
+        lapPreview = tp.lapPreview(lapPending, lapPressDist);
+        if (lapPreview != null) {
+            var text = lapPreview as String;
+            var cut = text.find(" · ");
+            msg = text;
+            msgShort = cut != null ? text.substring(cut + 3, text.length()) : "";
+            msgUntil = lapPending + LAP_UNDO_S;
+        }
         signal(Attention.TONE_LAP);
         WatchUi.requestUpdate();
     }
@@ -265,6 +275,7 @@ class Run {
             return false;
         }
         lapPending = 0;
+        lapPreview = null;
         signal(Attention.TONE_RESET);
         show(tpText(Rez.Strings.tp_lap_undone), "", Time.now().value());
         WatchUi.requestUpdate();
@@ -280,6 +291,7 @@ class Run {
             return;
         }
         lapPending = 0;
+        lapPreview = null;
         session.addLap();
         ep.onTimerLap();
         laps++;

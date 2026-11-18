@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.6.8, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.6.9, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -161,7 +161,10 @@ IQ ne peut pas effacer un tour déjà écrit) : le passage au point Trail Planne
 l'appui, le tour du fichier commence 8 s plus tard. Un nouvel appui sur Lap pendant le décompte valide le
 tour en attente ; une pause aussi. En **sortie libre**, l'écran du tour s'affiche pendant le décompte : numéro,
 temps, distance et allure (ou vitesse) du tour ; avec un parcours, l'écran reste celui affiché, avec l'anneau
-et « Bas : annuler ».
+et, à la place de la dernière ligne, **dès l'appui** le point que le tour va valider (« Passage · Courmayeur »
+en vert, ou « Départ · nom » au 2e tour d'un ravito ; le nom seul s'il ne tient pas) en alternance toutes les
+2 s avec « Bas : annuler » (le message reste aussi en haut du profil et de la carte). Rien d'affiché : le tour
+ne validera aucun point (trop loin de tout point).
 
 Écran tactile : balayages haut / bas pour changer d'écran. Le balayage « retour » ne fait rien (ni tour,
 ni retour à la liste) et un tap non plus : START et BACK restent sur les boutons. « Supprimer » demande une
@@ -277,7 +280,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.6.8 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.6.9 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

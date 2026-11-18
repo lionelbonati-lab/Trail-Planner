@@ -302,10 +302,51 @@ class TrailPlannerScreen {
         finishEta = t0 + ((restF > 0 ? restF : 0) * ratio).toNumber();
     }
 
-    // Bouton Lap : passage au point le plus proche pas encore validé par un tour, à moins de 300 m de
-    // la position calée sur le tracé (500 m sans tracé GPS calé). Heure de passage = maintenant,
-    // position recalée sur le point, heures estimées des points suivants recalculées. Un tour loin de
-    // tout point (tour auto au km…) est ignoré.
+    // Point validé par un tour à cette position (sur le parcours), -1 : aucun. Sans tracé calé, la distance
+    // peut dériver, mais une fenêtre trop large (8 % de la distance, 2,4 km au km 30) faisait valider par un
+    // tour, manuel ou automatique, un point loin devant. Avec le GPS calé : un point devant à 150 m au plus
+    // (un tour 300 m avant la buvette la validait), un point derrière à 300 m au plus.
+    function lapPoint(pressDist as Float) as Number {
+        var gps = plan.hasRoute() && matched >= 0;
+        var win = gps ? 300.0 : 500.0;
+        var ahead = gps ? 150.0 : 500.0;
+        var best = -1;
+        var bestGap = 0.0;
+        for (var i = 0; i < plan.cpDist.size(); i++) {
+            if (lapped.hasKey(i)) {
+                continue;
+            }
+            var gap = plan.cpDist[i] - pressDist;
+            if (gap > ahead) {
+                continue;
+            }
+            if (gap < 0) {
+                gap = -gap;
+            }
+            if (gap <= win && (best < 0 || gap < bestGap)) {
+                best = i;
+                bestGap = gap;
+            }
+        }
+        return best;
+    }
+
+    // Appli : ce qu'un tour à cet instant va valider, affiché dès l'appui pendant le décompte d'annulation :
+    // « Départ · nom » (2e tour au ravito), « Passage · nom », ou null (simple tour).
+    function lapPreview(pressAt as Number, pressDist as Float) as String or Null {
+        if (plan == null || !running || Application.Properties.getValue("lapPass") == false) {
+            return null;
+        }
+        if (bagCp >= 0 && bagLeg >= 0 && lapped.hasKey(bagCp) && ravitoShown(pressAt)) {
+            return "Départ · " + plan.cpName[bagCp];
+        }
+        var best = lapPoint(pressDist);
+        return best >= 0 ? "Passage · " + plan.cpName[best] : null;
+    }
+
+    // Bouton Lap : passage au point le plus proche pas encore validé par un tour (lapPoint). Heure de
+    // passage = l'appui, position recalée sur le point, heures estimées des points suivants recalculées.
+    // Un tour loin de tout point (tour auto au km…) est ignoré.
     // Appli : tour validé à la fin du décompte d'annulation (8 s, Run.commitLap) ; heure et position de
     // l'appui (pressAt, pressDist), message affiché à partir de maintenant.
     function onTimerLap(pressAt as Number, pressDist as Float) as Void {
@@ -328,30 +369,7 @@ class TrailPlannerScreen {
             return;
         }
         var gps = plan.hasRoute() && matched >= 0;
-        // Sans tracé calé, la distance peut dériver, mais une fenêtre trop large (8 % de la distance,
-        // 2,4 km au km 30) faisait valider par un tour, manuel ou automatique, un point loin devant.
-        // Avec le GPS calé : un point devant à 150 m au plus (un tour 300 m avant la buvette la validait),
-        // un point derrière à 300 m au plus.
-        var win = gps ? 300.0 : 500.0;
-        var ahead = gps ? 150.0 : 500.0;
-        var best = -1;
-        var bestGap = 0.0;
-        for (var i = 0; i < plan.cpDist.size(); i++) {
-            if (lapped.hasKey(i)) {
-                continue;
-            }
-            var gap = plan.cpDist[i] - pressDist;
-            if (gap > ahead) {
-                continue;
-            }
-            if (gap < 0) {
-                gap = -gap;
-            }
-            if (gap <= win && (best < 0 || gap < bestGap)) {
-                best = i;
-                bestGap = gap;
-            }
-        }
+        var best = lapPoint(pressDist);
         if (best < 0) {
             return;
         }
