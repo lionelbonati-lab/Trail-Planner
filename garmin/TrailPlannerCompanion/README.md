@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.7.6, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.7.7, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -205,9 +205,9 @@ rangés dans les dossiers d'EndurancePro (pas de dossier à part) :
   champ ; état de la synchro en sous-titre) et **Recharger le plan** (nom de la course chargée, ou message
   d'erreur).
 
-Dans Garmin Connect (appli installée depuis le Store, liste sans dossiers) : les mêmes réglages, dans
-l'ordre des dossiers de la montre (Affichage, Colorisation, Circuit, Allure, Alarmes, Propriétés), puis les
-données FIT d'EndurancePro. Rappel nutrition : -1 = produits du plan, N = toutes les N minutes, 0 = aucun.
+Dans Garmin Connect (appli installée depuis le Store, liste sans dossiers) : le **code Trail Planner en
+tête** (à coller depuis l'onglet Montre du site), puis les mêmes réglages, dans l'ordre des dossiers de la
+montre (Affichage, Colorisation, Circuit, Allure, Alarmes), puis les données FIT d'EndurancePro. Rappel nutrition : -1 = produits du plan, N = toutes les N minutes, 0 = aucun.
 
 ## Plan de la course et réglages EndurancePro
 
@@ -291,7 +291,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.7.6 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.7.7 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

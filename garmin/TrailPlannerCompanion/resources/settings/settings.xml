@@ -1,5 +1,6 @@
-<!-- settings.xml — EndurancePro 2.7.3 + appli Trail Planner Companion, dans l'ordre des dossiers du menu de
-     la montre (Affichage, Colorisation, Circuit, Allure, Alarmes, Propriétés), puis l'enregistrement FIT. -->
+<!-- settings.xml — EndurancePro 2.7.3 + appli Trail Planner Companion : le code Trail Planner en tête, puis
+     dans l'ordre des dossiers du menu de la montre (Affichage, Colorisation, Circuit, Allure, Alarmes), puis
+     l'enregistrement FIT. -->
 <!-- v1.9.45 : Tous les réglages migrés vers le menu on-watch (getSettingsView, voir
      EnduranceProSettingsMenu.mc). v2.1.2 : lissage (buffer_size_prop) et unité d'allure
      (pace_unit_prop, AFFICHAGE montre, modifiable en course) migrés à leur tour vers le
@@ -14,6 +15,11 @@
      combinés) — picker rétabli, comportement identique à la v2.2.8. -->
 <resources>
     <settings>
+
+        <!-- Code Trail Planner en tête (code du site : plan, parcours, réglages, suivi), à saisir en premier -->
+        <setting propertyKey="@Properties.trail_code_prop" title="@Strings.set_trail_code">
+            <settingConfig type="alphaNumeric" />
+        </setting>
 
         <!-- Affichage (dossier Affichage de la montre) : écrans Profil et Carte de l'appli -->
         <setting propertyKey="@Properties.zoom" title="@Strings.tp_zoom">
@@ -68,11 +74,6 @@
 
         <setting propertyKey="@Properties.vibrate" title="@Strings.tp_vibrate">
             <settingConfig type="boolean" />
-        </setting>
-
-        <!-- Propriétés : code Trail Planner (code à 8 chiffres du site : plan, parcours, réglages, suivi) -->
-        <setting propertyKey="@Properties.trail_code_prop" title="@Strings.set_trail_code">
-            <settingConfig type="alphaNumeric" />
         </setting>
 
         <!-- Enregistrement FIT (téléphone seulement, voir l'en-tête) -->

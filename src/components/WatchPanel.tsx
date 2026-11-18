@@ -47,7 +47,8 @@ export function WatchPanel({
           </div>
           <Hint>
             Paramètres d’une application installée depuis le Store : Garmin Connect › ta montre › Activités et applications ›
-            Trail Planner › Paramètres › Code montre.
+            Trail Planner › Paramètres › Code montre ; pour l’appli Trail Planner Companion, c’est le premier réglage (Code Trail
+            Planner).
           </Hint>
         </Card>
       )}
