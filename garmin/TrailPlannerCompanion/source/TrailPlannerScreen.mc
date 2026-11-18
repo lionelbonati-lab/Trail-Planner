@@ -678,42 +678,36 @@ class TrailPlannerScreen {
         return [now - arrived, plan.cpStop[bagCp]] as Array<Number>;
     }
 
-    // Écran du ravito du champ, entre top et bottom : pause en cours / prévue (rouge une fois dépassée),
-    // ravito suivant (distance, D+, D-), à manger sur place, puis « À emporter » : note du point et contenu
-    // du sac, un élément par ligne si la hauteur le permet, sinon deux voisins réunis.
-    function drawRavitoFull(dc as Graphics.Dc, top as Number, bottom as Number, fg, red) as Void {
+    // Écran du ravito du champ, entre top et bottom (le temps passé est sur l'anneau) : ravito suivant
+    // (distance, D+, D-), puis en alternance (5 s) « Manger ici » (produits sur ravito) et « À prendre » (note
+    // du point et sac), un élément par ligne si la hauteur le permet, sinon deux voisins réunis.
+    function drawRavitoFull(dc as Graphics.Dc, top as Number, bottom as Number, fg) as Void {
         var now = Time.now().value();
-        var entries = plan.bag(bagLeg);
         var site = plan.site(bagLeg);
+        var take = [] as Array<String>;
         var note = (bagCp < plan.cpNote.size() && plan.cpNote[bagCp].length() > 0) ? wrapNote(plan.cpNote[bagCp]) : [] as Array<String>;
+        var entries = plan.bag(bagLeg);
         var from = plan.legFrom[bagLeg];
         var to = plan.legTo[bagLeg];
         var d0 = (from >= 0 && from < plan.cpDist.size()) ? plan.cpDist[from].toFloat() : 0.0;
         var d1 = (to >= 0 && to < plan.cpDist.size()) ? plan.cpDist[to].toFloat() : plan.total.toFloat();
         var toName = (to >= 0 && to < plan.cpName.size()) ? plan.cpName[to] : "Arrivée";
-        var t = ravitoTimes(now);
-        var paused = t[0];
-        var stop = t[1];
-        var pause = "Pause " + mmss(paused) + (stop > 0 ? " / " + mmss(stop) : "");
         var lines = [
-            [pause, Graphics.FONT_SMALL, stop > 0 && paused > stop ? red : fg, 0],
             [toName.equals("Arrivée") ? "Vers l'arrivée" : "Vers " + toName, Graphics.FONT_XTINY, fg, 2],
             [remaining(d0, d1), Graphics.FONT_XTINY, fg, 0]
         ];
-        // À manger ou boire ici (produits « sur ravito » du plan).
-        if (site.size() > 0) {
-            lines.add(["Manger ici", Graphics.FONT_XTINY, Graphics.COLOR_ORANGE, 0]);
-            var siteRows = packItems(dc, site, Graphics.FONT_XTINY, 2);
-            for (var i = 0; i < siteRows.size(); i++) {
-                lines.add([siteRows[i], Graphics.FONT_XTINY, fg, 0]);
+        // Manger ici (sans sac ni note : toujours), sinon À prendre.
+        var eat = site.size() > 0 && ((note.size() == 0 && entries.size() == 0) || (now / 5) % 2 == 0);
+        lines.add([eat ? "Manger ici" : "À prendre", Graphics.FONT_XTINY, Graphics.COLOR_ORANGE, 0]);
+        if (eat) {
+            take = site;
+        } else {
+            for (var i = 0; i < note.size(); i++) {
+                lines.add([note[i], Graphics.FONT_XTINY, fg, 0]);
             }
+            take = entries;
         }
-        var title = "À emporter";
-        lines.add([from >= 0 && from < plan.cpName.size() ? [title + " · " + plan.cpName[from], title] : title, Graphics.FONT_XTINY, Graphics.COLOR_ORANGE, 1]);
-        for (var i = 0; i < note.size(); i++) {
-            lines.add([note[i], Graphics.FONT_XTINY, fg, 0]);
-        }
-        // Place restante pour le sac : SMALL si chaque élément tient sur sa ligne, sinon XTINY et voisins
+        // Place restante pour la liste : SMALL si chaque élément tient sur sa ligne, sinon XTINY et voisins
         // réunis (« Vers… », facultatif, non compté : retiré d'abord s'il le faut).
         var avail = bottom - top;
         for (var i = 0; i < lines.size(); i++) {
@@ -722,14 +716,14 @@ class TrailPlannerScreen {
             }
         }
         var font = Graphics.FONT_SMALL;
-        if (entries.size() * dc.getFontHeight(font) > bottom - top - linesHeight(dc, lines)) {
+        if (take.size() * dc.getFontHeight(font) > bottom - top - linesHeight(dc, lines)) {
             font = Graphics.FONT_XTINY;
         }
         var rows = avail / dc.getFontHeight(font);
         if (rows < 1) {
             rows = 1;
         }
-        var items = packItems(dc, entries, font, rows);
+        var items = packItems(dc, take, font, rows);
         for (var i = 0; i < items.size(); i++) {
             lines.add([items[i], font, fg, 0]);
         }

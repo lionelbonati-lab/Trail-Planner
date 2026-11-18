@@ -17,7 +17,7 @@ Le champ de données Trail Planner (`garmin/TrailPlannerField`) continue de s'ut
 Trail de Garmin ; l'appli en reprend l'écran et les calculs pour qui lance la sortie depuis elle (profil
 zoomable, carte, EndurancePro sur la même activité).
 
-**État :** version 0.7.0, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
+**État :** version 0.7.1, à compiler et à tester sur la montre (pas de SDK Connect IQ dans les sessions
 Claude). Gratuite pendant la bêta. Le passage au payant viendra plus tard : rien dans l'appli pour l'instant.
 
 ![Aperçu approximatif de l'écran Trail Planner sur Enduro 3](apercu-trail-planner.png)
@@ -171,13 +171,13 @@ pendant le décompte valide le tour en attente ; une pause aussi.
 - **Sortie libre**, ou tour loin de tout point : « Tour N », temps, distance et allure (ou vitesse) du tour.
 
 **Écran du ravito** (repris du champ), sur **tous les écrans**, de l'arrivée au ravito (1er Lap, ou passage
-noté par la position) jusqu'au départ (2e Lap) : pause en cours / prévue (rouge une fois dépassée), ravito
-suivant (distance, D+, D-), « Manger ici », puis « À emporter » (note du point et sac). Sur le bord, un
-**petit arc orange** en face de BACK/Lap avec, à côté, l'icône ravito et « **Fin de ravitaillement** » ; un
-**anneau** du temps passé au ravito va du haut de l'arc orange jusqu'à son bas sans passer dessous : vert,
-il se remplit jusqu'à l'arrêt prévu, puis plein en rouge une fois dépassé. **Haut / Bas** le cachent (l'écran
-d'avant reparaît, avec l'écran ravito de Trail Planner) ; il revient au prochain Lap (tour annulé par
-exemple). Pas affiché en pause ni pour un point avec une simple note.
+noté par la position) jusqu'au départ (2e Lap) : ravito suivant (distance, D+, D-), puis en **alternance (5 s)**
+« **Manger ici** » (produits sur ravito) et « **À prendre** » (note du point et sac). Le temps passé est sur
+l'**anneau**, du haut au bas d'un **petit arc orange** en face de BACK/Lap sans passer dessous : vert, il se
+remplit jusqu'à l'arrêt prévu, puis plein en rouge une fois dépassé. À côté de l'arc orange, l'icône **→|**
+(Lap = départ du ravito). **Haut / Bas** le cachent (l'écran d'avant reparaît, avec l'écran ravito de Trail
+Planner) ; il revient au prochain Lap (tour annulé par exemple). Pas affiché en pause ni pour un point avec
+une simple note.
 
 Écran tactile : balayages haut / bas pour changer d'écran. Le balayage « retour » ne fait rien (ni tour,
 ni retour à la liste) et un tap non plus : START et BACK restent sur les boutons. « Supprimer » demande une
@@ -293,7 +293,7 @@ de fichier :
   respecté ;
 - pas de lecture de l'étape d'entraînement Garmin (réservée aux champs de données) : alarmes toujours
   actives ;
-- `AppName` et `app_version` (« 0.7.0 (EndurancePro 2.7.3) ») propres à l'appli.
+- `AppName` et `app_version` (« 0.7.1 (EndurancePro 2.7.3) ») propres à l'appli.
 
 Une nouvelle version d'EndurancePro se reporte à la main dans ces fichiers.
 

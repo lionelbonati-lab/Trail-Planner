@@ -67,34 +67,19 @@ function drawLapCountdown(dc as Graphics.Dc, run as Run) as Void {
 
 // Au ravito (Run.ravitoOn), sur tous les écrans jusqu'au départ : écran du ravito du champ ; anneau du temps
 // passé sur l'arrêt prévu (vert, plein et rouge une fois dépassé) ; arc orange en face de BACK/Lap avec, à
-// côté, l'icône ravito et « Fin de ravitaillement » : le 2e Lap note le départ du ravito.
+// côté, l'icône →| : le 2e Lap note le départ du ravito.
 function drawRavitoOverlay(dc as Graphics.Dc, run as Run) as Void {
     var w = dc.getWidth();
     var h = dc.getHeight();
     var red = darkTheme() ? Graphics.COLOR_RED : Graphics.COLOR_DK_RED;
     dc.setColor(themeFg(), themeBg());
     dc.clear();
-    // En bas à droite, à côté de l'arc orange : icône ravito et « Fin de ravitaillement », dans la plus
-    // grande police qui tient.
+    // En bas à droite, à côté de l'arc orange : →|.
     var ly = (h * 0.80).toNumber();
-    var food = run.ep.foodIcon();
-    var iw = dc.getTextWidthInPixels(food[1] as String, food[0]);
-    var label = tpText(Rez.Strings.tp_ravito_end);
-    var fonts = [Graphics.FONT_MEDIUM, Graphics.FONT_SMALL, Graphics.FONT_TINY, Graphics.FONT_XTINY];
-    var font = Graphics.FONT_XTINY;
-    for (var i = 0; i < fonts.size(); i++) {
-        if (dc.getTextWidthInPixels(label, fonts[i]) + iw + 4 <= widthAt(dc, ly, fonts[i]) - 24) {
-            font = fonts[i];
-            break;
-        }
-    }
-    var xr = w / 2 + widthAt(dc, ly, font) / 2 - 12;
-    var tw = dc.getTextWidthInPixels(label, font);
-    dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
-    dc.drawText(xr, ly, font, label, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
-    dc.drawText(xr - tw - 4, ly + run.ep.lay().iconSmallOffsetY, food[0], food[1] as String, Graphics.TEXT_JUSTIFY_RIGHT | Graphics.TEXT_JUSTIFY_VCENTER);
+    var s = w > 300 ? 34 : 26;
+    drawGoIcon(dc, w / 2 + widthAt(dc, ly, Graphics.FONT_MEDIUM) / 2 - 14, ly, s);
     // Écran du ravito au-dessus.
-    run.tp.drawRavitoFull(dc, (h * 0.12).toNumber(), ly - dc.getFontHeight(font) / 2 - 4, themeFg(), red);
+    run.tp.drawRavitoFull(dc, (h * 0.12).toNumber(), ly - s / 2 - 6, themeFg());
     if (isRound()) {
         var t = run.tp.ravitoTimes(Time.now().value());
         if (t[1] > 0) {
@@ -106,6 +91,18 @@ function drawRavitoOverlay(dc as Graphics.Dc, run as Run) as Void {
         }
         drawEdgeArc(dc, RAVITO_ARC_BOTTOM, RAVITO_ARC_TOP, Graphics.COLOR_ORANGE, w > 300 ? 16 : 12);
     }
+}
+
+// Icône →| (repartir) en orange, de largeur s, son bord droit en xr : flèche, puis barre.
+function drawGoIcon(dc as Graphics.Dc, xr as Number, y as Number, s as Number) as Void {
+    var t = s > 30 ? 5 : 4;
+    var hl = s * 4 / 10;
+    var hh = s * 4 / 10;
+    var tip = xr - t - 2;
+    dc.setColor(Graphics.COLOR_ORANGE, Graphics.COLOR_TRANSPARENT);
+    dc.fillRectangle(xr - t, y - s / 2, t, s);
+    dc.fillPolygon([[tip, y], [tip - hl, y - hh], [tip - hl, y + hh]]);
+    dc.fillRectangle(xr - s, y - t / 2, s - t - 2 - hl + 1, t);
 }
 
 // Icône de tour et « Annuler » en rouge à partir de x : Bas annule le tour.
