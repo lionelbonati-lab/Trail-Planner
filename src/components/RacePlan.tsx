@@ -106,7 +106,7 @@ export function RacePlan({
   /** Éditeur (traceur) : tracé et points de course. */
   onRedraw?: () => void
   share?: { available: boolean; url: string | null; create: () => Promise<void>; remove: () => Promise<void> }
-  watch?: { available: boolean; active: boolean; activate: () => void }
+  watch?: { available: boolean; active: boolean; activate: () => void; deactivate: () => void }
   /** Départ libre : départ réel donné par la montre (ms), si l'activité est en cours. */
   watchStart?: number | null
   /** Ouvre le debrief d'une sortie. */
@@ -425,11 +425,18 @@ export function RacePlan({
                   className={watch.active ? 'on-watch' : ''}
                   onClick={() => {
                     if (!watch.available) return alert('Connecte-toi pour envoyer ton plan à la montre.')
+                    // Second toucher : retirée de la montre (sortie libre).
+                    if (watch.active) {
+                      setShowWatch(false)
+                      watch.deactivate()
+                      return
+                    }
                     setShowWatch(true)
-                    if (!watch.active) watch.activate()
+                    watch.activate()
                   }}
-                  title="Envoie cette course au champ de données Trail Planner de ta montre Garmin"
-                  aria-label={watch.active ? 'Sur la montre' : 'Mettre sur la montre'}
+                  title={watch.active ? 'Sur la montre (toucher pour la retirer)' : 'Envoie cette course au champ de données Trail Planner de ta montre Garmin'}
+                  aria-label={watch.active ? 'Retirer de la montre' : 'Mettre sur la montre'}
+                  aria-pressed={watch.active}
                 >
                   <Watch /><span className="btn-text">{watch.active ? <>Sur la montre <Check className="inline" /></> : 'Mettre sur la montre'}</span>
                 </button>
@@ -518,6 +525,18 @@ export function RacePlan({
               </span>
               <span className="row tight">
                 <a className="button" href="#/montre"><Watch /> Onglet Montre</a>
+                {watch?.active && (
+                  <button
+                    className="ghost"
+                    onClick={() => {
+                      setShowWatch(false)
+                      watch.deactivate()
+                    }}
+                    title="Retirer de la montre (sortie libre)"
+                  >
+                    Retirer
+                  </button>
+                )}
                 <button className="ghost" onClick={() => setShowWatch(false)}>Fermer</button>
               </span>
             </div>
