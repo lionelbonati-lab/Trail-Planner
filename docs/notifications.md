@@ -40,7 +40,8 @@ Elle permet à GitHub de déployer les fonctions et les règles Firestore à cha
    - Utilisateur du compte de service (`Service Account User`) : les fonctions tournent sous le compte par
      défaut du projet.
    - Administrateur Service Usage (`Service Usage Admin`) : active les services Google des fonctions (Cloud
-     Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub, Cloud Storage), et prépare à
+     Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub, Cloud Storage, Cloud Billing,
+     Extensions), et prépare à
      chaque déploiement les agents de service Pub/Sub et Eventarc : à garder. Sans lui, le déploiement
      s'arrête sur « Permissions denied enabling … ».
    - Administrateur de l'IAM du projet (`Project IAM Admin`) : pour le premier déploiement seulement, qui
@@ -78,6 +79,7 @@ l'explication) : ajouter à `github-deploy` un rôle qui la contient.
 | Message dans le journal | À faire |
 | --- | --- |
 | « Permissions denied enabling … » ou « ne peut pas activer » | Rôle Administrateur Service Usage pour `github-deploy` (les activer soi-même ne suffit pas : le rôle sert à chaque déploiement) |
+| « … API has not been used in project … or it is disabled » | Service Google non activé : l'ajouter à la liste de l'étape « Services Google » de `.github/workflows/firebase.yml`, qui l'active |
 | « … Blaze … » | Passer au forfait Blaze (étape 1) |
 | « Error generating the service identity » | Rôle Administrateur Service Usage |
 | « We failed to modify the IAM policy » | Rôle Administrateur de l'IAM du projet (premier déploiement) |

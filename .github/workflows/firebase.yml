@@ -72,7 +72,9 @@ jobs:
           fi
           export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="$GOOGLE_APPLICATION_CREDENTIALS"
           export CLOUDSDK_CORE_DISABLE_PROMPTS=1
-          REQUIRED="cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com storage.googleapis.com"
+          # Ceux des fonctions v2 (déclencheurs Firestore), plus Cloud Billing (vérification du forfait Blaze)
+          # et Extensions, interrogés aussi par firebase-tools.
+          REQUIRED="cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com pubsub.googleapis.com storage.googleapis.com cloudbilling.googleapis.com firebaseextensions.googleapis.com"
           if ! ENABLED=$(gcloud services list --enabled --project "$PROJECT" --format='value(config.name)'); then
             echo "::warning::Liste des services Google illisible : vérification sautée."
             exit 0
