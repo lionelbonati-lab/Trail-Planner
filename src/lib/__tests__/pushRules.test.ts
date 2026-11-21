@@ -125,7 +125,16 @@ describe('notifications du serveur', () => {
     // Lien permanent : toutes les courses suivies, pas de nom de course.
     expect(confirmNotice('suivi:abc', who).body).toBe('Tu seras prévenu à chaque passage de Lionel, même page fermée.')
     expect(confirmNotice('share:x', { athleteName: 'Anne', raceName: '' }).body).toBe("Tu seras prévenu à chaque passage d'Anne, même page fermée.")
-    expect(confirmNotice('share:x', { athleteName: 'Élodie', raceName: '' }).body).toContain("d'Élodie")
+    const of = (athleteName: string) => confirmNotice('suivi:x', { athleteName, raceName: '' }).body.split('passage ')[1].split(',')[0]
+    expect(['Élodie', 'Hélène', 'Yves', 'Óscar', 'Yann', 'Yasmine', 'Marc'].map(of)).toEqual([
+      "d'Élodie",
+      "d'Hélène",
+      "d'Yves",
+      "d'Óscar",
+      'de Yann',
+      'de Yasmine',
+      'de Marc',
+    ])
     expect(confirmNotice('share:x', { athleteName: ' ', raceName: 'UTMB' }).body).toBe('Tu seras prévenu à chaque passage du coureur (UTMB), même page fermée.')
     expect(confirmNotice('share:x', null).body).toBe('Tu seras prévenu à chaque passage du coureur, même page fermée.')
     expect(confirmNotice(null, null)).toMatchObject({ owner: true, body: 'Tu seras prévenu ici quand le debrief sera prêt.', tag: 'tp-confirm-owner' })

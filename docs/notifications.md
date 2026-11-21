@@ -1,7 +1,7 @@
 # Notifications push — mise en route
 
 Les notifications arrivent sur le téléphone même quand la page ou l'appli est fermée. Elles sont envoyées par
-deux fonctions Cloud (dossier `functions/`) qui surveillent Firestore :
+des fonctions Cloud (dossier `functions/`) qui surveillent Firestore :
 
 | Quoi | Pour qui | Déclencheur |
 | --- | --- | --- |

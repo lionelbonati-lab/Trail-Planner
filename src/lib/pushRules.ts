@@ -207,11 +207,15 @@ export function confirmWanted(before: PushSub | null, after: PushSub | null): bo
   return !before || before.token !== after.token || before.at !== after.at
 }
 
-/** « de Lionel », « d'Anne », « du coureur ». */
+/**
+ * « de Lionel », « d'Anne », « d'Hélène », « d'Yves » mais « de Yann » (y suivi d'une voyelle : consonne),
+ * « du coureur » sans nom. Accents ignorés (« d'Élodie », « d'Óscar »).
+ */
 function ofName(name: string | undefined): string {
   const n = (name ?? '').trim()
   if (!n) return 'du coureur'
-  return /^[aeiouyàâäéèêëîïôöûüœæ]/iu.test(n) ? `d'${n}` : `de ${n}`
+  const plain = n.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  return /^([aeiouhœæ]|y[^aeiouy])/.test(plain) ? `d'${n}` : `de ${n}`
 }
 
 /**
