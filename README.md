@@ -286,6 +286,10 @@ Les GPX sont compressés (gzip) et découpés si besoin pour respecter la limite
 Le workflow `.github/workflows/deploy.yml` publie sur GitHub Pages à chaque push sur `main`
 (activer Pages avec la source « GitHub Actions » dans les paramètres du dépôt).
 
+Le workflow `.github/workflows/infomaniak.yml` envoie le même site sur un hébergement Infomaniak (SFTP,
+FTPES ou FTP) à chaque push sur `main`, une fois l'accès réglé : mise en route dans
+[docs/infomaniak.md](docs/infomaniak.md). Sans ces réglages, il ne fait rien.
+
 Le workflow `.github/workflows/firebase.yml` déploie les fonctions Cloud (notifications push, dossier
 `functions/`) et les règles Firestore à chaque modification sur `main`, une fois le secret
 `FIREBASE_SERVICE_ACCOUNT` en place : mise en route dans [docs/notifications.md](docs/notifications.md).
