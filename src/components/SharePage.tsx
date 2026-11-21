@@ -5,9 +5,10 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { WatchMessageBox } from './WatchMessageBox'
 import { freeRunShown, freeStats, paceText, trackRoute, type TrackDoc } from '../lib/freeRun'
 import { awayFrom } from '../lib/live'
-import { pushFlag, showNotice } from '../lib/notify'
+import { pushFlag, showNotice, TEST_NOTICE_MS } from '../lib/notify'
 import { offText, reportFor, reportOffCourse, runnerBanner, runnerCourse, shareClosesAt, timeAtDist, type ShareSnapshot } from '../lib/share'
 import { formatClock, formatDuration } from '../lib/time'
+import { useBriefly } from '../lib/useBriefly'
 import { estimatedDist, parseWatchPlan, plannedAtWatch, watchStartMs, watchStatus, type WatchReport } from '../lib/watchLive'
 
 import type { MapPoint, Runner } from './ShareMap'
@@ -502,6 +503,8 @@ function usePushAlerts(target: string | null) {
   const [on, setOn] = useState(() => !!target && !!pushFlag(target))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Juste abonné : le serveur envoie une notification de confirmation, annoncée dans la page.
+  const [testing, setTesting] = useBriefly(TEST_NOTICE_MS)
   useEffect(() => {
     if (!target || !import.meta.env.VITE_FIREBASE_VAPID_KEY) return
     let cancelled = false
@@ -526,13 +529,14 @@ function usePushAlerts(target: string | null) {
       if (on) await push.unsubscribePush(target)
       else await push.subscribePush(target)
       setOn(!on)
+      setTesting(!on)
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setBusy(false)
     }
   }
-  return { on, busy, error, toggle }
+  return { on, busy, error, testing, toggle }
 }
 
 /** Activation des notifications : par le serveur si possible, sinon par la page tant qu'elle est ouverte. */
@@ -542,7 +546,10 @@ function NotifyBox({ alerts, push }: { alerts: ReturnType<typeof useCrossingAler
       <div className="notify-box row">
         {push.on ? (
           <>
-            <span><Bell className="inline" /> Notifications activées</span>
+            <span>
+              <Bell className="inline" /> Notifications activées
+              {push.testing && <span className="muted small"> · une notification de test arrive dans quelques secondes</span>}
+            </span>
             <button className="ghost" disabled={push.busy} onClick={() => void push.toggle()}>Désactiver</button>
           </>
         ) : (
@@ -550,7 +557,7 @@ function NotifyBox({ alerts, push }: { alerts: ReturnType<typeof useCrossingAler
         )}
         <Hint label="Notifications">
           Sur ce téléphone, même page fermée : passage à chaque point, retard (à chaque quart d'heure de plus sur le plan) et barrière
-          horaire menacée (moins de 30 min de marge estimée).
+          horaire menacée (moins de 30 min de marge estimée). Une notification de test confirme l'activation.
         </Hint>
         {push.error && <span className="warn small">{push.error}</span>}
       </div>

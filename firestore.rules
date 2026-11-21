@@ -63,7 +63,9 @@ service cloud.firestore {
     // l'identifiant du document vient du jeton (introuvable sans lui).
     match /push/{id} {
       allow read: if false;
-      allow create, update: if request.resource.data.keys().hasOnly(['token', 'target', 'ref', 'at'])
+      // quiet : jeton renouvelé sans appui (pas de notification de confirmation).
+      allow create, update: if request.resource.data.keys().hasOnly(['token', 'target', 'ref', 'at', 'quiet'])
+                            && (!('quiet' in request.resource.data) || request.resource.data.quiet == true)
                             && request.resource.data.token is string
                             && request.resource.data.token.size() > 20
                             && request.resource.data.token.size() < 1000

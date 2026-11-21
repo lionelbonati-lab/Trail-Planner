@@ -188,6 +188,7 @@ Webapp de préparation de plans de course trail : temps de passage calculés à 
   [docs/notifications.md](docs/notifications.md)) : « Me prévenir » sur le lien assistance ou le lien permanent.
   Passage à chaque point (heure, km, écart au plan compté depuis le vrai départ), retard (à chaque quart d'heure de
   plus sur le plan), barrière horaire menacée (moins de 30 min de marge estimée) ; un toucher ouvre la page.
+  À l'activation, une notification de test « Notifications activées » confirme que tout fonctionne.
   Sans serveur en place ou sur un navigateur qui ne le permet pas : notification de passage par la page, tant
   qu'elle reste ouverte.
 

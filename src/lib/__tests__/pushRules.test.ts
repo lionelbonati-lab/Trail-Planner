@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ATHLETE, newRace, normalizeAthlete } from '../defaults'
 import { computePlan, scenarioWindows } from '../plan'
-import { gapText, liveNotices, pushTargets, runnerDoc, shortDuration, tokenKey, watchNotices } from '../pushRules'
+import { confirmNotice, confirmWanted, gapText, liveNotices, pushTargets, runnerDoc, shortDuration, targetPath, tokenKey, watchNotices } from '../pushRules'
 import { buildSnapshot } from '../share'
 import { parseWatchPlan } from '../watchLive'
 
@@ -98,5 +98,47 @@ describe('notifications du serveur', () => {
     expect(tokenKey('xyz:APA91b-token')).toBe(tokenKey('xyz:APA91b-token'))
     expect(tokenKey('a')).not.toBe(tokenKey('b'))
     expect(tokenKey('f'.repeat(300))).toMatch(/^[\w-]+$/)
+  })
+
+  it('confirmation d\'abonnement : à chaque appui, jamais au renouvellement du jeton', () => {
+    const sub = { token: 'tok-1', target: 'share:lien1', ref: 'lien1', at: 1000 }
+    expect(confirmWanted(null, sub)).toBe(true)
+    // Nouvel appui (même jeton, nouvelle heure) ou nouveau jeton.
+    expect(confirmWanted(sub, { ...sub, at: 2000 })).toBe(true)
+    expect(confirmWanted(sub, { ...sub, token: 'tok-2' })).toBe(true)
+    // Même document réécrit à l'identique, renouvellement silencieux, suppression.
+    expect(confirmWanted(sub, { ...sub })).toBe(false)
+    expect(confirmWanted(null, { ...sub, token: 'tok-2', quiet: true })).toBe(false)
+    expect(confirmWanted(sub, { ...sub, at: 3000, quiet: true })).toBe(false)
+    expect(confirmWanted(sub, null)).toBe(false)
+    expect(confirmWanted(null, { ...sub, token: '' })).toBe(false)
+  })
+
+  it('confirmation d\'abonnement : textes et liens', () => {
+    const who = { athleteName: 'Lionel', raceName: 'Trail test' }
+    expect(confirmNotice('share:lien1', who)).toMatchObject({
+      kind: 'confirm',
+      title: 'Notifications activées',
+      body: 'Tu seras prévenu à chaque passage de Lionel (Trail test), même page fermée.',
+      tag: 'tp-confirm-share:lien1',
+    })
+    // Lien permanent : toutes les courses suivies, pas de nom de course.
+    expect(confirmNotice('suivi:abc', who).body).toBe('Tu seras prévenu à chaque passage de Lionel, même page fermée.')
+    expect(confirmNotice('share:x', { athleteName: 'Anne', raceName: '' }).body).toBe("Tu seras prévenu à chaque passage d'Anne, même page fermée.")
+    const of = (athleteName: string) => confirmNotice('suivi:x', { athleteName, raceName: '' }).body.split('passage ')[1].split(',')[0]
+    expect(['Élodie', 'Hélène', 'Yves', 'Óscar', 'Yann', 'Yasmine', 'Marc'].map(of)).toEqual([
+      "d'Élodie",
+      "d'Hélène",
+      "d'Yves",
+      "d'Óscar",
+      'de Yann',
+      'de Yasmine',
+      'de Marc',
+    ])
+    expect(confirmNotice('share:x', { athleteName: ' ', raceName: 'UTMB' }).body).toBe('Tu seras prévenu à chaque passage du coureur (UTMB), même page fermée.')
+    expect(confirmNotice('share:x', null).body).toBe('Tu seras prévenu à chaque passage du coureur, même page fermée.')
+    expect(confirmNotice(null, null)).toMatchObject({ owner: true, body: 'Tu seras prévenu ici quand le debrief sera prêt.', tag: 'tp-confirm-owner' })
+    expect(targetPath('share:lien1')).toBe('#/share/lien1')
+    expect(targetPath('suivi:abc')).toBe('#/suivi/abc')
   })
 })
