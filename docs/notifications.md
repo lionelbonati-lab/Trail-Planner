@@ -40,8 +40,9 @@ Elle permet à GitHub de déployer les fonctions et les règles Firestore à cha
    - Utilisateur du compte de service (`Service Account User`) : les fonctions tournent sous le compte par
      défaut du projet.
    - Administrateur Service Usage (`Service Usage Admin`) : active les services Google des fonctions (Cloud
-     Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub, Cloud Storage). Sans lui, le
-     déploiement s'arrête sur « Permissions denied enabling … ».
+     Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub, Cloud Storage), et prépare à
+     chaque déploiement les agents de service Pub/Sub et Eventarc : à garder. Sans lui, le déploiement
+     s'arrête sur « Permissions denied enabling … ».
    - Administrateur de l'IAM du projet (`Project IAM Admin`) : pour le premier déploiement seulement, qui
      donne lui-même trois droits aux services de Google (déclencheurs Firestore). À retirer une fois le
      premier déploiement réussi : il permettrait à la clé de se donner tous les droits.
@@ -65,21 +66,22 @@ suit celle de la base Firestore ; pour la forcer, ajouter une variable `FUNCTION
 ex. `europe-west1`).
 
 À savoir : ce déploiement publie aussi `firestore.rules`, avant les fonctions (les règles passent même si les
-fonctions échouent). Les règles modifiées directement dans la console Firebase seraient remplacées : les reporter
-d'abord dans le fichier.
+fonctions échouent, à l'assemblage comme au déploiement). Les règles modifiées directement dans la console
+Firebase seraient remplacées : les reporter d'abord dans le fichier.
 
 #### Si le déploiement échoue
 
-Les erreurs connues sont expliquées en français en haut de la page de l'action et dans son résumé. Sinon,
-relancer avec **Run workflow** en cochant **Journal détaillé** : le journal nomme la permission refusée.
+Les erreurs connues sont expliquées en français en haut de la page de l'action et dans son résumé. Pour un
+autre refus, le message d'erreur du journal nomme en général la permission refusée (reprise dans
+l'explication) : ajouter à `github-deploy` un rôle qui la contient.
 
 | Message dans le journal | À faire |
 | --- | --- |
-| « Permissions denied enabling … » | Rôle Administrateur Service Usage pour `github-deploy` ; ou, une fois, par le propriétaire du projet : [activer les services](https://console.cloud.google.com/flows/enableapi?apiid=cloudfunctions.googleapis.com,cloudbuild.googleapis.com,artifactregistry.googleapis.com,run.googleapis.com,eventarc.googleapis.com,pubsub.googleapis.com,storage.googleapis.com&project=trail-planner-814f6) (vérifier que le projet affiché est bien trail-planner-814f6) |
+| « Permissions denied enabling … » ou « ne peut pas activer » | Rôle Administrateur Service Usage pour `github-deploy` (les activer soi-même ne suffit pas : le rôle sert à chaque déploiement) |
 | « … Blaze … » | Passer au forfait Blaze (étape 1) |
 | « Error generating the service identity » | Rôle Administrateur Service Usage |
 | « We failed to modify the IAM policy » | Rôle Administrateur de l'IAM du projet (premier déploiement) |
-| « iam.serviceAccounts.ActAs » | Rôle Utilisateur du compte de service |
+| « Missing permissions required for functions deploy » (`iam.serviceAccounts.ActAs`) | Rôle Utilisateur du compte de service |
 | « Retry the deployment in a few minutes » | Premier déploiement : Google finit de préparer les déclencheurs ; relancer dans 5 minutes |
 | « missing permission on the build service account » | Dans IAM, donner au *Compte de service Compute Engine par défaut* (`…-compute@developer.gserviceaccount.com`) le rôle *Compte de service Cloud Build* (`Cloud Build Service Account`) |
 | « Timed out waiting for API » | Relancer dans quelques minutes |

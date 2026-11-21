@@ -13,11 +13,6 @@ on:
       - '.github/workflows/firebase.yml'
       - '.github/scripts/firebase-hints.sh'
   workflow_dispatch:
-    inputs:
-      debug:
-        description: 'Journal détaillé (nomme la permission refusée)'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -35,7 +30,6 @@ jobs:
     env:
       HAS_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
       PROJECT: trail-planner-814f6
-      DEBUG: ${{ inputs.debug && '--debug' || '' }}
     steps:
       - name: Clé de déploiement absente
         if: env.HAS_KEY != 'true'
@@ -54,8 +48,10 @@ jobs:
         run: |
           npm ci
           npm run build
+      # La clé est écrite après l'installation des dépendances (scripts d'installation sans accès à la clé).
+      # Elle et les règles passent même si l'assemblage des fonctions a échoué.
       - name: Clé du compte de service
-        if: env.HAS_KEY == 'true'
+        if: ${{ !cancelled() && env.HAS_KEY == 'true' }}
         env:
           KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
@@ -63,8 +59,8 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
       # Les règles d'abord : publiées même si les fonctions échouent.
       - name: Règles Firestore
-        if: env.HAS_KEY == 'true'
-        run: npx --yes firebase-tools@14 deploy --only firestore:rules --project "$PROJECT" --non-interactive --force ${DEBUG:+"$DEBUG"} 2>&1 | tee "$RUNNER_TEMP/rules.log"
+        if: ${{ !cancelled() && env.HAS_KEY == 'true' }}
+        run: npx --yes firebase-tools@14 deploy --only firestore:rules --project "$PROJECT" --non-interactive --force 2>&1 | tee "$RUNNER_TEMP/rules.log"
       # Services Google des fonctions : activés tous ensemble (le premier déploiement les active sinon un par
       # un, et s'arrête au premier refus), ou un message clair si le compte n'en a pas le droit.
       - name: Services Google
@@ -100,15 +96,9 @@ jobs:
             printf '### Déploiement Firebase : que faire\n- **Forfait Blaze** : %s\n' "$MSG" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          IDS=${MISSING# }
-          LINK="https://console.cloud.google.com/flows/enableapi?apiid=${IDS// /,}&project=$PROJECT"
           MSG="Le compte github-deploy ne peut pas activer :$MISSING. Lui ajouter le rôle « Administrateur Service Usage » (Service Usage Admin) dans Google Cloud → IAM (https://console.cloud.google.com/iam-admin/iam?project=$PROJECT), attendre 2 min, puis relancer l'action. Voir docs/notifications.md."
           echo "::error title=Services Google inactifs::$MSG"
-          {
-            echo "### Déploiement Firebase : que faire"
-            echo "- **Services Google inactifs** : $MSG"
-            echo "- Ou, par le propriétaire du projet, une fois : [activer les services]($LINK)."
-          } >> "$GITHUB_STEP_SUMMARY"
+          printf '### Déploiement Firebase : que faire\n- **Services Google inactifs** : %s\n' "$MSG" >> "$GITHUB_STEP_SUMMARY"
           exit 1
       - name: Région (celle de la base Firestore)
         if: env.HAS_KEY == 'true'
@@ -116,7 +106,8 @@ jobs:
           REGION: ${{ vars.FUNCTIONS_REGION }}
         run: |
           if [ -z "$REGION" ]; then
-            LOC=$(npx --yes firebase-tools@14 firestore:databases:get "(default)" --project "$PROJECT" --json 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).result.locationId||'')}catch{console.log('')}})")
+            LOC=$(npx --yes firebase-tools@14 firestore:databases:get "(default)" --project "$PROJECT" --json 2>/dev/null | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).result.locationId||'')}catch{console.log('')}})") \
+              || { LOC=""; echo "::warning title=Région::Base Firestore illisible : europe-west1 par défaut (variable FUNCTIONS_REGION pour la forcer)."; }
             case "$LOC" in
               nam5) REGION=us-central1 ;;
               eur3) REGION=europe-west1 ;;
@@ -130,7 +121,7 @@ jobs:
           echo "REGION=$REGION" >> "$GITHUB_ENV"
       - name: Fonctions (notifications)
         if: env.HAS_KEY == 'true'
-        run: npx --yes firebase-tools@14 deploy --only functions --project "$PROJECT" --non-interactive --force ${DEBUG:+"$DEBUG"} 2>&1 | tee "$RUNNER_TEMP/functions.log"
+        run: npx --yes firebase-tools@14 deploy --only functions --project "$PROJECT" --non-interactive --force 2>&1 | tee "$RUNNER_TEMP/functions.log"
       # Erreurs connues expliquées en français (en tête de la page de l'action et dans son résumé).
       - name: Explications
         if: always() && env.HAS_KEY == 'true'

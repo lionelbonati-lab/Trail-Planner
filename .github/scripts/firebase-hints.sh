@@ -4,7 +4,9 @@
 # Usage : firebase-hints.sh <journal>...   Variables : PROJECT, REGION (facultatives).
 PROJECT="${PROJECT:-trail-planner-814f6}"
 REGION="${REGION:-europe-west1}"
-LOG=$(cat "$@" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g')
+# Couleurs retirées ; lignes de requêtes HTTP (journal détaillé) ignorées : elles citent des permissions même
+# quand tout va bien.
+LOG=$(cat "$@" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -v '\[apiv2\]')
 [ -n "$LOG" ] || exit 0
 
 IAM="https://console.cloud.google.com/iam-admin/iam?project=$PROJECT"
@@ -41,7 +43,7 @@ if has 'failed to modify the IAM policy'; then
   say error "Droits des services Google" "Le premier déploiement donne des droits aux services de Google (déclencheurs Firestore) : ajouter à github-deploy le rôle « Administrateur de l'IAM du projet » (Project IAM Admin) dans Google Cloud → IAM ($IAM), puis relancer l'action. Ce rôle peut être retiré après le premier déploiement réussi."
 fi
 
-if has 'iam\.serviceAccounts\.actAs'; then
+if has 'Missing permissions required for functions deploy|missing permission .?iam\.serviceAccounts\.actAs'; then
   say error "Utilisateur du compte de service" "Ajouter à github-deploy le rôle « Utilisateur du compte de service » (Service Account User) dans Google Cloud → IAM ($IAM), puis relancer l'action."
 fi
 
@@ -65,8 +67,15 @@ if has 'could not set up cleanup policy|Failed to set up cleanup policy'; then
   say warning "Anciennes versions des fonctions" "Fonctions déployées, mais leurs anciennes versions ne sont pas effacées (quelques centimes de stockage à la longue). Pour les effacer automatiquement : ajouter à github-deploy le rôle « Administrateur Artifact Registry » (Artifact Registry Administrator) dans Google Cloud → IAM ($IAM)."
 fi
 
-# Autre refus : le détail est dans le journal (option « debug » au lancement manuel).
-if [ "$FOUND" = 0 ] && has 'HTTP Error: 403|PERMISSION_DENIED|does not have permission'; then
-  say error "Permission manquante" "Un droit manque au compte github-deploy. Relancer l'action avec l'option « Journal détaillé » : le journal nomme la permission refusée. Voir $DOC."
+# Autre refus : la permission citée par le message d'erreur de Google, s'il y en a une.
+if [ "$FOUND" = 0 ] && has 'HTTP Error: 403|PERMISSION_DENIED|does not have permission|Permission .{0,80} denied'; then
+  PERMS=$(grep -oiE "permissions? ['\"]?[a-z]+\.[a-z]+\.[a-z]+" <<<"$LOG" | grep -oiE '[a-z]+\.[a-z]+\.[a-z]+$' \
+    | sort -u | paste -sd ' ' -)
+  if [ -n "$PERMS" ]; then
+    WHAT="(permission refusée : $PERMS). Lui ajouter un rôle qui la contient"
+  else
+    WHAT="(voir le message d'erreur du journal). Lui ajouter le rôle correspondant"
+  fi
+  say error "Permission manquante" "Un droit manque au compte github-deploy $WHAT dans Google Cloud → IAM ($IAM), puis relancer l'action. Voir $DOC."
 fi
 exit 0
