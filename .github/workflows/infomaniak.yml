@@ -24,9 +24,9 @@ jobs:
       - name: Accès Infomaniak absent
         if: env.HAS_ACCESS != 'true'
         run: echo "::notice::Accès Infomaniak absent, envoi sauté (voir docs/infomaniak.md)."
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: env.HAS_ACCESS == 'true'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         if: env.HAS_ACCESS == 'true'
         with:
           node-version: 22
