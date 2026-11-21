@@ -290,7 +290,8 @@ Le workflow `.github/workflows/infomaniak.yml` envoie le même site sur un hébe
 FTPES ou FTP) à chaque push sur `main`, une fois l'accès réglé : mise en route dans
 [docs/infomaniak.md](docs/infomaniak.md). Sans ces réglages, il ne fait rien.
 
-Le workflow `.github/workflows/firebase.yml` déploie les fonctions Cloud (notifications push, dossier
-`functions/`) et les règles Firestore à chaque modification sur `main`, une fois le secret
+Le workflow `.github/workflows/firebase.yml` déploie les règles Firestore puis les fonctions Cloud
+(notifications push, dossier `functions/`) à chaque modification sur `main`, une fois le secret
 `FIREBASE_SERVICE_ACCOUNT` en place : mise en route dans [docs/notifications.md](docs/notifications.md).
-Sans ce secret, il ne fait rien.
+Sans ce secret, il ne fait rien. En cas d'échec, les erreurs connues sont expliquées en français en haut de
+la page de l'action (`.github/scripts/firebase-hints.sh`).

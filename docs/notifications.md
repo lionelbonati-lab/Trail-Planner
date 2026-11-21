@@ -36,24 +36,57 @@ Elle permet à GitHub de déployer les fonctions et les règles Firestore à cha
 1. [Google Cloud → IAM → Comptes de service](https://console.cloud.google.com/iam-admin/serviceaccounts?project=trail-planner-814f6)
    → **Créer un compte de service**, nom `github-deploy`.
 2. Lui donner ces rôles :
-   - Administrateur Firebase (`Firebase Admin`)
-   - Administrateur Cloud Functions (`Cloud Functions Admin`)
-   - Utilisateur du compte de service (`Service Account User`)
-   - Administrateur de l'IAM du projet (`Project IAM Admin`) : le premier déploiement donne lui-même les
-     droits nécessaires aux services de Google (déclencheurs Firestore).
-   - Si un déploiement échoue sur une permission, le journal de l'action GitHub nomme le rôle qui manque :
-     l'ajouter ici, puis relancer l'action.
+   - Administrateur Firebase (`Firebase Admin`) : règles, fonctions et déclencheurs.
+   - Utilisateur du compte de service (`Service Account User`) : les fonctions tournent sous le compte par
+     défaut du projet.
+   - Administrateur Service Usage (`Service Usage Admin`) : active les services Google des fonctions (Cloud
+     Functions, Cloud Build, Artifact Registry, Cloud Run, Eventarc, Pub/Sub, Cloud Storage), et prépare à
+     chaque déploiement les agents de service Pub/Sub et Eventarc : à garder. Sans lui, le déploiement
+     s'arrête sur « Permissions denied enabling … ».
+   - Administrateur de l'IAM du projet (`Project IAM Admin`) : pour le premier déploiement seulement, qui
+     donne lui-même trois droits aux services de Google (déclencheurs Firestore). À retirer une fois le
+     premier déploiement réussi : il permettrait à la clé de se donner tous les droits.
+   - Facultatif : Administrateur Artifact Registry (`Artifact Registry Administrator`) : efface
+     automatiquement les anciennes versions des fonctions. Sans lui, un avertissement à chaque déploiement,
+     et quelques centimes de stockage à la longue.
+   - Administrateur Cloud Functions n'est pas nécessaire : il est compris dans Administrateur Firebase.
+
+   Pour changer les rôles d'un compte déjà créé :
+   [Google Cloud → IAM](https://console.cloud.google.com/iam-admin/iam?project=trail-planner-814f6) → ligne
+   `github-deploy` → ✏️ → **Ajouter un autre rôle** (taper par exemple « Service Usage ») → **Enregistrer**.
+   Compter 2 minutes avant de relancer l'action.
 3. Sur le compte créé : **Clés** → **Ajouter une clé** → **JSON**. Un fichier se télécharge.
 4. GitHub → dépôt **Trail-Planner** → *Settings* → *Secrets and variables* → *Actions* → onglet **Secrets** →
    **New repository secret** : nom `FIREBASE_SERVICE_ACCOUNT`, valeur : tout le contenu du fichier JSON.
 5. Supprimer le fichier téléchargé de l'ordinateur.
 
 Puis *Actions* → **Deploy Firebase (notifications, règles)** → **Run workflow**. Le premier déploiement prend
-quelques minutes (il active aussi les services Google nécessaires). La région des fonctions suit celle de la base
-Firestore ; pour la forcer, ajouter une variable `FUNCTIONS_REGION` (onglet **Variables**, ex. `europe-west1`).
+quelques minutes : il active d'abord les services Google des fonctions, tous ensemble. La région des fonctions
+suit celle de la base Firestore ; pour la forcer, ajouter une variable `FUNCTIONS_REGION` (onglet **Variables**,
+ex. `europe-west1`).
 
-À savoir : ce déploiement publie aussi `firestore.rules`. Les règles modifiées directement dans la console
+À savoir : ce déploiement publie aussi `firestore.rules`, avant les fonctions (les règles passent même si les
+fonctions échouent, à l'assemblage comme au déploiement). Les règles modifiées directement dans la console
 Firebase seraient remplacées : les reporter d'abord dans le fichier.
+
+#### Si le déploiement échoue
+
+Les erreurs connues sont expliquées en français en haut de la page de l'action et dans son résumé. Pour un
+autre refus, le message d'erreur du journal nomme en général la permission refusée (reprise dans
+l'explication) : ajouter à `github-deploy` un rôle qui la contient.
+
+| Message dans le journal | À faire |
+| --- | --- |
+| « Permissions denied enabling … » ou « ne peut pas activer » | Rôle Administrateur Service Usage pour `github-deploy` (les activer soi-même ne suffit pas : le rôle sert à chaque déploiement) |
+| « … Blaze … » | Passer au forfait Blaze (étape 1) |
+| « Error generating the service identity » | Rôle Administrateur Service Usage |
+| « We failed to modify the IAM policy » | Rôle Administrateur de l'IAM du projet (premier déploiement) |
+| « Missing permissions required for functions deploy » (`iam.serviceAccounts.ActAs`) | Rôle Utilisateur du compte de service |
+| « Retry the deployment in a few minutes » | Premier déploiement : Google finit de préparer les déclencheurs ; relancer dans 5 minutes |
+| « missing permission on the build service account » | Dans IAM, donner au *Compte de service Compute Engine par défaut* (`…-compute@developer.gserviceaccount.com`) le rôle *Compte de service Cloud Build* (`Cloud Build Service Account`) |
+| « Timed out waiting for API » | Relancer dans quelques minutes |
+| « Failed to authenticate » | Clé refusée (supprimée ou mal copiée) : nouvelle clé JSON, à remettre dans le secret |
+| Avertissement « could not set up cleanup policy » | Facultatif : rôle Administrateur Artifact Registry |
 
 ### 3. Clé Web Push (une fois les fonctions déployées)
 
