@@ -220,3 +220,36 @@ export function estimatedDist(report: WatchReport, plan: WatchPlan, nowSec: numb
   return lo
 }
 
+
+/** Sans relevé depuis ce délai, l'activité de l'appli montre est tenue pour finie (ms). */
+export const APP_ACTIVITY_IDLE_MS = 2 * 3600_000
+
+/** Activité d'un relevé finie : arrivée atteinte (à 300 m près) ou plus de relevé depuis 2 h. */
+export function activityEnded(report: WatchReport, nowMs: number, totalDist?: number): boolean {
+  if (totalDist !== undefined && totalDist > 0 && report.d >= totalDist - 300) return true
+  return nowMs - report.t * 1000 > APP_ACTIVITY_IDLE_MS
+}
+
+/**
+ * ⌚ d'un parcours lancé depuis l'appli montre (Trail Planner Companion) : il devient la course sur la
+ * montre pendant son activité (adopt), et plus rien n'est sur la montre une fois l'activité finie (clear).
+ * Un choix fait à la main sur le web (⌚ mis ou retiré) depuis le départ de l'activité reste prioritaire.
+ */
+export function appWatchAction(
+  athlete: { watchId?: string; watchRaceId?: string; watchRaceAt?: string; watchRaceApp?: boolean },
+  report: WatchReport | null,
+  nowMs: number,
+  known: (id: string) => boolean,
+  totalOf: (id: string) => number | undefined,
+): { adopt: string } | { clear: true } | null {
+  if (!report || !athlete.watchId) return null
+  const id = reportCourse(report)
+  // Parcours mis sur la montre par l'appli : retiré à la fin de son activité.
+  if (athlete.watchRaceApp && athlete.watchRaceId && (id === null || id === athlete.watchRaceId)) {
+    return activityEnded(report, nowMs, totalOf(athlete.watchRaceId)) ? { clear: true } : null
+  }
+  if (!id || id === athlete.watchRaceId || !known(id)) return null
+  if (athlete.watchRaceAt && report.s * 1000 < Date.parse(athlete.watchRaceAt)) return null
+  if (activityEnded(report, nowMs, totalOf(id))) return null
+  return { adopt: id }
+}

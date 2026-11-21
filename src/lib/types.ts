@@ -114,6 +114,8 @@ export interface Athlete {
   watchRaceId?: string
   /** Quand elle y a été envoyée (ISO) : les relevés plus anciens viennent d'une autre activité. */
   watchRaceAt?: string
+  /** Course mise sur la montre par l'appli montre (parcours lancé depuis Trail Planner Companion) : retirée à la fin de son activité. */
+  watchRaceApp?: boolean
   /** Synchroniser le datafield EndurancePro (VC, zones…) via le code montre. */
   epSync?: boolean
   /**

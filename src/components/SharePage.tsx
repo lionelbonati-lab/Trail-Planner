@@ -197,7 +197,7 @@ export function RunnerPage({ code }: { code: string }) {
   // Course montrée : celle du document du code montre (course envoyée à la montre) ou son document <code>-<id>.
   const full = (s: ShareSnapshot | null | undefined) => (s && Array.isArray(s.rows) && s.rows.length ? s : null)
   const snap = target ? (docId ? full(course.snap) : full(base)) : null
-  if (!target || !snap) return <main><p className="muted">Aucune course en cours ni à venir pour l'instant. Cette page se met à jour toute seule.</p></main>
+  if (!target || !snap) return <RunnerIdle name={base.athleteName} timeZone={base.timeZone} report={report} />
 
   const banner = runnerBanner(target.mode, snap, reportFor(snap, report, nowMs), nowMs)
   return (
@@ -210,6 +210,45 @@ export function RunnerPage({ code }: { code: string }) {
       pushTarget={`suivi:${code}`}
       watchCodes={[code, base.liveRefShort].filter((c): c is string => !!c)}
     />
+  )
+}
+
+/**
+ * Lien permanent sans rien en cours ni à venir : message bien visible et résumé de la dernière sortie
+ * (dernier relevé de la montre), au lieu d'une page presque vide.
+ */
+export function RunnerIdle({ name, timeZone, report }: { name?: string; timeZone?: string; report: WatchReport | null }) {
+  const tz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+  const last = report && report.s > 0 && report.t >= report.s ? report : null
+  const st = last ? freeStats(last, Date.now()) : null
+  const day = last ? new Date(last.s * 1000).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: '2-digit', timeZone: tz }) : ''
+  const km = (d: number) => (d / 1000).toFixed(1).replace('.', ',')
+  return (
+    <div className="app">
+      <header className="topbar"><span className="brand"><Mountain className="inline" /> Trail Planner · Assistance</span></header>
+      <main className="share runner-idle">
+        <RunnerBanner text="Rien en cours" live={false} />
+        <h1>{name ? `Suivi de ${name}` : 'Suivi du coureur'}</h1>
+        <section className="card">
+          <h2>Aucune course en cours ni à venir</h2>
+          <p className="muted">La prochaine course ou sortie s'affichera ici dès qu'elle sera sur la montre. Cette page se met à jour toute seule.</p>
+        </section>
+        {last && st && (
+          <section className="card">
+            <h3>Dernière sortie · {day}</h3>
+            <p className="muted small">
+              Départ {formatClock(new Date(last.s * 1000), tz)} · dernier relevé {formatClock(new Date(last.t * 1000), tz)}
+            </p>
+            <Kpis summary={[`${km(st.dist)} km`, formatDuration(st.elapsed), st.ascent !== null ? `D+ ${st.ascent} m` : ''].filter(Boolean).join(' · ')}>
+              <Kpi label="Distance" value={`${km(st.dist)} km`} />
+              <Kpi label="Temps" value={formatDuration(st.elapsed)} />
+              {st.ascent !== null && <Kpi label="D+" value={`${st.ascent} m`} />}
+              {st.pace !== null && <Kpi label="Allure moyenne" value={paceText(st.pace)} />}
+            </Kpis>
+          </section>
+        )}
+      </main>
+    </div>
   )
 }
 

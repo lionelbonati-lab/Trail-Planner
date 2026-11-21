@@ -863,3 +863,7 @@ button.map-fab.on { color: #fff; background: var(--series-1); border-color: var(
 .msg-count { margin-top: 2px; }
 .msg-status { margin: 8px 0 0; }
 .msg-status .msg-read { color: var(--ok); }
+
+/* Erreur d'affichage (au lieu d'une page blanche) */
+.crash { margin: 24px auto; max-width: 560px; }
+.crash-msg { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }

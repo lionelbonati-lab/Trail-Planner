@@ -73,7 +73,7 @@ const rememberSignedIn = (on: boolean) => {
   }
 }
 import type { Athlete, Checkpoint, Race, RaceKind } from './lib/types'
-import { reportCourse, watchStartMs, type WatchReport } from './lib/watchLive'
+import { appWatchAction, reportCourse, watchStartMs, type WatchReport } from './lib/watchLive'
 import { FREE_HIDE_M } from './lib/freeRun'
 import { debriefPoints, debriefReport, debriefStart, debriefsToAnnounce, debriefsToNotify, signedGap, upsertLive, upsertWatch } from './lib/debrief'
 import { debriefNotifyOn, notifiedDebriefs, ownerPushOn, rememberNotified, showNotice } from './lib/notify'
@@ -458,18 +458,28 @@ export default function App() {
   }, [races, clockMs, loaded])
 
   // Appli montre : parcours choisi dans sa liste au lieu de la course envoyée à la montre. Il devient la
-  // course sur la montre dès son premier relevé (départ réel, direct, debrief, lien permanent), sauf si
-  // une course a été envoyée à la montre (⌚) depuis le départ de cette activité : le choix fait à la main
-  // reste prioritaire (sinon chaque relevé d'une sortie en cours éteignait le ⌚ tout juste choisi). Envoi
-  // daté du départ de cette activité, pour que ses relevés comptent.
+  // course sur la montre pendant son activité (départ réel, direct, debrief, lien permanent), sauf si une
+  // course a été mise sur la montre ou retirée (⌚) depuis le départ de cette activité : le choix fait à la
+  // main reste prioritaire. Activité finie (arrivée, ou plus de relevé depuis 2 h) : plus rien sur la
+  // montre. Dates rapportées au départ de l'activité, pour que ses relevés comptent.
+  const appRace = races.find((r) => r.id === (athlete.watchRaceApp ? athlete.watchRaceId : watchReport && reportCourse(watchReport)))
+  const appTotal = useMemo(() => {
+    if (!appRace?.gpxText) return undefined
+    try {
+      return parseGpx(appRace.gpxText).totalDist
+    } catch {
+      return undefined
+    }
+  }, [appRace?.id, appRace?.gpxText])
   useEffect(() => {
-    if (!watchReport || !loaded || !athlete.watchId) return
-    const id = reportCourse(watchReport)
-    if (!id || id === athlete.watchRaceId || !races.some((r) => r.id === id)) return
-    if (athlete.watchRaceAt && watchReport.s * 1000 < Date.parse(athlete.watchRaceAt)) return
-    patchAthlete({ watchRaceId: id, watchRaceAt: new Date((watchReport.s - 60) * 1000).toISOString() })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- un relevé est traité à son arrivée (et au chargement)
-  }, [watchReport, loaded, races, athlete])
+    if (!loaded) return
+    const act = appWatchAction(athlete, watchReport, clockMs, (id) => races.some((r) => r.id === id), (id) => (id === appRace?.id ? appTotal : undefined))
+    if (!act || !watchReport) return
+    const since = new Date((watchReport.s - 60) * 1000).toISOString()
+    if ('adopt' in act) patchAthlete({ watchRaceId: act.adopt, watchRaceAt: since, watchRaceApp: true })
+    else patchAthlete({ watchRaceId: undefined, watchRaceAt: since, watchRaceApp: undefined })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- un relevé est traité à son arrivée, au chargement et chaque minute
+  }, [watchReport, loaded, races, athlete, clockMs, appTotal])
 
   // Debrief : passages relevés par la montre copiés dans la sortie (un relevé n'est traité qu'une fois).
   const debriefDone = useRef('')
@@ -536,7 +546,7 @@ export default function App() {
   const sendToWatch = (race: Race) => {
     // Sans tirets : plus simple à saisir dans les réglages Garmin.
     const watchId = athlete.watchId ?? crypto.randomUUID().replace(/-/g, '')
-    const next = { ...athlete, watchId, watchRaceId: race.id, watchRaceAt: athlete.watchRaceId === race.id && athlete.watchRaceAt ? athlete.watchRaceAt : new Date().toISOString() }
+    const next = { ...athlete, watchId, watchRaceId: race.id, watchRaceAt: athlete.watchRaceId === race.id && athlete.watchRaceAt ? athlete.watchRaceAt : new Date().toISOString(), watchRaceApp: undefined }
     updateAthlete(next)
     publish(race, next, watchId).catch((e) => setError(`Envoi à la montre impossible : ${(e as Error).message}`))
   }
@@ -555,7 +565,8 @@ export default function App() {
    */
   /** Plus rien sur la montre : le champ Trail Planner passe en sortie libre. */
   const removeFromWatch = (race: Race | undefined) => {
-    updateAthlete({ ...athlete, watchRaceId: undefined, watchRaceAt: undefined })
+    // Heure du choix gardée : les relevés d'avant (activité de l'appli montre arrêtée) ne remettent pas le ⌚.
+    updateAthlete({ ...athlete, watchRaceId: undefined, watchRaceAt: new Date().toISOString(), watchRaceApp: undefined })
     flash(`${race ? `« ${race.name} »` : 'La course'} n'est plus sur ta montre : sortie libre.`)
   }
   const putOnWatch = (race: Race) => {

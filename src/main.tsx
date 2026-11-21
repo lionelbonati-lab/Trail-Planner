@@ -2,6 +2,8 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary.tsx'
+import { reloadOnce } from './lib/reload.ts'
 import { RunnerPage, SharePage } from './components/SharePage.tsx'
 
 /**
@@ -23,9 +25,17 @@ function Root() {
   return link ? <SharePage shareId={link.id} /> : <App />
 }
 
+// Fichier de code introuvable (nouvelle version déployée pendant que la page était ouverte, par ex. la
+// page assistance gardée ouverte toute une course) : on recharge la page plutôt que de planter.
+window.addEventListener('vite:preloadError', (e) => {
+  if (reloadOnce()) e.preventDefault()
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Root />
+    <ErrorBoundary>
+      <Root />
+    </ErrorBoundary>
   </StrictMode>,
 )
 // Installation (PWA) : service worker en production uniquement.
