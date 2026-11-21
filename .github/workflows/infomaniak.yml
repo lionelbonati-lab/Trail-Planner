@@ -1,0 +1,97 @@
+name: Deploy to Infomaniak
+
+# Le site (dossier dist/) envoyé à la racine du site Infomaniak (SFTP, FTPES ou FTP), à chaque modification
+# sur main. Sans l'accès (variables INFOMANIAK_HOST et INFOMANIAK_USER, secret INFOMANIAK_PASSWORD), rien
+# n'est envoyé : voir docs/infomaniak.md.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infomaniak
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_ACCESS: ${{ secrets.INFOMANIAK_PASSWORD != '' && vars.INFOMANIAK_HOST != '' && vars.INFOMANIAK_USER != '' }}
+    steps:
+      - name: Accès Infomaniak absent
+        if: env.HAS_ACCESS != 'true'
+        run: echo "::notice::Accès Infomaniak absent, envoi sauté (voir docs/infomaniak.md)."
+      - uses: actions/checkout@v4
+        if: env.HAS_ACCESS == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_ACCESS == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Construction
+        if: env.HAS_ACCESS == 'true'
+        run: |
+          npm ci
+          npm test
+          npm run build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_VAPID_KEY: ${{ vars.VITE_FIREBASE_VAPID_KEY }}
+      - name: Outil d'envoi (lftp)
+        if: env.HAS_ACCESS == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+      - name: Envoi
+        if: env.HAS_ACCESS == 'true'
+        env:
+          HOST: ${{ vars.INFOMANIAK_HOST }}
+          LOGIN: ${{ vars.INFOMANIAK_USER }}
+          PROTOCOL: ${{ vars.INFOMANIAK_PROTOCOL }}
+          PORT: ${{ vars.INFOMANIAK_PORT }}
+          SITE_DIR: ${{ vars.INFOMANIAK_DIR }}
+          LFTP_PASSWORD: ${{ secrets.INFOMANIAK_PASSWORD }}
+        run: |
+          # SFTP (hébergement Web payant, par défaut), FTPES (FTP chiffré) ou FTP (offre Starter, non chiffré).
+          case "${PROTOCOL:-sftp}" in
+            sftp)
+              PORT="${PORT:-22}"
+              # Clé du serveur relevée à chaque envoi, dans un fichier à part (lu par ssh via lftp).
+              KNOWN="$RUNNER_TEMP/known_hosts"
+              ssh-keyscan -p "$PORT" -H "$HOST" > "$KNOWN" 2>/dev/null
+              test -s "$KNOWN" || { echo "::error::Serveur SFTP injoignable : $HOST:$PORT (voir docs/infomaniak.md)."; exit 1; }
+              URL="sftp://$HOST:$PORT"
+              SETUP="set sftp:connect-program \"ssh -a -x -o UserKnownHostsFile=$KNOWN -o StrictHostKeyChecking=yes\"" ;;
+            ftpes)
+              URL="ftp://$HOST:${PORT:-21}"
+              SETUP="set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate yes" ;;
+            ftp)
+              echo "::warning::FTP non chiffré (offre Starter) : le mot de passe circule en clair."
+              URL="ftp://$HOST:${PORT:-21}"
+              SETUP="set ftp:ssl-allow false" ;;
+            *)
+              echo "::error::INFOMANIAK_PROTOCOL : sftp, ftpes ou ftp."
+              exit 1 ;;
+          esac
+          # Nouveaux fichiers à empreinte d'abord, puis la page et le reste, enfin les anciens fichiers
+          # à empreinte retirés : la page en ligne ne pointe jamais vers un fichier absent.
+          # Seul le dossier assets/ est nettoyé : le reste du dossier du site n'est pas supprimé. Dernier
+          # passage : contrôle (taille, date) ; un fichier coupé par une connexion interrompue est renvoyé.
+          lftp --env-password -u "$LOGIN" "$URL" <<EOF
+          set net:max-retries 3
+          set net:timeout 30
+          set cmd:fail-exit yes
+          $SETUP
+          cd "${SITE_DIR:-.}"
+          mirror --reverse --no-perms --verbose=1 dist/assets assets
+          mirror --reverse --no-perms --verbose=1 --exclude ^assets/ dist .
+          mirror --reverse --no-perms --verbose=1 --delete dist/assets assets
+          mirror --reverse --no-perms --verbose=1 dist .
+          bye
+          EOF
