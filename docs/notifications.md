@@ -9,9 +9,11 @@ deux fonctions Cloud (dossier `functions/`) qui surveillent Firestore :
 | Retard : à chaque quart d'heure de plus sur le plan | assistance | relevé de la montre |
 | Barrière horaire menacée : moins de 30 min de marge estimée | assistance | relevé de la montre |
 | Debrief prêt (arrivée, temps, écart) | coureur connecté, « Me prévenir à l'arrivée » activé | arrivée relevée |
+| Confirmation (« Notifications activées ») | le téléphone qui vient de s'abonner | appui sur « Me prévenir » ou « Me prévenir à l'arrivée » |
 
 Les règles (quoi envoyer, et quand) sont dans `src/lib/pushRules.ts`. Un même passage n'est envoyé qu'une fois,
-même si la montre et le mode course le relèvent tous les deux.
+même si la montre et le mode course le relèvent tous les deux. La confirmation part à chaque appui (la page
+l'annonce pendant une minute), jamais quand le navigateur renouvelle seul le jeton du téléphone.
 
 Tant que le serveur n'est pas en place, rien ne change dans l'appli : la page assistance prévient elle-même
 tant qu'elle reste ouverte, et le « Me prévenir » du serveur n'apparaît pas.
@@ -105,18 +107,20 @@ l'arrivée » (carte *Sorties et debriefs*) passe par le serveur pour un coureur
 ## Essayer
 
 1. Sur le téléphone de l'assistance : ouvrir le lien assistance d'une course envoyée à la montre →
-   **Me prévenir** → autoriser.
+   **Me prévenir** → autoriser. La notification « Notifications activées » arrive dans les secondes qui
+   suivent : toute la chaîne (téléphone, serveur, envoi) fonctionne.
    Sur iPhone : ajouter d'abord la page à l'écran d'accueil (Partager → *Sur l'écran d'accueil*) et l'ouvrir
    depuis l'icône (iOS 16.4 ou plus).
 2. Fermer la page, lancer une activité avec le champ Trail Planner et passer le premier point : la notification
    arrive au relevé suivant de la montre (toutes les 5 min au mieux).
-3. Journal des envois : Google Cloud → *Cloud Run* → fonctions `onwatchreport` et `onshareupdate` → *Journaux*.
+3. Journal des envois : Google Cloud → *Cloud Run* → fonctions `onwatchreport` et `onshareupdate` (passages),
+   `onpushsubscribe` et `onownerpushsubscribe` (confirmations) → *Journaux*.
 
 ## Données
 
 - `push/{id}` : abonnements d'un téléphone à un lien (`target` : `share:<id>` ou `suivi:<code montre>`). Écrits
   sans compte (comme les relevés de la montre), lus par le serveur seul ; supprimés quand le téléphone se
-  désabonne ou que son jeton n'est plus valable.
+  désabonne ou que son jeton n'est plus valable. `quiet` : jeton renouvelé sans appui (pas de confirmation).
 - `users/{uid}/push/{id}` : téléphones du coureur pour « Debrief prêt ».
 - `push_state/{id}` : ce qui a déjà été notifié pour un lien (serveur seul).
 - `live/{code}/track/current` : trace de la sortie libre en cours ou récente (rien sur la montre), un point

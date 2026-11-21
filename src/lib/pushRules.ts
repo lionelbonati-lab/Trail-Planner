@@ -11,7 +11,7 @@ export const BARRIER_WARN_S = 30 * 60
 /** Deux départs à moins de 30 min : la même sortie (montre et mode course du téléphone). */
 const SAME_RUN_S = 30 * 60
 
-export type NoticeKind = 'pass' | 'late' | 'barrier' | 'finish'
+export type NoticeKind = 'pass' | 'late' | 'barrier' | 'finish' | 'confirm'
 
 export interface Notice {
   kind: NoticeKind
@@ -189,6 +189,46 @@ export function runnerDoc(
 ): string | null {
   const target = runnerCourse(base, report, nowMs)
   return target ? (target.id === base?.courseId ? code : `${code}-${target.id}`) : null
+}
+
+/** Abonnement d'un téléphone : push/{id} (lien, avec `target` et `ref`) ou users/{uid}/push/{id} (coureur). */
+export interface PushSub {
+  token: string
+  at: number
+  target?: string
+  ref?: string
+  /** Jeton renouvelé par le navigateur, sans appui : pas de confirmation. */
+  quiet?: boolean
+}
+
+/** Confirmation à envoyer : abonnement fait (ou refait) par un appui sur « Me prévenir », pas un renouvellement. */
+export function confirmWanted(before: PushSub | null, after: PushSub | null): boolean {
+  if (!after?.token || after.quiet) return false
+  return !before || before.token !== after.token || before.at !== after.at
+}
+
+/** « de Lionel », « d'Anne », « du coureur ». */
+function ofName(name: string | undefined): string {
+  const n = (name ?? '').trim()
+  if (!n) return 'du coureur'
+  return /^[aeiouyàâäéèêëîïôöûüœæ]/iu.test(n) ? `d'${n}` : `de ${n}`
+}
+
+/**
+ * Notification de confirmation d'un abonnement : lien assistance (« share:<id> », course nommée), lien
+ * permanent (« suivi:<code> », toutes les courses suivies par la montre) ou coureur (null : debrief prêt).
+ */
+export function confirmNotice(target: string | null, snap: Pick<ShareSnapshot, 'athleteName' | 'raceName'> | null): Notice {
+  const title = 'Notifications activées'
+  if (!target) return { kind: 'confirm', owner: true, title, body: 'Tu seras prévenu ici quand le debrief sera prêt.', tag: 'tp-confirm-owner' }
+  const race = target.startsWith('share:') && snap?.raceName ? ` (${snap.raceName})` : ''
+  return { kind: 'confirm', title, body: `Tu seras prévenu à chaque passage ${ofName(snap?.athleteName)}${race}, même page fermée.`, tag: `tp-confirm-${target}` }
+}
+
+/** Lien ouvert en touchant une notification d'un abonnement à `target`, relatif à l'adresse du site. */
+export function targetPath(target: string): string {
+  const [kind, id] = target.split(/:(.*)/)
+  return kind === 'suivi' ? `#/suivi/${id}` : `#/share/${id}`
 }
 
 /** Identifiant court et stable d'un jeton (nom de document Firestore). */

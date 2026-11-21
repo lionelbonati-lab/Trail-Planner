@@ -1,7 +1,8 @@
 // Notifications push (Firebase Cloud Messaging), même appli et page fermées :
 // - relevé de la montre (live/{code}) : passages aux points, retard sur le plan, barrière menacée ;
 // - mode course du téléphone (shares/{id}) : passages notés dans l'appli ;
-// - arrivée : « Debrief prêt » pour le coureur.
+// - arrivée : « Debrief prêt » pour le coureur ;
+// - abonnement (« Me prévenir ») : notification de confirmation, sur le téléphone qui s'abonne.
 // Les règles (quoi notifier) sont dans src/lib/pushRules.ts, partagées avec l'appli et testées ;
 // ici on lit Firestore, on applique, on envoie.
 import { initializeApp } from 'firebase-admin/app'
@@ -11,7 +12,19 @@ import { setGlobalOptions } from 'firebase-functions/v2'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { decodeFromFirestore } from '../../src/lib/firestoreCodec'
 import { appendTrack, isFreeRun, type TrackDoc } from '../../src/lib/freeRun'
-import { liveNotices, pushTargets, runnerDoc, tokenKey, watchNotices, type Notice, type PushState } from '../../src/lib/pushRules'
+import {
+  confirmNotice,
+  confirmWanted,
+  liveNotices,
+  pushTargets,
+  runnerDoc,
+  targetPath,
+  tokenKey,
+  watchNotices,
+  type Notice,
+  type PushState,
+  type PushSub,
+} from '../../src/lib/pushRules'
 import type { ShareSnapshot } from '../../src/lib/share'
 import type { WatchReport } from '../../src/lib/watchLive'
 
@@ -40,8 +53,7 @@ async function subscribers(db: Firestore, targets: string[]): Promise<Sub[]> {
   const q = await db.collection('push').where('target', 'in', targets).get()
   return q.docs.map((d) => {
     const { token, target } = d.data() as { token: string; target: string }
-    const [kind, id] = target.split(/:(.*)/)
-    return { token, path: kind === 'suivi' ? `#/suivi/${id}` : `#/share/${id}`, ref: d.ref }
+    return { token, path: targetPath(target), ref: d.ref }
   })
 }
 
@@ -198,4 +210,24 @@ export const onShareUpdate = onDocumentWritten('shares/{id}', async (event) => {
     runner = runnerDoc(snap.liveRef, snapOf(base), report, Date.now()) === id ? snap.liveRef : null
   }
   await send(await notify(db, id, snap, runner, (prev) => liveNotices(before, snap, prev)))
+})
+
+const subOf = (d: { data: () => unknown } | undefined): PushSub | null => (d?.data() as PushSub | undefined) ?? null
+
+/** « Me prévenir » de la page assistance ou du lien permanent : confirmation sur ce téléphone. */
+export const onPushSubscribe = onDocumentWritten('push/{id}', async (event) => {
+  const after = subOf(event.data?.after)
+  if (!after?.target || !confirmWanted(subOf(event.data?.before), after)) return
+  const db = getFirestore()
+  const base = await db.collection('shares').doc(after.target.slice(after.target.indexOf(':') + 1)).get()
+  const sub = { token: after.token, path: targetPath(after.target), ref: db.collection('push').doc(event.params.id) }
+  await send([{ sub, notice: confirmNotice(after.target, snapOf(base)) }])
+})
+
+/** « Me prévenir à l'arrivée » du coureur connecté : confirmation sur ce téléphone. */
+export const onOwnerPushSubscribe = onDocumentWritten('users/{uid}/push/{id}', async (event) => {
+  const after = subOf(event.data?.after)
+  if (!after || !confirmWanted(subOf(event.data?.before), after)) return
+  const ref = getFirestore().collection('users').doc(event.params.uid).collection('push').doc(event.params.id)
+  await send([{ sub: { token: after.token, path: '', ref }, notice: confirmNotice(null, null) }])
 })

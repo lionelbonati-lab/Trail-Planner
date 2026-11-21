@@ -76,6 +76,9 @@ export function rememberNotified(ids: string[]) {
 /** Abonnement du coureur (« uid|jeton ») : debrief prêt envoyé par le serveur. */
 export const OWNER_PUSH = 'owner'
 
+/** Après « Me prévenir » : durée du message « une notification de test arrive… » dans la page. */
+export const TEST_NOTICE_MS = 60_000
+
 /** Jeton de l'abonnement de cet appareil à une cible (« share:<id> », « suivi:<code> », OWNER_PUSH), ou null. */
 export function pushFlag(target: string): string | null {
   return read(`tp-push-${target}`)

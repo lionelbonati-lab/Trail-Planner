@@ -2,8 +2,9 @@ import { Bell, BellOff, Flag, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { debriefEnded, debriefReport, signedGap, sortedDebriefs, type DebriefReport } from '../lib/debrief'
 import { importActivity } from '../lib/debriefImport'
-import { debriefNotifyOn, notifySupported, setDebriefNotify } from '../lib/notify'
+import { debriefNotifyOn, notifySupported, setDebriefNotify, TEST_NOTICE_MS } from '../lib/notify'
 import { formatClock, formatDuration } from '../lib/time'
+import { useBriefly } from '../lib/useBriefly'
 import type { Athlete, Debrief, Race } from '../lib/types'
 import { Card, Hint } from './ui'
 
@@ -30,6 +31,8 @@ export function SortiesCard({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notify, setNotify] = useState(debriefNotifyOn)
+  // Abonnement au serveur fait : notification de confirmation annoncée dans la page.
+  const [testing, setTesting] = useBriefly(TEST_NOTICE_MS)
   const tz = race.env.timeZone
   const debriefs = sortedDebriefs(race)
   const reports = debriefs.map((d) => ({ d, r: debriefReport(d) }))
@@ -93,13 +96,15 @@ export function SortiesCard({
               const on = await setDebriefNotify(!notify)
               setNotify(on)
               // Envoyée aussi par le serveur, même appli fermée (si en place et connecté).
-              await import('../lib/push').then((p) => (p.pushAvailable() ? p.setOwnerPush(on) : undefined)).catch(() => undefined)
+              const server = await import('../lib/push').then((p) => (p.pushAvailable() ? p.setOwnerPush(on) : false)).catch(() => false)
+              setTesting(on && server)
             }}
             title="Notification de ce téléphone quand l'arrivée est relevée"
           >
             {notify ? <><Bell /> Notification à l'arrivée activée</> : <><BellOff /> Me prévenir à l'arrivée</>}
           </button>
         )}
+        {testing && <span className="muted small">Une notification de test arrive dans quelques secondes.</span>}
         {busy && <span className="muted">Lecture…</span>}
       </div>
       {error && <p className="warn">{error}</p>}

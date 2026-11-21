@@ -57,7 +57,12 @@ vi.mock('firebase-functions/v2', () => ({ setGlobalOptions: () => undefined }))
 vi.mock('firebase-functions/v2/firestore', () => ({ onDocumentWritten: (_path: string, fn: unknown) => fn }))
 
 type Handler = (e: unknown) => Promise<void>
-const fns = (await import('../src/index')) as unknown as { onWatchReport: Handler; onShareUpdate: Handler }
+const fns = (await import('../src/index')) as unknown as {
+  onWatchReport: Handler
+  onShareUpdate: Handler
+  onPushSubscribe: Handler
+  onOwnerPushSubscribe: Handler
+}
 
 function gpx(): string {
   const pts: string[] = []
@@ -131,6 +136,58 @@ describe('fonctions Cloud : notifications', () => {
     store.set('shares/lien1', encodeForFirestore(after) as Data)
     await fns.onShareUpdate(event(encodeForFirestore(before) as Data, encodeForFirestore(after) as Data, { id: 'lien1' }))
     expect(sent.map((m) => [m.token, m.data.title])).toEqual([['tok-aide', 'Lionel · Ravito A']])
+  })
+})
+
+describe('fonctions Cloud : confirmation d\'abonnement', () => {
+  const race = newRace('Trail test', gpx())
+  const athlete = normalizeAthlete({ ...DEFAULT_ATHLETE, name: 'Lionel' })
+  const plan = computePlan(race, athlete)!
+  const snap = buildSnapshot('uid1', race, athlete, plan.track, plan.sim, scenarioWindows(plan.track, athlete, plan.opts))
+
+  beforeEach(() => {
+    store.clear()
+    sent.length = 0
+    invalid = new Set()
+    store.set('shares/lien1', encodeForFirestore(snap) as Data)
+  })
+
+  it('« Me prévenir » : notification de test sur le téléphone qui s\'abonne, lien ouvert au toucher', async () => {
+    const sub = { token: 'tok-aide', target: 'share:lien1', ref: 'lien1', at: 1000 }
+    store.set('push/x1', sub)
+    store.set('push/x2', { token: 'tok-autre', target: 'share:lien1', ref: 'lien1', at: 1 })
+    await fns.onPushSubscribe(event(null, sub, { id: 'x1' }))
+    expect(sent).toEqual([
+      {
+        token: 'tok-aide',
+        data: { title: 'Notifications activées', body: 'Tu seras prévenu à chaque passage de Lionel (Trail test), même page fermée.', tag: 'tp-confirm-share:lien1', path: '#/share/lien1' },
+        webpush: expect.anything(),
+      },
+    ])
+    // Nouvel appui : nouvelle confirmation ; jeton renouvelé sans appui ou document effacé : rien.
+    sent.length = 0
+    await fns.onPushSubscribe(event(sub, { ...sub, at: 2000 }, { id: 'x1' }))
+    expect(sent).toHaveLength(1)
+    sent.length = 0
+    await fns.onPushSubscribe(event(null, { ...sub, token: 'tok-neuf', quiet: true }, { id: 'x3' }))
+    await fns.onPushSubscribe(event(sub, null, { id: 'x1' }))
+    expect(sent).toEqual([])
+  })
+
+  it('lien permanent et coureur : textes adaptés ; jeton refusé : abonnement supprimé', async () => {
+    const perm = { token: 'tok-perm', target: 'suivi:lien1', ref: 'lien1', at: 1000 }
+    await fns.onPushSubscribe(event(null, perm, { id: 'p1' }))
+    expect(sent[0].data).toMatchObject({ body: 'Tu seras prévenu à chaque passage de Lionel, même page fermée.', path: '#/suivi/lien1' })
+    sent.length = 0
+    store.set('users/uid1/push/k', { token: 'tok-coureur', at: 1000 })
+    await fns.onOwnerPushSubscribe(event(null, { token: 'tok-coureur', at: 1000 }, { uid: 'uid1', id: 'k' }))
+    expect(sent.map((m) => [m.token, m.data.body, m.data.path])).toEqual([['tok-coureur', 'Tu seras prévenu ici quand le debrief sera prêt.', '']])
+    sent.length = 0
+    await fns.onOwnerPushSubscribe(event(null, { token: 'tok-coureur', at: 2000, quiet: true }, { uid: 'uid1', id: 'k' }))
+    expect(sent).toEqual([])
+    invalid = new Set(['tok-coureur'])
+    await fns.onOwnerPushSubscribe(event(null, { token: 'tok-coureur', at: 3000 }, { uid: 'uid1', id: 'k' }))
+    expect(store.has('users/uid1/push/k')).toBe(false)
   })
 })
 

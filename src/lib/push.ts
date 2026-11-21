@@ -50,11 +50,14 @@ async function pushToken(ask: boolean): Promise<string> {
 
 const subId = (token: string, target: string) => `${tokenKey(token)}-${tokenKey(target)}`
 
-/** Abonne ce téléphone aux notifications d'un lien (`target` : « share:<id> » ou « suivi:<code> »). */
-export async function subscribePush(target: string): Promise<void> {
-  const token = await pushToken(true)
+/**
+ * Abonne ce téléphone aux notifications d'un lien (`target` : « share:<id> » ou « suivi:<code> »). Le
+ * serveur envoie une notification de confirmation, sauf au renouvellement du jeton (`quiet`).
+ */
+export async function subscribePush(target: string, quiet = false): Promise<void> {
+  const token = await pushToken(!quiet)
   const ref = target.slice(target.indexOf(':') + 1)
-  await setDoc(doc(db!, 'push', subId(token, target)), { token, target, ref, at: Date.now() })
+  await setDoc(doc(db!, 'push', subId(token, target)), { token, target, ref, at: Date.now(), ...(quiet ? { quiet: true } : {}) })
   setPushFlag(target, token)
 }
 
@@ -70,21 +73,27 @@ export async function refreshPush(target: string): Promise<void> {
   if (!old || !pushAvailable() || Notification.permission !== 'granted') return
   const token = await pushToken(false)
   if (token === old) return
-  await subscribePush(target)
+  await subscribePush(target, true)
   await deleteDoc(doc(db!, 'push', subId(old, target))).catch(() => undefined)
 }
 
-/** Coureur connecté : « Debrief prêt » envoyé sur ce téléphone par le serveur. */
-export async function setOwnerPush(on: boolean): Promise<boolean> {
+/**
+ * Coureur connecté : « Debrief prêt » envoyé sur ce téléphone par le serveur, qui confirme l'abonnement
+ * par une notification. `quiet` : abonnement refait sans appui (connexion, jeton renouvelé), sans
+ * confirmation ni demande d'autorisation.
+ */
+export async function setOwnerPush(on: boolean, quiet = false): Promise<boolean> {
   const uid = auth?.currentUser?.uid
   const prev = pushFlag(OWNER_PUSH)
   const [prevUid, prevToken] = prev ? prev.split('|') : []
   const drop = () => (prev && db ? deleteDoc(doc(db, 'users', prevUid, 'push', tokenKey(prevToken))).catch(() => undefined) : undefined)
   if (on && uid && pushAvailable()) {
-    const token = await pushToken(true)
-    if (prevUid === uid && prevToken === token) return true
-    await setDoc(doc(db!, 'users', uid, 'push', tokenKey(token)), { token, at: Date.now() })
-    await drop()
+    const token = await pushToken(!quiet)
+    const same = prevUid === uid && prevToken === token
+    if (same && quiet) return true
+    await setDoc(doc(db!, 'users', uid, 'push', tokenKey(token)), { token, at: Date.now(), ...(quiet ? { quiet: true } : {}) })
+    // Ancien abonnement (autre compte ou ancien jeton) ; le même document vient d'être réécrit.
+    if (!same) await drop()
     setPushFlag(OWNER_PUSH, `${uid}|${token}`)
     return true
   }

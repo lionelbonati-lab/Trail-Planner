@@ -429,7 +429,7 @@ export default function App() {
   useEffect(() => {
     if (!user || !debriefNotifyOn()) return
     import('./lib/push')
-      .then((p) => (p.pushAvailable() ? p.setOwnerPush(true) : undefined))
+      .then((p) => (p.pushAvailable() ? p.setOwnerPush(true, true) : undefined))
       .catch(() => undefined)
   }, [user])
 
