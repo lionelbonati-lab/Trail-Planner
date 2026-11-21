@@ -31,6 +31,11 @@ if has 'Permissions? denied (enabling|to enable service)'; then
   say error "Services Google inactifs" "Le compte github-deploy ne peut pas activer ${APIS:-un service Google}. Lui ajouter le rôle « Administrateur Service Usage » (Service Usage Admin) dans Google Cloud → IAM ($IAM), attendre 2 min, puis relancer l'action (Run workflow). Voir $DOC."
 fi
 
+if has 'has not been used in project [0-9]+ before or it is disabled'; then
+  APIS=$(grep -oE 'apis/api/[a-z0-9-]+\.googleapis\.com' <<<"$LOG" | sed 's|apis/api/||' | sort -u | paste -sd ' ' -)
+  say error "Service Google inactif" "Le service Google ${APIS:-demandé} n'est pas activé. L'ajouter à la liste de l'étape « Services Google » (.github/workflows/firebase.yml), qui l'active, puis relancer l'action."
+fi
+
 if has 'must be on the Blaze|requires the pay-as-you-go \(Blaze\)'; then
   say error "Forfait Blaze" "Les fonctions Cloud demandent le forfait Blaze (paiement à l'usage, gratuit à cette échelle) : le choisir dans la console Firebase (https://console.firebase.google.com/project/$PROJECT/usage/details), puis relancer l'action."
 fi
